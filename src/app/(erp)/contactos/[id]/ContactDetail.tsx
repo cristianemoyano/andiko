@@ -5,6 +5,7 @@ import { TopBar } from '@/components/layout/TopBar'
 import { StatusBadge, Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { ContactModal } from '../ContactModal'
+import { AddressesSection } from './AddressesSection'
 
 type Contact = {
   id: string
@@ -21,6 +22,20 @@ type Contact = {
   updated_at: string
 }
 
+type Address = {
+  id: string
+  type: 'fiscal' | 'delivery' | 'commercial'
+  street: string
+  number: string | null
+  floor: string | null
+  apartment: string | null
+  city: string
+  province: string
+  postal_code: string | null
+  country: string
+  is_default: boolean
+}
+
 const TYPE_LABEL: Record<string, string> = {
   customer: 'Cliente',
   supplier: 'Proveedor',
@@ -35,7 +50,7 @@ const IVA_LABEL: Record<string, string> = {
   no_responsable:        'No Responsable',
 }
 
-export function ContactDetail({ contact: initial }: { contact: Contact }) {
+export function ContactDetail({ contact: initial, addresses }: { contact: Contact; addresses: Address[] }) {
   const [contact, setContact] = useState(initial)
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -70,7 +85,7 @@ export function ContactDetail({ contact: initial }: { contact: Contact }) {
       />
 
       <div className="flex-1 overflow-y-auto p-5">
-        <div className="max-w-2xl flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
 
           {/* Header card */}
           <div className="bg-white border border-zinc-200 rounded p-5 flex items-start justify-between gap-4">
@@ -106,6 +121,9 @@ export function ContactDetail({ contact: initial }: { contact: Contact }) {
             <Row label="Email"    value={contact.email}  empty="—" />
             <Row label="Teléfono" value={contact.phone}  empty="—" />
           </Section>
+
+          {/* Direcciones */}
+          <AddressesSection contactId={contact.id} initialAddresses={addresses} />
 
           {/* Notas */}
           {contact.notes && (
