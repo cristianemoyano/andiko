@@ -12,10 +12,16 @@
     "test:watch": "vitest",
     "migrate": "tsx src/db/migrate.ts",
     "release": "release-it",
-    "prepare": "husky"
+    "prepare": "husky",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
     "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "next": "16.2.4",
     "next-auth": "5.0.0-beta.31",
     "pg": "^8.20.0",
@@ -25,6 +31,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "sequelize": "^6.37.8",
+    "tailwind-merge": "^3.5.0",
     "umzug": "^3.8.2",
     "zod": "^4.3.6"
   },
@@ -48,6 +55,18 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "storybook": "^10.3.5",
+    "@storybook/nextjs-vite": "^10.3.5",
+    "@chromatic-com/storybook": "^5.1.2",
+    "@storybook/addon-vitest": "^10.3.5",
+    "@storybook/addon-a11y": "^10.3.5",
+    "@storybook/addon-docs": "^10.3.5",
+    "@storybook/addon-onboarding": "^10.3.5",
+    "vite": "^8.0.8",
+    "eslint-plugin-storybook": "^10.3.5",
+    "playwright": "^1.59.1",
+    "@vitest/browser-playwright": "4.1.4",
+    "@vitest/coverage-v8": "4.1.4"
   }
 }

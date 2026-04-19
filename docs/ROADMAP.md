@@ -37,17 +37,19 @@ Biblioteca de componentes reutilizables documentada en Storybook.
 Arranca en paralelo con Fase 1 y crece a medida que cada módulo necesita UI.
 Ningún componente se usa en producción sin su story.
 
-**Stack:** Storybook 8, Tailwind, Radix UI (primitivas accesibles), `class-variance-authority` (variantes).  
+**Stack:** Storybook 10, Tailwind, Radix UI (primitivas accesibles), `class-variance-authority` (variantes).  
 **Ubicación:** `src/components/` — nunca dentro de `src/modules/`.
 
 ### Setup
-- [ ] Storybook 8 configurado con Next.js + Tailwind
-- [ ] Chromatic o similar para visual regression testing (opcional, fase posterior)
-- [ ] `src/components/` con estructura por categoría
+- [x] Storybook 10 configurado con Next.js + Tailwind (`pnpm storybook`)
+- [x] `src/components/` con estructura por categoría (primitives, layout, erp)
+- [x] `src/lib/utils.ts` — helper `cn()` (clsx + tailwind-merge)
+- [ ] Chromatic para visual regression testing (fase posterior)
 
 ### Primitivas base
-- [ ] Button (variantes: primary, secondary, ghost, danger; tamaños: sm, md, lg)
-- [ ] Input (text, number, password; estados: error, disabled, readonly)
+- [x] Button (variantes: primary, secondary, ghost, danger; tamaños: sm, md, lg)
+- [x] Input (estados: error, disabled, readonly)
+- [x] FormField (label + control + mensaje de error, Radix Label)
 - [ ] Select / Combobox (búsqueda, multi-select)
 - [ ] Textarea
 - [ ] Checkbox y Switch
