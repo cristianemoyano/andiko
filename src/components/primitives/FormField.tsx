@@ -15,7 +15,7 @@ function FormField({ label, htmlFor, error, required, className, children }: For
     <div className={cn('flex flex-col gap-1.5', className)}>
       <Label.Root
         htmlFor={htmlFor}
-        className="text-sm font-medium text-gray-700"
+        className="text-[12px] font-medium text-zinc-600"
       >
         {label}
         {required && <span className="ml-1 text-red-500" aria-hidden>*</span>}
