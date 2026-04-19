@@ -26,6 +26,55 @@ Infraestructura base sin lógica de negocio.
 
 ---
 
+## Fase DS — Design System
+
+Biblioteca de componentes reutilizables documentada en Storybook.
+Arranca en paralelo con Fase 1 y crece a medida que cada módulo necesita UI.
+Ningún componente se usa en producción sin su story.
+
+**Stack:** Storybook 8, Tailwind, Radix UI (primitivas accesibles), `class-variance-authority` (variantes).  
+**Ubicación:** `src/components/` — nunca dentro de `src/modules/`.
+
+### Setup
+- [ ] Storybook 8 configurado con Next.js + Tailwind
+- [ ] Chromatic o similar para visual regression testing (opcional, fase posterior)
+- [ ] `src/components/` con estructura por categoría
+
+### Primitivas base
+- [ ] Button (variantes: primary, secondary, ghost, danger; tamaños: sm, md, lg)
+- [ ] Input (text, number, password; estados: error, disabled, readonly)
+- [ ] Select / Combobox (búsqueda, multi-select)
+- [ ] Textarea
+- [ ] Checkbox y Switch
+- [ ] Badge / StatusBadge (para estados de documentos ERP)
+- [ ] Tooltip
+- [ ] Modal / Dialog (con focus trap)
+- [ ] Dropdown Menu
+
+### Componentes de layout
+- [ ] PageHeader (título + breadcrumb + acciones)
+- [ ] Card / Panel
+- [ ] Sidebar (navegación principal)
+- [ ] Tabs
+
+### Componentes ERP-específicos
+- [ ] DataTable (columnas configurables, sorting, paginación, row actions)
+- [ ] CurrencyInput (formato ARS, separador de miles, decimales)
+- [ ] DatePicker (formato DD/MM/YYYY, Argentina)
+- [ ] FormField (label + input + mensaje de error — envuelve cualquier control)
+- [ ] SearchableSelect (para seleccionar contactos, productos en formularios)
+- [ ] TotalsFooter (subtotal / IVA / total en formularios de factura)
+- [ ] EmptyState (pantalla vacía con acción primaria)
+- [ ] ConfirmDialog (para acciones destructivas)
+
+### Principios del design system
+- Accesibilidad primero: todos los componentes deben ser navegables por teclado y compatibles con lectores de pantalla.
+- Densidad de información alta: ERP, no landing page. Tablas compactas, formularios en columnas.
+- Sin animaciones innecesarias. Transiciones solo donde ayudan a orientar al usuario.
+- Cada componente tiene: story de estados, story de edge cases, y props documentadas en Storybook.
+
+---
+
 ## Fase 1 — Contactos
 
 Base de datos de clientes y proveedores. Dependencia de todos los módulos siguientes.

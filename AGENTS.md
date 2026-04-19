@@ -153,6 +153,25 @@ const result = await sequelize.transaction(async (t) => {
 
 ---
 
+## Design System Rules
+
+- All UI components live in `src/components/`. Never inside `src/modules/`.
+- Components are categorized: `src/components/primitives/`, `src/components/layout/`, `src/components/erp/`.
+- No component ships to production without a Storybook story.
+- Use **Radix UI** for accessible primitives (Dialog, Select, Tooltip, etc.). Never build modal or focus-trap logic from scratch.
+- Use **`class-variance-authority`** (`cva`) for component variants. Never conditional class strings inline.
+- Tailwind only for styling. No CSS modules, no styled-components, no inline `style` props.
+- Story structure per component: default state, all variants, disabled/error states, edge cases (long text, empty, loading).
+- ERP-specific rules:
+  - `CurrencyInput` must always format ARS (`.` as thousands separator, `,` as decimal).
+  - `DatePicker` must default to `DD/MM/YYYY` format.
+  - `DataTable` must support keyboard navigation between rows.
+  - `ConfirmDialog` is required for any destructive action (delete, cancel, reverse).
+- Never use a raw `<input>` or `<button>` directly in module pages — always use the design system component.
+- Component file structure: `ComponentName.tsx`, `ComponentName.stories.tsx`, `index.ts` (re-export).
+
+---
+
 ## API Design Principles
 
 - REST only. No GraphQL.
