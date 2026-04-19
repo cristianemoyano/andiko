@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -142,10 +143,19 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
         <div className="w-[26px] h-[26px] rounded-full bg-brand-100 text-brand-800 text-[11px] font-semibold flex items-center justify-center flex-shrink-0">
           {initials}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="text-xs font-medium text-zinc-900 truncate">{userName ?? '—'}</div>
           <div className="text-[11px] text-zinc-400 truncate">{userRole ?? ''}</div>
         </div>
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          title="Cerrar sesión"
+          className="flex-shrink-0 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer"
+        >
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l3-3-3-3M13 8H6"/>
+          </svg>
+        </button>
       </div>
     </aside>
   )
