@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
+import { PasswordInput } from '@/components/primitives/PasswordInput'
 import { FormField } from '@/components/primitives/FormField'
 
 const ERRORS: Record<string, string> = {
@@ -56,10 +57,9 @@ export function LoginForm() {
       </FormField>
 
       <FormField label="Contraseña" htmlFor="password" required>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           placeholder="••••••••"
