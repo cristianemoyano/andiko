@@ -25,8 +25,10 @@ Infraestructura base sin lógica de negocio.
 - [x] Migración `users` con roles (admin, operator, readonly), soft delete, UUID
 - [x] Middleware de protección de rutas (`src/middleware.ts`)
 - [x] Tipos de sesión extendidos con `role` (`src/types/next-auth.d.ts`)
+- [x] Página de login (`/login`) con design system, error inline, redirect post-auth
+- [x] Route groups: `(auth)/` para páginas públicas, `(erp)/` para páginas protegidas
+- [x] ERP layout base con auth guard (`src/app/(erp)/layout.tsx`)
 - [ ] Roles y permisos a nivel de recurso (guardas por módulo)
-- [ ] Página de login (`/login`)
 - [ ] Página de perfil de usuario
 
 ---
