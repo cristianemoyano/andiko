@@ -49,6 +49,29 @@ release/*   ← cut from develop, merged into main, back-merged into develop.
 - Module structure: `sales/`, `inventory/`, `purchases/`, `contacts/`, `accounting/` — each with its own routes, services, and models.
 - No circular dependencies between modules. Use event bus or shared services for cross-module logic.
 
+**App Router structure:**
+```
+src/app/
+  (auth)/
+    login/page.tsx        ← public, outside ERP layout
+  (erp)/
+    layout.tsx            ← shared sidebar + header
+    contacts/page.tsx
+    sales/page.tsx
+    inventory/page.tsx
+    purchases/page.tsx
+    accounting/page.tsx
+  api/v1/
+    contacts/route.ts
+    sales/route.ts
+src/modules/              ← business logic only (services, models)
+src/components/           ← design system (primitives, layout, erp)
+src/lib/                  ← db, auth, logger
+src/config/               ← env validation
+src/types/                ← shared TypeScript types
+src/db/migrations/        ← Umzug migrations
+```
+
 ---
 
 ## PostgreSQL Rules (Critical)
