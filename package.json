@@ -6,17 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
+    "migrate": "tsx src/db/migrate.ts",
     "release": "release-it",
     "prepare": "husky"
   },
   "dependencies": {
     "next": "16.2.4",
+    "pg": "^8.20.0",
+    "pg-hstore": "^2.3.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "sequelize": "^6.37.8",
+    "umzug": "^3.8.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
@@ -24,6 +30,7 @@
     "@release-it/conventional-changelog": "^10.0.6",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
@@ -32,7 +39,9 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "release-it": "^19.2.4",
+    "sequelize-cli": "^6.6.5",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.4"
   }

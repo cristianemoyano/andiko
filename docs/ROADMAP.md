@@ -15,12 +15,14 @@ Infraestructura base sin lógica de negocio.
 - [x] AGENTS.md + skills de Claude (ship-feature, release, setup-tooling)
 - [x] Docker Compose con PostgreSQL 16 + pgAdmin (Colima como engine)
 - [x] Makefile con comandos de entorno local (up, down, reset, shell, dev)
-- [ ] PostgreSQL + Sequelize setup
-- [ ] Estructura de módulos (`src/modules/`)
+- [x] PostgreSQL + Sequelize setup (`src/lib/db.ts`, pool, paranoid, underscored)
+- [x] Estructura de módulos (`src/modules/` con contacts, sales, inventory, purchases, accounting, auth)
+- [x] Variables de entorno y configuración por ambiente (`src/config/env.ts` con Zod)
+- [x] Sistema de migraciones con Umzug (`src/db/migrate.ts`, `pnpm migrate up/down/status`)
+- [x] Tipos base compartidos (`src/types/index.ts`)
 - [ ] Sistema de autenticación (NextAuth o similar)
 - [ ] Roles y permisos básicos (admin, operador, solo lectura)
 - [ ] Logger estructurado
-- [ ] Variables de entorno y configuración por ambiente
 
 ---
 
