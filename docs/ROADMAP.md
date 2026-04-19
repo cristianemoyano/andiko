@@ -88,14 +88,25 @@ Ningún componente se usa en producción sin su story.
 
 Base de datos de clientes y proveedores. Dependencia de todos los módulos siguientes.
 
-**Entidades:** `contacts`, `contact_addresses`, `contact_fiscal_data`
+**Entidades:** `contacts`, `contact_addresses`, `contact_payment_info`
 
-- [ ] ABM de contactos (clientes y proveedores)
-- [ ] Campos fiscales argentinos: CUIT, condición IVA (Responsable Inscripto, Monotributista, Consumidor Final, Exento), categoría fiscal
+### Backend (completado)
+- [x] Migración `contacts`, `contact_addresses`, `contact_payment_info` con ENUMs PostgreSQL
+- [x] Modelo Sequelize `Contact` con tipos estrictos (`ContactType`, `IvaCondition`)
+- [x] Validación de CUIT (algoritmo de verificación mod 11 con dígito verificador)
+- [x] Schemas Zod: create, update (partial), query (page/limit/search/type)
+- [x] Service: `listContacts` (paginado, búsqueda por nombre/trade_name/cuit, filtro por tipo)
+- [x] Service: `getContact`, `createContact`, `updateContact`, `deleteContact` (soft delete)
+- [x] API REST: `GET /api/v1/contacts`, `POST /api/v1/contacts`
+- [x] API REST: `GET /api/v1/contacts/:id`, `PATCH /api/v1/contacts/:id`, `DELETE /api/v1/contacts/:id`
+- [x] Tests unitarios para `contact.utils.ts` (validateCuit, formatCuit)
+
+### Frontend (pendiente)
+- [ ] Listado de contactos con DataTable (búsqueda, filtros, paginación)
+- [ ] Formulario de creación/edición de contacto
+- [ ] Vista detalle de contacto
 - [ ] Datos de pago: CBU, alias, banco
 - [ ] Múltiples direcciones por contacto (entrega, fiscal, comercial)
-- [ ] Búsqueda y filtros (por nombre, CUIT, tipo)
-- [ ] Validación de CUIT (algoritmo de verificación)
 - [ ] Importación desde CSV
 
 ---

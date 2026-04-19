@@ -1,3 +1,4 @@
+import 'server-only'
 import bcrypt from 'bcryptjs'
 import User from './user.model'
 import logger from '@/lib/logger'
