@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "migrate": "tsx src/db/migrate.ts",
+    "migrate": "tsx --env-file=.env.local src/db/migrate.ts",
     "release": "release-it",
     "prepare": "husky",
     "storybook": "storybook dev -p 6006",
