@@ -9,8 +9,8 @@ export const umzug = new Umzug({
       const migration = require(path!)
       return {
         name,
-        up: async () => migration.up(context, sequelize.constructor),
-        down: async () => migration.down(context, sequelize.constructor),
+        up: async () => migration.up({ context }, sequelize.constructor),
+        down: async () => migration.down({ context }, sequelize.constructor),
       }
     },
   },
