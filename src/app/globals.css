@@ -6,9 +6,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Color & layout tokens — plain @theme so utilities are generated */
+/* Andiko brand palette */
 @theme {
-  /* Teal — Andiko identity */
   --color-brand-50:  #EEF8FA;
   --color-brand-100: #D0EEF3;
   --color-brand-200: #A2DCE7;
@@ -19,20 +18,14 @@
   --color-brand-700: #0A5268;
   --color-brand-800: #083F52;
   --color-brand-900: #052C3A;
-
-  /* Zinc neutrals */
-  --color-zinc-50:  #FAFAFA;
-  --color-zinc-100: #F4F4F5;
-  --color-zinc-200: #E4E4E7;
-  --color-zinc-300: #D4D4D8;
-  --color-zinc-400: #A1A1AA;
-  --color-zinc-500: #71717A;
-  --color-zinc-600: #52525B;
-  --color-zinc-700: #3F3F46;
-  --color-zinc-800: #27272A;
-  --color-zinc-900: #18181B;
-  --color-zinc-950: #09090B;
 }
+
+/*
+  Force-generate brand utilities in case @theme alone doesn't trigger JIT scanning.
+  This is needed because Tailwind v4 JIT may not detect dynamic token references
+  in component files before the theme is registered.
+*/
+@source inline("bg-brand-50 bg-brand-100 bg-brand-600 bg-brand-700 bg-brand-800 text-brand-600 text-brand-800 border-brand-200 hover:bg-brand-700 active:bg-brand-800 focus-visible:ring-brand-600");
 
 /* ── Base ────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
