@@ -56,6 +56,7 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
       iva_condition: form.get('iva_condition'),
       email:         form.get('email') || null,
       phone:         form.get('phone') || null,
+      ...(isEdit ? { is_active: form.get('is_active') === 'on' } : {}),
     }
 
     const url    = isEdit ? `/api/v1/contacts/${contact.id}` : '/api/v1/contacts'
@@ -213,6 +214,18 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
               />
             </FormField>
           </div>
+
+          {isEdit && (
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                name="is_active"
+                defaultChecked={contact?.is_active ?? true}
+                className="w-4 h-4 rounded-sm accent-brand-600 cursor-pointer"
+              />
+              <span className="text-[13px] text-zinc-700">Contacto activo</span>
+            </label>
+          )}
 
           {serverError && (
             <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">

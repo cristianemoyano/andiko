@@ -16,7 +16,9 @@ export const contactSchema = z.object({
   notes:         z.string().nullable().optional(),
 })
 
-export const contactUpdateSchema = contactSchema.partial()
+export const contactUpdateSchema = contactSchema.partial().extend({
+  is_active: z.boolean().optional(),
+})
 
 export const contactQuerySchema = z.object({
   page:   z.coerce.number().int().positive().default(1),

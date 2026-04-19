@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { DataTable, type Column } from '@/components/erp/DataTable'
 import { StatusBadge } from '@/components/primitives/Badge'
@@ -86,6 +87,7 @@ const COLUMNS: Column<Contact>[] = [
 ]
 
 export function ContactosClient() {
+  const router = useRouter()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [total, setTotal]       = useState(0)
   const [page, setPage]         = useState(1)
@@ -131,9 +133,14 @@ export function ContactosClient() {
       key: '_actions',
       header: '',
       render: row => (
-        <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>
-          Editar
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="xs" onClick={() => router.push(`/contactos/${row.id}`)}>
+            Ver
+          </Button>
+          <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>
+            Editar
+          </Button>
+        </div>
       ),
     },
   ]
