@@ -1,4 +1,3 @@
-import 'server-only'
 import { Sequelize } from 'sequelize'
 import { env } from '@/config/env'
 
