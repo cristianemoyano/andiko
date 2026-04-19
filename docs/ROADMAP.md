@@ -20,9 +20,14 @@ Infraestructura base sin lógica de negocio.
 - [x] Variables de entorno y configuración por ambiente (`src/config/env.ts` con Zod)
 - [x] Sistema de migraciones con Umzug (`src/db/migrate.ts`, `pnpm migrate up/down/status`)
 - [x] Tipos base compartidos (`src/types/index.ts`)
-- [ ] Sistema de autenticación (NextAuth o similar)
-- [ ] Roles y permisos básicos (admin, operador, solo lectura)
-- [ ] Logger estructurado
+- [x] Logger estructurado (pino + pino-pretty, `src/lib/logger.ts`)
+- [x] Sistema de autenticación (NextAuth v5, JWT, Credentials provider, `src/lib/auth.ts`)
+- [x] Migración `users` con roles (admin, operator, readonly), soft delete, UUID
+- [x] Middleware de protección de rutas (`src/middleware.ts`)
+- [x] Tipos de sesión extendidos con `role` (`src/types/next-auth.d.ts`)
+- [ ] Roles y permisos a nivel de recurso (guardas por módulo)
+- [ ] Página de login (`/login`)
+- [ ] Página de perfil de usuario
 
 ---
 
