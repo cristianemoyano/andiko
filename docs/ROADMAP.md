@@ -12,7 +12,9 @@ Infraestructura base sin lógica de negocio.
 - [x] Scaffold Next.js 16 + TypeScript + Tailwind
 - [x] pnpm, Vitest, ESLint, commitlint, husky, lint-staged
 - [x] release-it + conventional changelog
-- [x] AGENTS.md + skills de Claude (ship-feature, release)
+- [x] AGENTS.md + skills de Claude (ship-feature, release, setup-tooling)
+- [x] Docker Compose con PostgreSQL 16 + pgAdmin (Colima como engine)
+- [x] Makefile con comandos de entorno local (up, down, reset, shell, dev)
 - [ ] PostgreSQL + Sequelize setup
 - [ ] Estructura de módulos (`src/modules/`)
 - [ ] Sistema de autenticación (NextAuth o similar)
