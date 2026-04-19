@@ -9,7 +9,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({ className, error, ...p
   <input
     ref={ref}
     className={cn(
-      'flex h-9 w-full rounded-md border bg-white px-3 py-1 text-sm shadow-sm transition-colors',
+      'flex h-9 w-full rounded-md border bg-white px-3 py-1 text-sm text-gray-900 shadow-sm transition-colors',
       'placeholder:text-gray-400',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
       'disabled:cursor-not-allowed disabled:opacity-50 read-only:bg-gray-50',
