@@ -67,14 +67,25 @@ pnpm test
 ```
 All must pass. Fix failures before continuing.
 
-### 7. Stage files
+### 7. Update ROADMAP.md
+
+Read `docs/ROADMAP.md` and update it to reflect what was just built:
+
+- Mark completed tasks as `- [x]` in the corresponding phase.
+- If the feature introduced something not listed, add it as a new `- [x]` item under the right phase.
+- If the feature revealed work that's still needed, add it as `- [ ]` under the same phase.
+- Do not rewrite descriptions or restructure phases — only update checkboxes and add missing items.
+
+Always include `docs/ROADMAP.md` in the commit if it was modified.
+
+### 8. Stage files
 ```bash
 git diff --stat        # review what changed
 git add <specific files>
 ```
 Never `git add .` blindly. Exclude: `.env*`, debug files, unrelated changes.
 
-### 8. Commit (Conventional Commits)
+### 9. Commit (Conventional Commits)
 
 Format: `<type>(<scope>): <short description>`
 
@@ -95,12 +106,12 @@ git commit -m "feat(sales): add invoice creation with IVA 21% breakdown"
 
 If husky/lint-staged hooks fail → fix the reported issue and retry. Never `--no-verify`.
 
-### 9. Push
+### 10. Push
 ```bash
 git push -u origin feature/<slug>
 ```
 
-### 10. Open PR → develop
+### 11. Open PR → develop
 ```bash
 gh pr create \
   --base develop \
@@ -123,7 +134,7 @@ EOF
 )"
 ```
 
-### 11. Report
+### 12. Report
 Print the PR URL and a one-line summary of what was shipped.
 
 ---
