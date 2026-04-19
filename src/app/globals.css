@@ -1,26 +1,57 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* ── Andiko brand tokens ─────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Teal — Andiko identity */
+  --color-brand-50:  #EEF8FA;
+  --color-brand-100: #D0EEF3;
+  --color-brand-200: #A2DCE7;
+  --color-brand-300: #5FC0D3;
+  --color-brand-400: #2DA3BC;
+  --color-brand-500: #158799;
+  --color-brand-600: #0C647A;
+  --color-brand-700: #0A5268;
+  --color-brand-800: #083F52;
+  --color-brand-900: #052C3A;
+
+  /* Zinc neutrals */
+  --color-zinc-50:  #FAFAFA;
+  --color-zinc-100: #F4F4F5;
+  --color-zinc-200: #E4E4E7;
+  --color-zinc-300: #D4D4D8;
+  --color-zinc-400: #A1A1AA;
+  --color-zinc-500: #71717A;
+  --color-zinc-600: #52525B;
+  --color-zinc-700: #3F3F46;
+  --color-zinc-800: #27272A;
+  --color-zinc-900: #18181B;
+  --color-zinc-950: #09090B;
+
+  /* Semantic layout */
+  --color-background: #FAFAFA;
+  --color-surface:    #FFFFFF;
+  --color-foreground: #18181B;
+
+  /* Sidebar */
+  --sidebar-width:   220px;
+  --topbar-height:   52px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base ────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans, 'Geist', sans-serif);
+  font-size: 14px;
+  line-height: 1.5;
 }
