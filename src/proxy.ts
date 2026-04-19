@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/api/auth']
 
-export default auth((req) => {
+export const proxy = auth((req) => {
   const isPublic = PUBLIC_PATHS.some((path) => req.nextUrl.pathname.startsWith(path))
   if (!req.auth && !isPublic) {
     return NextResponse.redirect(new URL('/login', req.url))
