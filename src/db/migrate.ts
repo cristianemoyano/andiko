@@ -1,4 +1,5 @@
 import { umzug } from '../lib/migrations'
+import sequelize from '../lib/db'
 
 const command = process.argv[2]
 
@@ -22,7 +23,9 @@ async function run() {
   }
 }
 
-run().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+run()
+  .catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+  .finally(() => sequelize.close())
