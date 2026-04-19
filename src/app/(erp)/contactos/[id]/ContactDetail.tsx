@@ -85,7 +85,7 @@ export function ContactDetail({ contact: initial, addresses }: { contact: Contac
       />
 
       <div className="flex-1 overflow-y-auto p-5">
-        <div className="max-w-2xl flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
 
           {/* Header card */}
           <div className="bg-white border border-zinc-200 rounded p-5 flex items-start justify-between gap-4">

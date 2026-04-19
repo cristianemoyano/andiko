@@ -28,6 +28,7 @@ Infraestructura base sin lógica de negocio.
 - [x] Página de login (`/login`) con design system, error inline, redirect post-auth
 - [x] Route groups: `(auth)/` para páginas públicas, `(erp)/` para páginas protegidas
 - [x] ERP layout base con auth guard (`src/app/(erp)/layout.tsx`)
+- [ ] Modelo base de auditoría (`BaseModel`) con `created_by`, `updated_by`, `deleted_by` (FK a `users`), heredado por todos los modelos de negocio
 - [ ] Roles y permisos a nivel de recurso (guardas por módulo)
 - [ ] Página de perfil de usuario
 
@@ -55,19 +56,19 @@ Ningún componente se usa en producción sin su story.
 - [ ] Select / Combobox (búsqueda, multi-select)
 - [ ] Textarea
 - [ ] Checkbox y Switch
-- [ ] Badge / StatusBadge (para estados de documentos ERP)
+- [x] Badge / StatusBadge (para estados de documentos ERP)
 - [ ] Tooltip
 - [ ] Modal / Dialog (con focus trap)
 - [ ] Dropdown Menu
 
 ### Componentes de layout
-- [ ] PageHeader (título + breadcrumb + acciones)
+- [x] TopBar / PageHeader (breadcrumb + slot de acciones)
 - [ ] Card / Panel
-- [ ] Sidebar (navegación principal)
+- [x] Sidebar (navegación principal, logout, estado activo)
 - [ ] Tabs
 
 ### Componentes ERP-específicos
-- [ ] DataTable (columnas configurables, sorting, paginación, row actions)
+- [x] DataTable (columnas configurables, sorting client-side, row actions)
 - [ ] CurrencyInput (formato ARS, separador de miles, decimales)
 - [ ] DatePicker (formato DD/MM/YYYY, Argentina)
 - [ ] FormField (label + input + mensaje de error — envuelve cualquier control)
@@ -110,7 +111,7 @@ Base de datos de clientes y proveedores. Dependencia de todos los módulos sigui
 - [x] Vista detalle de contacto (`/contactos/[id]`) con secciones de datos fiscales y de contacto
 - [x] Breadcrumb `Contactos › Razón social` con navegación de vuelta al listado
 - [ ] Datos de pago: CBU, alias, banco
-- [ ] Múltiples direcciones por contacto (entrega, fiscal, comercial)
+- [x] Múltiples direcciones por contacto (entrega, fiscal, comercial) con CRUD desde vista detalle
 - [ ] Importación desde CSV
 
 ---
