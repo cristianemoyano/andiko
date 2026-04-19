@@ -101,10 +101,14 @@ Base de datos de clientes y proveedores. Dependencia de todos los módulos sigui
 - [x] API REST: `GET /api/v1/contacts/:id`, `PATCH /api/v1/contacts/:id`, `DELETE /api/v1/contacts/:id`
 - [x] Tests unitarios para `contact.utils.ts` (validateCuit, formatCuit)
 
-### Frontend (pendiente)
-- [ ] Listado de contactos con DataTable (búsqueda, filtros, paginación)
-- [ ] Formulario de creación/edición de contacto
-- [ ] Vista detalle de contacto
+### Frontend
+- [x] TopBar con breadcrumb (componente de layout reutilizable)
+- [x] Listado de contactos con DataTable (búsqueda por nombre/CUIT, filtro por tipo, paginación)
+- [x] Modal crear/editar contacto con validación inline y manejo de errores de API
+- [x] Campo `is_active` editable en modal de edición
+- [x] Eliminación de contacto con confirmación desde el modal de edición
+- [x] Vista detalle de contacto (`/contactos/[id]`) con secciones de datos fiscales y de contacto
+- [x] Breadcrumb `Contactos › Razón social` con navegación de vuelta al listado
 - [ ] Datos de pago: CBU, alias, banco
 - [ ] Múltiples direcciones por contacto (entrega, fiscal, comercial)
 - [ ] Importación desde CSV
