@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { z } from 'zod'
+import { authConfig } from './auth.config'
 import { findUserByEmail, validatePassword } from '@/modules/auth/auth.service'
 import logger from './logger'
 
@@ -10,8 +11,7 @@ const loginSchema = z.object({
 })
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  session: { strategy: 'jwt' },
-  pages: { signIn: '/login' },
+  ...authConfig,
   providers: [
     Credentials({
       async authorize(credentials) {
@@ -32,14 +32,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) token.role = (user as { role: string }).role
-      return token
-    },
-    session({ session, token }) {
-      if (session.user) session.user.role = token.role as string
-      return session
-    },
-  },
 })
