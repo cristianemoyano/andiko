@@ -1,10 +1,13 @@
 @import "tailwindcss";
 
-/* ── Andiko brand tokens ─────────────────────────── */
+/* Font vars come from Next.js font system — must use inline */
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
 
+/* Color & layout tokens — plain @theme so utilities are generated */
+@theme {
   /* Teal — Andiko identity */
   --color-brand-50:  #EEF8FA;
   --color-brand-100: #D0EEF3;
@@ -29,15 +32,6 @@
   --color-zinc-800: #27272A;
   --color-zinc-900: #18181B;
   --color-zinc-950: #09090B;
-
-  /* Semantic layout */
-  --color-background: #FAFAFA;
-  --color-surface:    #FFFFFF;
-  --color-foreground: #18181B;
-
-  /* Sidebar */
-  --sidebar-width:   220px;
-  --topbar-height:   52px;
 }
 
 /* ── Base ────────────────────────────────────────── */
@@ -49,9 +43,9 @@ html {
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans, 'Geist', sans-serif);
+  background: #FAFAFA;
+  color: #18181B;
+  font-family: var(--font-sans, sans-serif);
   font-size: 14px;
   line-height: 1.5;
 }
