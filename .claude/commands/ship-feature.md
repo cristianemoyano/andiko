@@ -30,9 +30,9 @@ If already on a `feature/*` branch, continue. If on `main` or `develop`, create 
 
 ### 3. Verify scripts exist in `package.json`
 Required scripts — add them if missing:
-- `"lint"` → `"next lint"` or `"eslint . --ext .ts,.tsx"`
+- `"lint"` → `"eslint src/"` (not `next lint` — broken in Next.js 16)
 - `"typecheck"` → `"tsc --noEmit"`
-- `"test"` → `"vitest run"`
+- `"test"` → `"vitest run --passWithNoTests"`
 
 Package manager: **pnpm**. Never `npm run` or `yarn`.
 
@@ -145,3 +145,35 @@ Print the PR URL and a one-line summary of what was shipped.
 - **Never skip failing tests.** Fix the code or the test — never both without understanding why.
 - **Never commit secrets, `.env` files, or unintended migration files.**
 - If the feature touches financial flows (invoices, payments, stock), flag it explicitly in the PR body.
+
+---
+
+## Next.js 16 — Patrones obligatorios
+
+Leer `node_modules/next/dist/docs/` antes de escribir código que toque routing, proxy o config.
+
+### Proxy (antes Middleware)
+- El archivo se llama `src/proxy.ts`, no `middleware.ts`.
+- Exportar como `export { auth as proxy }` o `export default function proxy()`. No `export default auth` con nombre distinto.
+- El proxy corre en **Edge runtime**: sin Node.js nativo (`pg`, `sequelize`, `bcryptjs`, `pino`).
+- Si necesitás auth en el proxy, usá un `auth.config.ts` Edge-compatible (sin imports de DB) separado del `auth.ts` completo.
+
+### Bundler — paquetes server-only
+Agregar a `next.config.ts` cualquier paquete Node.js que no debe bundlearse para cliente:
+```typescript
+serverExternalPackages: ['sequelize', 'pg', 'pg-hstore', 'pino', 'pino-pretty']
+```
+Si ves `"Please install pg package manually"` en el browser → falta este config.
+
+### Server-only imports
+Agregar `import 'server-only'` al tope de cualquier módulo que use pino, Sequelize, o secretos,
+para que Next.js falle en build si se importa desde un Client Component.
+
+### Route groups
+- `src/app/(auth)/` → páginas públicas (login, etc.)
+- `src/app/(erp)/` → páginas protegidas, con auth guard en `layout.tsx`
+- Los route groups no afectan la URL.
+
+### Scripts
+- `pnpm lint` → `eslint src/` (no `next lint`, roto en v16)
+- `pnpm migrate` → `tsx --env-file=.env.local src/db/migrate.ts` (tsx no carga `.env.local` solo)
