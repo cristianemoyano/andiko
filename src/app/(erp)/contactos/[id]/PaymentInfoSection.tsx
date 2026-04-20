@@ -13,6 +13,7 @@ export type PaymentInfo = {
   cbu: string | null
   alias: string | null
   account_type: AccountType | null
+  is_default: boolean
 }
 
 const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
@@ -71,6 +72,9 @@ export function PaymentInfoSection({ contactId, initialPaymentInfo }: PaymentInf
                   {item.account_type && (
                     <span className="text-[11px] text-zinc-400">{ACCOUNT_TYPE_LABEL[item.account_type]}</span>
                   )}
+                  {item.is_default && (
+                    <span className="text-[11px] text-zinc-400">Principal</span>
+                  )}
                 </div>
               </div>
               <Button
@@ -121,6 +125,7 @@ function PaymentInfoModal({ contactId, item, onClose, onSaved }: {
       cbu:          form.get('cbu') || null,
       alias:        form.get('alias') || null,
       account_type: form.get('account_type') || null,
+      is_default:   form.get('is_default') === 'on',
     }
 
     const url    = isEdit ? `/api/v1/contacts/${contactId}/payment-info/${item.id}` : `/api/v1/contacts/${contactId}/payment-info`
@@ -182,6 +187,16 @@ function PaymentInfoModal({ contactId, item, onClose, onSaved }: {
                 <option value="savings">Caja de ahorro</option>
               </select>
             </FormField>
+
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                name="is_default"
+                defaultChecked={item?.is_default ?? false}
+                className="w-4 h-4 rounded-sm cursor-pointer"
+              />
+              <span className="text-[13px] text-zinc-700">Dato de pago principal</span>
+            </label>
           </div>
 
           <div className="flex items-center justify-between px-5 py-4 border-t border-zinc-200 bg-zinc-50">

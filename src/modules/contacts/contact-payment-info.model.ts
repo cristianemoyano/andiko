@@ -18,11 +18,12 @@ export interface ContactPaymentInfoAttributes extends Timestamps, AuditFields {
   cbu: string | null
   alias: string | null
   account_type: AccountType | null
+  is_default: boolean
 }
 
 type ContactPaymentInfoCreationAttributes = Optional<
   ContactPaymentInfoAttributes,
-  'id' | 'bank_name' | 'cbu' | 'alias' | 'account_type' |
+  'id' | 'bank_name' | 'cbu' | 'alias' | 'account_type' | 'is_default' |
   'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -33,6 +34,7 @@ class ContactPaymentInfo extends AuditModel<ContactPaymentInfoAttributes, Contac
   declare cbu: string | null
   declare alias: string | null
   declare account_type: AccountType | null
+  declare is_default: boolean
 }
 
 ContactPaymentInfo.init(
@@ -43,12 +45,17 @@ ContactPaymentInfo.init(
     cbu:          { type: DataTypes.STRING(22), unique: true },
     alias:        { type: DataTypes.STRING(100) },
     account_type: { type: DataTypes.STRING(20) },
+    is_default:   { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'contact_payment_info', paranoid: true, underscored: true }
 )
 
-Contact.hasMany(ContactPaymentInfo, { foreignKey: 'contact_id', as: 'payment_info' })
+// Turbopack/HMR re-evaluates this module; ContactPaymentInfo.init() clears only this model's
+// associations, while Contact still holds the prior hasMany — re-registering throws on duplicate alias.
+if (!Object.prototype.hasOwnProperty.call(Contact.associations, 'payment_info')) {
+  Contact.hasMany(ContactPaymentInfo, { foreignKey: 'contact_id', as: 'payment_info' })
+}
 ContactPaymentInfo.belongsTo(Contact, { foreignKey: 'contact_id', as: 'contact' })
 
 export default ContactPaymentInfo

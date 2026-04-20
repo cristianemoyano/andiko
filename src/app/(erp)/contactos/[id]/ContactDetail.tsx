@@ -14,6 +14,9 @@ type Contact = {
   type: 'customer' | 'supplier' | 'both'
   legal_name: string
   trade_name: string | null
+  first_name: string | null
+  last_name: string | null
+  job_title: string | null
   cuit: string | null
   iva_condition: string
   email: string | null
@@ -120,8 +123,11 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
 
           {/* Datos de contacto */}
           <Section title="Datos de contacto">
-            <Row label="Email"    value={contact.email}  empty="—" />
-            <Row label="Teléfono" value={contact.phone}  empty="—" />
+            <Row label="Nombre" value={contact.first_name} empty="—" />
+            <Row label="Apellido" value={contact.last_name} empty="—" />
+            <Row label="Puesto en la empresa" value={contact.job_title} empty="—" />
+            <Row label="Email" value={contact.email} empty="—" />
+            <Row label="Teléfono" value={contact.phone} empty="—" />
           </Section>
 
           {/* Direcciones */}

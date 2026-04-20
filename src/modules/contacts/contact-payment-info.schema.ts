@@ -5,6 +5,7 @@ export const contactPaymentInfoSchema = z.object({
   cbu:          z.string().regex(/^\d{22}$/, 'El CBU debe tener exactamente 22 dígitos').nullable().optional(),
   alias:        z.string().max(100).nullable().optional(),
   account_type: z.enum(['checking', 'savings']).nullable().optional(),
+  is_default:   z.boolean().optional(),
 })
 
 export const contactPaymentInfoUpdateSchema = contactPaymentInfoSchema

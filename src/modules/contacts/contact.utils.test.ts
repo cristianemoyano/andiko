@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateCuit, formatCuit } from './contact.utils'
+import { validateCuit, formatCuit, formatContactPersonLabel } from './contact.utils'
 
 describe('validateCuit', () => {
   it('validates a correct CUIT with dashes', () => {
@@ -38,5 +38,21 @@ describe('formatCuit', () => {
 
   it('returns raw value if not 11 digits after stripping', () => {
     expect(formatCuit('123')).toBe('123')
+  })
+})
+
+describe('formatContactPersonLabel', () => {
+  it('returns null when both empty', () => {
+    expect(formatContactPersonLabel({ first_name: null, last_name: null })).toBe(null)
+    expect(formatContactPersonLabel({ first_name: '', last_name: '' })).toBe(null)
+  })
+
+  it('joins first and last name', () => {
+    expect(formatContactPersonLabel({ first_name: 'Ana', last_name: 'García' })).toBe('Ana García')
+  })
+
+  it('handles single field', () => {
+    expect(formatContactPersonLabel({ first_name: 'Ana', last_name: null })).toBe('Ana')
+    expect(formatContactPersonLabel({ first_name: null, last_name: 'García' })).toBe('García')
   })
 })

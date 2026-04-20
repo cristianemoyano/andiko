@@ -18,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   try {
     const item = await updatePaymentInfo(paymentInfoId, parsed.data, session.user.id!)
-    return NextResponse.json(item)
+    return NextResponse.json(item.toJSON())
   } catch (err) {
     if (err instanceof Error && err.message === 'PAYMENT_INFO_NOT_FOUND') {
       return NextResponse.json({ error: 'Dato de pago no encontrado', code: 'NOT_FOUND' }, { status: 404 })

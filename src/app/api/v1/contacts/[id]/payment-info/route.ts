@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const { id } = await params
   const items = await listPaymentInfo(id)
-  return NextResponse.json(items)
+  return NextResponse.json(items.map((row) => row.toJSON()))
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   try {
     const item = await createPaymentInfo(id, parsed.data, session.user.id!)
-    return NextResponse.json(item, { status: 201 })
+    return NextResponse.json(item.toJSON(), { status: 201 })
   } catch (err) {
     if (err instanceof Error && err.message.includes('unique')) {
       return NextResponse.json({ error: 'El CBU ya está registrado', code: 'DUPLICATE_CBU' }, { status: 409 })
