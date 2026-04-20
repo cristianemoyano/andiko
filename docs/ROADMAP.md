@@ -110,7 +110,7 @@ Base de datos de clientes y proveedores. Dependencia de todos los módulos sigui
 - [x] Eliminación de contacto con confirmación desde el modal de edición
 - [x] Vista detalle de contacto (`/contactos/[id]`) con secciones de datos fiscales y de contacto
 - [x] Breadcrumb `Contactos › Razón social` con navegación de vuelta al listado
-- [ ] Datos de pago: CBU, alias, banco
+- [x] Datos de pago: CBU, alias, banco (CRUD desde vista detalle, validación de 22 dígitos)
 - [x] Múltiples direcciones por contacto (entrega, fiscal, comercial) con CRUD desde vista detalle
 - [ ] Importación desde CSV
 

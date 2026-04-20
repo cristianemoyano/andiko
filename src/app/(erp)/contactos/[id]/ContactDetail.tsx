@@ -6,6 +6,8 @@ import { StatusBadge, Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { ContactModal } from '../ContactModal'
 import { AddressesSection } from './AddressesSection'
+import { PaymentInfoSection } from './PaymentInfoSection'
+import type { PaymentInfo } from './PaymentInfoSection'
 
 type Contact = {
   id: string
@@ -50,7 +52,7 @@ const IVA_LABEL: Record<string, string> = {
   no_responsable:        'No Responsable',
 }
 
-export function ContactDetail({ contact: initial, addresses }: { contact: Contact; addresses: Address[] }) {
+export function ContactDetail({ contact: initial, addresses, paymentInfo }: { contact: Contact; addresses: Address[]; paymentInfo: PaymentInfo[] }) {
   const [contact, setContact] = useState(initial)
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -124,6 +126,9 @@ export function ContactDetail({ contact: initial, addresses }: { contact: Contac
 
           {/* Direcciones */}
           <AddressesSection contactId={contact.id} initialAddresses={addresses} />
+
+          {/* Datos de pago */}
+          <PaymentInfoSection contactId={contact.id} initialPaymentInfo={paymentInfo} />
 
           {/* Notas */}
           {contact.notes && (
