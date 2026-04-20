@@ -145,6 +145,8 @@ Print the PR URL and a one-line summary of what was shipped.
 - **Never skip failing tests.** Fix the code or the test — never both without understanding why.
 - **Never commit secrets, `.env` files, or unintended migration files.**
 - If the feature touches financial flows (invoices, payments, stock), flag it explicitly in the PR body.
+- **No magic strings or numbers.** Status values, document types, tax codes, ENUMs, and other fixed domain values must be defined as TypeScript constants or enum types — never hardcoded inline. Scan the diff for string literals that represent domain concepts and extract them before committing.
+- **Every list endpoint must support pagination.** Any `GET` route that returns an array of resources must accept `page` and `limit` query params and return `{ data, total, page, limit, pages }`. Use `paginationSchema`, `paginate()`, and `toPaginated()` from `src/lib/pagination.ts` — never roll your own offset logic or response shape.
 
 ---
 

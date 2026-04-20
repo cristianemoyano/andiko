@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { validateCuit } from './contact.utils'
+import { paginationSchema } from '@/lib/pagination'
 
 export const contactSchema = z.object({
   type:          z.enum(['customer', 'supplier', 'both']),
@@ -20,9 +21,7 @@ export const contactUpdateSchema = contactSchema.partial().extend({
   is_active: z.boolean().optional(),
 })
 
-export const contactQuerySchema = z.object({
-  page:   z.coerce.number().int().positive().default(1),
-  limit:  z.coerce.number().int().positive().max(100).default(20),
+export const contactQuerySchema = paginationSchema.extend({
   search: z.string().optional(),
   type:   z.enum(['customer', 'supplier', 'both']).optional(),
 })
