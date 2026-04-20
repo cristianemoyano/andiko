@@ -17,3 +17,14 @@ export function formatCuit(raw: string): string {
   if (digits.length !== 11) return raw
   return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits[10]}`
 }
+
+/** Combined given name + family name for the contact person at the organization. */
+export function formatContactPersonLabel(input: {
+  first_name: string | null | undefined
+  last_name: string | null | undefined
+}): string | null {
+  const first = input.first_name?.trim() ?? ''
+  const last = input.last_name?.trim() ?? ''
+  if (!first && !last) return null
+  return [first, last].filter(Boolean).join(' ')
+}

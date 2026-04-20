@@ -98,19 +98,22 @@ Base de datos de clientes y proveedores. Dependencia de todos los módulos sigui
 - [x] Schemas Zod: create, update (partial), query (page/limit/search/type)
 - [x] Service: `listContacts` (paginado, búsqueda por nombre/trade_name/cuit, filtro por tipo)
 - [x] Service: `getContact`, `createContact`, `updateContact`, `deleteContact` (soft delete)
+- [x] Campos de persona de contacto en `contacts` (`first_name`, `last_name`, `job_title`) y búsqueda en listado
+- [x] Dato de pago `is_default` (a lo sumo un principal por contacto: transacción + índice único parcial)
 - [x] API REST: `GET /api/v1/contacts`, `POST /api/v1/contacts`
 - [x] API REST: `GET /api/v1/contacts/:id`, `PATCH /api/v1/contacts/:id`, `DELETE /api/v1/contacts/:id`
-- [x] Tests unitarios para `contact.utils.ts` (validateCuit, formatCuit)
+- [x] Tests unitarios para `contact.utils.ts` (validateCuit, formatCuit, `formatContactPersonLabel`)
 
 ### Frontend
 - [x] TopBar con breadcrumb (componente de layout reutilizable)
 - [x] Listado de contactos con DataTable (búsqueda por nombre/CUIT, filtro por tipo, paginación)
+- [x] Columna y formulario: persona de contacto (nombre, apellido, puesto)
 - [x] Modal crear/editar contacto con validación inline y manejo de errores de API
 - [x] Campo `is_active` editable en modal de edición
 - [x] Eliminación de contacto con confirmación desde el modal de edición
 - [x] Vista detalle de contacto (`/contactos/[id]`) con secciones de datos fiscales y de contacto
 - [x] Breadcrumb `Contactos › Razón social` con navegación de vuelta al listado
-- [ ] Datos de pago: CBU, alias, banco
+- [x] Datos de pago: CBU, alias, banco (CRUD desde vista detalle, validación de 22 dígitos, dato principal)
 - [x] Múltiples direcciones por contacto (entrega, fiscal, comercial) con CRUD desde vista detalle
 - [ ] Importación desde CSV
 

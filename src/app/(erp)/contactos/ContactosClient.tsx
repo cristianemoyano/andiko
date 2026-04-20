@@ -7,12 +7,16 @@ import { DataTable, type Column } from '@/components/erp/DataTable'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { ContactModal } from './ContactModal'
+import { formatContactPersonLabel } from '@/modules/contacts/contact.utils'
 
 type Contact = {
   id: string
   type: 'customer' | 'supplier' | 'both'
   legal_name: string
   trade_name: string | null
+  first_name: string | null
+  last_name: string | null
+  job_title: string | null
   cuit: string | null
   iva_condition: string
   email: string | null
@@ -50,6 +54,22 @@ const COLUMNS: Column<Contact>[] = [
     header: 'Nombre comercial',
     sortable: true,
     render: row => row.trade_name ?? <span className="text-zinc-400">—</span>,
+  },
+  {
+    key: 'contact_person',
+    header: 'Persona de contacto',
+    render: row => {
+      const name = formatContactPersonLabel(row)
+      if (!name && !row.job_title) return <span className="text-zinc-400">—</span>
+      if (name && !row.job_title) return <span className="text-[13px] text-zinc-800">{name}</span>
+      if (!name && row.job_title) return <span className="text-[13px] text-zinc-800">{row.job_title}</span>
+      return (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[13px] text-zinc-800">{name}</span>
+          <span className="text-[11px] text-zinc-500">{row.job_title}</span>
+        </div>
+      )
+    },
   },
   {
     key: 'cuit',
@@ -170,7 +190,7 @@ export function ContactosClient() {
                 </svg>
                 <input
                   className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-52 bg-white focus:outline-none focus:border-blue-500"
-                  placeholder="Buscar por nombre o CUIT…"
+                  placeholder="Buscar por razón social, persona, puesto o CUIT…"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1) }}
                 />

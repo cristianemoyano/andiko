@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getContact } from '@/modules/contacts/contacts.service'
 import { listAddresses } from '@/modules/contacts/contact-address.service'
+import { listPaymentInfo } from '@/modules/contacts/contact-payment-info.service'
 import { ContactDetail } from './ContactDetail'
 
 type Props = { params: Promise<{ id: string }> }
@@ -28,12 +29,14 @@ export default async function ContactPage({ params }: Props) {
   const { id } = await params
   let contact: Parameters<typeof ContactDetail>[0]['contact']
   let addresses: Parameters<typeof ContactDetail>[0]['addresses']
+  let paymentInfo: Parameters<typeof ContactDetail>[0]['paymentInfo']
   try {
-    const [c, addrs] = await Promise.all([getContact(id), listAddresses(id)])
-    contact = serializeDates(c.toJSON() as unknown as Record<string, unknown>) as unknown as typeof contact
-    addresses = addrs.map(a => serializeDates(a.toJSON() as unknown as Record<string, unknown>)) as unknown as typeof addresses
+    const [c, addrs, pinfo] = await Promise.all([getContact(id), listAddresses(id), listPaymentInfo(id)])
+    contact     = serializeDates(c.toJSON() as unknown as Record<string, unknown>) as unknown as typeof contact
+    addresses   = addrs.map(a => serializeDates(a.toJSON() as unknown as Record<string, unknown>)) as unknown as typeof addresses
+    paymentInfo = pinfo.map(p => serializeDates(p.toJSON() as unknown as Record<string, unknown>)) as unknown as typeof paymentInfo
   } catch {
     notFound()
   }
-  return <ContactDetail contact={contact} addresses={addresses} />
+  return <ContactDetail contact={contact} addresses={addresses} paymentInfo={paymentInfo} />
 }

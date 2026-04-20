@@ -16,6 +16,9 @@ export async function listContacts(query: ContactQuery) {
     where[Op.or as unknown as string] = [
       { legal_name: { [Op.iLike]: `%${search}%` } },
       { trade_name: { [Op.iLike]: `%${search}%` } },
+      { first_name: { [Op.iLike]: `%${search}%` } },
+      { last_name: { [Op.iLike]: `%${search}%` } },
+      { job_title: { [Op.iLike]: `%${search}%` } },
       { cuit: { [Op.iLike]: `%${search}%` } },
     ]
   }
@@ -25,7 +28,10 @@ export async function listContacts(query: ContactQuery) {
     limit,
     offset,
     order: [['legal_name', 'ASC']],
-    attributes: ['id', 'type', 'legal_name', 'trade_name', 'cuit', 'iva_condition', 'email', 'phone', 'is_active'],
+    attributes: [
+      'id', 'type', 'legal_name', 'trade_name', 'first_name', 'last_name', 'job_title',
+      'cuit', 'iva_condition', 'email', 'phone', 'is_active',
+    ],
   })
 
   return toPaginated(rows, count, page, limit)

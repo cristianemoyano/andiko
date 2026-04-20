@@ -11,6 +11,9 @@ type Contact = {
   type: 'customer' | 'supplier' | 'both'
   legal_name: string
   trade_name: string | null
+  first_name: string | null
+  last_name: string | null
+  job_title: string | null
   cuit: string | null
   iva_condition: string
   email: string | null
@@ -52,6 +55,9 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
       type:          form.get('type'),
       legal_name:    form.get('legal_name'),
       trade_name:    form.get('trade_name') || null,
+      first_name:    form.get('first_name') || null,
+      last_name:     form.get('last_name') || null,
+      job_title:     form.get('job_title') || null,
       cuit:          form.get('cuit') || null,
       iva_condition: form.get('iva_condition'),
       email:         form.get('email') || null,
@@ -175,6 +181,42 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
               defaultValue={contact?.trade_name ?? ''}
               placeholder="Opcional"
               error={!!errors.trade_name}
+              disabled={saving}
+            />
+          </FormField>
+
+          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Persona de contacto</p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Nombre" htmlFor="first_name" error={errors.first_name?.[0]}>
+              <Input
+                id="first_name"
+                name="first_name"
+                defaultValue={contact?.first_name ?? ''}
+                placeholder="Opcional"
+                error={!!errors.first_name}
+                disabled={saving}
+              />
+            </FormField>
+            <FormField label="Apellido" htmlFor="last_name" error={errors.last_name?.[0]}>
+              <Input
+                id="last_name"
+                name="last_name"
+                defaultValue={contact?.last_name ?? ''}
+                placeholder="Opcional"
+                error={!!errors.last_name}
+                disabled={saving}
+              />
+            </FormField>
+          </div>
+
+          <FormField label="Puesto en la empresa" htmlFor="job_title" error={errors.job_title?.[0]}>
+            <Input
+              id="job_title"
+              name="job_title"
+              defaultValue={contact?.job_title ?? ''}
+              placeholder="Ej: Compras, Administración"
+              error={!!errors.job_title}
               disabled={saving}
             />
           </FormField>

@@ -11,6 +11,9 @@ export interface ContactAttributes extends Timestamps, AuditFields {
   type: ContactType
   legal_name: string
   trade_name: string | null
+  first_name: string | null
+  last_name: string | null
+  job_title: string | null
   cuit: string | null
   iva_condition: IvaCondition
   email: string | null
@@ -21,7 +24,7 @@ export interface ContactAttributes extends Timestamps, AuditFields {
 
 type ContactCreationAttributes = Optional<
   ContactAttributes,
-  'id' | 'trade_name' | 'cuit' | 'email' | 'phone' | 'notes' | 'is_active' |
+  'id' | 'trade_name' | 'first_name' | 'last_name' | 'job_title' | 'cuit' | 'email' | 'phone' | 'notes' | 'is_active' |
   'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -30,6 +33,9 @@ class Contact extends AuditModel<ContactAttributes, ContactCreationAttributes> {
   declare type: ContactType
   declare legal_name: string
   declare trade_name: string | null
+  declare first_name: string | null
+  declare last_name: string | null
+  declare job_title: string | null
   declare cuit: string | null
   declare iva_condition: IvaCondition
   declare email: string | null
@@ -44,6 +50,9 @@ Contact.init(
     type:          { type: DataTypes.ENUM('customer', 'supplier', 'both'), allowNull: false },
     legal_name:    { type: DataTypes.STRING(255), allowNull: false },
     trade_name:    { type: DataTypes.STRING(255) },
+    first_name:    { type: DataTypes.STRING(100) },
+    last_name:     { type: DataTypes.STRING(100) },
+    job_title:     { type: DataTypes.STRING(120) },
     cuit:          { type: DataTypes.STRING(13), unique: true },
     iva_condition: { type: DataTypes.ENUM('responsable_inscripto', 'monotributista', 'consumidor_final', 'exento', 'no_responsable'), allowNull: false },
     email:         { type: DataTypes.STRING(255) },
