@@ -25,6 +25,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
 
-  const address = await createAddress(id, parsed.data)
+  const address = await createAddress(id, parsed.data, session.user.id!)
   return NextResponse.json(address, { status: 201 })
 }

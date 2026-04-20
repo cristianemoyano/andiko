@@ -1,11 +1,12 @@
-import { Model, DataTypes, Optional } from 'sequelize'
+import { DataTypes, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
-import type { UUID, Timestamps } from '@/types'
+import { AuditModel, auditColumnDefs } from '@/lib/base-model'
+import type { UUID, Timestamps, AuditFields } from '@/types'
 
 export type ContactType = 'customer' | 'supplier' | 'both'
 export type IvaCondition = 'responsable_inscripto' | 'monotributista' | 'consumidor_final' | 'exento' | 'no_responsable'
 
-export interface ContactAttributes extends Timestamps {
+export interface ContactAttributes extends Timestamps, AuditFields {
   id: UUID
   type: ContactType
   legal_name: string
@@ -18,9 +19,13 @@ export interface ContactAttributes extends Timestamps {
   is_active: boolean
 }
 
-type ContactCreationAttributes = Optional<ContactAttributes, 'id' | 'trade_name' | 'cuit' | 'email' | 'phone' | 'notes' | 'is_active' | 'created_at' | 'updated_at' | 'deleted_at'>
+type ContactCreationAttributes = Optional<
+  ContactAttributes,
+  'id' | 'trade_name' | 'cuit' | 'email' | 'phone' | 'notes' | 'is_active' |
+  'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
+>
 
-class Contact extends Model<ContactAttributes, ContactCreationAttributes> {
+class Contact extends AuditModel<ContactAttributes, ContactCreationAttributes> {
   declare id: UUID
   declare type: ContactType
   declare legal_name: string
@@ -31,9 +36,6 @@ class Contact extends Model<ContactAttributes, ContactCreationAttributes> {
   declare phone: string | null
   declare notes: string | null
   declare is_active: boolean
-  declare created_at: Date
-  declare updated_at: Date
-  declare deleted_at: Date | null
 }
 
 Contact.init(
@@ -48,9 +50,7 @@ Contact.init(
     phone:         { type: DataTypes.STRING(50) },
     notes:         { type: DataTypes.TEXT },
     is_active:     { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
-    created_at:    { type: DataTypes.DATE, allowNull: false },
-    updated_at:    { type: DataTypes.DATE, allowNull: false },
-    deleted_at:    { type: DataTypes.DATE },
+    ...auditColumnDefs,
   },
   { sequelize, tableName: 'contacts', paranoid: true, underscored: true }
 )

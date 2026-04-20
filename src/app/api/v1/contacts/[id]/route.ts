@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   try {
-    const contact = await updateContact(id, parsed.data)
+    const contact = await updateContact(id, parsed.data, session.user.id!)
     return NextResponse.json(contact)
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'CONTACT_NOT_FOUND') {
@@ -46,7 +46,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   const { id } = await params
   try {
-    await deleteContact(id)
+    await deleteContact(id, session.user.id!)
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'CONTACT_NOT_FOUND') {

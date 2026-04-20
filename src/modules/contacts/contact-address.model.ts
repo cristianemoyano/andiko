@@ -1,11 +1,12 @@
-import { Model, DataTypes, Optional } from 'sequelize'
+import { DataTypes, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
-import type { UUID } from '@/types'
+import { AuditModel, auditColumnDefs } from '@/lib/base-model'
+import type { UUID, Timestamps, AuditFields } from '@/types'
 import Contact from './contact.model'
 
 export type AddressType = 'fiscal' | 'delivery' | 'commercial'
 
-export interface ContactAddressAttributes {
+export interface ContactAddressAttributes extends Timestamps, AuditFields {
   id: UUID
   contact_id: UUID
   type: AddressType
@@ -18,17 +19,15 @@ export interface ContactAddressAttributes {
   postal_code: string | null
   country: string
   is_default: boolean
-  created_at: Date
-  updated_at: Date
-  deleted_at: Date | null
 }
 
 type ContactAddressCreationAttributes = Optional<
   ContactAddressAttributes,
-  'id' | 'number' | 'floor' | 'apartment' | 'postal_code' | 'country' | 'is_default' | 'created_at' | 'updated_at' | 'deleted_at'
+  'id' | 'number' | 'floor' | 'apartment' | 'postal_code' | 'country' | 'is_default' |
+  'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
-class ContactAddress extends Model<ContactAddressAttributes, ContactAddressCreationAttributes> {
+class ContactAddress extends AuditModel<ContactAddressAttributes, ContactAddressCreationAttributes> {
   declare id: UUID
   declare contact_id: UUID
   declare type: AddressType
@@ -41,9 +40,6 @@ class ContactAddress extends Model<ContactAddressAttributes, ContactAddressCreat
   declare postal_code: string | null
   declare country: string
   declare is_default: boolean
-  declare created_at: Date
-  declare updated_at: Date
-  declare deleted_at: Date | null
 }
 
 ContactAddress.init(
@@ -60,9 +56,7 @@ ContactAddress.init(
     postal_code: { type: DataTypes.STRING(10) },
     country:     { type: DataTypes.STRING(100), allowNull: false, defaultValue: 'Argentina' },
     is_default:  { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
-    created_at:  { type: DataTypes.DATE, allowNull: false },
-    updated_at:  { type: DataTypes.DATE, allowNull: false },
-    deleted_at:  { type: DataTypes.DATE },
+    ...auditColumnDefs,
   },
   { sequelize, tableName: 'contact_addresses', paranoid: true, underscored: true }
 )

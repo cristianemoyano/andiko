@@ -36,31 +36,31 @@ export async function getContact(id: string) {
   return contact
 }
 
-export async function createContact(input: ContactInput) {
-  const data = {
+export async function createContact(input: ContactInput, actorId: string) {
+  const contact = await Contact.create({
     ...input,
     cuit: input.cuit ? formatCuit(input.cuit) : null,
-  }
-
-  const contact = await Contact.create(data)
-  logger.info({ contactId: contact.id }, 'contact created')
+    created_by: actorId,
+    updated_by: actorId,
+  })
+  logger.info({ contactId: contact.id, actorId }, 'contact created')
   return contact
 }
 
-export async function updateContact(id: string, input: ContactUpdateInput) {
+export async function updateContact(id: string, input: ContactUpdateInput, actorId: string) {
   const contact = await getContact(id)
-
   await contact.update({
     ...input,
     ...(input.cuit ? { cuit: formatCuit(input.cuit) } : {}),
+    updated_by: actorId,
   })
-
-  logger.info({ contactId: id }, 'contact updated')
+  logger.info({ contactId: id, actorId }, 'contact updated')
   return contact
 }
 
-export async function deleteContact(id: string) {
+export async function deleteContact(id: string, actorId: string) {
   const contact = await getContact(id)
+  await contact.update({ deleted_by: actorId })
   await contact.destroy()
-  logger.info({ contactId: id }, 'contact soft-deleted')
+  logger.info({ contactId: id, actorId }, 'contact soft-deleted')
 }

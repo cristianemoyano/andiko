@@ -17,7 +17,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   try {
-    const address = await updateAddress(addressId, parsed.data)
+    const address = await updateAddress(addressId, parsed.data, session.user.id!)
     return NextResponse.json(address)
   } catch (err) {
     if (err instanceof Error && err.message === 'ADDRESS_NOT_FOUND') {
@@ -33,7 +33,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   const { addressId } = await params
   try {
-    await deleteAddress(addressId)
+    await deleteAddress(addressId, session.user.id!)
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     if (err instanceof Error && err.message === 'ADDRESS_NOT_FOUND') {

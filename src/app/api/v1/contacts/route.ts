@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const contact = await createContact(parsed.data)
+    const contact = await createContact(parsed.data, session.user.id!)
     return NextResponse.json(contact, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof Error && err.message.includes('unique')) {

@@ -6,6 +6,12 @@ export type Timestamps = {
   deleted_at: Date | null
 }
 
+export type AuditFields = {
+  created_by: UUID | null
+  updated_by: UUID | null
+  deleted_by: UUID | null
+}
+
 export type ApiResponse<T> = {
   data: T
   meta?: {
