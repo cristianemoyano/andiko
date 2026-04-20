@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
+import { useState } from 'react'
 import { DataTable } from './DataTable'
+import { TablePagination } from './TablePagination'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 
@@ -98,4 +100,25 @@ export const Empty: Story = {
       emptyMessage="No se encontraron facturas."
     />
   ),
+}
+
+function DataTableWithPagination() {
+  const [page, setPage] = useState(1)
+  const pageSize = 2
+  const total = SAMPLE_DATA.length
+  const slice = SAMPLE_DATA.slice((page - 1) * pageSize, page * pageSize)
+  return (
+    <DataTable
+      columns={COLUMNS}
+      data={slice}
+      keyExtractor={r => r.id}
+      toolbar={<span className="text-[12px] text-zinc-500">Ejemplo: {total} filas, {pageSize} por página</span>}
+      footer={<TablePagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />}
+    />
+  )
+}
+
+export const WithPaginationFooter: Story = {
+  name: 'Con paginación en footer',
+  render: () => <DataTableWithPagination />,
 }
