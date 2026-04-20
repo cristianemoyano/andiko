@@ -3,11 +3,12 @@ import { Op } from 'sequelize'
 import Contact from './contact.model'
 import type { ContactInput, ContactUpdateInput, ContactQuery } from './contact.schema'
 import { formatCuit } from './contact.utils'
+import { paginate, toPaginated } from '@/lib/pagination'
 import logger from '@/lib/logger'
 
 export async function listContacts(query: ContactQuery) {
   const { page, limit, search, type } = query
-  const offset = (page - 1) * limit
+  const { offset } = paginate(page, limit)
 
   const where: Record<string, unknown> = {}
   if (type) where.type = type
@@ -27,7 +28,7 @@ export async function listContacts(query: ContactQuery) {
     attributes: ['id', 'type', 'legal_name', 'trade_name', 'cuit', 'iva_condition', 'email', 'phone', 'is_active'],
   })
 
-  return { data: rows, total: count, page, limit }
+  return toPaginated(rows, count, page, limit)
 }
 
 export async function getContact(id: string) {
