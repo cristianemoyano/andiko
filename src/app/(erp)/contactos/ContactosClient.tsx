@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
-import { DataTable, type Column } from '@/components/erp/DataTable'
+import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { ContactModal } from './ContactModal'
@@ -31,6 +31,8 @@ const TYPE_LABEL: Record<string, string> = {
   supplier: 'Proveedor',
   both:     'Ambos',
 }
+
+const PAGE_SIZE = 20
 
 const IVA_LABEL: Record<string, string> = {
   responsable_inscripto: 'Resp. Inscripto',
@@ -120,7 +122,7 @@ export function ContactosClient() {
   useEffect(() => {
     const params = new URLSearchParams({
       page: String(page),
-      limit: '20',
+      limit: String(PAGE_SIZE),
       ...(search     ? { search }     : {}),
       ...(typeFilter ? { type: typeFilter } : {}),
     })
@@ -129,6 +131,8 @@ export function ContactosClient() {
       .then(data => {
         setContacts(data.data)
         setTotal(data.total)
+        const pages = Math.max(1, Math.ceil(data.total / PAGE_SIZE))
+        setPage(p => (p > pages ? pages : p))
       })
   }, [page, search, typeFilter, refresh])
 
@@ -212,16 +216,13 @@ export function ContactosClient() {
             </>
           }
           footer={
-            total > 20 ? (
-              <div className="flex items-center gap-3">
-                <Button variant="secondary" size="xs" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
-                  ← Anterior
-                </Button>
-                <span className="text-[12px] text-zinc-500">Pág. {page} de {Math.ceil(total / 20)}</span>
-                <Button variant="secondary" size="xs" disabled={page >= Math.ceil(total / 20)} onClick={() => setPage(p => p + 1)}>
-                  Siguiente →
-                </Button>
-              </div>
+            total > 0 ? (
+              <TablePagination
+                page={page}
+                pageSize={PAGE_SIZE}
+                total={total}
+                onPageChange={setPage}
+              />
             ) : undefined
           }
         />

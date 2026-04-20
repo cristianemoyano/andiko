@@ -69,6 +69,7 @@ Ningún componente se usa en producción sin su story.
 
 ### Componentes ERP-específicos
 - [x] DataTable (columnas configurables, sorting client-side, row actions)
+- [x] TablePagination (anterior / siguiente y página actual, para tablas con datos paginados)
 - [ ] CurrencyInput (formato ARS, separador de miles, decimales)
 - [ ] DatePicker (formato DD/MM/YYYY, Argentina)
 - [ ] FormField (label + input + mensaje de error — envuelve cualquier control)
