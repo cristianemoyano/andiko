@@ -140,13 +140,15 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
 
       {/* User area */}
       <div className="flex items-center gap-2.5 px-3 py-3 border-t border-zinc-200">
-        <div className="w-[26px] h-[26px] rounded-full bg-brand-100 text-brand-800 text-[11px] font-semibold flex items-center justify-center flex-shrink-0">
-          {initials}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium text-zinc-900 truncate">{userName ?? '—'}</div>
-          <div className="text-[11px] text-zinc-400 truncate">{userRole ?? ''}</div>
-        </div>
+        <Link href="/perfil" className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity">
+          <div className="w-[26px] h-[26px] rounded-full bg-brand-100 text-brand-800 text-[11px] font-semibold flex items-center justify-center flex-shrink-0">
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-zinc-900 truncate">{userName ?? '—'}</div>
+            <div className="text-[11px] text-zinc-400 truncate">{userRole ?? ''}</div>
+          </div>
+        </Link>
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           title="Cerrar sesión"
