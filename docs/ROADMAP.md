@@ -138,6 +138,7 @@ Productos y servicios. Requisito mínimo para facturar.
 - [x] Listas de precios (múltiples listas por cliente/canal)
 - [x] Historial de precios
 - [ ] Ajustes masivos de precios (por categoría / % / canal) y reglas
+- [ ] Datos de logística / shipping por SKU (peso, dimensiones, bultos/presentaciones)
 
 ---
 
