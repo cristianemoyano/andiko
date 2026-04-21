@@ -1,12 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withPermission } from '@/lib/api-handler'
 import { contactSchema, contactQuerySchema } from '@/modules/contacts/contact.schema'
 import { listContacts, createContact } from '@/modules/contacts/contacts.service'
 
-export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
+export const GET = withPermission('contacts:read', async (req) => {
   const parsed = contactQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
@@ -14,12 +11,9 @@ export async function GET(req: NextRequest) {
 
   const result = await listContacts(parsed.data)
   return NextResponse.json(result)
-}
+})
 
-export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
+export const POST = withPermission('contacts:write', async (req, _ctx, session) => {
   const body = await req.json()
   const parsed = contactSchema.safeParse(body)
   if (!parsed.success) {
@@ -35,4 +29,4 @@ export async function POST(req: NextRequest) {
     }
     throw err
   }
-}
+})

@@ -28,7 +28,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         logger.info({ userId: user.id, email: user.email }, 'user logged in')
-        return { id: user.id, email: user.email, name: user.name, role: user.role }
+        return { id: user.id, email: user.email, name: user.name, role: user.role, org_id: user.org_id, branch_id: user.branch_id }
       },
     }),
   ],

@@ -28,8 +28,12 @@ Infraestructura base sin lógica de negocio.
 - [x] Página de login (`/login`) con design system, error inline, redirect post-auth
 - [x] Route groups: `(auth)/` para páginas públicas, `(erp)/` para páginas protegidas
 - [x] ERP layout base con auth guard (`src/app/(erp)/layout.tsx`)
-- [ ] Modelo base de auditoría (`BaseModel`) con `created_by`, `updated_by`, `deleted_by` (FK a `users`), heredado por todos los modelos de negocio
-- [ ] Roles y permisos a nivel de recurso (guardas por módulo)
+- [x] Modelo base de auditoría (`AuditModel`) con `created_by`, `updated_by`, `deleted_by` (FK a `users`), heredado por todos los modelos de negocio
+- [x] Multi-tenant foundation: tablas `organizations` + `branches`, `org_id` en `AuditModel` y tablas de contactos, `branch_id` en `users`
+- [x] Roles y permisos DB-backed: tablas `permissions` + `role_permissions`, defaults globales, override por organización, `sys-admin` bypass
+- [x] `withPermission()` wrapper para route handlers (reemplaza boilerplate de auth manual en los 6 endpoints de contactos)
+- [x] `src/lib/permissions.ts` con `can()`, `requirePermission()`, `ForbiddenError`, deduplicación con React `cache()`
+- [x] Sesión extendida: `role`, `orgId`, `branchId` en JWT y session callbacks
 - [ ] Página de perfil de usuario
 
 ---

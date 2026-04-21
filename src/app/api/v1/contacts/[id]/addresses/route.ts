@@ -1,24 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withPermission } from '@/lib/api-handler'
 import { contactAddressSchema } from '@/modules/contacts/contact-address.schema'
 import { listAddresses, createAddress } from '@/modules/contacts/contact-address.service'
 
-type Params = { params: Promise<{ id: string }> }
+type P = { id: string }
 
-export async function GET(_req: NextRequest, { params }: Params) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
-  const { id } = await params
+export const GET = withPermission<P>('contacts:read', async (_req, ctx) => {
+  const { id } = await ctx.params
   const addresses = await listAddresses(id)
   return NextResponse.json(addresses)
-}
+})
 
-export async function POST(req: NextRequest, { params }: Params) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
-  const { id } = await params
+export const POST = withPermission<P>('contacts:write', async (req, ctx, session) => {
+  const { id } = await ctx.params
   const body = await req.json()
   const parsed = contactAddressSchema.safeParse(body)
   if (!parsed.success) {
@@ -27,4 +21,4 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const address = await createAddress(id, parsed.data, session.user.id!)
   return NextResponse.json(address, { status: 201 })
-}
+})

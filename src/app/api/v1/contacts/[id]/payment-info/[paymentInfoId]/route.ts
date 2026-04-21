@@ -1,15 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withPermission } from '@/lib/api-handler'
 import { contactPaymentInfoUpdateSchema } from '@/modules/contacts/contact-payment-info.schema'
 import { updatePaymentInfo, deletePaymentInfo } from '@/modules/contacts/contact-payment-info.service'
 
-type Params = { params: Promise<{ id: string; paymentInfoId: string }> }
+type P = { id: string; paymentInfoId: string }
 
-export async function PATCH(req: NextRequest, { params }: Params) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
-  const { paymentInfoId } = await params
+export const PATCH = withPermission<P>('contacts:write', async (req, ctx, session) => {
+  const { paymentInfoId } = await ctx.params
   const body = await req.json()
   const parsed = contactPaymentInfoUpdateSchema.safeParse(body)
   if (!parsed.success) {
@@ -28,13 +25,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
     throw err
   }
-}
+})
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
-  const { paymentInfoId } = await params
+export const DELETE = withPermission<P>('contacts:delete', async (_req, ctx, session) => {
+  const { paymentInfoId } = await ctx.params
   try {
     await deletePaymentInfo(paymentInfoId, session.user.id!)
     return new NextResponse(null, { status: 204 })
@@ -44,4 +38,4 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     }
     throw err
   }
-}
+})
