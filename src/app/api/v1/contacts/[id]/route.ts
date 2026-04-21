@@ -1,28 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withPermission } from '@/lib/api-handler'
 import { contactUpdateSchema } from '@/modules/contacts/contact.schema'
 import { getContact, updateContact, deleteContact } from '@/modules/contacts/contacts.service'
 
-type Params = { params: Promise<{ id: string }> }
+type P = { id: string }
 
-export async function GET(_req: NextRequest, { params }: Params) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
-  const { id } = await params
+export const GET = withPermission<P>('contacts:read', async (_req, ctx) => {
+  const { id } = await ctx.params
   try {
     const contact = await getContact(id)
     return NextResponse.json(contact)
   } catch {
     return NextResponse.json({ error: 'Contacto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
   }
-}
+})
 
-export async function PATCH(req: NextRequest, { params }: Params) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
-  const { id } = await params
+export const PATCH = withPermission<P>('contacts:write', async (req, ctx, session) => {
+  const { id } = await ctx.params
   const body = await req.json()
   const parsed = contactUpdateSchema.safeParse(body)
   if (!parsed.success) {
@@ -38,13 +32,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
     throw err
   }
-}
+})
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
-  const { id } = await params
+export const DELETE = withPermission<P>('contacts:delete', async (_req, ctx, session) => {
+  const { id } = await ctx.params
   try {
     await deleteContact(id, session.user.id!)
     return new NextResponse(null, { status: 204 })
@@ -54,4 +45,4 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     }
     throw err
   }
-}
+})

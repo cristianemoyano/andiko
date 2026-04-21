@@ -1,3 +1,4 @@
+export type { UserRole } from './roles'
 export type UUID = string
 
 export type Timestamps = {
@@ -10,6 +11,7 @@ export type AuditFields = {
   created_by: UUID | null
   updated_by: UUID | null
   deleted_by: UUID | null
+  org_id:     UUID | null
 }
 
 export type ApiError = {

@@ -1,8 +1,10 @@
 import { Model, DataTypes } from 'sequelize'
 import type { Timestamps, AuditFields, UUID } from '@/types'
 
+export type OrgScoped = { org_id: UUID | null }
+
 export abstract class AuditModel<
-  TAttr extends Timestamps & AuditFields,
+  TAttr extends Timestamps & AuditFields & OrgScoped,
   TCreate extends Record<string, unknown>,
 > extends Model<TAttr, TCreate> {
   declare created_at: Date
@@ -11,6 +13,7 @@ export abstract class AuditModel<
   declare created_by: UUID | null
   declare updated_by: UUID | null
   declare deleted_by: UUID | null
+  declare org_id: UUID | null
 }
 
 export const auditColumnDefs = {
@@ -20,4 +23,5 @@ export const auditColumnDefs = {
   created_by: { type: DataTypes.UUID },
   updated_by: { type: DataTypes.UUID },
   deleted_by: { type: DataTypes.UUID },
+  org_id:     { type: DataTypes.UUID },
 } as const

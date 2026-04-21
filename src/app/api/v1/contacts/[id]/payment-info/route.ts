@@ -1,24 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withPermission } from '@/lib/api-handler'
 import { contactPaymentInfoSchema } from '@/modules/contacts/contact-payment-info.schema'
 import { listPaymentInfo, createPaymentInfo } from '@/modules/contacts/contact-payment-info.service'
 
-type Params = { params: Promise<{ id: string }> }
+type P = { id: string }
 
-export async function GET(_req: NextRequest, { params }: Params) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
-  const { id } = await params
+export const GET = withPermission<P>('contacts:read', async (_req, ctx) => {
+  const { id } = await ctx.params
   const items = await listPaymentInfo(id)
   return NextResponse.json(items.map((row) => row.toJSON()))
-}
+})
 
-export async function POST(req: NextRequest, { params }: Params) {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-
-  const { id } = await params
+export const POST = withPermission<P>('contacts:write', async (req, ctx, session) => {
+  const { id } = await ctx.params
   const body = await req.json()
   const parsed = contactPaymentInfoSchema.safeParse(body)
   if (!parsed.success) {
@@ -34,4 +28,4 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
     throw err
   }
-}
+})
