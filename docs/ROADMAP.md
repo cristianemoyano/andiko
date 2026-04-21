@@ -130,13 +130,15 @@ Productos y servicios. Requisito mínimo para facturar.
 
 **Entidades:** `products`, `product_categories`, `price_lists`, `price_list_items`
 
-- [ ] ABM de productos y servicios
-- [ ] Categorías y subcategorías
-- [ ] Unidades de medida (kg, unidad, hora, etc.)
-- [ ] Código interno y código de barras
-- [ ] Alícuota IVA por producto (0%, 10.5%, 21%, 27%)
-- [ ] Listas de precios (múltiples listas por cliente/canal)
-- [ ] Historial de precios
+- [x] ABM de productos y servicios
+- [x] Categorías y subcategorías
+- [x] Unidades de medida (kg, unidad, hora, etc.)
+- [x] Código interno y código de barras
+- [x] Alícuota IVA por producto (0%, 10.5%, 21%, 27%)
+- [x] Listas de precios (múltiples listas por cliente/canal)
+- [x] Historial de precios
+- [ ] Ajustes masivos de precios (por categoría / % / canal) y reglas
+- [ ] Datos de logística / shipping por SKU (peso, dimensiones, bultos/presentaciones)
 
 ---
 

@@ -16,6 +16,7 @@ interface DataTableProps<T> {
   columns: Column<T>[]
   data: T[]
   keyExtractor: (row: T) => string
+  onRowClick?: (row: T) => void
   toolbar?: React.ReactNode
   footer?: React.ReactNode
   emptyMessage?: string
@@ -28,6 +29,7 @@ export function DataTable<T extends Record<string, unknown>>({
   columns,
   data,
   keyExtractor,
+  onRowClick,
   toolbar,
   footer,
   emptyMessage = 'Sin registros.',
@@ -106,7 +108,20 @@ export function DataTable<T extends Record<string, unknown>>({
               sorted.map(row => (
                 <tr
                   key={keyExtractor(row)}
-                  className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50 transition-colors"
+                  onClick={
+                    onRowClick
+                      ? (e) => {
+                          const target = e.target as HTMLElement | null
+                          const interactive = target?.closest('button, a, input, select, textarea, [role="button"], [data-stop-row-click]')
+                          if (interactive) return
+                          onRowClick(row)
+                        }
+                      : undefined
+                  }
+                  className={cn(
+                    'border-b border-zinc-100 last:border-0 hover:bg-zinc-50 transition-colors',
+                    onRowClick && 'cursor-pointer'
+                  )}
                 >
                   {columns.map(col => (
                     <td
