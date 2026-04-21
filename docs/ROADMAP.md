@@ -34,7 +34,7 @@ Infraestructura base sin lógica de negocio.
 - [x] `withPermission()` wrapper para route handlers (reemplaza boilerplate de auth manual en los 6 endpoints de contactos)
 - [x] `src/lib/permissions.ts` con `can()`, `requirePermission()`, `ForbiddenError`, deduplicación con React `cache()`
 - [x] Sesión extendida: `role`, `orgId`, `branchId` en JWT y session callbacks
-- [ ] Página de perfil de usuario
+- [x] Página de perfil de usuario (`/perfil`): nombre, email, rol, org, sucursal; avatar clickeable en Sidebar
 
 ---
 
