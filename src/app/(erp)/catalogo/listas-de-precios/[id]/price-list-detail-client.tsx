@@ -1,0 +1,285 @@
+'use client'
+
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { DataTable, type Column } from '@/components/erp'
+import { Badge } from '@/components/primitives/Badge'
+import { Button } from '@/components/primitives/Button'
+import { FormField } from '@/components/primitives/FormField'
+import { Input } from '@/components/primitives/Input'
+
+type PriceList = {
+  id: string
+  name: string
+  description: string | null
+  is_default: boolean
+  is_active: boolean
+}
+
+type Variant = {
+  id: string
+  sku: string
+  name: string | null
+  base_price: string | null
+  product_id: string
+}
+
+type PriceListItem = {
+  id: string
+  price: string
+  valid_from: string
+  variant: Variant
+}
+
+type ProductRow = {
+  id: string
+  name: string
+  vendor: string | null
+  variants: Array<{
+    id: string
+    sku: string
+    base_price: string | null
+  }>
+}
+
+const ITEMS_COLUMNS: Column<PriceListItem>[] = [
+  {
+    key: 'sku',
+    header: 'SKU',
+    render: row => <span className="font-mono text-xs">{row.variant?.sku ?? '—'}</span>,
+  },
+  {
+    key: 'name',
+    header: 'Variante',
+    render: row => row.variant?.name ?? <span className="text-zinc-400">—</span>,
+  },
+  {
+    key: 'price',
+    header: 'Precio',
+    align: 'right',
+    render: row => (
+      <span className="tabular-nums">
+        ${Number(row.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+      </span>
+    ),
+  },
+  {
+    key: 'valid_from',
+    header: 'Vigencia',
+    render: row => new Date(row.valid_from).toLocaleDateString('es-AR'),
+  },
+  {
+    key: 'actions',
+    header: '',
+    align: 'right',
+    render: row => <RemoveItemButton priceListItemId={row.id} />,
+  },
+]
+
+function RemoveItemButton({ priceListItemId }: { priceListItemId: string }) {
+  const [removing, setRemoving] = useState(false)
+
+  async function handleRemove() {
+    setRemoving(true)
+    await fetch(`/api/v1/catalog/price-lists/${encodeURIComponent(priceListIdFromPath())}/items/${priceListItemId}`, { method: 'DELETE' })
+    location.reload()
+  }
+
+  return (
+    <Button size="sm" variant="secondary" disabled={removing} onClick={handleRemove}>
+      {removing ? 'Quitando…' : 'Quitar'}
+    </Button>
+  )
+}
+
+function priceListIdFromPath(): string {
+  const parts = location.pathname.split('/').filter(Boolean)
+  return parts[parts.length - 1] ?? ''
+}
+
+export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
+  const [items, setItems] = useState<PriceListItem[]>([])
+  const [loadingItems, setLoadingItems] = useState(true)
+
+  const [skuQuery, setSkuQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [results, setResults] = useState<ProductRow[]>([])
+
+  const [selectedVariantId, setSelectedVariantId] = useState<string>('')
+  const [price, setPrice] = useState<string>('')
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const searchAbortRef = useRef<AbortController | null>(null)
+
+  const variants = useMemo(() => (
+    results
+      .flatMap(p => p.variants.map(v => ({ productName: p.name, vendor: p.vendor, ...v })))
+      .filter(v => v.sku)
+  ), [results])
+
+  const variantBySku = useMemo(() => {
+    const map = new Map<string, { id: string; productName: string; vendor: string | null }>()
+    for (const v of variants) map.set(v.sku, { id: v.id, productName: v.productName, vendor: v.vendor })
+    return map
+  }, [variants])
+
+  async function safeJson(res: Response): Promise<unknown | null> {
+    const text = await res.text()
+    if (!text) return null
+    try { return JSON.parse(text) } catch { return { error: text } }
+  }
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      setLoadingItems(true)
+      const res = await fetch(`/api/v1/catalog/price-lists/${priceList.id}/items`)
+      const data = await safeJson(res)
+      if (mounted) setItems(Array.isArray(data) ? (data as PriceListItem[]) : [])
+      if (mounted) setLoadingItems(false)
+    })()
+    return () => { mounted = false }
+  }, [priceList.id])
+
+  useEffect(() => {
+    const q = skuQuery.trim()
+    if (!q) return
+
+    const t = setTimeout(async () => {
+      searchAbortRef.current?.abort()
+      const abort = new AbortController()
+      searchAbortRef.current = abort
+      setSearching(true)
+      setFormError(null)
+
+      const params = new URLSearchParams({ page: '1', limit: '20', search: q })
+      const res = await fetch(`/api/v1/catalog/products?${params}`, { signal: abort.signal })
+      const data = await safeJson(res)
+      const payload = data as { data?: ProductRow[] } | null
+      setResults(Array.isArray(payload?.data) ? payload!.data : [])
+      setSearching(false)
+    }, 250)
+
+    return () => clearTimeout(t)
+  }, [skuQuery])
+
+  async function handleSetPrice(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    setFormError(null)
+
+    const res = await fetch(`/api/v1/catalog/price-lists/${priceList.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_variant_id: selectedVariantId, price }),
+    })
+    const data = await safeJson(res)
+    if (!res.ok) {
+      const payload = data as { error?: string } | null
+      setFormError(payload?.error ?? 'Error inesperado')
+      setSaving(false)
+      return
+    }
+
+    setPrice('')
+    setSelectedVariantId('')
+    // Reload list
+    setLoadingItems(true)
+    const reload = await fetch(`/api/v1/catalog/price-lists/${priceList.id}/items`)
+    const reloadData = await safeJson(reload)
+    setItems(Array.isArray(reloadData) ? (reloadData as PriceListItem[]) : [])
+    setLoadingItems(false)
+    setSaving(false)
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="bg-white border border-zinc-200 rounded-sm p-5 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-semibold text-zinc-900 truncate">{priceList.name}</h1>
+            {priceList.is_default && <Badge status="info">Predeterminada</Badge>}
+            <Badge status={priceList.is_active ? 'success' : 'neutral'}>
+              {priceList.is_active ? 'Activa' : 'Inactiva'}
+            </Badge>
+          </div>
+          {priceList.description && <p className="text-xs text-zinc-500 mt-1">{priceList.description}</p>}
+        </div>
+      </div>
+
+      <div className="bg-white border border-zinc-200 rounded-sm p-5">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div>
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Cargar / actualizar precio</p>
+            <p className="text-xs text-zinc-400 mt-1">Tipeá un SKU (o nombre/proveedor) y seleccioná una sugerencia.</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSetPrice} className="grid grid-cols-3 gap-3 mt-4 items-end">
+          <div className="col-span-2">
+            <FormField label="SKU" htmlFor="pl_sku">
+              <Input
+                id="pl_sku"
+                placeholder={searching ? 'Buscando…' : 'Ej: RES-A4-500'}
+                value={skuQuery}
+                onChange={(e) => {
+                  const v = e.target.value.toUpperCase()
+                  setSkuQuery(v)
+                  if (!v) {
+                    setResults([])
+                    setSelectedVariantId('')
+                    setSearching(false)
+                    searchAbortRef.current?.abort()
+                    searchAbortRef.current = null
+                    return
+                  }
+                  const hit = variantBySku.get(v)
+                  setSelectedVariantId(hit?.id ?? '')
+                }}
+                list="pl_sku_list"
+              />
+            </FormField>
+            <datalist id="pl_sku_list">
+              {variants.map(v => (
+                <option key={v.id} value={v.sku}>
+                  {v.productName}{v.vendor ? ` (${v.vendor})` : ''}
+                </option>
+              ))}
+            </datalist>
+          </div>
+          <div>
+            <FormField label="Precio" htmlFor="pl_price" error={formError ?? undefined}>
+              <Input
+                id="pl_price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                error={!!formError}
+                placeholder="0.00"
+              />
+            </FormField>
+          </div>
+          <div className="col-span-3 flex justify-end">
+            <Button size="sm" type="submit" disabled={saving || !selectedVariantId || !price}>
+              {saving ? 'Guardando…' : 'Guardar precio'}
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Precios cargados</p>
+        </div>
+        <DataTable
+          columns={ITEMS_COLUMNS}
+          data={loadingItems ? [] : items}
+          keyExtractor={(row) => row.id}
+          emptyMessage={loadingItems ? 'Cargando…' : 'No hay precios cargados para esta lista.'}
+        />
+      </div>
+    </div>
+  )
+}
+

@@ -78,6 +78,37 @@ const NAV_MODULES: NavItem[] = [
       </svg>
     ),
   },
+  {
+    id: 'catalogo',
+    label: 'Catálogo',
+    href: '/catalogo',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <rect x="1" y="2" width="14" height="3" rx="0.5"/><rect x="1" y="7" width="14" height="3" rx="0.5"/><rect x="1" y="12" width="14" height="2" rx="0.5"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'categorias',
+    label: 'Categorías',
+    href: '/catalogo/categorias',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'listas-de-precios',
+    label: 'Listas de precios',
+    href: '/catalogo/listas-de-precios',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <path d="M4 2h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/>
+        <path d="M5 5h6M5 8h6M5 11h4"/>
+      </svg>
+    ),
+  },
 ]
 
 const NAV_SYSTEM: NavItem[] = [
