@@ -58,11 +58,11 @@ Ningún componente se usa en producción sin su story.
 - [x] Input (estados: error, disabled, readonly)
 - [x] FormField (label + control + mensaje de error, Radix Label)
 - [ ] Select / Combobox (búsqueda, multi-select)
-- [ ] Textarea
+- [x] Textarea
 - [ ] Checkbox y Switch
 - [x] Badge / StatusBadge (para estados de documentos ERP)
 - [ ] Tooltip
-- [ ] Modal / Dialog (con focus trap)
+- [x] Modal / Dialog (con focus trap, Radix Dialog)
 - [ ] Dropdown Menu
 
 ### Componentes de layout
@@ -74,13 +74,13 @@ Ningún componente se usa en producción sin su story.
 ### Componentes ERP-específicos
 - [x] DataTable (columnas configurables, sorting client-side, row actions)
 - [x] TablePagination (anterior / siguiente y página actual, para tablas con datos paginados)
-- [ ] CurrencyInput (formato ARS, separador de miles, decimales)
-- [ ] DatePicker (formato DD/MM/YYYY, Argentina)
-- [ ] FormField (label + input + mensaje de error — envuelve cualquier control)
-- [ ] SearchableSelect (para seleccionar contactos, productos en formularios)
-- [ ] TotalsFooter (subtotal / IVA / total en formularios de factura)
-- [ ] EmptyState (pantalla vacía con acción primaria)
-- [ ] ConfirmDialog (para acciones destructivas)
+- [x] CurrencyInput (formato ARS: `$ 1.234,56`, edición en coma decimal, `Decimal.js`-safe)
+- [x] DateInput (formato DD/MM/YYYY, automask, parse/format UTC)
+- [x] SearchableSelect (estático y async con debounce 300ms, Radix Popover, sublabel)
+- [x] TotalsFooter (subtotal / IVA desglosado por alícuota / total)
+- [x] EmptyState (pantalla vacía con acción primaria e ícono configurable)
+- [x] ConfirmDialog (danger/warning, loading state, Radix Dialog)
+- [x] FormField (label + input + mensaje de error — envuelve cualquier control)
 
 ### Principios del design system
 - Accesibilidad primero: todos los componentes deben ser navegables por teclado y compatibles con lectores de pantalla.
