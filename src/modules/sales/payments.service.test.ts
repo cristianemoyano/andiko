@@ -28,7 +28,9 @@ import Invoice from './invoice.model'
 import { createPayment } from './payments.service'
 
 const mockInvoice = (status = 'issued') => ({
-  id: 'inv-1', status,
+  id: 'inv-1',
+  status,
+  branch_id: 'branch-1',
 })
 
 beforeEach(() => vi.clearAllMocks())
@@ -74,5 +76,22 @@ describe('createPayment', () => {
   it('throws INVOICE_ALREADY_PAID for fully paid invoices', async () => {
     ;(Invoice.findByPk as Mock).mockResolvedValue(mockInvoice('paid'))
     await expect(createPayment(input, 'org-1', 'actor-1')).rejects.toThrow('INVOICE_ALREADY_PAID')
+  })
+
+  it('throws INVOICE_BRANCH_REQUIRED when invoice has no branch', async () => {
+    ;(Invoice.findByPk as Mock).mockResolvedValue({ ...mockInvoice('issued'), branch_id: null })
+    await expect(createPayment(input, 'org-1', 'actor-1')).rejects.toThrow('INVOICE_BRANCH_REQUIRED')
+  })
+
+  it('sets payment branch_id from invoice', async () => {
+    ;(Invoice.findByPk as Mock).mockResolvedValue(mockInvoice('issued'))
+    ;(Payment.create as Mock).mockResolvedValue({ id: 'pay-1' })
+
+    await createPayment(input, 'org-1', 'actor-1')
+
+    expect(Payment.create).toHaveBeenCalledWith(
+      expect.objectContaining({ branch_id: 'branch-1' }),
+      expect.anything(),
+    )
   })
 })

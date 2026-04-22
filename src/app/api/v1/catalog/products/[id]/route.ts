@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
+import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { productUpdateSchema } from '@/modules/catalog/product.schema'
 import { getProduct, updateProduct, deleteProduct } from '@/modules/catalog/products.service'
 
@@ -8,7 +9,8 @@ type P = { id: string }
 export const GET = withPermission<P>('products:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const product = await getProduct(id, session.user.orgId)
+    const ctxTenant = await makeTenantContext(session.user)
+    const product = await getProduct(id, ctxTenant)
     return NextResponse.json(product)
   } catch {
     return NextResponse.json({ error: 'Producto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
@@ -23,9 +25,13 @@ export const PATCH = withPermission<P>('products:write', async (req, ctx, sessio
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const product = await updateProduct(id, parsed.data, session.user.id!, session.user.orgId)
+    const ctxTenant = await makeTenantContext(session.user)
+    const product = await updateProduct(id, parsed.data, session.user.id!, ctxTenant)
     return NextResponse.json(product)
   } catch (err) {
+    if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
+      return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
+    }
     if (err instanceof Error && err.message === 'PRODUCT_NOT_FOUND') {
       return NextResponse.json({ error: 'Producto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
     }
@@ -39,9 +45,13 @@ export const PATCH = withPermission<P>('products:write', async (req, ctx, sessio
 export const DELETE = withPermission<P>('products:delete', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    await deleteProduct(id, session.user.id!, session.user.orgId)
+    const ctxTenant = await makeTenantContext(session.user)
+    await deleteProduct(id, session.user.id!, ctxTenant)
     return new NextResponse(null, { status: 204 })
   } catch (err) {
+    if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
+      return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
+    }
     if (err instanceof Error && err.message === 'PRODUCT_NOT_FOUND') {
       return NextResponse.json({ error: 'Producto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
     }

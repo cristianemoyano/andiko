@@ -4,7 +4,10 @@ import User from './user.model'
 import logger from '@/lib/logger'
 
 export async function findUserByEmail(email: string) {
-  return User.findOne({ where: { email, is_active: true }, attributes: ['id', 'email', 'name', 'role', 'password_hash'] })
+  return User.findOne({
+    where: { email, is_active: true },
+    attributes: ['id', 'email', 'name', 'role', 'password_hash', 'org_id', 'branch_id'],
+  })
 }
 
 export async function validatePassword(plaintext: string, hash: string) {

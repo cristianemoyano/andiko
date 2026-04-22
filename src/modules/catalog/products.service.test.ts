@@ -44,7 +44,10 @@ describe('catalog/products.service', () => {
 
     const { listProducts } = await import('./products.service')
 
-    await listProducts({ page: 1, limit: 20, search: 'RESM' }, null)
+    await listProducts(
+      { page: 1, limit: 20, search: 'RESM' },
+      { orgId: 'o1', userId: 'u1', defaultBranchId: null, allowedBranchIds: [] }
+    )
 
     expect(productFindAndCountAll).toHaveBeenCalledTimes(1)
     const arg = productFindAndCountAll.mock.calls[0]![0]
@@ -75,7 +78,7 @@ describe('catalog/products.service', () => {
         // omit manage_stock + stock_quantity
       } as unknown as ProductInput,
       'u1' as unknown as string,
-      null
+      { orgId: 'o1', userId: 'u1', defaultBranchId: null, allowedBranchIds: [] }
     )
 
     expect(variantCreate).toHaveBeenCalledTimes(1)
@@ -97,7 +100,7 @@ describe('catalog/products.service', () => {
         stock_quantity: 12,
       } as unknown as ProductInput,
       'u1' as unknown as string,
-      null
+      { orgId: 'o1', userId: 'u1', defaultBranchId: null, allowedBranchIds: [] }
     )
 
     const payload = variantCreate.mock.calls[0]![0]

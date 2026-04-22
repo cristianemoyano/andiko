@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
+import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { contactPaymentInfoUpdateSchema } from '@/modules/contacts/contact-payment-info.schema'
 import { updatePaymentInfo, deletePaymentInfo } from '@/modules/contacts/contact-payment-info.service'
 
@@ -14,9 +15,13 @@ export const PATCH = withPermission<P>('contacts:write', async (req, ctx, sessio
   }
 
   try {
-    const item = await updatePaymentInfo(paymentInfoId, parsed.data, session.user.id!)
+    const ctxTenant = await makeTenantContext(session.user)
+    const item = await updatePaymentInfo(paymentInfoId, parsed.data, ctxTenant, session.user.id!)
     return NextResponse.json(item.toJSON())
   } catch (err) {
+    if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
+      return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
+    }
     if (err instanceof Error && err.message === 'PAYMENT_INFO_NOT_FOUND') {
       return NextResponse.json({ error: 'Dato de pago no encontrado', code: 'NOT_FOUND' }, { status: 404 })
     }
@@ -30,9 +35,13 @@ export const PATCH = withPermission<P>('contacts:write', async (req, ctx, sessio
 export const DELETE = withPermission<P>('contacts:delete', async (_req, ctx, session) => {
   const { paymentInfoId } = await ctx.params
   try {
-    await deletePaymentInfo(paymentInfoId, session.user.id!)
+    const ctxTenant = await makeTenantContext(session.user)
+    await deletePaymentInfo(paymentInfoId, ctxTenant, session.user.id!)
     return new NextResponse(null, { status: 204 })
   } catch (err) {
+    if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
+      return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
+    }
     if (err instanceof Error && err.message === 'PAYMENT_INFO_NOT_FOUND') {
       return NextResponse.json({ error: 'Dato de pago no encontrado', code: 'NOT_FOUND' }, { status: 404 })
     }

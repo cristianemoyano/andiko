@@ -9,16 +9,14 @@ import { paginate, toPaginated } from '@/lib/pagination'
 import logger from '@/lib/logger'
 import type { ProductInput, ProductUpdateInput, ProductQuery } from './product.schema'
 import type { UUID } from '@/types'
+import type { TenantContext } from '@/lib/tenancy'
+import { whereOrg } from '@/lib/tenancy'
 
-function orgWhere(orgId: string | null) {
-  return { org_id: orgId ?? null }
-}
-
-export async function listProducts(query: ProductQuery, orgId: string | null) {
+export async function listProducts(query: ProductQuery, ctx: TenantContext) {
   const { page, limit, search, category_id, status, product_type } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = { ...orgWhere(orgId) }
+  const where: Record<string, unknown> = whereOrg(ctx)
   if (status)       where.status       = status
   if (product_type) where.product_type = product_type
   if (category_id)  where.category_id  = category_id
@@ -61,9 +59,9 @@ export async function listProducts(query: ProductQuery, orgId: string | null) {
   return toPaginated(rows, count, page, limit)
 }
 
-export async function getProduct(id: UUID, orgId: string | null) {
+export async function getProduct(id: UUID, ctx: TenantContext) {
   const product = await Product.findOne({
-    where: { id, ...orgWhere(orgId) },
+    where: whereOrg(ctx, { id }),
     include: [
       { model: ProductVariant, as: 'variants', attributes: { exclude: ['created_by', 'updated_by', 'deleted_by'] } },
       { model: ProductCategory, as: 'category', required: false, attributes: ['id', 'name'] },
@@ -73,21 +71,21 @@ export async function getProduct(id: UUID, orgId: string | null) {
   return product
 }
 
-export async function createProduct(input: ProductInput, actorId: UUID, orgId: string | null) {
+export async function createProduct(input: ProductInput, actorId: UUID, ctx: TenantContext) {
   const { sku, barcode, cost_price, base_price, manage_stock, stock_quantity, ...productData } = input
 
   return sequelize.transaction(async (t) => {
     const slug = generateSlug(productData.name)
 
     const product = await Product.create(
-      { ...productData, slug, org_id: orgId ?? null, created_by: actorId, updated_by: actorId },
+      { ...productData, slug, org_id: ctx.orgId, created_by: actorId, updated_by: actorId },
       { transaction: t }
     )
 
     await ProductVariant.create(
       {
         product_id:     product.id,
-        org_id:         orgId ?? null,
+        org_id:         ctx.orgId,
         sku:            formatSku(sku),
         barcode:        barcode ?? null,
         is_default:     true,
@@ -106,8 +104,8 @@ export async function createProduct(input: ProductInput, actorId: UUID, orgId: s
   })
 }
 
-export async function updateProduct(id: UUID, input: ProductUpdateInput, actorId: UUID, orgId: string | null) {
-  const product = await getProduct(id, orgId)
+export async function updateProduct(id: UUID, input: ProductUpdateInput, actorId: UUID, ctx: TenantContext) {
+  const product = await getProduct(id, ctx)
 
   const { sku, barcode, cost_price, base_price, stock_quantity, manage_stock, ...productData } = input
 
@@ -131,20 +129,20 @@ export async function updateProduct(id: UUID, input: ProductUpdateInput, actorId
     if (Object.keys(variantUpdates).length > 0) {
       await ProductVariant.update(
         { ...variantUpdates, updated_by: actorId },
-        { where: { product_id: id, is_default: true, ...orgWhere(orgId) }, transaction: t }
+        { where: { product_id: id, is_default: true, org_id: ctx.orgId }, transaction: t }
       )
     }
   })
 
   logger.info({ productId: id, actorId }, 'product updated')
-  return getProduct(id, orgId)
+  return getProduct(id, ctx)
 }
 
-export async function deleteProduct(id: UUID, actorId: UUID, orgId: string | null) {
-  const product = await getProduct(id, orgId)
+export async function deleteProduct(id: UUID, actorId: UUID, ctx: TenantContext) {
+  const product = await getProduct(id, ctx)
   await sequelize.transaction(async (t) => {
-    await ProductVariant.update({ deleted_by: actorId }, { where: { product_id: id, ...orgWhere(orgId) }, transaction: t })
-    await ProductVariant.destroy({ where: { product_id: id, ...orgWhere(orgId) }, transaction: t })
+    await ProductVariant.update({ deleted_by: actorId }, { where: { product_id: id, org_id: ctx.orgId }, transaction: t })
+    await ProductVariant.destroy({ where: { product_id: id, org_id: ctx.orgId }, transaction: t })
     await product.update({ deleted_by: actorId }, { transaction: t })
     await product.destroy({ transaction: t })
   })

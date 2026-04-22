@@ -35,6 +35,8 @@ Infraestructura base sin lógica de negocio.
 - [x] `src/lib/permissions.ts` con `can()`, `requirePermission()`, `ForbiddenError`, deduplicación con React `cache()`
 - [x] Sesión extendida: `role`, `orgId`, `branchId` en JWT y session callbacks
 - [x] Página de perfil de usuario (`/perfil`): nombre, email, rol, org, sucursal; avatar clickeable en Sidebar
+- [ ] UX: componente global de error de API (banner/toast) + helper `fetchJson` para evitar duplicar manejo de errores en cada pantalla
+- [ ] Dev tooling: comandos de seed/clear idempotentes creciendo con el sistema (incluye permisos, catálogo, ventas, tenancy)
 
 ---
 
@@ -142,6 +144,28 @@ Productos y servicios. Requisito mínimo para facturar.
 
 ---
 
+## Multitenancy & Tenancy Admin (en curso)
+
+Trabajo transversal para garantizar aislamiento fuerte por `org_id` y `branch_id`, y un panel sys-admin para administrar organizaciones/sucursales/usuarios.
+
+- [ ] Extender `organizations` con campos fiscales mínimos + Zod + UI sys-admin
+- [ ] Extender `branches` con campos operativos (dirección estructurada, horarios, pos_number) + UI sys-admin
+- [ ] Crear `organization_settings` (enabled_modules/features/customizations) + API sys-admin + lectura en layout/sidebar + guards por módulo/feature
+- [ ] Reutilizar `BranchSelectField` en módulos branch-scoped y asegurar default + restricción por usuario en todos los formularios relevantes
+- [ ] Suite de tests multitenant (no-cross-tenant) + permisos de sucursal (`user_branches`) para endpoints clave
+
+### Pendientes derivados del plan multitenant org+branch
+
+- [ ] Enforcements DB: completar checklist de tablas branch-scoped y asegurar índices/uniques *scoped* (`UNIQUE(org_id, ...)` / `UNIQUE(org_id, branch_id, ...)`) en todas las entidades relevantes
+- [ ] Consistencia `org_id`↔`branch_id`: estandarizar estrategia (FK compuesta `(branch_id, org_id)` → `branches(id, org_id)` vs trigger) y aplicarla a todas las tablas branch-scoped
+- [ ] Policy de lecturas: enforzar `user_branches` también en lecturas (no solo en writes) para todos los módulos branch-scoped
+- [ ] Panel sys-admin: gestión de branches y usuarios con asignación de branches (`user_branches`) y branch default (`users.branch_id`)
+- [ ] Wrapper tenancy: adopción gradual por módulo (ventas, catálogo, contactos, y futuros inventory/purchases/accounting) sin hacks y sin depender de `resolveOrgIdForMutation`
+- [ ] Plan de validación/rollout: migraciones por pasos (nullable + backfill → NOT NULL → constraints) con tests “no cross tenant”
+- [ ] Definir mapa base vs premium (ej. `accounting` premium; `inventory` premium por features) e integrarlo con `organization_settings`
+
+---
+
 ## Fase 3 — Ventas
 
 Flujo principal de negocio: presupuesto → pedido → factura → cobro.
@@ -168,11 +192,11 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] Tests unitarios: `calcLineItem`, `calcDocumentTotals`, `issueInvoice`, `cancelInvoice`, `createPayment` (48 assertions)
 
 ### Frontend
-- [ ] Presupuestos con vigencia y estado
-- [ ] Conversión presupuesto → pedido → factura en un flujo (UI)
-- [ ] Descuentos por ítem y por documento (UI)
-- [ ] Registro de cobros parciales y totales (UI)
-- [ ] Estados de factura: borrador, emitida, cobrada, anulada (UI)
+- [x] Presupuestos con vigencia y estado (listado + detalle + modal)
+- [x] Conversión presupuesto → pedido → factura en un flujo (UI en detalle + navegación entre secciones)
+- [x] Descuentos por ítem (modales de líneas; descuento a nivel documento según backend en totales)
+- [x] Registro de cobros parciales y totales (UI en detalle de factura + listado de cobros)
+- [x] Estados de factura: borrador, emitida, cobrada, anulada (UI listado + emitir / anular / cobros en detalle)
 - [ ] Notas de crédito internas
 - [ ] Listado de cuentas corrientes por cliente
 - [ ] Reportes: ventas por período, por cliente, por producto

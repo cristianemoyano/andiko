@@ -8,14 +8,19 @@ import SalesQuoteItem from './sales-quote-item.model'
 import SalesOrder from './sales-order.model'
 import SalesOrderItem from './sales-order-item.model'
 import type { SalesQuoteInput, SalesQuoteUpdateInput, SalesQuoteQuery } from './sales-quote.schema'
+import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
+import type { TenantContext } from '@/lib/tenancy'
+import { whereAllowedBranches, whereBranch } from '@/lib/tenancy'
 
-export async function listQuotes(query: SalesQuoteQuery) {
+export async function listQuotes(query: SalesQuoteQuery, ctx: TenantContext) {
+  ensureSalesBranchAssociations()
+  const { default: Branch } = await import('@/modules/auth/branch.model')
   const { page, limit, search, status, contact_id } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = {}
+  const where: Record<string, unknown> = whereAllowedBranches(ctx)
   if (status)     where.status     = status
   if (contact_id) where.contact_id = contact_id
   if (search) {
@@ -30,37 +35,51 @@ export async function listQuotes(query: SalesQuoteQuery) {
     offset,
     order: [['created_at', 'DESC']],
     attributes: [
-      'id', 'quote_number', 'status', 'contact_id', 'valid_until',
+      'id', 'branch_id', 'quote_number', 'status', 'contact_id', 'valid_until',
       'payment_condition', 'currency', 'subtotal', 'tax_amount', 'total',
       'notes', 'created_at',
     ],
+    include: [{ model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] }],
   })
 
   return toPaginated(rows, count, page, limit)
 }
 
-export async function getQuote(id: string) {
+export async function getQuote(id: string, ctx: TenantContext) {
+  ensureSalesBranchAssociations()
+  const { default: Branch } = await import('@/modules/auth/branch.model')
   const quote = await SalesQuote.findByPk(id, {
-    include: [{ model: SalesQuoteItem, as: 'items', order: [['sort_order', 'ASC']] }],
+    include: [
+      { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: SalesQuoteItem, as: 'items', order: [['sort_order', 'ASC']] },
+    ],
   })
   if (!quote) throw new Error('QUOTE_NOT_FOUND')
+  // Enforce tenant+branch visibility
+  if (quote.org_id !== ctx.orgId) throw new Error('QUOTE_NOT_FOUND')
+  if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(quote.branch_id as string)) {
+    throw new Error('QUOTE_NOT_FOUND')
+  }
   return quote
 }
 
-export async function createQuote(input: SalesQuoteInput, orgId: string, actorId: string) {
+export async function createQuote(input: SalesQuoteInput, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const quote_number = await nextDocumentNumber(orgId, 'quote', t)
+    const { items, branch_id, ...quoteFields } = input
+    void whereBranch(ctx, branch_id)
+    const quote_number = await nextDocumentNumber(ctx.orgId, branch_id, 'quote', t)
 
-    const itemTotals = input.items.map(item =>
+    const itemTotals = items.map(item =>
       calcLineItem(item.quantity, item.unit_price, item.discount_pct ?? 0, (item.iva_rate ?? '21') as IvaRate)
     )
     const docTotals = calcDocumentTotals(itemTotals)
 
     const quote = await SalesQuote.create(
       {
-        ...input,
+        ...quoteFields,
+        branch_id,
         quote_number,
-        org_id:     orgId,
+        org_id:     ctx.orgId,
         created_by: actorId,
         updated_by: actorId,
         ...docTotals,
@@ -69,9 +88,9 @@ export async function createQuote(input: SalesQuoteInput, orgId: string, actorId
     )
 
     await SalesQuoteItem.bulkCreate(
-      input.items.map((item, idx) => ({
+      items.map((item, idx) => ({
         quote_id:   quote.id,
-        org_id:     orgId,
+        org_id:     ctx.orgId,
         product_id: item.product_id ?? null,
         description: item.description,
         quantity:   String(item.quantity),
@@ -86,15 +105,18 @@ export async function createQuote(input: SalesQuoteInput, orgId: string, actorId
       { transaction: t },
     )
 
-    logger.info({ quoteId: quote.id, quote_number, orgId, actorId }, 'quote created')
-    return getQuoteInTransaction(quote.id, t)
+    logger.info({ quoteId: quote.id, quote_number, orgId: ctx.orgId, actorId }, 'quote created')
+    return getQuoteInTransaction(quote.id, ctx, t)
   })
 }
 
-export async function updateQuote(id: string, input: SalesQuoteUpdateInput, actorId: string) {
+export async function updateQuote(id: string, input: SalesQuoteUpdateInput, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const quote = await SalesQuote.findByPk(id, { transaction: t })
+    const quote = await SalesQuote.findOne({ where: { id, org_id: ctx.orgId }, transaction: t })
     if (!quote) throw new Error('QUOTE_NOT_FOUND')
+    if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(quote.branch_id as string)) {
+      throw new Error('QUOTE_NOT_FOUND')
+    }
     if (quote.status === 'accepted' || quote.status === 'rejected') {
       throw new Error('QUOTE_NOT_EDITABLE')
     }
@@ -130,17 +152,22 @@ export async function updateQuote(id: string, input: SalesQuoteUpdateInput, acto
       Object.assign(updateData, docTotals)
     }
 
-    const { items: _items, ...rest } = input
+    const { items: discardedItems, branch_id: discardedBranch, ...rest } = input
+    void discardedItems
+    void discardedBranch
     await quote.update({ ...rest, ...updateData }, { transaction: t })
 
     logger.info({ quoteId: id, actorId }, 'quote updated')
-    return getQuoteInTransaction(id, t)
+    return getQuoteInTransaction(id, ctx, t)
   })
 }
 
-export async function deleteQuote(id: string, actorId: string) {
-  const quote = await SalesQuote.findByPk(id)
+export async function deleteQuote(id: string, ctx: TenantContext, actorId: string) {
+  const quote = await SalesQuote.findOne({ where: { id, org_id: ctx.orgId } })
   if (!quote) throw new Error('QUOTE_NOT_FOUND')
+  if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(quote.branch_id as string)) {
+    throw new Error('QUOTE_NOT_FOUND')
+  }
   if (quote.status === 'accepted') throw new Error('QUOTE_NOT_DELETABLE')
 
   await quote.update({ deleted_by: actorId })
@@ -148,21 +175,26 @@ export async function deleteQuote(id: string, actorId: string) {
   logger.info({ quoteId: id, actorId }, 'quote soft-deleted')
 }
 
-export async function convertQuoteToOrder(id: string, orgId: string, actorId: string) {
+export async function convertQuoteToOrder(id: string, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
     const quote = await SalesQuote.findByPk(id, {
       include: [{ model: SalesQuoteItem, as: 'items' }],
       transaction: t,
     })
     if (!quote) throw new Error('QUOTE_NOT_FOUND')
+    if (quote.org_id !== ctx.orgId) throw new Error('QUOTE_NOT_FOUND')
+    if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(quote.branch_id as string)) {
+      throw new Error('QUOTE_NOT_FOUND')
+    }
     if (quote.status !== 'accepted') throw new Error('QUOTE_NOT_ACCEPTED')
+    if (!quote.branch_id) throw new Error('QUOTE_BRANCH_REQUIRED')
 
-    const order_number = await nextDocumentNumber(orgId, 'order', t)
+    const order_number = await nextDocumentNumber(ctx.orgId, quote.branch_id, 'order', t)
     const items = (quote as SalesQuote & { items: SalesQuoteItem[] }).items
 
     const order = await SalesOrder.create(
       {
-        org_id:           orgId,
+        org_id:           ctx.orgId,
         branch_id:        quote.branch_id,
         contact_id:       quote.contact_id,
         quote_id:         quote.id,
@@ -183,7 +215,7 @@ export async function convertQuoteToOrder(id: string, orgId: string, actorId: st
     await SalesOrderItem.bulkCreate(
       items.map(item => ({
         order_id:       order.id,
-        org_id:         orgId,
+        org_id:         ctx.orgId,
         product_id:     item.product_id,
         description:    item.description,
         quantity:       item.quantity,
@@ -207,9 +239,15 @@ export async function convertQuoteToOrder(id: string, orgId: string, actorId: st
   })
 }
 
-async function getQuoteInTransaction(id: string, t: import('sequelize').Transaction) {
-  return SalesQuote.findByPk(id, {
-    include: [{ model: SalesQuoteItem, as: 'items', order: [['sort_order', 'ASC']] }],
+async function getQuoteInTransaction(id: string, ctx: TenantContext, t: import('sequelize').Transaction) {
+  ensureSalesBranchAssociations()
+  const { default: Branch } = await import('@/modules/auth/branch.model')
+  return SalesQuote.findOne({
+    where: whereAllowedBranches(ctx, { id }),
+    include: [
+      { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: SalesQuoteItem, as: 'items', order: [['sort_order', 'ASC']] },
+    ],
     transaction: t,
   })
 }
