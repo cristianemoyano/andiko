@@ -149,13 +149,30 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 
 **Entidades:** `sales_quotes`, `sales_orders`, `invoices`, `invoice_items`, `payments`
 
+### Backend (completado)
+- [x] Migraciones: `document_sequences`, `sales_quotes`, `sales_quote_items`, `sales_orders`, `sales_order_items`, `invoices`, `invoice_items`, `payments`
+- [x] Modelos Sequelize con tipos estrictos para los 7 modelos (SalesQuote, SalesQuoteItem, SalesOrder, SalesOrderItem, Invoice, InvoiceItem, Payment)
+- [x] Numeración automática de documentos por org (`PRES-NNNN`, `PED-NNNN`, `FAC-NNNN`, `COB-NNNN`) con secuencias atómicas (`ON CONFLICT DO UPDATE`)
+- [x] Cálculo de IVA discriminado por alícuota (0%, 10.5%, 21%, 27%) con `Decimal.js` — sin float math
+- [x] Descuentos por ítem con base imponible calculada antes de IVA
+- [x] Condiciones de pago (contado, 30/60/90 días) con cálculo automático de `due_date`
+- [x] Schemas Zod con tipos estrictos, fechas parseadas a `Date`, constantes de enum exportadas
+- [x] Service presupuestos: CRUD + conversión `quote → order` (requiere status `accepted`)
+- [x] Service pedidos: CRUD + conversión `order → invoice` (requiere status `confirmed | in_progress`)
+- [x] Service facturas: CRUD + `issueInvoice` + `cancelInvoice` con transición de estados explícita
+- [x] Service cobros: CRUD + `recalcInvoiceBalance` (recalcula `paid_amount`, `balance`, `status` atomicamente)
+- [x] API REST: `quotes`, `orders`, `invoices`, `payments` — CRUD + acciones de estado
+- [x] Endpoints de conversión: `POST /quotes/:id/convert`, `POST /orders/:id/convert`
+- [x] Endpoints de estado: `POST /invoices/:id/issue`, `POST /invoices/:id/cancel`
+- [x] Permisos `sales:read / sales:write / sales:delete` — ya presentes en DB desde Fase 0
+- [x] Tests unitarios: `calcLineItem`, `calcDocumentTotals`, `issueInvoice`, `cancelInvoice`, `createPayment` (48 assertions)
+
+### Frontend
 - [ ] Presupuestos con vigencia y estado
-- [ ] Conversión presupuesto → pedido → factura en un flujo
-- [ ] Cálculo automático de IVA discriminado por alícuota
-- [ ] Descuentos por ítem y por documento
-- [ ] Condiciones de pago (contado, 30/60/90 días)
-- [ ] Registro de cobros parciales y totales
-- [ ] Estados de factura: borrador, emitida, cobrada, anulada
+- [ ] Conversión presupuesto → pedido → factura en un flujo (UI)
+- [ ] Descuentos por ítem y por documento (UI)
+- [ ] Registro de cobros parciales y totales (UI)
+- [ ] Estados de factura: borrador, emitida, cobrada, anulada (UI)
 - [ ] Notas de crédito internas
 - [ ] Listado de cuentas corrientes por cliente
 - [ ] Reportes: ventas por período, por cliente, por producto
