@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
+import { SysAdminImpersonation } from './SysAdminImpersonation'
 
 interface NavItem {
   id: string
@@ -127,9 +128,18 @@ const NAV_SYSTEM: NavItem[] = [
 interface SidebarProps {
   userName?: string
   userRole?: string
+  /** Signed-in account is sys-admin (including while impersonating another user) */
+  isRealSysAdmin?: boolean
+  /** Show link to Organizaciones: real sys-admin and not impersonating */
+  showSysAdminNavigation?: boolean
 }
 
-export function Sidebar({ userName, userRole }: SidebarProps) {
+export function Sidebar({
+  userName,
+  userRole,
+  isRealSysAdmin = false,
+  showSysAdminNavigation = false,
+}: SidebarProps) {
   const pathname = usePathname()
 
   const initials = userName
@@ -153,6 +163,28 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-2 py-1.5">
+        {isRealSysAdmin && (
+          <>
+            <SectionLabel>Administración</SectionLabel>
+            {showSysAdminNavigation && (
+              <NavLink
+                item={{
+                  id: 'sys-admin-orgs',
+                  label: 'Organizaciones',
+                  href: '/sys-admin/organizaciones',
+                  icon: (
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M3 14h10M3 10h10M5 6h6M5 2h6M2 14V6l6-4 6 4v8"/>
+                    </svg>
+                  ),
+                }}
+                active={pathname.startsWith('/sys-admin')}
+              />
+            )}
+            <SysAdminImpersonation />
+          </>
+        )}
+
         <SectionLabel>Principal</SectionLabel>
         {NAV_MAIN.map(item => (
           <NavLink key={item.id} item={item} active={pathname === item.href} />

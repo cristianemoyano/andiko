@@ -8,7 +8,7 @@ const paymentConditionEnum = z.enum([...PAYMENT_CONDITIONS] as [PaymentCondition
 
 export const salesOrderSchema = z.object({
   contact_id:        z.string().uuid().nullable().optional(),
-  branch_id:         z.string().uuid().nullable().optional(),
+  branch_id:         z.string().uuid(),
   quote_id:          z.string().uuid().nullable().optional(),
   payment_condition: paymentConditionEnum.default('cash'),
   currency:          z.string().length(3).default('ARS'),

@@ -136,6 +136,7 @@ export function CatalogoClient() {
   const [search, setSearch]         = useState('')
   const [status, setStatus]         = useState('')
   const [loading, setLoading]       = useState(true)
+  const [serverError, setServerError] = useState<string | null>(null)
   const [modalOpen, setModalOpen]   = useState(false)
   const [editing, setEditing]       = useState<ProductForEdit>(null)
   const [loadingEdit, setLoadingEdit] = useState(false)
@@ -150,14 +151,23 @@ export function CatalogoClient() {
     let mounted = true
     ;(async () => {
       setLoading(true)
+      setServerError(null)
       const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
       if (search) params.set('search', search)
       if (status) params.set('status', status)
       const res = await fetch(`/api/v1/catalog/products?${params}`)
-      const data = (await safeJson(res)) as { data?: Product[]; total?: number } | null
-      if (mounted && res.ok) {
+      const data = (await safeJson(res)) as { data?: Product[]; total?: number; error?: string; code?: string } | null
+      if (!mounted) return
+      if (res.ok) {
         setProducts(data?.data ?? [])
         setTotal(data?.total ?? 0)
+      } else {
+        const msg = data?.error
+          ? `${data.error}${data.code ? ` (${data.code})` : ''}`
+          : `No se pudo cargar el catálogo (HTTP ${res.status}).`
+        setServerError(msg)
+        setProducts([])
+        setTotal(0)
       }
       if (mounted) setLoading(false)
     })()
@@ -201,6 +211,11 @@ export function CatalogoClient() {
       />
 
       <div className="flex-1 p-5 overflow-auto">
+        {serverError ? (
+          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            {serverError}
+          </div>
+        ) : null}
         <DataTable
           columns={[
             ...COLUMNS,

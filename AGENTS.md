@@ -195,6 +195,48 @@ const result = await sequelize.transaction(async (t) => {
 
 ---
 
+## Frontend Patterns (App Router)
+
+### Server / Client split
+- Every page is a Server Component that exports `metadata` and renders a `*Client.tsx` sibling.
+- All state, fetch logic, and event handlers live in the Client Component — never in the Server Component.
+- Pass only serialized props (no Date objects, no class instances) from Server to Client.
+
+### Data refresh after mutation — MANDATORY
+After any mutation (create, update, delete), always re-fetch the affected list or resource. Use a `refresh` counter in `useEffect` dependencies:
+
+```tsx
+const [refresh, setRefresh] = useState(0)
+useEffect(() => { fetchData() }, [refresh])
+
+// After every successful mutation:
+setRefresh(r => r + 1)
+```
+
+Never rely on optimistic updates or stale local state. Every successful write must trigger a re-fetch. This is the canonical pattern — any screen that skips it is broken.
+
+### Modal / Dialog pattern
+- Use `Dialog` from `src/components/primitives/Dialog.tsx` (Radix-based). Never native `<dialog>` with `useRef`.
+- For destructive confirmations (delete, cancel, reverse) use `ConfirmDialog` from `src/components/erp/ConfirmDialog.tsx`.
+
+### Form pattern
+- Use `FormData` API. Add `key={formKey}` to `<form>` and increment `formKey` to reset after submit.
+- Keep field-level `errors` (Record<string, string>) and a separate `serverError` string for generic failures.
+- Always show errors inline — never only in a toast.
+
+### Page structure
+```
+src/app/(erp)/{module}/
+  page.tsx          ← Server Component: metadata only
+  {Module}Client.tsx ← Client Component: state + fetch + render
+  {Entity}Modal.tsx  ← Dialog wrapper for create/edit forms
+  [id]/
+    page.tsx         ← Server Component: metadata only
+    {Entity}Detail.tsx ← Client Component: detail state + mutations
+```
+
+---
+
 ## API Design Principles
 
 - REST only. No GraphQL.
@@ -237,6 +279,7 @@ const result = await sequelize.transaction(async (t) => {
 - **No schema changes in application startup.** Migrations only.
 - **No unbounded queries.** Every list query must have a `LIMIT`.
 - **No magic strings.** Use constants or enums for status values, document types, tax codes.
+- **No stale list state after mutation.** Always call `setRefresh(r => r + 1)` (or equivalent) after every successful create/update/delete to trigger a re-fetch. Never update local state manually as a substitute for a re-fetch.
 
 ---
 

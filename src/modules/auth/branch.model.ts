@@ -1,11 +1,12 @@
 import { Model, DataTypes, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
 import type { UUID, Timestamps } from '@/types'
-import Organization from './organization.model'
 
 export interface BranchAttributes extends Timestamps {
   id: UUID
   org_id: UUID
+  /** Número estable por organización (1…9999), usado en numeración de documentos de venta */
+  branch_code: number
   name: string
   address: string | null
   is_active: boolean
@@ -13,12 +14,13 @@ export interface BranchAttributes extends Timestamps {
 
 type BranchCreationAttributes = Optional<
   BranchAttributes,
-  'id' | 'address' | 'is_active' | 'created_at' | 'updated_at' | 'deleted_at'
+  'id' | 'branch_code' | 'address' | 'is_active' | 'created_at' | 'updated_at' | 'deleted_at'
 >
 
 export class Branch extends Model<BranchAttributes, BranchCreationAttributes> {
   declare id: UUID
   declare org_id: UUID
+  declare branch_code: number
   declare name: string
   declare address: string | null
   declare is_active: boolean
@@ -29,9 +31,10 @@ export class Branch extends Model<BranchAttributes, BranchCreationAttributes> {
 
 Branch.init(
   {
-    id:        { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-    org_id:    { type: DataTypes.UUID, allowNull: false },
-    name:      { type: DataTypes.STRING(255), allowNull: false },
+    id:           { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    org_id:       { type: DataTypes.UUID, allowNull: false },
+    branch_code:  { type: DataTypes.INTEGER, allowNull: false },
+    name:         { type: DataTypes.STRING(255), allowNull: false },
     address:   { type: DataTypes.STRING(500) },
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     created_at: { type: DataTypes.DATE, allowNull: false },
@@ -40,8 +43,5 @@ Branch.init(
   },
   { sequelize, tableName: 'branches', paranoid: true, underscored: true }
 )
-
-Organization.hasMany(Branch, { foreignKey: 'org_id', as: 'branches' })
-Branch.belongsTo(Organization, { foreignKey: 'org_id', as: 'organization' })
 
 export default Branch

@@ -10,6 +10,8 @@ export type AuthedSession = Session & {
     role: UserRole
     orgId: string | null
     branchId: string | null
+    actingOrgId: string | null
+    realRole: UserRole
   }
 }
 

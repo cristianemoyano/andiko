@@ -8,14 +8,17 @@ import Invoice from './invoice.model'
 import InvoiceItem from './invoice-item.model'
 import Payment from './payment.model'
 import type { InvoiceInput, InvoiceUpdateInput, InvoiceQuery } from './invoice.schema'
+import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
 
-export async function listInvoices(query: InvoiceQuery) {
+export async function listInvoices(query: InvoiceQuery, orgId: string) {
+  ensureSalesBranchAssociations()
+  const { default: Branch } = await import('@/modules/auth/branch.model')
   const { page, limit, search, status, contact_id, order_id, overdue } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = {}
+  const where: Record<string, unknown> = { org_id: orgId }
   if (status)     where.status     = status
   if (contact_id) where.contact_id = contact_id
   if (order_id)   where.order_id   = order_id
@@ -35,19 +38,23 @@ export async function listInvoices(query: InvoiceQuery) {
     offset,
     order: [['created_at', 'DESC']],
     attributes: [
-      'id', 'invoice_number', 'status', 'contact_id', 'order_id',
+      'id', 'branch_id', 'invoice_number', 'status', 'contact_id', 'order_id',
       'issue_date', 'due_date', 'payment_condition', 'currency',
       'subtotal', 'tax_amount', 'total', 'paid_amount', 'balance',
       'notes', 'created_at',
     ],
+    include: [{ model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] }],
   })
 
   return toPaginated(rows, count, page, limit)
 }
 
 export async function getInvoice(id: string) {
+  ensureSalesBranchAssociations()
+  const { default: Branch } = await import('@/modules/auth/branch.model')
   const invoice = await Invoice.findByPk(id, {
     include: [
+      { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
       { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
       { model: Payment, as: 'payments', where: { deleted_at: null }, required: false },
     ],
@@ -58,16 +65,18 @@ export async function getInvoice(id: string) {
 
 export async function createInvoice(input: InvoiceInput, orgId: string, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const invoice_number = await nextDocumentNumber(orgId, 'invoice', t)
+    const { items, branch_id, ...invoiceFields } = input
+    const invoice_number = await nextDocumentNumber(orgId, branch_id, 'invoice', t)
 
-    const itemTotals = input.items.map(item =>
+    const itemTotals = items.map(item =>
       calcLineItem(item.quantity, item.unit_price, item.discount_pct ?? 0, (item.iva_rate ?? '21') as IvaRate)
     )
     const docTotals = calcDocumentTotals(itemTotals)
 
     const invoice = await Invoice.create(
       {
-        ...input,
+        ...invoiceFields,
+        branch_id,
         invoice_number,
         org_id:     orgId,
         balance:    docTotals.total,
@@ -79,7 +88,7 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
     )
 
     await InvoiceItem.bulkCreate(
-      input.items.map((item, idx) => ({
+      items.map((item, idx) => ({
         invoice_id:   invoice.id,
         org_id:       orgId,
         product_id:   item.product_id ?? null,
@@ -138,7 +147,9 @@ export async function updateInvoice(id: string, input: InvoiceUpdateInput, actor
       Object.assign(updateData, { ...docTotals, balance: docTotals.total })
     }
 
-    const { items: _items, ...rest } = input
+    const { items: discardedItems, branch_id: discardedBranch, ...rest } = input
+    void discardedItems
+    void discardedBranch
     await invoice.update({ ...rest, ...updateData }, { transaction: t })
 
     logger.info({ invoiceId: id, actorId }, 'invoice updated')
@@ -223,8 +234,13 @@ function computeDueDate(issueDate: Date, paymentCondition: string): Date {
 }
 
 async function getInvoiceInTransaction(id: string, t: import('sequelize').Transaction) {
+  ensureSalesBranchAssociations()
+  const { default: Branch } = await import('@/modules/auth/branch.model')
   return Invoice.findByPk(id, {
-    include: [{ model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] }],
+    include: [
+      { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
+    ],
     transaction: t,
   })
 }

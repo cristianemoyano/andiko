@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
+import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { productSchema, productQuerySchema } from '@/modules/catalog/product.schema'
 import { listProducts, createProduct } from '@/modules/catalog/products.service'
 
@@ -8,8 +9,16 @@ export const GET = withPermission('products:read', async (req, _ctx, session) =>
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
   }
-  const result = await listProducts(parsed.data, session.user.orgId)
-  return NextResponse.json(result)
+  try {
+    const ctxTenant = await makeTenantContext(session.user)
+    const result = await listProducts(parsed.data, ctxTenant)
+    return NextResponse.json(result)
+  } catch (err: unknown) {
+    if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
+      return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
+    }
+    throw err
+  }
 })
 
 export const POST = withPermission('products:write', async (req, _ctx, session) => {
@@ -19,9 +28,13 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const product = await createProduct(parsed.data, session.user.id!, session.user.orgId)
+    const ctxTenant = await makeTenantContext(session.user)
+    const product = await createProduct(parsed.data, session.user.id!, ctxTenant)
     return NextResponse.json(product, { status: 201 })
   } catch (err) {
+    if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
+      return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
+    }
     if (err instanceof Error && err.message.includes('unique')) {
       return NextResponse.json({ error: 'El SKU ya existe', code: 'DUPLICATE_SKU' }, { status: 409 })
     }

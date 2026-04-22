@@ -45,12 +45,14 @@ export async function createPayment(input: PaymentInput, orgId: string, actorId:
     if (invoice.status === 'cancelled') throw new Error('INVOICE_CANCELLED')
     if (invoice.status === 'draft')     throw new Error('INVOICE_NOT_ISSUED')
     if (invoice.status === 'paid')      throw new Error('INVOICE_ALREADY_PAID')
+    if (!invoice.branch_id) throw new Error('INVOICE_BRANCH_REQUIRED')
 
-    const payment_number = await nextDocumentNumber(orgId, 'payment', t)
+    const payment_number = await nextDocumentNumber(orgId, invoice.branch_id, 'payment', t)
 
     const payment = await Payment.create(
       {
         ...input,
+        branch_id:      invoice.branch_id,
         payment_number,
         org_id:     orgId,
         amount:     String(input.amount),
@@ -72,9 +74,9 @@ export async function updatePayment(id: string, input: PaymentUpdateInput, actor
     const payment = await Payment.findByPk(id, { transaction: t })
     if (!payment) throw new Error('PAYMENT_NOT_FOUND')
 
-    const { amount: _amount, ...rest } = input
+    const { amount, ...rest } = input
     const updateData: Record<string, unknown> = { ...rest, updated_by: actorId }
-    if (input.amount !== undefined) updateData.amount = String(input.amount)
+    if (amount !== undefined) updateData.amount = String(amount)
 
     await payment.update(updateData as Parameters<typeof payment.update>[0], { transaction: t })
     await recalcInvoiceBalance(payment.invoice_id, t)

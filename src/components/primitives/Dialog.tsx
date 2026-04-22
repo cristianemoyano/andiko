@@ -56,9 +56,13 @@ function Dialog({ open, onOpenChange, title, description, children, size, classN
               <RadixDialog.Title className="text-[14px] font-semibold text-zinc-900">
                 {title}
               </RadixDialog.Title>
-              {description && (
+              {description ? (
                 <RadixDialog.Description className="mt-0.5 text-[12px] text-zinc-500">
                   {description}
+                </RadixDialog.Description>
+              ) : (
+                <RadixDialog.Description className="sr-only">
+                  {title}
                 </RadixDialog.Description>
               )}
             </div>

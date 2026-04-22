@@ -12,9 +12,9 @@ export interface Column<T> {
   className?: string
 }
 
-interface DataTableProps<T> {
+interface DataTableProps<T extends object> {
   columns: Column<T>[]
-  data: T[]
+  data?: T[] | null
   keyExtractor: (row: T) => string
   onRowClick?: (row: T) => void
   toolbar?: React.ReactNode
@@ -25,7 +25,8 @@ interface DataTableProps<T> {
 
 type SortDir = 'asc' | 'desc' | null
 
-export function DataTable<T extends Record<string, unknown>>({
+/** Domain row types need not be index signatures; dynamic columns use a narrow cast internally. */
+export function DataTable<T extends object>({
   columns,
   data,
   keyExtractor,
@@ -51,10 +52,13 @@ export function DataTable<T extends Record<string, unknown>>({
   }
 
   const sorted = useMemo(() => {
-    if (!sortKey || !sortDir) return data
-    return [...data].sort((a, b) => {
-      const av = String(a[sortKey] ?? '')
-      const bv = String(b[sortKey] ?? '')
+    const safeData = Array.isArray(data) ? data : []
+    if (!sortKey || !sortDir) return safeData
+    return [...safeData].sort((a, b) => {
+      const ra = a as Record<string, unknown>
+      const rb = b as Record<string, unknown>
+      const av = String(ra[sortKey] ?? '')
+      const bv = String(rb[sortKey] ?? '')
       const cmp = av.localeCompare(bv, 'es', { numeric: true })
       return sortDir === 'asc' ? cmp : -cmp
     })
@@ -132,7 +136,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         col.className
                       )}
                     >
-                      {col.render ? col.render(row) : String(row[col.key] ?? '')}
+                      {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '')}
                     </td>
                   ))}
                 </tr>

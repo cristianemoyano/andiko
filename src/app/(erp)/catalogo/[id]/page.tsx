@@ -3,6 +3,7 @@ import { TopBar } from '@/components/layout/TopBar'
 import { Badge } from '@/components/primitives/Badge'
 import { auth } from '@/lib/auth'
 import type { AuthedSession } from '@/lib/api-handler'
+import { makeTenantContext } from '@/lib/tenancy'
 import { getProduct } from '@/modules/catalog/products.service'
 import type ProductVariant from '@/modules/catalog/product-variant.model'
 import { ProductDetailClient } from './ProductDetailClient'
@@ -34,7 +35,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const authed = session as AuthedSession
   let product: Awaited<ReturnType<typeof getProduct>> | null = null
   try {
-    product = await getProduct(id, authed.user.orgId ?? null)
+    const ctxTenant = await makeTenantContext(authed.user)
+    product = await getProduct(id, ctxTenant)
   } catch {
     product = null
   }
