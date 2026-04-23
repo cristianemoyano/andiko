@@ -8,6 +8,7 @@ import SalesOrderItem from './sales-order-item.model'
 import Invoice from './invoice.model'
 import InvoiceItem from './invoice-item.model'
 import type { SalesOrderInput, SalesOrderUpdateInput, SalesOrderQuery } from './sales-order.schema'
+import Branch from '@/modules/auth/branch.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
@@ -16,7 +17,7 @@ import { whereAllowedBranches, whereBranch } from '@/lib/tenancy'
 
 export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
+
   const { page, limit, search, status, contact_id, quote_id } = query
   const { offset } = paginate(page, limit)
 
@@ -48,7 +49,7 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
 
 export async function getOrder(id: string, ctx: TenantContext) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
+
   const order = await SalesOrder.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
@@ -186,8 +187,8 @@ export async function convertOrderToInvoice(id: string, ctx: TenantContext, acto
     if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(order.branch_id as string)) {
       throw new Error('ORDER_NOT_FOUND')
     }
-    if (order.status !== 'confirmed' && order.status !== 'in_progress') {
-      throw new Error('ORDER_NOT_CONVERTIBLE')
+    if (order.status !== 'delivered') {
+      throw new Error('ORDER_NOT_DELIVERED')
     }
     if (!order.branch_id) throw new Error('ORDER_BRANCH_REQUIRED')
 
@@ -196,21 +197,22 @@ export async function convertOrderToInvoice(id: string, ctx: TenantContext, acto
 
     const invoice = await Invoice.create(
       {
-        org_id:           ctx.orgId,
-        branch_id:        order.branch_id,
-        contact_id:       order.contact_id,
-        order_id:         order.id,
+        org_id:            ctx.orgId,
+        branch_id:         order.branch_id,
+        contact_id:        order.contact_id,
+        order_id:          order.id,
+        price_list_id:     order.price_list_id,
         invoice_number,
         payment_condition: order.payment_condition,
-        currency:         order.currency,
-        subtotal:         order.subtotal,
-        discount_amount:  order.discount_amount,
-        tax_amount:       order.tax_amount,
-        total:            order.total,
-        balance:          order.total,
-        notes:            order.notes,
-        created_by:       actorId,
-        updated_by:       actorId,
+        currency:          order.currency,
+        subtotal:          order.subtotal,
+        discount_amount:   order.discount_amount,
+        tax_amount:        order.tax_amount,
+        total:             order.total,
+        balance:           order.total,
+        notes:             order.notes,
+        created_by:        actorId,
+        updated_by:        actorId,
       },
       { transaction: t },
     )
@@ -244,7 +246,7 @@ export async function convertOrderToInvoice(id: string, ctx: TenantContext, acto
 
 async function getOrderInTransaction(id: string, ctx: TenantContext, t: import('sequelize').Transaction) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
+
   return SalesOrder.findOne({
     where: whereAllowedBranches(ctx, { id }),
     include: [

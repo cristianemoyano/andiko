@@ -47,6 +47,7 @@ export interface Quote {
   id: string
   branch_id: string | null
   contact_id: string | null
+  price_list_id: string | null
   quote_number: string
   status: QuoteStatus
   valid_until: string | null
@@ -67,13 +68,13 @@ export interface Quote {
 
 // --- Order ---
 
-export type OrderStatus = 'draft' | 'confirmed' | 'in_progress' | 'fulfilled' | 'cancelled'
+export type OrderStatus = 'draft' | 'confirmed' | 'in_progress' | 'delivered' | 'cancelled'
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   draft:       'Borrador',
   confirmed:   'Confirmado',
   in_progress: 'En proceso',
-  fulfilled:   'Cumplido',
+  delivered:   'Entregado',
   cancelled:   'Cancelado',
 }
 
@@ -97,6 +98,7 @@ export interface Order {
   branch_id: string | null
   contact_id: string | null
   quote_id: string | null
+  price_list_id: string | null
   order_number: string
   status: OrderStatus
   required_date: string | null
@@ -170,8 +172,9 @@ export interface Invoice {
   id: string
   branch_id: string | null
   contact_id: string | null
-  order_id: string | null
+  order_id: string
   quote_id: string | null
+  price_list_id: string | null
   invoice_number: string
   status: InvoiceStatus
   issue_date: string | null

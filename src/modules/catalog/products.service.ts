@@ -148,3 +148,68 @@ export async function deleteProduct(id: UUID, actorId: UUID, ctx: TenantContext)
   })
   logger.info({ productId: id, actorId }, 'product deleted')
 }
+
+export type SaleProductOption = {
+  product_id: string
+  variant_id: string
+  name: string
+  sku: string
+  iva_rate: string
+  unit_of_measure: string
+  price: string
+}
+
+export async function listProductsForSale(
+  search: string | undefined,
+  priceListId: string | undefined,
+  limit: number,
+  orgId: string,
+): Promise<SaleProductOption[]> {
+  const { getEffectivePrice } = await import('./price-list.service')
+
+  const where: Record<string, unknown> = { org_id: orgId, status: 'active' }
+  if (search) {
+    where[Op.or as unknown as string] = [
+      { name: { [Op.iLike]: `%${search}%` } },
+      { '$variants.sku$': { [Op.iLike]: `%${search}%` } },
+    ]
+  }
+
+  const rows = await Product.findAll({
+    where,
+    limit,
+    subQuery: false,
+    order: [['name', 'ASC']],
+    attributes: ['id', 'name', 'iva_rate', 'unit_of_measure'],
+    include: [{
+      model: ProductVariant,
+      as: 'variants',
+      where: { is_default: true },
+      required: true,
+      attributes: ['id', 'sku', 'base_price'],
+    }],
+  })
+
+  return Promise.all(
+    rows.map(async (row) => {
+      const variants = row.get('variants') as ProductVariant[]
+      const variant = variants[0]
+
+      let price = (variant?.base_price as string | null) ?? '0.00'
+      if (priceListId && variant?.id) {
+        const listPrice = await getEffectivePrice(priceListId, variant.id, orgId)
+        if (listPrice !== null) price = listPrice
+      }
+
+      return {
+        product_id:      row.id,
+        variant_id:      variant.id,
+        name:            row.name,
+        sku:             variant.get('sku') as string,
+        iva_rate:        row.get('iva_rate') as string,
+        unit_of_measure: row.get('unit_of_measure') as string,
+        price,
+      }
+    }),
+  )
+}

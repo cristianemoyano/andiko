@@ -9,7 +9,6 @@ import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import type { Order, OrderStatus } from '../types'
 import { ORDER_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../types'
-import { OrderModal } from './OrderModal'
 import { VentasSubNav } from '../VentasSubNav'
 
 const PAGE_SIZE = 20
@@ -19,7 +18,7 @@ const STATUS_OPTIONS: { value: OrderStatus | ''; label: string }[] = [
   { value: 'draft',       label: 'Borrador' },
   { value: 'confirmed',   label: 'Confirmado' },
   { value: 'in_progress', label: 'En proceso' },
-  { value: 'fulfilled',   label: 'Cumplido' },
+  { value: 'delivered',   label: 'Entregado' },
   { value: 'cancelled',   label: 'Cancelado' },
 ]
 
@@ -89,14 +88,11 @@ const COLUMNS: Column<Order>[] = [
 
 export function PedidosClient() {
   const router = useRouter()
-  const [orders, setOrders]       = useState<Order[]>([])
-  const [total, setTotal]         = useState(0)
-  const [page, setPage]           = useState(1)
-  const [search, setSearch]       = useState('')
+  const [orders, setOrders] = useState<Order[]>([])
+  const [total, setTotal]   = useState(0)
+  const [page, setPage]     = useState(1)
+  const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('')
-  const [refresh, setRefresh]     = useState(0)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing]     = useState<Order | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams({
@@ -115,47 +111,14 @@ export function PedidosClient() {
         const pages = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE))
         setPage(p => (p > pages ? pages : p))
       })
-  }, [page, search, statusFilter, refresh])
-
-  function openCreate() {
-    setEditing(null)
-    setModalOpen(true)
-  }
-
-  function openEdit(order: Order) {
-    setEditing(order)
-    setModalOpen(true)
-  }
-
-  function handleSaved() {
-    setModalOpen(false)
-    setRefresh(r => r + 1)
-  }
-
-  const columnsWithActions: Column<Order>[] = [
-    ...COLUMNS,
-    {
-      key: '_actions',
-      header: '',
-      render: row => (
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="xs" onClick={() => router.push(`/ventas/pedidos/${row.id}`)}>
-            Ver
-          </Button>
-          <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>
-            Editar
-          </Button>
-        </div>
-      ),
-    },
-  ]
+  }, [page, search, statusFilter])
 
   return (
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[{ label: 'Ventas', href: '/ventas/presupuestos' }, { label: 'Pedidos' }]}
         actions={
-          <Button size="sm" onClick={openCreate}>
+          <Button size="sm" onClick={() => router.push('/ventas/pedidos/nuevo')}>
             + Nuevo pedido
           </Button>
         }
@@ -164,9 +127,10 @@ export function PedidosClient() {
 
       <div className="flex-1 p-5 overflow-auto">
         <DataTable
-          columns={columnsWithActions}
+          columns={COLUMNS}
           data={orders}
           keyExtractor={r => r.id}
+          onRowClick={row => router.push(`/ventas/pedidos/${row.id}`)}
           emptyMessage="No hay pedidos. Creá el primero."
           toolbar={
             <>
@@ -201,14 +165,6 @@ export function PedidosClient() {
           }
         />
       </div>
-
-      <OrderModal
-        key={`${editing?.id ?? 'new'}-${String(modalOpen)}`}
-        open={modalOpen}
-        order={editing}
-        onClose={() => setModalOpen(false)}
-        onSaved={handleSaved}
-      />
     </div>
   )
 }

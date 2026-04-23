@@ -12,6 +12,7 @@ export interface SalesOrderAttributes extends Timestamps, AuditFields {
   branch_id: UUID | null
   contact_id: UUID | null
   quote_id: UUID | null
+  price_list_id: UUID | null
   order_number: string
   status: OrderStatus
   payment_condition: PaymentCondition
@@ -28,7 +29,7 @@ export interface SalesOrderAttributes extends Timestamps, AuditFields {
 
 type SalesOrderCreationAttributes = Optional<
   SalesOrderAttributes,
-  | 'id' | 'branch_id' | 'contact_id' | 'quote_id' | 'status' | 'payment_condition' | 'currency'
+  | 'id' | 'branch_id' | 'contact_id' | 'quote_id' | 'price_list_id' | 'status' | 'payment_condition' | 'currency'
   | 'promised_date' | 'delivered_date' | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total'
   | 'notes' | 'internal_notes'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
@@ -39,6 +40,7 @@ class SalesOrder extends AuditModel<SalesOrderAttributes, SalesOrderCreationAttr
   declare branch_id: UUID | null
   declare contact_id: UUID | null
   declare quote_id: UUID | null
+  declare price_list_id: UUID | null
   declare order_number: string
   declare status: OrderStatus
   declare payment_condition: PaymentCondition
@@ -59,6 +61,7 @@ SalesOrder.init(
     branch_id:         { type: DataTypes.UUID },
     contact_id:        { type: DataTypes.UUID },
     quote_id:          { type: DataTypes.UUID },
+    price_list_id:     { type: DataTypes.UUID },
     order_number:      { type: DataTypes.STRING(20), allowNull: false },
     status:            { type: DataTypes.ENUM(...ORDER_STATUSES), allowNull: false, defaultValue: 'draft' },
     payment_condition: { type: DataTypes.ENUM('cash', 'net_30', 'net_60', 'net_90'), allowNull: false, defaultValue: 'cash' },

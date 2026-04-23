@@ -10,6 +10,7 @@ export const salesOrderSchema = z.object({
   contact_id:        z.string().uuid().nullable().optional(),
   branch_id:         z.string().uuid(),
   quote_id:          z.string().uuid().nullable().optional(),
+  price_list_id:     z.string().uuid().nullable().optional(),
   payment_condition: paymentConditionEnum.default('cash'),
   currency:          z.string().length(3).default('ARS'),
   promised_date:     z.string().datetime({ offset: true }).transform(s => new Date(s)).nullable().optional(),

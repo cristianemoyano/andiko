@@ -1,4 +1,5 @@
 import sequelize from '@/lib/db'
+import Contact from '@/modules/contacts/contact.model'
 import Organization from '@/modules/auth/organization.model'
 import Branch from '@/modules/auth/branch.model'
 import User from '@/modules/auth/user.model'
@@ -97,6 +98,64 @@ async function ensurePermissionsSeeded(t: import('sequelize').Transaction) {
         { transaction: t, replacements: { role, name: permName } },
       )
     }
+  }
+}
+
+async function seedContacts(orgId: string, actorId: string, t: import('sequelize').Transaction) {
+  const contactsSpec = [
+    {
+      type: 'customer' as const,
+      legal_name: 'Distribuidora El Sol SRL',
+      trade_name: 'El Sol',
+      iva_condition: 'responsable_inscripto' as const,
+      email: 'compras@elsol.com.ar',
+      phone: '011-4234-5678',
+    },
+    {
+      type: 'customer' as const,
+      legal_name: 'Comercial Norte SA',
+      trade_name: null,
+      iva_condition: 'responsable_inscripto' as const,
+      email: 'admin@comercialnorte.com.ar',
+      phone: '0342-456-7890',
+    },
+    {
+      type: 'supplier' as const,
+      legal_name: 'Proveedora Central SRL',
+      trade_name: 'ProCentral',
+      iva_condition: 'responsable_inscripto' as const,
+      email: 'ventas@procentral.com.ar',
+      phone: '011-5678-1234',
+    },
+    {
+      type: 'supplier' as const,
+      legal_name: 'Importaciones del Sur SA',
+      trade_name: 'ImpoSur',
+      iva_condition: 'responsable_inscripto' as const,
+      email: 'contacto@imposur.com.ar',
+      phone: '0261-789-0123',
+    },
+  ]
+
+  for (const c of contactsSpec) {
+    await Contact.findOrCreate({
+      where: { org_id: orgId, legal_name: c.legal_name },
+      defaults: {
+        org_id: orgId,
+        type: c.type,
+        legal_name: c.legal_name,
+        trade_name: c.trade_name,
+        cuit: null,
+        iva_condition: c.iva_condition,
+        email: c.email,
+        phone: c.phone,
+        notes: null,
+        is_active: true,
+        created_by: actorId,
+        updated_by: actorId,
+      },
+      transaction: t,
+    })
   }
 }
 
@@ -294,9 +353,10 @@ async function run() {
           })
         }
 
-        // Seed catalog once per org (using the admin user as actor)
+        // Seed catalog and contacts once per org (using the admin user as actor)
         if (u.role === 'admin') {
           await seedCatalog(org.id, user.id, t)
+          await seedContacts(org.id, user.id, t)
         }
 
         // Seed a minimal sales flow for the first user of the first tenant only

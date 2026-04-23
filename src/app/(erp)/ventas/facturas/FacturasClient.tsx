@@ -5,11 +5,9 @@ import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
-import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import type { Invoice, InvoiceStatus } from '../types'
 import { INVOICE_STATUS_LABEL } from '../types'
-import { InvoiceModal } from './InvoiceModal'
 import { VentasSubNav } from '../VentasSubNav'
 
 const PAGE_SIZE = 20
@@ -99,14 +97,11 @@ const COLUMNS: Column<Invoice>[] = [
 
 export function FacturasClient() {
   const router = useRouter()
-  const [invoices, setInvoices]   = useState<Invoice[]>([])
-  const [total, setTotal]         = useState(0)
-  const [page, setPage]           = useState(1)
-  const [search, setSearch]       = useState('')
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [total, setTotal]       = useState(0)
+  const [page, setPage]         = useState(1)
+  const [search, setSearch]     = useState('')
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | ''>('')
-  const [refresh, setRefresh]     = useState(0)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing]     = useState<Invoice | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams({
@@ -125,61 +120,22 @@ export function FacturasClient() {
         const pages = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE))
         setPage(p => (p > pages ? pages : p))
       })
-  }, [page, search, statusFilter, refresh])
-
-  function openCreate() {
-    setEditing(null)
-    setModalOpen(true)
-  }
-
-  function openEdit(invoice: Invoice) {
-    setEditing(invoice)
-    setModalOpen(true)
-  }
-
-  function handleSaved() {
-    setModalOpen(false)
-    setRefresh(r => r + 1)
-  }
-
-  const columnsWithActions: Column<Invoice>[] = [
-    ...COLUMNS,
-    {
-      key: '_actions',
-      header: '',
-      render: row => (
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="xs" onClick={() => router.push(`/ventas/facturas/${row.id}`)}>
-            Ver
-          </Button>
-          {row.status === 'draft' && (
-            <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>
-              Editar
-            </Button>
-          )}
-        </div>
-      ),
-    },
-  ]
+  }, [page, search, statusFilter])
 
   return (
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[{ label: 'Ventas', href: '/ventas/presupuestos' }, { label: 'Facturas' }]}
-        actions={
-          <Button size="sm" onClick={openCreate}>
-            + Nueva factura
-          </Button>
-        }
       />
       <VentasSubNav />
 
       <div className="flex-1 p-5 overflow-auto">
         <DataTable
-          columns={columnsWithActions}
+          columns={COLUMNS}
           data={invoices}
           keyExtractor={r => r.id}
-          emptyMessage="No hay facturas. Creá la primera."
+          onRowClick={row => router.push(`/ventas/facturas/${row.id}`)}
+          emptyMessage="Las facturas se generan desde pedidos entregados."
           toolbar={
             <>
               <div className="relative flex items-center">
@@ -213,14 +169,6 @@ export function FacturasClient() {
           }
         />
       </div>
-
-      <InvoiceModal
-        key={`${editing?.id ?? 'new'}-${String(modalOpen)}`}
-        open={modalOpen}
-        invoice={editing}
-        onClose={() => setModalOpen(false)}
-        onSaved={handleSaved}
-      />
     </div>
   )
 }

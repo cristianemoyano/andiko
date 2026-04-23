@@ -12,8 +12,9 @@ export interface InvoiceAttributes extends Timestamps, AuditFields {
   id: UUID
   branch_id: UUID | null
   contact_id: UUID | null
-  order_id: UUID | null
+  order_id: UUID
   quote_id: UUID | null
+  price_list_id: UUID | null
   invoice_number: string
   status: InvoiceStatus
   issue_date: Date | null
@@ -32,7 +33,7 @@ export interface InvoiceAttributes extends Timestamps, AuditFields {
 
 type InvoiceCreationAttributes = Optional<
   InvoiceAttributes,
-  | 'id' | 'branch_id' | 'contact_id' | 'order_id' | 'quote_id' | 'status' | 'issue_date' | 'due_date'
+  | 'id' | 'branch_id' | 'contact_id' | 'quote_id' | 'price_list_id' | 'status' | 'issue_date' | 'due_date'
   | 'payment_condition' | 'currency' | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total'
   | 'paid_amount' | 'balance' | 'notes' | 'internal_notes'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
@@ -42,8 +43,9 @@ class Invoice extends AuditModel<InvoiceAttributes, InvoiceCreationAttributes> {
   declare id: UUID
   declare branch_id: UUID | null
   declare contact_id: UUID | null
-  declare order_id: UUID | null
+  declare order_id: UUID
   declare quote_id: UUID | null
+  declare price_list_id: UUID | null
   declare invoice_number: string
   declare status: InvoiceStatus
   declare issue_date: Date | null
@@ -65,8 +67,9 @@ Invoice.init(
     id:                { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     branch_id:         { type: DataTypes.UUID },
     contact_id:        { type: DataTypes.UUID },
-    order_id:          { type: DataTypes.UUID },
+    order_id:          { type: DataTypes.UUID, allowNull: false },
     quote_id:          { type: DataTypes.UUID },
+    price_list_id:     { type: DataTypes.UUID },
     invoice_number:    { type: DataTypes.STRING(20), allowNull: false },
     status:            { type: DataTypes.ENUM(...INVOICE_STATUSES), allowNull: false, defaultValue: 'draft' },
     issue_date:        { type: DataTypes.DATE },
