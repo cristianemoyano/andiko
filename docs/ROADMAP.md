@@ -205,6 +205,7 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [ ] Notas de crédito internas
 - [ ] Listado de cuentas corrientes por cliente
 - [ ] Reportes: ventas por período, por cliente, por producto
+- [ ] **Impresión y exportación de documentos** — Vista de impresión (`/ventas/presupuestos/[id]/print`, `/pedidos/[id]/print`, `/facturas/[id]/print`) con layout optimizado para papel A4. Templates configurables por organización: logo, colores corporativos, datos fiscales (CUIT, condición de IVA, domicilio), pie de página personalizado. Exportación a PDF vía `window.print()` + CSS `@media print`. Fase 2: editor visual de template (tipografía, paleta, secciones visibles). Bloquear impresión de documentos en estado `draft`.
 
 ---
 
@@ -278,6 +279,7 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 
 Ideas validadas pero sin fecha definida.
 
+- Pipelines de estado configurables por el cliente: el `StatusPipeline` actual tiene los pasos hardcodeados por tipo de documento. A futuro, permitir que cada organización defina sus propios estados y transiciones (ej. agregar "En revisión" entre Borrador y Confirmado), con la lógica de transición validada en backend.
 - Multi-empresa (una instalación, múltiples razones sociales)
 - Módulo de Recursos Humanos básico (empleados, liquidación de sueldos)
 - Integración con medios de pago (Mercado Pago, transferencias bancarias)
@@ -285,6 +287,11 @@ Ideas validadas pero sin fecha definida.
 - Portal de clientes (consulta de facturas y cuenta corriente)
 - Integración con e-commerce (WooCommerce, Tiendanube)
 - BI / Dashboards ejecutivos
+- Descuentos comerciales avanzados:
+  - Descuento global por documento (adicional al descuento por ítem)
+  - Reglas/promociones (por cantidad, por categoría, combos)
+  - Descuentos por cliente y por lista de precios con vigencia
+  - Descuento por condición de pago (contado/anticipado)
 
 ---
 

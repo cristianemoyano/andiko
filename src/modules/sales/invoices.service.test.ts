@@ -21,6 +21,7 @@ vi.mock('@/lib/db', () => ({
 }))
 vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), error: vi.fn() } }))
 vi.mock('@/modules/auth/branch.model', () => ({ default: { belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('@/modules/contacts/contact.model', () => ({ default: { belongsTo: vi.fn(), hasMany: vi.fn() } }))
 vi.mock('./sales-branch-associations', () => ({ ensureSalesBranchAssociations: vi.fn() }))
 vi.mock('./sales.utils', () => ({
   nextDocumentNumber: vi.fn().mockResolvedValue('FAC-0001'),

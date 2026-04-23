@@ -9,6 +9,7 @@ import InvoiceItem from './invoice-item.model'
 import Payment from './payment.model'
 import type { InvoiceInput, InvoiceUpdateInput, InvoiceQuery } from './invoice.schema'
 import Branch from '@/modules/auth/branch.model'
+import Contact from '@/modules/contacts/contact.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
@@ -44,7 +45,10 @@ export async function listInvoices(query: InvoiceQuery, orgId: string) {
       'subtotal', 'tax_amount', 'total', 'paid_amount', 'balance',
       'notes', 'created_at',
     ],
-    include: [{ model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] }],
+    include: [
+      { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+    ],
   })
 
   return toPaginated(rows, count, page, limit)
@@ -56,6 +60,7 @@ export async function getInvoice(id: string) {
   const invoice = await Invoice.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
       { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
       { model: Payment, as: 'payments', where: { deleted_at: null }, required: false },
     ],
@@ -70,11 +75,12 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
 
     const order = await (await import('./sales-order.model')).default.findOne({
       where: { id: input.order_id, org_id: orgId },
-      attributes: ['id', 'status'],
+      attributes: ['id', 'status', 'contact_id'],
       transaction: t,
     })
     if (!order) throw new Error('ORDER_NOT_FOUND')
     if (order.status !== 'delivered') throw new Error('ORDER_NOT_DELIVERED')
+    if (!order.contact_id) throw new Error('ORDER_CONTACT_REQUIRED')
 
     const invoice_number = await nextDocumentNumber(orgId, branch_id, 'invoice', t)
 
@@ -87,6 +93,7 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
       {
         ...invoiceFields,
         branch_id,
+        contact_id: order.contact_id,
         invoice_number,
         org_id:     orgId,
         balance:    docTotals.total,
@@ -249,6 +256,7 @@ async function getInvoiceInTransaction(id: string, t: import('sequelize').Transa
   return Invoice.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
       { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
     transaction: t,

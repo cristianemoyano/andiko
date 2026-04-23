@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { StatusBadge, Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
+import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { ContactModal } from '../ContactModal'
 import { AddressesSection } from './AddressesSection'
 import { PaymentInfoSection } from './PaymentInfoSection'
@@ -58,6 +59,7 @@ const IVA_LABEL: Record<string, string> = {
 export function ContactDetail({ contact: initial, addresses, paymentInfo }: { contact: Contact; addresses: Address[]; paymentInfo: PaymentInfo[] }) {
   const [contact, setContact] = useState(initial)
   const [modalOpen, setModalOpen] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   async function handleSaved() {
     setModalOpen(false)
@@ -66,6 +68,13 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
       const updated = await res.json() as Contact
       setContact(updated)
     }
+  }
+
+  async function handleDelete() {
+    const res = await fetch(`/api/v1/contacts/${contact.id}`, { method: 'DELETE' })
+    setConfirmDelete(false)
+    if (!res.ok && res.status !== 204) return
+    window.location.assign('/contactos')
   }
 
   const createdAt = new Date(contact.created_at).toLocaleDateString('es-AR', {
@@ -83,9 +92,14 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
           { label: contact.legal_name },
         ]}
         actions={
-          <Button size="sm" onClick={() => setModalOpen(true)}>
-            Editar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>
+              Eliminar
+            </Button>
+            <Button size="sm" onClick={() => setModalOpen(true)}>
+              Editar
+            </Button>
+          </div>
         }
       />
 
@@ -156,6 +170,16 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
         contact={contact}
         onClose={() => setModalOpen(false)}
         onSaved={handleSaved}
+      />
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Eliminar contacto"
+        description={`Se eliminará ${contact.legal_name}.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={handleDelete}
       />
     </div>
   )

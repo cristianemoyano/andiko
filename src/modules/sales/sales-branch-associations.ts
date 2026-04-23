@@ -1,5 +1,6 @@
 import 'server-only'
 import Branch from '@/modules/auth/branch.model'
+import Contact from '@/modules/contacts/contact.model'
 import SalesQuote from './sales-quote.model'
 import SalesOrder from './sales-order.model'
 import Invoice from './invoice.model'
@@ -17,4 +18,7 @@ export function ensureSalesBranchAssociations(): void {
   SalesQuote.belongsTo(Branch, { foreignKey: 'branch_id', as: 'branch' })
   SalesOrder.belongsTo(Branch, { foreignKey: 'branch_id', as: 'branch' })
   Invoice.belongsTo(Branch, { foreignKey: 'branch_id', as: 'branch' })
+  SalesQuote.belongsTo(Contact, { foreignKey: 'contact_id', as: 'contact' })
+  SalesOrder.belongsTo(Contact, { foreignKey: 'contact_id', as: 'contact' })
+  Invoice.belongsTo(Contact, { foreignKey: 'contact_id', as: 'contact' })
 }

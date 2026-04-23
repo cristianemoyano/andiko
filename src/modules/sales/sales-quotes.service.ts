@@ -9,6 +9,7 @@ import SalesOrder from './sales-order.model'
 import SalesOrderItem from './sales-order-item.model'
 import type { SalesQuoteInput, SalesQuoteUpdateInput, SalesQuoteQuery } from './sales-quote.schema'
 import Branch from '@/modules/auth/branch.model'
+import Contact from '@/modules/contacts/contact.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
@@ -39,7 +40,10 @@ export async function listQuotes(query: SalesQuoteQuery, ctx: TenantContext) {
       'payment_condition', 'currency', 'subtotal', 'tax_amount', 'total',
       'notes', 'created_at',
     ],
-    include: [{ model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] }],
+    include: [
+      { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+    ],
   })
 
   return toPaginated(rows, count, page, limit)
@@ -50,6 +54,7 @@ export async function getQuote(id: string, ctx: TenantContext) {
   const quote = await SalesQuote.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
       { model: SalesQuoteItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
   })
@@ -116,7 +121,7 @@ export async function updateQuote(id: string, input: SalesQuoteUpdateInput, ctx:
     if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(quote.branch_id as string)) {
       throw new Error('QUOTE_NOT_FOUND')
     }
-    if (quote.status === 'accepted' || quote.status === 'rejected') {
+    if (quote.status === 'accepted' || quote.status === 'rejected' || quote.status === 'cancelled') {
       throw new Error('QUOTE_NOT_EDITABLE')
     }
 
@@ -187,6 +192,7 @@ export async function convertQuoteToOrder(id: string, ctx: TenantContext, actorI
     }
     if (quote.status !== 'accepted') throw new Error('QUOTE_NOT_ACCEPTED')
     if (!quote.branch_id) throw new Error('QUOTE_BRANCH_REQUIRED')
+    if (!quote.contact_id) throw new Error('QUOTE_CONTACT_REQUIRED')
 
     const order_number = await nextDocumentNumber(ctx.orgId, quote.branch_id, 'order', t)
     const items = (quote as SalesQuote & { items: SalesQuoteItem[] }).items
@@ -245,6 +251,7 @@ async function getQuoteInTransaction(id: string, ctx: TenantContext, t: import('
     where: whereAllowedBranches(ctx, { id }),
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
       { model: SalesQuoteItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
     transaction: t,

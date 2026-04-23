@@ -18,7 +18,7 @@ export const PAYMENT_CONDITION_LABEL: Record<PaymentCondition, string> = {
 
 // --- Quote ---
 
-export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired'
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'cancelled'
 
 export const QUOTE_STATUS_LABEL: Record<QuoteStatus, string> = {
   draft:    'Borrador',
@@ -26,6 +26,7 @@ export const QUOTE_STATUS_LABEL: Record<QuoteStatus, string> = {
   accepted: 'Aceptado',
   rejected: 'Rechazado',
   expired:  'Vencido',
+  cancelled: 'Cancelado',
 }
 
 export interface QuoteItem {
@@ -101,9 +102,25 @@ export interface Order {
   price_list_id: string | null
   order_number: string
   status: OrderStatus
-  required_date: string | null
+  promised_date: string | null
   payment_condition: PaymentCondition
   currency: string
+  shipping_street: string | null
+  shipping_number: string | null
+  shipping_floor: string | null
+  shipping_apartment: string | null
+  shipping_city: string | null
+  shipping_province: string | null
+  shipping_postal_code: string | null
+  shipping_country: string | null
+  billing_street: string | null
+  billing_number: string | null
+  billing_floor: string | null
+  billing_apartment: string | null
+  billing_city: string | null
+  billing_province: string | null
+  billing_postal_code: string | null
+  billing_country: string | null
   subtotal: string
   discount_amount: string
   tax_amount: string
@@ -196,4 +213,57 @@ export interface Invoice {
   items?: InvoiceItem[]
   /** Present on GET `/api/v1/sales/invoices/:id` when backend includes payments */
   payments?: Payment[]
+}
+
+// --- Account statement (cuenta corriente) ---
+
+export type AccountDebtStatus = 'up_to_date' | 'with_balance' | 'overdue'
+export type AccountMovementType = 'invoice' | 'payment'
+
+export const ACCOUNT_DEBT_STATUS_LABEL: Record<AccountDebtStatus, string> = {
+  up_to_date: 'Al día',
+  with_balance: 'Con saldo',
+  overdue: 'Vencido',
+}
+
+export const ACCOUNT_MOVEMENT_TYPE_LABEL: Record<AccountMovementType, string> = {
+  invoice: 'Factura',
+  payment: 'Cobro',
+}
+
+export interface AccountStatementSummary {
+  currency: string
+  total_invoiced: string
+  total_paid: string
+  balance: string
+  overdue_balance: string
+  current_balance: string
+  debt_status: AccountDebtStatus
+}
+
+export interface AccountStatementLine {
+  id: string
+  movement_type: AccountMovementType
+  movement_id: string
+  date: string
+  document_number: string
+  description: string | null
+  due_date: string | null
+  debit: string
+  credit: string
+  running_balance: string
+}
+
+export interface AccountStatementResponse {
+  contact: {
+    id: string
+    legal_name: string
+    trade_name: string | null
+  }
+  summary: AccountStatementSummary
+  data: AccountStatementLine[]
+  total: number
+  page: number
+  limit: number
+  pages: number
 }

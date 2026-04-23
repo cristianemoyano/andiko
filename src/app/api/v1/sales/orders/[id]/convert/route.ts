@@ -29,6 +29,12 @@ export const POST = withPermission<P>('sales:write', async (_req, ctx, session) 
           { status: 422 },
         )
       }
+      if (err.message === 'ORDER_CONTACT_REQUIRED') {
+        return NextResponse.json(
+          { error: 'El pedido debe tener un cliente asignado para generar la factura.', code: 'ORDER_CONTACT_REQUIRED' },
+          { status: 422 },
+        )
+      }
       if (err.message === 'BRANCH_NOT_FOUND') {
         return NextResponse.json({ error: 'Sucursal no encontrada o inactiva', code: 'BRANCH_NOT_FOUND' }, { status: 404 })
       }

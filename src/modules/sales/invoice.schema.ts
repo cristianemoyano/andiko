@@ -7,7 +7,7 @@ import { lineItemSchema } from './sales-quote.schema'
 const paymentConditionEnum = z.enum([...PAYMENT_CONDITIONS] as [PaymentCondition, ...PaymentCondition[]])
 
 export const invoiceSchema = z.object({
-  contact_id:        z.string().uuid().nullable().optional(),
+  contact_id:        z.string().uuid(),
   branch_id:         z.string().uuid(),
   order_id:          z.string().uuid(),
   quote_id:          z.string().uuid().nullable().optional(),

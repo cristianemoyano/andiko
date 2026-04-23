@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
+import { Input } from '@/components/primitives/Input'
 import { Textarea } from '@/components/primitives/Textarea'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
@@ -18,8 +20,9 @@ import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { VentasBranchField } from '@/components/erp/VentasBranchField'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import type { Order, PaymentCondition } from '../../types'
-import { PAYMENT_CONDITION_LABEL } from '../../types'
+import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
+import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
 import { cn, parseResponseBodyJson } from '@/lib/utils'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
@@ -29,6 +32,82 @@ const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, 
 
 type OrderStatus = Order['status']
 type FieldErrors = Record<string, string[]>
+type ContactAddress = {
+  id: string
+  type: 'fiscal' | 'delivery' | 'commercial'
+  street: string
+  number: string | null
+  floor: string | null
+  apartment: string | null
+  city: string
+  province: string
+  postal_code: string | null
+  country: string
+  is_default: boolean
+}
+
+type AddressSnapshot = {
+  street: string
+  number: string
+  floor: string
+  apartment: string
+  city: string
+  province: string
+  postal_code: string
+  country: string
+}
+
+const EMPTY_ADDRESS: AddressSnapshot = {
+  street: '',
+  number: '',
+  floor: '',
+  apartment: '',
+  city: '',
+  province: '',
+  postal_code: '',
+  country: 'Argentina',
+}
+
+function fromContactAddress(address: ContactAddress | null): AddressSnapshot {
+  if (!address) return { ...EMPTY_ADDRESS }
+  return {
+    street: address.street,
+    number: address.number ?? '',
+    floor: address.floor ?? '',
+    apartment: address.apartment ?? '',
+    city: address.city,
+    province: address.province,
+    postal_code: address.postal_code ?? '',
+    country: address.country ?? 'Argentina',
+  }
+}
+
+function addressLabel(address: ContactAddress): string {
+  const base = [`${address.street}${address.number ? ` ${address.number}` : ''}`.trim(), address.city, address.province]
+    .filter(Boolean)
+    .join(', ')
+  return `${address.type === 'fiscal' ? 'Fiscal' : address.type === 'delivery' ? 'Entrega' : 'Comercial'} — ${base}`
+}
+
+function orderSnapshot(prefix: 'shipping' | 'billing', order: Order): AddressSnapshot {
+  return {
+    street: (prefix === 'shipping' ? order.shipping_street : order.billing_street) ?? '',
+    number: (prefix === 'shipping' ? order.shipping_number : order.billing_number) ?? '',
+    floor: (prefix === 'shipping' ? order.shipping_floor : order.billing_floor) ?? '',
+    apartment: (prefix === 'shipping' ? order.shipping_apartment : order.billing_apartment) ?? '',
+    city: (prefix === 'shipping' ? order.shipping_city : order.billing_city) ?? '',
+    province: (prefix === 'shipping' ? order.shipping_province : order.billing_province) ?? '',
+    postal_code: (prefix === 'shipping' ? order.shipping_postal_code : order.billing_postal_code) ?? '',
+    country: (prefix === 'shipping' ? order.shipping_country : order.billing_country) ?? 'Argentina',
+  }
+}
+
+function displaySnapshot(address: AddressSnapshot): string | null {
+  const first = `${address.street}${address.number ? ` ${address.number}` : ''}`.trim()
+  const parts = [first, address.city, address.province, address.postal_code, address.country].filter(Boolean)
+  if (parts.length === 0) return null
+  return parts.join(', ')
+}
 
 const STATUS_TRANSITIONS: Partial<Record<OrderStatus, { next: OrderStatus; label: string }[]>> = {
   draft:       [{ next: 'confirmed',   label: 'Confirmar pedido' }],
@@ -59,6 +138,14 @@ export function OrderDetail({ id }: OrderDetailProps) {
   const [order, setOrder]     = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(0)
+  const [relatedInvoices, setRelatedInvoices] = useState<Array<{
+    id: string
+    invoice_number: string
+    status: keyof typeof INVOICE_STATUS_LABEL
+    issue_date: string | null
+    created_at: string
+  }>>([])
+  const [loadingTraceability, setLoadingTraceability] = useState(false)
 
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving]     = useState(false)
@@ -67,9 +154,17 @@ export function OrderDetail({ id }: OrderDetailProps) {
 
   // Edit form fields
   const [contactId, setContactId]               = useState<string | null>(null)
+  const [contactOption, setContactOption]       = useState<SearchableSelectOption | null>(null)
   const [branchId, setBranchId]                 = useState<string | null>(null)
   const [priceListId, setPriceListId]           = useState<string | null>(null)
-  const [requiredDate, setRequiredDate]         = useState<Date | null>(null)
+  const [promisedDate, setPromisedDate]         = useState<Date | null>(null)
+  const [contactAddresses, setContactAddresses] = useState<ContactAddress[]>([])
+  const [shippingAddressId, setShippingAddressId] = useState<string>('')
+  const [billingAddressId, setBillingAddressId] = useState<string>('')
+  const [shippingAddress, setShippingAddress] = useState<AddressSnapshot>({ ...EMPTY_ADDRESS })
+  const [billingAddress, setBillingAddress] = useState<AddressSnapshot>({ ...EMPTY_ADDRESS })
+  const [createContactOpen, setCreateContactOpen] = useState(false)
+  const [createContactSeed, setCreateContactSeed] = useState('')
   const [paymentCondition, setPaymentCondition] = useState<PaymentCondition>('cash')
   const [items, setItems]                       = useState<LineItemInput[]>([makeEmptyLine()])
   const [notes, setNotes]                       = useState('')
@@ -94,11 +189,59 @@ export function OrderDetail({ id }: OrderDetailProps) {
     return () => { cancelled = true }
   }, [id, refresh])
 
+  useEffect(() => {
+    let cancelled = false
+    async function loadRelatedInvoices() {
+      setLoadingTraceability(true)
+      const params = new URLSearchParams({
+        order_id: id,
+        page: '1',
+        limit: '50',
+      })
+      const res = await fetch(`/api/v1/sales/invoices?${params}`)
+      if (!res.ok) {
+        if (!cancelled) {
+          setRelatedInvoices([])
+          setLoadingTraceability(false)
+        }
+        return
+      }
+      const payload = await res.json() as {
+        data?: Array<{
+          id: string
+          invoice_number: string
+          status: keyof typeof INVOICE_STATUS_LABEL
+          issue_date: string | null
+          created_at: string
+        }>
+      }
+      if (cancelled) return
+      setRelatedInvoices(Array.isArray(payload.data) ? payload.data : [])
+      setLoadingTraceability(false)
+    }
+
+    void loadRelatedInvoices()
+    return () => { cancelled = true }
+  }, [id, refresh])
+
   function enterEditMode(o: Order) {
     setContactId(o.contact_id ?? null)
+    if (o.contact_id && o.contact) {
+      setContactOption({
+        value: o.contact_id,
+        label: o.contact.legal_name,
+        sublabel: o.contact.trade_name ?? undefined,
+      })
+    } else {
+      setContactOption(null)
+    }
     setBranchId(o.branch_id ?? null)
     setPriceListId(o.price_list_id ?? null)
-    setRequiredDate(o.required_date ? new Date(o.required_date) : null)
+    setPromisedDate(o.promised_date ? new Date(o.promised_date) : null)
+    setShippingAddress(orderSnapshot('shipping', o))
+    setBillingAddress(orderSnapshot('billing', o))
+    setShippingAddressId('')
+    setBillingAddressId('')
     setPaymentCondition(o.payment_condition)
     setItems(itemsToLineInput(o.items))
     setNotes(o.notes ?? '')
@@ -120,11 +263,33 @@ export function OrderDetail({ id }: OrderDetailProps) {
     setErrors({})
     setServerError(null)
 
+    if (!contactId) {
+      setSaving(false)
+      setErrors(prev => ({ ...prev, contact_id: ['Seleccioná un cliente.'] }))
+      return
+    }
+
     const body = {
       contact_id:        contactId,
       branch_id:         branchId,
       price_list_id:     priceListId,
-      required_date:     requiredDate ? requiredDate.toISOString() : null,
+      promised_date:     promisedDate ? promisedDate.toISOString() : null,
+      shipping_street: shippingAddress.street || null,
+      shipping_number: shippingAddress.number || null,
+      shipping_floor: shippingAddress.floor || null,
+      shipping_apartment: shippingAddress.apartment || null,
+      shipping_city: shippingAddress.city || null,
+      shipping_province: shippingAddress.province || null,
+      shipping_postal_code: shippingAddress.postal_code || null,
+      shipping_country: shippingAddress.country || null,
+      billing_street: billingAddress.street || null,
+      billing_number: billingAddress.number || null,
+      billing_floor: billingAddress.floor || null,
+      billing_apartment: billingAddress.apartment || null,
+      billing_city: billingAddress.city || null,
+      billing_province: billingAddress.province || null,
+      billing_postal_code: billingAddress.postal_code || null,
+      billing_country: billingAddress.country || null,
       payment_condition: paymentCondition,
       notes:             notes.trim() || null,
       internal_notes:    internalNotes.trim() || null,
@@ -205,6 +370,34 @@ export function OrderDetail({ id }: OrderDetailProps) {
     return (data.data ?? []).map(pl => ({ value: pl.id, label: pl.name }))
   }, [])
 
+  useEffect(() => {
+    if (!editMode || !contactId) return
+    let cancelled = false
+    void (async () => {
+      const res = await fetch(`/api/v1/contacts/${contactId}/addresses`)
+      if (!res.ok) return
+      const addresses = await res.json() as ContactAddress[]
+      if (cancelled) return
+      const rows = Array.isArray(addresses) ? addresses : []
+      setContactAddresses(rows)
+      if (!shippingAddress.street && !shippingAddress.city) {
+        const nextShipping = rows.find(a => a.type === 'delivery' && a.is_default) ?? rows.find(a => a.type === 'delivery') ?? null
+        if (nextShipping) {
+          setShippingAddressId(nextShipping.id)
+          setShippingAddress(fromContactAddress(nextShipping))
+        }
+      }
+      if (!billingAddress.street && !billingAddress.city) {
+        const nextBilling = rows.find(a => a.type === 'fiscal' && a.is_default) ?? rows.find(a => a.type === 'fiscal') ?? null
+        if (nextBilling) {
+          setBillingAddressId(nextBilling.id)
+          setBillingAddress(fromContactAddress(nextBilling))
+        }
+      }
+    })()
+    return () => { cancelled = true }
+  }, [editMode, contactId, shippingAddress.street, shippingAddress.city, billingAddress.street, billingAddress.city])
+
   if (loading) {
     return (
       <div className="flex flex-col h-full">
@@ -231,10 +424,6 @@ export function OrderDetail({ id }: OrderDetailProps) {
   const canCancel   = CAN_CANCEL.includes(order.status)
   const canConvert  = order.status === 'delivered'
   const canEdit     = order.status !== 'delivered' && order.status !== 'cancelled'
-
-  const contactOption: SearchableSelectOption[] = order.contact && order.contact_id
-    ? [{ value: order.contact_id, label: order.contact.legal_name, sublabel: order.contact.trade_name ?? undefined }]
-    : []
 
   const editTotals = editMode ? calcTotals(items) : null
 
@@ -308,15 +497,28 @@ export function OrderDetail({ id }: OrderDetailProps) {
                     <SearchableSelect
                       id="contact_id"
                       value={contactId}
-                      onChange={setContactId}
+                      onChange={(next) => {
+                        setContactId(next)
+                        setShippingAddress({ ...EMPTY_ADDRESS })
+                        setBillingAddress({ ...EMPTY_ADDRESS })
+                        setShippingAddressId('')
+                        setBillingAddressId('')
+                        if (!next) setContactOption(null)
+                      }}
+                      onSelect={setContactOption}
                       onSearch={searchContacts}
-                      options={contactOption}
+                      options={contactOption ? [contactOption] : []}
+                      onCreateRequest={(query) => {
+                        setCreateContactSeed(query)
+                        setCreateContactOpen(true)
+                      }}
+                      createActionLabel="Crear cliente…"
                       placeholder="Buscar cliente…"
                       error={!!errors.contact_id}
                     />
                   </FormField>
-                  <FormField label="Fecha requerida" htmlFor="required_date">
-                    <DatePicker id="required_date" value={requiredDate} onChange={setRequiredDate} placeholder="Seleccionar fecha" />
+                  <FormField label="Fecha prometida" htmlFor="promised_date">
+                    <DatePicker id="promised_date" value={promisedDate} onChange={setPromisedDate} placeholder="Seleccionar fecha" />
                   </FormField>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -351,6 +553,48 @@ export function OrderDetail({ id }: OrderDetailProps) {
                     ))}
                   </div>
                 </FormField>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField label="Dirección de entrega" htmlFor="shipping_address_id">
+                    <select
+                      id="shipping_address_id"
+                      value={shippingAddressId}
+                      onChange={(e) => {
+                        const nextId = e.target.value
+                        setShippingAddressId(nextId)
+                        const selected = contactAddresses.find(a => a.id === nextId) ?? null
+                        setShippingAddress(fromContactAddress(selected))
+                      }}
+                      className="h-8 w-full rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="">Sin dirección predefinida</option>
+                      {contactAddresses.filter(a => a.type === 'delivery').map((address) => (
+                        <option key={address.id} value={address.id}>{addressLabel(address)}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <FormField label="Dirección de facturación" htmlFor="billing_address_id">
+                    <select
+                      id="billing_address_id"
+                      value={billingAddressId}
+                      onChange={(e) => {
+                        const nextId = e.target.value
+                        setBillingAddressId(nextId)
+                        const selected = contactAddresses.find(a => a.id === nextId) ?? null
+                        setBillingAddress(fromContactAddress(selected))
+                      }}
+                      className="h-8 w-full rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="">Sin dirección predefinida</option>
+                      {contactAddresses.filter(a => a.type === 'fiscal').map((address) => (
+                        <option key={address.id} value={address.id}>{addressLabel(address)}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <AddressSnapshotFields prefix="shipping" title="Snapshot entrega" value={shippingAddress} onChange={setShippingAddress} />
+                  <AddressSnapshotFields prefix="billing" title="Snapshot facturación" value={billingAddress} onChange={setBillingAddress} />
+                </div>
               </>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[13px]">
@@ -374,13 +618,26 @@ export function OrderDetail({ id }: OrderDetailProps) {
                   <p className="text-zinc-800">{PAYMENT_CONDITION_LABEL[order.payment_condition]}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Fecha requerida</p>
+                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Fecha prometida</p>
                   <p className="text-zinc-800">
-                    {order.required_date
-                      ? new Date(order.required_date).toLocaleDateString('es-AR')
+                    {order.promised_date
+                      ? new Date(order.promised_date).toLocaleDateString('es-AR')
                       : <span className="text-zinc-400">—</span>
                     }
                   </p>
+                </div>
+              </div>
+            )}
+
+            {!editMode && (
+              <div className="grid grid-cols-2 gap-4 border-t border-zinc-100 pt-4 text-[13px]">
+                <div>
+                  <p className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">Dirección de entrega</p>
+                  <p className="text-zinc-700">{displaySnapshot(orderSnapshot('shipping', order)) ?? <span className="text-zinc-400">—</span>}</p>
+                </div>
+                <div>
+                  <p className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">Dirección de facturación</p>
+                  <p className="text-zinc-700">{displaySnapshot(orderSnapshot('billing', order)) ?? <span className="text-zinc-400">—</span>}</p>
                 </div>
               </div>
             )}
@@ -419,6 +676,46 @@ export function OrderDetail({ id }: OrderDetailProps) {
                 {serverError}
               </p>
             )}
+          </div>
+
+          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+            <h2 className="text-[13px] font-semibold text-zinc-900 mb-3">Trazabilidad</h2>
+            <div className="space-y-3">
+              <div>
+                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-1">Origen</p>
+                {order.quote_id ? (
+                  <Button variant="ghost" size="xs" asChild>
+                    <Link href={`/ventas/presupuestos/${order.quote_id}`}>Ver presupuesto origen</Link>
+                  </Button>
+                ) : (
+                  <p className="text-[13px] text-zinc-500">Pedido creado manualmente (sin presupuesto origen).</p>
+                )}
+              </div>
+              <div>
+                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-1">Destino</p>
+                {loadingTraceability ? (
+                  <p className="text-[13px] text-zinc-500">Cargando facturas relacionadas…</p>
+                ) : relatedInvoices.length === 0 ? (
+                  <p className="text-[13px] text-zinc-500">Todavía no hay facturas generadas desde este pedido.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {relatedInvoices.map((invoice) => (
+                      <div key={invoice.id} className="flex items-center justify-between gap-3 rounded-sm border border-zinc-200 px-3 py-2">
+                        <div>
+                          <p className="text-[13px] font-medium text-zinc-900">{invoice.invoice_number}</p>
+                          <p className="text-[12px] text-zinc-500">
+                            {INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status} · {new Date(invoice.issue_date ?? invoice.created_at).toLocaleDateString('es-AR')}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="xs" asChild>
+                          <Link href={`/ventas/facturas/${invoice.id}`}>Ver factura</Link>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Items */}
@@ -505,6 +802,64 @@ export function OrderDetail({ id }: OrderDetailProps) {
         variant="danger"
         onConfirm={handleCancelOrder}
       />
+
+      <CustomerQuickCreateDialog
+        open={createContactOpen}
+        onOpenChange={setCreateContactOpen}
+        initialLegalName={createContactSeed}
+        onCreated={(option) => {
+          setContactOption(option)
+          setContactId(option.value)
+        }}
+      />
+    </div>
+  )
+}
+
+function AddressSnapshotFields({
+  prefix,
+  title,
+  value,
+  onChange,
+}: {
+  prefix: string
+  title: string
+  value: AddressSnapshot
+  onChange: (next: AddressSnapshot) => void
+}) {
+  function patch(p: Partial<AddressSnapshot>) {
+    onChange({ ...value, ...p })
+  }
+
+  return (
+    <div className="rounded-sm border border-zinc-200 p-3">
+      <p className="mb-3 text-[12px] font-medium text-zinc-600">{title}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="Calle" htmlFor={`${prefix}_street`}>
+          <Input id={`${prefix}_street`} value={value.street} onChange={(e) => patch({ street: e.target.value })} />
+        </FormField>
+        <FormField label="Número" htmlFor={`${prefix}_number`}>
+          <Input id={`${prefix}_number`} value={value.number} onChange={(e) => patch({ number: e.target.value })} />
+        </FormField>
+        <FormField label="Piso" htmlFor={`${prefix}_floor`}>
+          <Input id={`${prefix}_floor`} value={value.floor} onChange={(e) => patch({ floor: e.target.value })} />
+        </FormField>
+        <FormField label="Depto" htmlFor={`${prefix}_apartment`}>
+          <Input id={`${prefix}_apartment`} value={value.apartment} onChange={(e) => patch({ apartment: e.target.value })} />
+        </FormField>
+        <FormField label="Ciudad" htmlFor={`${prefix}_city`}>
+          <Input id={`${prefix}_city`} value={value.city} onChange={(e) => patch({ city: e.target.value })} />
+        </FormField>
+        <FormField label="Provincia" htmlFor={`${prefix}_province`}>
+          <Input id={`${prefix}_province`} value={value.province} onChange={(e) => patch({ province: e.target.value })} />
+        </FormField>
+        <FormField label="Código postal" htmlFor={`${prefix}_postal_code`}>
+          <Input id={`${prefix}_postal_code`} value={value.postal_code} onChange={(e) => patch({ postal_code: e.target.value })} />
+        </FormField>
+        <FormField label="País" htmlFor={`${prefix}_country`}>
+          <Input id={`${prefix}_country`} value={value.country} onChange={(e) => patch({ country: e.target.value })} />
+        </FormField>
+      </div>
     </div>
   )
 }

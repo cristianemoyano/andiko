@@ -48,6 +48,7 @@ export const POST = withPermission('sales:write', async (req, _ctx, session) => 
     if (err instanceof Error) {
       if (err.message === 'ORDER_NOT_FOUND')     return NextResponse.json({ error: 'Pedido no encontrado', code: 'ORDER_NOT_FOUND' }, { status: 404 })
       if (err.message === 'ORDER_NOT_DELIVERED') return NextResponse.json({ error: 'El pedido debe estar entregado para generar una factura', code: 'ORDER_NOT_DELIVERED' }, { status: 409 })
+      if (err.message === 'ORDER_CONTACT_REQUIRED') return NextResponse.json({ error: 'El pedido debe tener cliente asignado para facturar', code: 'ORDER_CONTACT_REQUIRED' }, { status: 422 })
       if (err.message === 'BRANCH_NOT_FOUND')    return NextResponse.json({ error: 'Sucursal no encontrada o inactiva', code: 'BRANCH_NOT_FOUND' }, { status: 404 })
       if (err.message === 'ORG_CONTEXT_REQUIRED') return NextResponse.json({ error: 'Falta contexto de organización o sucursal', code: 'ORG_CONTEXT_REQUIRED' }, { status: 422 })
     }

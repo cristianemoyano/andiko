@@ -8,6 +8,7 @@ import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
+import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 
 type PriceList = {
   id: string
@@ -55,6 +56,7 @@ export function PriceListsClient() {
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving]       = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [listToDelete, setListToDelete] = useState<PriceList | null>(null)
   const [form, setForm] = useState({ name: '', description: '', is_default: false })
 
   useEffect(() => {
@@ -99,6 +101,23 @@ export function PriceListsClient() {
     setSaving(false)
   }
 
+  async function reloadLists() {
+    setLoading(true)
+    const reload = await fetch('/api/v1/catalog/price-lists?limit=100')
+    if (reload.ok) {
+      const data = await reload.json() as { data: PriceList[] }
+      setLists(data.data)
+    }
+    setLoading(false)
+  }
+
+  async function handleDeletePriceList() {
+    if (!listToDelete) return
+    await fetch(`/api/v1/catalog/price-lists/${listToDelete.id}`, { method: 'DELETE' })
+    setListToDelete(null)
+    await reloadLists()
+  }
+
   return (
     <div className="flex flex-col h-full">
       <TopBar
@@ -113,7 +132,26 @@ export function PriceListsClient() {
 
       <div className="flex-1 overflow-auto p-6">
         <DataTable
-          columns={COLUMNS}
+          columns={[
+            ...COLUMNS,
+            {
+              key: '_actions',
+              header: '',
+              align: 'right',
+              render: row => (
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setListToDelete(row)
+                  }}
+                >
+                  Eliminar
+                </Button>
+              ),
+            },
+          ]}
           data={loading ? [] : lists}
           keyExtractor={(row) => row.id}
           onRowClick={(row) => router.push(`/catalogo/listas-de-precios/${row.id}`)}
@@ -173,6 +211,16 @@ export function PriceListsClient() {
           </form>
         </dialog>
       )}
+
+      <ConfirmDialog
+        open={!!listToDelete}
+        onOpenChange={(open) => { if (!open) setListToDelete(null) }}
+        title="Eliminar lista de precios"
+        description={listToDelete ? `Se eliminará ${listToDelete.name}.` : ''}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={handleDeletePriceList}
+      />
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
+import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 
 type Category = {
   id: string
@@ -39,6 +40,7 @@ export function CategoriesClient() {
   const [errors, setErrors] = useState<FieldErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
   const [view, setView] = useState<'table' | 'tree'>('tree')
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
 
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [loadingAll, setLoadingAll] = useState(false)
@@ -187,8 +189,10 @@ export function CategoriesClient() {
     setSaving(false)
   }
 
-  async function handleDelete(id: string) {
-    await fetch(`/api/v1/catalog/categories/${id}`, { method: 'DELETE' })
+  async function handleDeleteConfirmed() {
+    if (!categoryToDelete) return
+    await fetch(`/api/v1/catalog/categories/${categoryToDelete.id}`, { method: 'DELETE' })
+    setCategoryToDelete(null)
     await loadFiltered()
   }
 
@@ -201,7 +205,7 @@ export function CategoriesClient() {
       render: row => (
         <div className="flex items-center gap-1 justify-end">
           <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>Editar</Button>
-          <Button variant="ghost" size="xs" onClick={() => handleDelete(row.id)}>Eliminar</Button>
+          <Button variant="ghost" size="xs" onClick={() => setCategoryToDelete(row)}>Eliminar</Button>
         </div>
       ),
     },
@@ -239,7 +243,7 @@ export function CategoriesClient() {
           <span className="flex-1" />
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="xs" onClick={() => openEdit(node)}>Editar</Button>
-            <Button variant="ghost" size="xs" onClick={() => handleDelete(node.id)}>Eliminar</Button>
+            <Button variant="ghost" size="xs" onClick={() => setCategoryToDelete(node)}>Eliminar</Button>
           </div>
         </div>
 
@@ -419,6 +423,16 @@ export function CategoriesClient() {
           </form>
         </dialog>
       )}
+
+      <ConfirmDialog
+        open={!!categoryToDelete}
+        onOpenChange={(open) => { if (!open) setCategoryToDelete(null) }}
+        title="Eliminar categoría"
+        description={categoryToDelete ? `Se eliminará ${categoryToDelete.name}.` : ''}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={handleDeleteConfirmed}
+      />
     </div>
   )
 }

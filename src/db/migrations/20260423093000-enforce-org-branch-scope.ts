@@ -2,10 +2,11 @@ import type { Migration } from '../../lib/migrations'
 
 export const up: Migration = async ({ context: queryInterface }) => {
   await queryInterface.sequelize.query(`
-    -- Branches: enable composite FK targets
+    -- Branches: enable composite FK targets.
+    -- FK references cannot target partial unique indexes in PostgreSQL.
     CREATE UNIQUE INDEX IF NOT EXISTS uq_branches_id_org
       ON branches (id, org_id)
-      WHERE deleted_at IS NULL;
+      ;
 
     -- -----------------------------
     -- SALES: backfill org/branch

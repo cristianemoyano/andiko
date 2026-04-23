@@ -9,6 +9,7 @@ import Invoice from './invoice.model'
 import InvoiceItem from './invoice-item.model'
 import type { SalesOrderInput, SalesOrderUpdateInput, SalesOrderQuery } from './sales-order.schema'
 import Branch from '@/modules/auth/branch.model'
+import Contact from '@/modules/contacts/contact.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
@@ -39,9 +40,14 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
     attributes: [
       'id', 'branch_id', 'order_number', 'status', 'contact_id', 'quote_id',
       'payment_condition', 'currency', 'promised_date', 'delivered_date',
+      'shipping_street', 'shipping_number', 'shipping_floor', 'shipping_apartment', 'shipping_city', 'shipping_province', 'shipping_postal_code', 'shipping_country',
+      'billing_street', 'billing_number', 'billing_floor', 'billing_apartment', 'billing_city', 'billing_province', 'billing_postal_code', 'billing_country',
       'subtotal', 'tax_amount', 'total', 'notes', 'created_at',
     ],
-    include: [{ model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] }],
+    include: [
+      { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+    ],
   })
 
   return toPaginated(rows, count, page, limit)
@@ -53,6 +59,7 @@ export async function getOrder(id: string, ctx: TenantContext) {
   const order = await SalesOrder.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
       { model: SalesOrderItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
   })
@@ -191,6 +198,7 @@ export async function convertOrderToInvoice(id: string, ctx: TenantContext, acto
       throw new Error('ORDER_NOT_DELIVERED')
     }
     if (!order.branch_id) throw new Error('ORDER_BRANCH_REQUIRED')
+    if (!order.contact_id) throw new Error('ORDER_CONTACT_REQUIRED')
 
     const invoice_number = await nextDocumentNumber(ctx.orgId, order.branch_id, 'invoice', t)
     const items = (order as SalesOrder & { items: SalesOrderItem[] }).items
@@ -251,6 +259,7 @@ async function getOrderInTransaction(id: string, ctx: TenantContext, t: import('
     where: whereAllowedBranches(ctx, { id }),
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
       { model: SalesOrderItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
     transaction: t,

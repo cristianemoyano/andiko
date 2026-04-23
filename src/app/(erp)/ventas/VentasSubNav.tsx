@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/ventas/presupuestos', label: 'Presupuestos' },
   { href: '/ventas/pedidos', label: 'Pedidos' },
   { href: '/ventas/facturas', label: 'Facturas' },
+  { href: '/ventas/cuenta-corriente', label: 'Cuenta corriente' },
 ] as const
 
 export function VentasSubNav() {

@@ -1,9 +1,39 @@
 'use client'
 import { useState, useCallback } from 'react'
 import * as Popover from '@radix-ui/react-popover'
-import { DayPicker } from 'react-day-picker'
+import { DayPicker, getDefaultClassNames } from 'react-day-picker'
 import { es } from 'react-day-picker/locale'
 import { cn } from '@/lib/utils'
+
+const defaultCN = getDefaultClassNames()
+
+const DAY_PICKER_CLASS_NAMES = {
+  root:            cn(defaultCN.root, 'p-2 text-[13px] text-zinc-900'),
+  months:          'flex gap-4',
+  month:           'relative flex flex-col',
+  month_caption:   'flex items-center justify-center h-8 px-8 text-[13px] font-semibold text-zinc-800',
+  caption_label:   '',
+  nav:             'absolute inset-0 flex items-center justify-between pointer-events-none h-8',
+  button_previous: cn(defaultCN.button_previous, 'pointer-events-auto w-7 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-500'),
+  button_next:     cn(defaultCN.button_next,     'pointer-events-auto w-7 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-500'),
+  month_grid:      'w-full border-collapse',
+  weekdays:        'flex',
+  weekday:         'w-8 h-7 flex items-center justify-center text-[11px] font-medium text-zinc-400',
+  weeks:           'flex flex-col gap-0.5 mt-1',
+  week:            'flex',
+  day:             'w-8 h-8 p-0 flex items-center justify-center',
+  day_button:      cn(
+    'w-7 h-7 flex items-center justify-center rounded text-[12px] font-medium',
+    'hover:bg-zinc-100 transition-colors cursor-pointer',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600',
+  ),
+  selected:        '[&_button]:bg-brand-600 [&_button]:text-white [&_button]:hover:bg-brand-700',
+  today:           '[&_button]:font-bold [&_button]:text-brand-700 [&_button]:border [&_button]:border-brand-300 [&_button]:bg-brand-50',
+  outside:         'opacity-40',
+  disabled:        'opacity-30 cursor-not-allowed',
+  hidden:          'invisible',
+  chevron:         'fill-current',
+}
 
 function dateToDisplay(value: Date | string | null | undefined): string {
   if (!value) return ''
@@ -93,6 +123,7 @@ export function DatePicker({
             onSelect={handleSelect}
             defaultMonth={selected}
             navLayout="around"
+            classNames={DAY_PICKER_CLASS_NAMES}
           />
         </Popover.Content>
       </Popover.Portal>
