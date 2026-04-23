@@ -8,6 +8,7 @@ import SalesQuoteItem from './sales-quote-item.model'
 import SalesOrder from './sales-order.model'
 import SalesOrderItem from './sales-order-item.model'
 import type { SalesQuoteInput, SalesQuoteUpdateInput, SalesQuoteQuery } from './sales-quote.schema'
+import Branch from '@/modules/auth/branch.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
@@ -16,7 +17,6 @@ import { whereAllowedBranches, whereBranch } from '@/lib/tenancy'
 
 export async function listQuotes(query: SalesQuoteQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
   const { page, limit, search, status, contact_id } = query
   const { offset } = paginate(page, limit)
 
@@ -47,7 +47,6 @@ export async function listQuotes(query: SalesQuoteQuery, ctx: TenantContext) {
 
 export async function getQuote(id: string, ctx: TenantContext) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
   const quote = await SalesQuote.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
@@ -242,7 +241,6 @@ export async function convertQuoteToOrder(id: string, ctx: TenantContext, actorI
 
 async function getQuoteInTransaction(id: string, ctx: TenantContext, t: import('sequelize').Transaction) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
   return SalesQuote.findOne({
     where: whereAllowedBranches(ctx, { id }),
     include: [

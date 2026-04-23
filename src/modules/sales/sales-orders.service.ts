@@ -8,6 +8,7 @@ import SalesOrderItem from './sales-order-item.model'
 import Invoice from './invoice.model'
 import InvoiceItem from './invoice-item.model'
 import type { SalesOrderInput, SalesOrderUpdateInput, SalesOrderQuery } from './sales-order.schema'
+import Branch from '@/modules/auth/branch.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
@@ -16,7 +17,7 @@ import { whereAllowedBranches, whereBranch } from '@/lib/tenancy'
 
 export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
+
   const { page, limit, search, status, contact_id, quote_id } = query
   const { offset } = paginate(page, limit)
 
@@ -48,7 +49,7 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
 
 export async function getOrder(id: string, ctx: TenantContext) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
+
   const order = await SalesOrder.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
@@ -245,7 +246,7 @@ export async function convertOrderToInvoice(id: string, ctx: TenantContext, acto
 
 async function getOrderInTransaction(id: string, ctx: TenantContext, t: import('sequelize').Transaction) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
+
   return SalesOrder.findOne({
     where: whereAllowedBranches(ctx, { id }),
     include: [

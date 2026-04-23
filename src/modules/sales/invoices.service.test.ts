@@ -20,6 +20,8 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), error: vi.fn() } }))
+vi.mock('@/modules/auth/branch.model', () => ({ default: { belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('./sales-branch-associations', () => ({ ensureSalesBranchAssociations: vi.fn() }))
 vi.mock('./sales.utils', () => ({
   nextDocumentNumber: vi.fn().mockResolvedValue('FAC-0001'),
   calcLineItem:       vi.fn().mockReturnValue({ subtotal: '100.00', discount_amount: '0.00', tax_base: '100.00', tax_amount: '21.00', total: '121.00' }),

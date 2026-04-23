@@ -8,13 +8,14 @@ import Invoice from './invoice.model'
 import InvoiceItem from './invoice-item.model'
 import Payment from './payment.model'
 import type { InvoiceInput, InvoiceUpdateInput, InvoiceQuery } from './invoice.schema'
+import Branch from '@/modules/auth/branch.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
 
 export async function listInvoices(query: InvoiceQuery, orgId: string) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
+
   const { page, limit, search, status, contact_id, order_id, overdue } = query
   const { offset } = paginate(page, limit)
 
@@ -51,7 +52,7 @@ export async function listInvoices(query: InvoiceQuery, orgId: string) {
 
 export async function getInvoice(id: string) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
+
   const invoice = await Invoice.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
@@ -244,7 +245,7 @@ function computeDueDate(issueDate: Date, paymentCondition: string): Date {
 
 async function getInvoiceInTransaction(id: string, t: import('sequelize').Transaction) {
   ensureSalesBranchAssociations()
-  const { default: Branch } = await import('@/modules/auth/branch.model')
+
   return Invoice.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
