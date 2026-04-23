@@ -64,11 +64,11 @@ const COLUMNS: Column<Order>[] = [
     render: row => PAYMENT_CONDITION_LABEL[row.payment_condition],
   },
   {
-    key: 'required_date',
-    header: 'Fecha requerida',
+    key: 'promised_date',
+    header: 'Fecha prometida',
     render: row =>
-      row.required_date
-        ? new Date(row.required_date).toLocaleDateString('es-AR')
+      row.promised_date
+        ? new Date(row.promised_date).toLocaleDateString('es-AR')
         : <span className="text-zinc-400">—</span>,
   },
   {

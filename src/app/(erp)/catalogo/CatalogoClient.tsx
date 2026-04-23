@@ -6,6 +6,7 @@ import { TopBar } from '@/components/layout/TopBar'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
+import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { ProductModal } from './ProductModal'
 
 type Variant = {
@@ -140,6 +141,7 @@ export function CatalogoClient() {
   const [modalOpen, setModalOpen]   = useState(false)
   const [editing, setEditing]       = useState<ProductForEdit>(null)
   const [loadingEdit, setLoadingEdit] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
 
   async function safeJson(res: Response): Promise<unknown | null> {
     const text = await res.text()
@@ -199,6 +201,21 @@ export function CatalogoClient() {
     setLoadingEdit(false)
   }
 
+  async function handleDeleteProduct() {
+    if (!productToDelete) return
+    await fetch(`/api/v1/catalog/products/${productToDelete.id}`, { method: 'DELETE' })
+    setProductToDelete(null)
+    setLoading(true)
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
+    if (search) params.set('search', search)
+    if (status) params.set('status', status)
+    const res = await fetch(`/api/v1/catalog/products?${params}`)
+    const data = (await safeJson(res)) as { data?: Product[]; total?: number } | null
+    setProducts(data?.data ?? [])
+    setTotal(data?.total ?? 0)
+    setLoading(false)
+  }
+
   return (
     <div className="flex flex-col h-full">
       <TopBar
@@ -234,6 +251,13 @@ export function CatalogoClient() {
                     onClick={(e) => { e.stopPropagation(); openEdit(row.id) }}
                   >
                     Editar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={(e) => { e.stopPropagation(); setProductToDelete(row) }}
+                  >
+                    Eliminar
                   </Button>
                 </div>
               ),
@@ -295,6 +319,16 @@ export function CatalogoClient() {
           onSaved={() => { setModalOpen(false); setEditing(null) }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!productToDelete}
+        onOpenChange={(open) => { if (!open) setProductToDelete(null) }}
+        title="Eliminar producto"
+        description={productToDelete ? `Se eliminará ${productToDelete.name}.` : ''}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={handleDeleteProduct}
+      />
     </div>
   )
 }

@@ -12,8 +12,11 @@ export interface SearchableSelectOption {
 export interface SearchableSelectProps {
   value: string | null | undefined
   onChange: (value: string | null) => void
+  onSelect?: (option: SearchableSelectOption | null) => void
   options?: SearchableSelectOption[]
   onSearch?: (query: string) => Promise<SearchableSelectOption[]>
+  onCreateRequest?: (query: string) => void
+  createActionLabel?: string
   placeholder?: string
   error?: boolean
   disabled?: boolean
@@ -25,8 +28,11 @@ export interface SearchableSelectProps {
 function SearchableSelect({
   value,
   onChange,
+  onSelect,
   options: staticOptions = [],
   onSearch,
+  onCreateRequest,
+  createActionLabel = 'Crear nuevo',
   placeholder = 'Seleccionar…',
   error,
   disabled,
@@ -83,17 +89,19 @@ function SearchableSelect({
   const handleSelect = useCallback(
     (option: SearchableSelectOption) => {
       onChange(option.value)
+      onSelect?.(option)
       setOpen(false)
     },
-    [onChange],
+    [onChange, onSelect],
   )
 
   const handleClear = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation()
       onChange(null)
+      onSelect?.(null)
     },
-    [onChange],
+    [onChange, onSelect],
   )
 
   return (
@@ -196,8 +204,17 @@ function SearchableSelect({
               <div className="py-6 text-center text-[12px] text-zinc-400">Buscando…</div>
             )}
             {!loading && filteredOptions.length === 0 && (
-              <div className="py-6 text-center text-[12px] text-zinc-400">
-                {query ? 'Sin resultados' : 'Sin opciones'}
+              <div className="px-3 py-4 text-center text-[12px] text-zinc-400">
+                <p>{query ? 'Sin resultados' : 'Sin opciones'}</p>
+                {onCreateRequest && query.trim().length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onCreateRequest(query.trim())}
+                    className="mt-2 inline-flex items-center rounded-sm border border-zinc-300 bg-white px-2.5 py-1 text-[12px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+                  >
+                    {createActionLabel}
+                  </button>
+                )}
               </div>
             )}
             {!loading && filteredOptions.map(option => (

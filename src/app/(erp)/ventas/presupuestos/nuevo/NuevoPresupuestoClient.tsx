@@ -16,6 +16,7 @@ import { VentasBranchField } from '@/components/erp/VentasBranchField'
 import type { PaymentCondition } from '../../types'
 import { PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
+import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
 import { cn, parseResponseBodyJson } from '@/lib/utils'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
@@ -29,6 +30,7 @@ export function NuevoPresupuestoClient() {
   const router = useRouter()
 
   const [contactId, setContactId]               = useState<string | null>(null)
+  const [contactOption, setContactOption]       = useState<SearchableSelectOption | null>(null)
   const [branchId, setBranchId]                 = useState<string | null>(null)
   const [priceListId, setPriceListId]           = useState<string | null>(null)
   const [validUntil, setValidUntil]             = useState<Date | null>(null)
@@ -39,6 +41,8 @@ export function NuevoPresupuestoClient() {
   const [saving, setSaving]                     = useState(false)
   const [errors, setErrors]                     = useState<FieldErrors>({})
   const [serverError, setServerError]           = useState<string | null>(null)
+  const [createContactOpen, setCreateContactOpen] = useState(false)
+  const [createContactSeed, setCreateContactSeed] = useState('')
 
   const totals = calcTotals(items)
 
@@ -62,6 +66,11 @@ export function NuevoPresupuestoClient() {
     if (!branchId) {
       setSaving(false)
       setServerError('Elegí una sucursal.')
+      return
+    }
+    if (!contactId) {
+      setSaving(false)
+      setErrors(prev => ({ ...prev, contact_id: ['Seleccioná un cliente.'] }))
       return
     }
 
@@ -136,8 +145,18 @@ export function NuevoPresupuestoClient() {
                 <SearchableSelect
                   id="contact_id"
                   value={contactId}
-                  onChange={setContactId}
+                  onChange={(next) => {
+                    setContactId(next)
+                    if (!next) setContactOption(null)
+                  }}
+                  onSelect={setContactOption}
+                  options={contactOption ? [contactOption] : []}
                   onSearch={searchContacts}
+                  onCreateRequest={(query) => {
+                    setCreateContactSeed(query)
+                    setCreateContactOpen(true)
+                  }}
+                  createActionLabel="Crear cliente…"
                   placeholder="Buscar cliente…"
                   error={!!errors.contact_id}
                 />
@@ -216,6 +235,16 @@ export function NuevoPresupuestoClient() {
           )}
         </div>
       </div>
+
+      <CustomerQuickCreateDialog
+        open={createContactOpen}
+        onOpenChange={setCreateContactOpen}
+        initialLegalName={createContactSeed}
+        onCreated={(option) => {
+          setContactOption(option)
+          setContactId(option.value)
+        }}
+      />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
+import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 
 type PriceList = {
   id: string
@@ -77,17 +78,30 @@ const ITEMS_COLUMNS: Column<PriceListItem>[] = [
 
 function RemoveItemButton({ priceListItemId }: { priceListItemId: string }) {
   const [removing, setRemoving] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   async function handleRemove() {
     setRemoving(true)
     await fetch(`/api/v1/catalog/price-lists/${encodeURIComponent(priceListIdFromPath())}/items/${priceListItemId}`, { method: 'DELETE' })
+    setConfirmOpen(false)
     location.reload()
   }
 
   return (
-    <Button size="sm" variant="secondary" disabled={removing} onClick={handleRemove}>
-      {removing ? 'Quitando…' : 'Quitar'}
-    </Button>
+    <>
+      <Button size="sm" variant="secondary" disabled={removing} onClick={() => setConfirmOpen(true)}>
+        {removing ? 'Quitando…' : 'Quitar'}
+      </Button>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Quitar precio de la lista"
+        description="Se eliminará este ítem de la lista."
+        confirmLabel="Quitar"
+        variant="danger"
+        onConfirm={handleRemove}
+      />
+    </>
   )
 }
 
@@ -108,6 +122,7 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
   const [price, setPrice] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [confirmDeleteList, setConfirmDeleteList] = useState(false)
   const searchAbortRef = useRef<AbortController | null>(null)
 
   const variants = useMemo(() => (
@@ -191,6 +206,13 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
     setSaving(false)
   }
 
+  async function handleDeleteList() {
+    const res = await fetch(`/api/v1/catalog/price-lists/${priceList.id}`, { method: 'DELETE' })
+    setConfirmDeleteList(false)
+    if (!res.ok && res.status !== 204) return
+    window.location.assign('/catalogo/listas-de-precios')
+  }
+
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6">
       <div className="bg-white border border-zinc-200 rounded-sm p-5 flex items-start justify-between gap-4">
@@ -204,6 +226,9 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
           </div>
           {priceList.description && <p className="text-xs text-zinc-500 mt-1">{priceList.description}</p>}
         </div>
+        <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteList(true)}>
+          Eliminar lista
+        </Button>
       </div>
 
       <div className="bg-white border border-zinc-200 rounded-sm p-5">
@@ -279,6 +304,16 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
           emptyMessage={loadingItems ? 'Cargando…' : 'No hay precios cargados para esta lista.'}
         />
       </div>
+
+      <ConfirmDialog
+        open={confirmDeleteList}
+        onOpenChange={setConfirmDeleteList}
+        title="Eliminar lista de precios"
+        description={`Se eliminará ${priceList.name}.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={handleDeleteList}
+      />
     </div>
   )
 }

@@ -17,7 +17,7 @@ export const lineItemSchema = z.object({
 })
 
 export const salesQuoteSchema = z.object({
-  contact_id:        z.string().uuid().nullable().optional(),
+  contact_id:        z.string().uuid(),
   branch_id:         z.string().uuid(),
   price_list_id:     z.string().uuid().nullable().optional(),
   valid_until:       z.string().datetime({ offset: true }).transform(s => new Date(s)).nullable().optional(),

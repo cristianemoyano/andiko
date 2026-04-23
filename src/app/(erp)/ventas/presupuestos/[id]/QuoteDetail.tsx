@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
@@ -18,8 +19,9 @@ import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { VentasBranchField } from '@/components/erp/VentasBranchField'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import type { Quote, PaymentCondition } from '../../types'
-import { PAYMENT_CONDITION_LABEL } from '../../types'
+import { ORDER_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
+import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
 import { cn, parseResponseBodyJson } from '@/lib/utils'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
@@ -64,14 +66,24 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
   const [quote, setQuote]     = useState<Quote | null>(null)
   const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(0)
+  const [relatedOrders, setRelatedOrders] = useState<Array<{
+    id: string
+    order_number: string
+    status: keyof typeof ORDER_STATUS_LABEL
+    created_at: string
+  }>>([])
+  const [loadingTraceability, setLoadingTraceability] = useState(false)
 
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving]     = useState(false)
   const [errors, setErrors]     = useState<FieldErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
+  const [createContactOpen, setCreateContactOpen] = useState(false)
+  const [createContactSeed, setCreateContactSeed] = useState('')
 
   // Edit form fields
   const [contactId, setContactId]               = useState<string | null>(null)
+  const [contactOption, setContactOption]       = useState<SearchableSelectOption | null>(null)
   const [branchId, setBranchId]                 = useState<string | null>(null)
   const [priceListId, setPriceListId]           = useState<string | null>(null)
   const [validUntil, setValidUntil]             = useState<Date | null>(null)
@@ -98,8 +110,46 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
     return () => { cancelled = true }
   }, [id, refresh])
 
+  useEffect(() => {
+    let cancelled = false
+    async function loadRelatedOrders() {
+      setLoadingTraceability(true)
+      const params = new URLSearchParams({
+        quote_id: id,
+        page: '1',
+        limit: '50',
+      })
+      const res = await fetch(`/api/v1/sales/orders?${params}`)
+      if (!res.ok) {
+        if (!cancelled) {
+          setRelatedOrders([])
+          setLoadingTraceability(false)
+        }
+        return
+      }
+      const payload = await res.json() as {
+        data?: Array<{ id: string; order_number: string; status: keyof typeof ORDER_STATUS_LABEL; created_at: string }>
+      }
+      if (cancelled) return
+      setRelatedOrders(Array.isArray(payload.data) ? payload.data : [])
+      setLoadingTraceability(false)
+    }
+
+    void loadRelatedOrders()
+    return () => { cancelled = true }
+  }, [id, refresh])
+
   function enterEditMode(q: Quote) {
     setContactId(q.contact_id ?? null)
+    if (q.contact_id && q.contact) {
+      setContactOption({
+        value: q.contact_id,
+        label: q.contact.legal_name,
+        sublabel: q.contact.trade_name ?? undefined,
+      })
+    } else {
+      setContactOption(null)
+    }
     setBranchId(q.branch_id ?? null)
     setPriceListId(q.price_list_id ?? null)
     setValidUntil(q.valid_until ? new Date(q.valid_until) : null)
@@ -123,6 +173,12 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
     setSaving(true)
     setErrors({})
     setServerError(null)
+
+    if (!contactId) {
+      setSaving(false)
+      setErrors(prev => ({ ...prev, contact_id: ['Seleccioná un cliente.'] }))
+      return
+    }
 
     const body = {
       contact_id:        contactId,
@@ -223,10 +279,6 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
   const canConvert  = quote.status === 'accepted'
   const canEdit     = quote.status === 'draft' || quote.status === 'sent'
 
-  const contactOption: SearchableSelectOption[] = quote.contact && quote.contact_id
-    ? [{ value: quote.contact_id, label: quote.contact.legal_name, sublabel: quote.contact.trade_name ?? undefined }]
-    : []
-
   const editTotals = editMode ? calcTotals(items) : null
 
   return (
@@ -294,9 +346,18 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                     <SearchableSelect
                       id="contact_id"
                       value={contactId}
-                      onChange={setContactId}
+                      onChange={(next) => {
+                        setContactId(next)
+                        if (!next) setContactOption(null)
+                      }}
+                      onSelect={setContactOption}
                       onSearch={searchContacts}
-                      options={contactOption}
+                      options={contactOption ? [contactOption] : []}
+                      onCreateRequest={(query) => {
+                        setCreateContactSeed(query)
+                        setCreateContactOpen(true)
+                      }}
+                      createActionLabel="Crear cliente…"
                       placeholder="Buscar cliente…"
                       error={!!errors.contact_id}
                     />
@@ -406,6 +467,31 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
             )}
           </div>
 
+          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+            <h2 className="text-[13px] font-semibold text-zinc-900 mb-3">Trazabilidad</h2>
+            {loadingTraceability ? (
+              <p className="text-[13px] text-zinc-500">Cargando relaciones…</p>
+            ) : relatedOrders.length === 0 ? (
+              <p className="text-[13px] text-zinc-500">Todavía no se generaron pedidos desde este presupuesto.</p>
+            ) : (
+              <div className="space-y-2">
+                {relatedOrders.map((order) => (
+                  <div key={order.id} className="flex items-center justify-between gap-3 rounded-sm border border-zinc-200 px-3 py-2">
+                    <div>
+                      <p className="text-[13px] font-medium text-zinc-900">{order.order_number}</p>
+                      <p className="text-[12px] text-zinc-500">
+                        {ORDER_STATUS_LABEL[order.status] ?? order.status} · {new Date(order.created_at).toLocaleDateString('es-AR')}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="xs" asChild>
+                      <Link href={`/ventas/pedidos/${order.id}`}>Ver pedido</Link>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Items */}
           {editMode ? (
             <div className="bg-white border border-zinc-200 rounded-sm p-5">
@@ -479,6 +565,16 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
         confirmLabel="Convertir"
         variant="warning"
         onConfirm={handleConvertToOrder}
+      />
+
+      <CustomerQuickCreateDialog
+        open={createContactOpen}
+        onOpenChange={setCreateContactOpen}
+        initialLegalName={createContactSeed}
+        onCreated={(option) => {
+          setContactOption(option)
+          setContactId(option.value)
+        }}
       />
     </div>
   )

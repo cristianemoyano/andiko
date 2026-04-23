@@ -6,6 +6,7 @@ import { TopBar } from '@/components/layout/TopBar'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
+import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { ContactModal } from './ContactModal'
 import { formatContactPersonLabel } from '@/modules/contacts/contact.utils'
 
@@ -118,6 +119,7 @@ export function ContactosClient() {
   const [refresh, setRefresh]   = useState(0)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing]     = useState<Contact | null>(null)
+  const [contactToDelete, setContactToDelete] = useState<Contact | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams({
@@ -151,6 +153,13 @@ export function ContactosClient() {
     setRefresh(r => r + 1)
   }
 
+  async function handleDeleteContact() {
+    if (!contactToDelete) return
+    await fetch(`/api/v1/contacts/${contactToDelete.id}`, { method: 'DELETE' })
+    setContactToDelete(null)
+    setRefresh(r => r + 1)
+  }
+
   const columnsWithAction: Column<Contact>[] = [
     ...COLUMNS,
     {
@@ -163,6 +172,9 @@ export function ContactosClient() {
           </Button>
           <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>
             Editar
+          </Button>
+          <Button variant="ghost" size="xs" onClick={() => setContactToDelete(row)}>
+            Eliminar
           </Button>
         </div>
       ),
@@ -233,6 +245,16 @@ export function ContactosClient() {
         contact={editing}
         onClose={() => setModalOpen(false)}
         onSaved={handleSaved}
+      />
+
+      <ConfirmDialog
+        open={!!contactToDelete}
+        onOpenChange={(open) => { if (!open) setContactToDelete(null) }}
+        title="Eliminar contacto"
+        description={contactToDelete ? `Se eliminará ${contactToDelete.legal_name}.` : ''}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={handleDeleteContact}
       />
     </div>
   )

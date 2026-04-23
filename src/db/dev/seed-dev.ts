@@ -1,5 +1,6 @@
 import sequelize from '@/lib/db'
 import Contact from '@/modules/contacts/contact.model'
+import ContactAddress from '@/modules/contacts/contact-address.model'
 import Organization from '@/modules/auth/organization.model'
 import Branch from '@/modules/auth/branch.model'
 import User from '@/modules/auth/user.model'
@@ -137,8 +138,10 @@ async function seedContacts(orgId: string, actorId: string, t: import('sequelize
     },
   ]
 
+  const seededContacts: Contact[] = []
+
   for (const c of contactsSpec) {
-    await Contact.findOrCreate({
+    const [contact] = await Contact.findOrCreate({
       where: { org_id: orgId, legal_name: c.legal_name },
       defaults: {
         org_id: orgId,
@@ -156,7 +159,71 @@ async function seedContacts(orgId: string, actorId: string, t: import('sequelize
       },
       transaction: t,
     })
+    seededContacts.push(contact)
+
+    if (c.type !== 'customer') continue
+
+    const fiscalStreet = c.trade_name ? `Av. Fiscal ${c.trade_name}` : `Av. Fiscal ${c.legal_name.split(' ')[0]}`
+    const deliveryStreet = c.trade_name ? `Calle Entrega ${c.trade_name}` : `Calle Entrega ${c.legal_name.split(' ')[0]}`
+
+    await ContactAddress.findOrCreate({
+      where: {
+        org_id: orgId,
+        contact_id: contact.id,
+        type: 'fiscal',
+        street: fiscalStreet,
+        city: 'CABA',
+        province: 'Buenos Aires',
+      },
+      defaults: {
+        org_id: orgId,
+        contact_id: contact.id,
+        type: 'fiscal',
+        street: fiscalStreet,
+        number: '100',
+        floor: null,
+        apartment: null,
+        city: 'CABA',
+        province: 'Buenos Aires',
+        postal_code: '1000',
+        country: 'Argentina',
+        is_default: true,
+        created_by: actorId,
+        updated_by: actorId,
+      },
+      transaction: t,
+    })
+
+    await ContactAddress.findOrCreate({
+      where: {
+        org_id: orgId,
+        contact_id: contact.id,
+        type: 'delivery',
+        street: deliveryStreet,
+        city: 'CABA',
+        province: 'Buenos Aires',
+      },
+      defaults: {
+        org_id: orgId,
+        contact_id: contact.id,
+        type: 'delivery',
+        street: deliveryStreet,
+        number: '200',
+        floor: null,
+        apartment: null,
+        city: 'CABA',
+        province: 'Buenos Aires',
+        postal_code: '1000',
+        country: 'Argentina',
+        is_default: true,
+        created_by: actorId,
+        updated_by: actorId,
+      },
+      transaction: t,
+    })
   }
+
+  return seededContacts
 }
 
 async function seedCatalog(orgId: string, actorId: string, t: import('sequelize').Transaction) {
@@ -310,6 +377,7 @@ async function run() {
       })
 
       const branches: Branch[] = []
+      let defaultCustomerId: string | null = null
       let code = 1
       for (const b of tenant.branches) {
         const [branch] = await Branch.findOrCreate({
@@ -356,7 +424,9 @@ async function run() {
         // Seed catalog and contacts once per org (using the admin user as actor)
         if (u.role === 'admin') {
           await seedCatalog(org.id, user.id, t)
-          await seedContacts(org.id, user.id, t)
+          const contacts = await seedContacts(org.id, user.id, t)
+          const defaultCustomer = contacts.find(c => c.type === 'customer' || c.type === 'both') ?? null
+          defaultCustomerId = defaultCustomer?.id ?? null
         }
 
         // Seed a minimal sales flow for the first user of the first tenant only
@@ -384,7 +454,7 @@ async function run() {
             {
               org_id: org.id,
               branch_id: defaultBranch.id,
-              contact_id: null,
+              contact_id: defaultCustomerId,
               quote_number,
               status: 'accepted',
               valid_until: null,
@@ -429,7 +499,7 @@ async function run() {
             {
               org_id: org.id,
               branch_id: defaultBranch.id,
-              contact_id: null,
+              contact_id: defaultCustomerId,
               quote_id: quote.id,
               order_number,
               status: 'confirmed',
@@ -476,7 +546,7 @@ async function run() {
             {
               org_id: org.id,
               branch_id: defaultBranch.id,
-              contact_id: null,
+              contact_id: defaultCustomerId,
               order_id: order.id,
               quote_id: quote.id,
               invoice_number,
@@ -528,7 +598,7 @@ async function run() {
               org_id: org.id,
               branch_id: defaultBranch.id,
               invoice_id: invoice.id,
-              contact_id: null,
+              contact_id: defaultCustomerId,
               payment_number,
               payment_date: new Date(),
               amount: paidAmount,

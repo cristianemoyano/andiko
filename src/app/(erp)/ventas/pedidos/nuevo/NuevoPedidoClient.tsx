@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
+import { Input } from '@/components/primitives/Input'
 import { Textarea } from '@/components/primitives/Textarea'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
@@ -16,6 +17,7 @@ import { VentasBranchField } from '@/components/erp/VentasBranchField'
 import type { PaymentCondition } from '../../types'
 import { PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
+import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
 import { cn, parseResponseBodyJson } from '@/lib/utils'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
@@ -24,14 +26,78 @@ const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, 
 }))
 
 type FieldErrors = Record<string, string[]>
+type ContactAddress = {
+  id: string
+  type: 'fiscal' | 'delivery' | 'commercial'
+  street: string
+  number: string | null
+  floor: string | null
+  apartment: string | null
+  city: string
+  province: string
+  postal_code: string | null
+  country: string
+  is_default: boolean
+}
+
+type AddressSnapshot = {
+  street: string
+  number: string
+  floor: string
+  apartment: string
+  city: string
+  province: string
+  postal_code: string
+  country: string
+}
+
+const EMPTY_ADDRESS: AddressSnapshot = {
+  street: '',
+  number: '',
+  floor: '',
+  apartment: '',
+  city: '',
+  province: '',
+  postal_code: '',
+  country: 'Argentina',
+}
+
+function fromContactAddress(address: ContactAddress | null): AddressSnapshot {
+  if (!address) return { ...EMPTY_ADDRESS }
+  return {
+    street: address.street,
+    number: address.number ?? '',
+    floor: address.floor ?? '',
+    apartment: address.apartment ?? '',
+    city: address.city,
+    province: address.province,
+    postal_code: address.postal_code ?? '',
+    country: address.country ?? 'Argentina',
+  }
+}
+
+function addressLabel(address: ContactAddress): string {
+  const base = [`${address.street}${address.number ? ` ${address.number}` : ''}`.trim(), address.city, address.province]
+    .filter(Boolean)
+    .join(', ')
+  return `${address.type === 'fiscal' ? 'Fiscal' : address.type === 'delivery' ? 'Entrega' : 'Comercial'} — ${base}`
+}
 
 export function NuevoPedidoClient() {
   const router = useRouter()
 
   const [contactId, setContactId]               = useState<string | null>(null)
+  const [contactOption, setContactOption]       = useState<SearchableSelectOption | null>(null)
   const [branchId, setBranchId]                 = useState<string | null>(null)
   const [priceListId, setPriceListId]           = useState<string | null>(null)
-  const [requiredDate, setRequiredDate]         = useState<Date | null>(null)
+  const [promisedDate, setPromisedDate]         = useState<Date | null>(null)
+  const [contactAddresses, setContactAddresses] = useState<ContactAddress[]>([])
+  const [shippingAddressId, setShippingAddressId] = useState<string>('')
+  const [billingAddressId, setBillingAddressId] = useState<string>('')
+  const [shippingAddress, setShippingAddress] = useState<AddressSnapshot>({ ...EMPTY_ADDRESS })
+  const [billingAddress, setBillingAddress] = useState<AddressSnapshot>({ ...EMPTY_ADDRESS })
+  const [createContactOpen, setCreateContactOpen] = useState(false)
+  const [createContactSeed, setCreateContactSeed] = useState('')
   const [paymentCondition, setPaymentCondition] = useState<PaymentCondition>('cash')
   const [items, setItems]                       = useState<LineItemInput[]>([makeEmptyLine()])
   const [notes, setNotes]                       = useState('')
@@ -54,6 +120,44 @@ export function NuevoPedidoClient() {
     return (data.data ?? []).map(pl => ({ value: pl.id, label: pl.name }))
   }, [])
 
+  useEffect(() => {
+    if (!contactId) {
+      queueMicrotask(() => {
+        setContactAddresses([])
+        setShippingAddressId('')
+        setBillingAddressId('')
+        setShippingAddress({ ...EMPTY_ADDRESS })
+        setBillingAddress({ ...EMPTY_ADDRESS })
+      })
+      return
+    }
+
+    let cancelled = false
+    void (async () => {
+      const res = await fetch(`/api/v1/contacts/${contactId}/addresses`)
+      if (!res.ok) return
+      const addresses = await res.json() as ContactAddress[]
+      if (cancelled) return
+
+      const rows = Array.isArray(addresses) ? addresses : []
+      setContactAddresses(rows)
+
+      const defaultShipping = rows.find(a => a.type === 'delivery' && a.is_default)
+        ?? rows.find(a => a.type === 'delivery')
+        ?? null
+      const defaultBilling = rows.find(a => a.type === 'fiscal' && a.is_default)
+        ?? rows.find(a => a.type === 'fiscal')
+        ?? null
+
+      setShippingAddressId(defaultShipping?.id ?? '')
+      setBillingAddressId(defaultBilling?.id ?? '')
+      setShippingAddress(fromContactAddress(defaultShipping))
+      setBillingAddress(fromContactAddress(defaultBilling))
+    })()
+
+    return () => { cancelled = true }
+  }, [contactId])
+
   async function handleSave() {
     setSaving(true)
     setErrors({})
@@ -64,12 +168,33 @@ export function NuevoPedidoClient() {
       setServerError('Elegí una sucursal.')
       return
     }
+    if (!contactId) {
+      setSaving(false)
+      setErrors(prev => ({ ...prev, contact_id: ['Seleccioná un cliente.'] }))
+      return
+    }
 
     const body = {
       contact_id:        contactId,
       branch_id:         branchId,
       price_list_id:     priceListId,
-      required_date:     requiredDate ? requiredDate.toISOString() : null,
+      promised_date:     promisedDate ? promisedDate.toISOString() : null,
+      shipping_street: shippingAddress.street || null,
+      shipping_number: shippingAddress.number || null,
+      shipping_floor: shippingAddress.floor || null,
+      shipping_apartment: shippingAddress.apartment || null,
+      shipping_city: shippingAddress.city || null,
+      shipping_province: shippingAddress.province || null,
+      shipping_postal_code: shippingAddress.postal_code || null,
+      shipping_country: shippingAddress.country || null,
+      billing_street: billingAddress.street || null,
+      billing_number: billingAddress.number || null,
+      billing_floor: billingAddress.floor || null,
+      billing_apartment: billingAddress.apartment || null,
+      billing_city: billingAddress.city || null,
+      billing_province: billingAddress.province || null,
+      billing_postal_code: billingAddress.postal_code || null,
+      billing_country: billingAddress.country || null,
       payment_condition: paymentCondition,
       notes:             notes.trim() || null,
       internal_notes:    internalNotes.trim() || null,
@@ -136,14 +261,24 @@ export function NuevoPedidoClient() {
                 <SearchableSelect
                   id="contact_id"
                   value={contactId}
-                  onChange={setContactId}
+                  onChange={(next) => {
+                    setContactId(next)
+                    if (!next) setContactOption(null)
+                  }}
+                  onSelect={setContactOption}
+                  options={contactOption ? [contactOption] : []}
                   onSearch={searchContacts}
+                  onCreateRequest={(query) => {
+                    setCreateContactSeed(query)
+                    setCreateContactOpen(true)
+                  }}
+                  createActionLabel="Crear cliente…"
                   placeholder="Buscar cliente…"
                   error={!!errors.contact_id}
                 />
               </FormField>
-              <FormField label="Fecha requerida" htmlFor="required_date">
-                <DatePicker id="required_date" value={requiredDate} onChange={setRequiredDate} placeholder="Seleccionar fecha" />
+              <FormField label="Fecha prometida" htmlFor="promised_date">
+                <DatePicker id="promised_date" value={promisedDate} onChange={setPromisedDate} placeholder="Seleccionar fecha" />
               </FormField>
             </div>
 
@@ -207,6 +342,64 @@ export function NuevoPedidoClient() {
                 <Textarea id="internal_notes" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={3} placeholder="Visible solo para el equipo…" />
               </FormField>
             </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Dirección de entrega" htmlFor="shipping_address_id">
+              <select
+                id="shipping_address_id"
+                value={shippingAddressId}
+                onChange={(e) => {
+                  const nextId = e.target.value
+                  setShippingAddressId(nextId)
+                  const selected = contactAddresses.find(a => a.id === nextId) ?? null
+                  setShippingAddress(fromContactAddress(selected))
+                }}
+                className="h-8 w-full rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">Sin dirección predefinida</option>
+                {contactAddresses
+                  .filter(a => a.type === 'delivery')
+                  .map((address) => (
+                    <option key={address.id} value={address.id}>{addressLabel(address)}</option>
+                  ))}
+              </select>
+            </FormField>
+            <FormField label="Dirección de facturación" htmlFor="billing_address_id">
+              <select
+                id="billing_address_id"
+                value={billingAddressId}
+                onChange={(e) => {
+                  const nextId = e.target.value
+                  setBillingAddressId(nextId)
+                  const selected = contactAddresses.find(a => a.id === nextId) ?? null
+                  setBillingAddress(fromContactAddress(selected))
+                }}
+                className="h-8 w-full rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">Sin dirección predefinida</option>
+                {contactAddresses
+                  .filter(a => a.type === 'fiscal')
+                  .map((address) => (
+                    <option key={address.id} value={address.id}>{addressLabel(address)}</option>
+                  ))}
+              </select>
+            </FormField>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <AddressSnapshotFields
+              prefix="shipping"
+              title="Snapshot entrega"
+              value={shippingAddress}
+              onChange={setShippingAddress}
+            />
+            <AddressSnapshotFields
+              prefix="billing"
+              title="Snapshot facturación"
+              value={billingAddress}
+              onChange={setBillingAddress}
+            />
+          </div>
           </div>
 
           {serverError && (
@@ -215,6 +408,64 @@ export function NuevoPedidoClient() {
             </p>
           )}
         </div>
+      </div>
+
+      <CustomerQuickCreateDialog
+        open={createContactOpen}
+        onOpenChange={setCreateContactOpen}
+        initialLegalName={createContactSeed}
+        onCreated={(option) => {
+          setContactOption(option)
+          setContactId(option.value)
+        }}
+      />
+    </div>
+  )
+}
+
+function AddressSnapshotFields({
+  prefix,
+  title,
+  value,
+  onChange,
+}: {
+  prefix: string
+  title: string
+  value: AddressSnapshot
+  onChange: (next: AddressSnapshot) => void
+}) {
+  function patch(p: Partial<AddressSnapshot>) {
+    onChange({ ...value, ...p })
+  }
+
+  return (
+    <div className="rounded-sm border border-zinc-200 p-3">
+      <p className="mb-3 text-[12px] font-medium text-zinc-600">{title}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="Calle" htmlFor={`${prefix}_street`}>
+          <Input id={`${prefix}_street`} value={value.street} onChange={(e) => patch({ street: e.target.value })} />
+        </FormField>
+        <FormField label="Número" htmlFor={`${prefix}_number`}>
+          <Input id={`${prefix}_number`} value={value.number} onChange={(e) => patch({ number: e.target.value })} />
+        </FormField>
+        <FormField label="Piso" htmlFor={`${prefix}_floor`}>
+          <Input id={`${prefix}_floor`} value={value.floor} onChange={(e) => patch({ floor: e.target.value })} />
+        </FormField>
+        <FormField label="Depto" htmlFor={`${prefix}_apartment`}>
+          <Input id={`${prefix}_apartment`} value={value.apartment} onChange={(e) => patch({ apartment: e.target.value })} />
+        </FormField>
+        <FormField label="Ciudad" htmlFor={`${prefix}_city`}>
+          <Input id={`${prefix}_city`} value={value.city} onChange={(e) => patch({ city: e.target.value })} />
+        </FormField>
+        <FormField label="Provincia" htmlFor={`${prefix}_province`}>
+          <Input id={`${prefix}_province`} value={value.province} onChange={(e) => patch({ province: e.target.value })} />
+        </FormField>
+        <FormField label="Código postal" htmlFor={`${prefix}_postal_code`}>
+          <Input id={`${prefix}_postal_code`} value={value.postal_code} onChange={(e) => patch({ postal_code: e.target.value })} />
+        </FormField>
+        <FormField label="País" htmlFor={`${prefix}_country`}>
+          <Input id={`${prefix}_country`} value={value.country} onChange={(e) => patch({ country: e.target.value })} />
+        </FormField>
       </div>
     </div>
   )
