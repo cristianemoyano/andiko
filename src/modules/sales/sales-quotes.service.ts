@@ -121,7 +121,7 @@ export async function updateQuote(id: string, input: SalesQuoteUpdateInput, ctx:
     if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(quote.branch_id as string)) {
       throw new Error('QUOTE_NOT_FOUND')
     }
-    if (quote.status === 'accepted' || quote.status === 'rejected') {
+    if (quote.status === 'accepted' || quote.status === 'rejected' || quote.status === 'cancelled') {
       throw new Error('QUOTE_NOT_EDITABLE')
     }
 

@@ -94,6 +94,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
 
   // Confirm dialogs
   const [confirmConvert, setConfirmConvert] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
   const [transitioning, setTransitioning]   = useState(false)
 
   useEffect(() => {
@@ -180,6 +181,13 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
       return
     }
 
+    const lineWithoutProduct = items.findIndex(item => !item.product_id)
+    if (lineWithoutProduct >= 0) {
+      setSaving(false)
+      setServerError(`Completá el producto en la línea ${lineWithoutProduct + 1} antes de guardar.`)
+      return
+    }
+
     const body = {
       contact_id:        contactId,
       branch_id:         branchId,
@@ -216,6 +224,10 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
     const data = await parseResponseBodyJson<{ code?: string; details?: { fieldErrors?: FieldErrors }; error?: string }>(res)
     if (data?.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
       setErrors(data.details.fieldErrors)
+      const hasItemsErrors = Object.keys(data.details.fieldErrors).some((k) => k.startsWith('items'))
+      if (hasItemsErrors) {
+        setServerError('Hay errores en los ítems. Revisá producto, descripción, cantidad y precio.')
+      }
     } else {
       setServerError(data?.error ?? `Error ${res.status}. Revisá los datos e intentá de nuevo.`)
     }
@@ -239,6 +251,16 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
       const order = await res.json() as { id: string }
       router.push(`/ventas/pedidos/${order.id}`)
     }
+  }
+
+  async function handleCancelQuote() {
+    const res = await fetch(`/api/v1/sales/quotes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled' satisfies QuoteStatus }),
+    })
+    setConfirmCancel(false)
+    if (res.ok) setRefresh(r => r + 1)
   }
 
   const searchContacts = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
@@ -277,6 +299,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
 
   const transitions = STATUS_TRANSITIONS[quote.status] ?? []
   const canConvert  = quote.status === 'accepted'
+  const canCancel = quote.status === 'draft'
   const canEdit     = quote.status === 'draft' || quote.status === 'sent'
 
   const editTotals = editMode ? calcTotals(items) : null
@@ -301,6 +324,11 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                 {canConvert && (
                   <Button size="sm" onClick={() => setConfirmConvert(true)} disabled={transitioning}>
                     Convertir en pedido
+                  </Button>
+                )}
+                {canCancel && (
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmCancel(true)} disabled={transitioning}>
+                    Cancelar
                   </Button>
                 )}
                 {canEdit && (
@@ -565,6 +593,16 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
         confirmLabel="Convertir"
         variant="warning"
         onConfirm={handleConvertToOrder}
+      />
+
+      <ConfirmDialog
+        open={confirmCancel}
+        onOpenChange={setConfirmCancel}
+        title="Cancelar presupuesto"
+        description={`El presupuesto ${quote.quote_number} quedará cancelado y no podrá editarse.`}
+        confirmLabel="Cancelar presupuesto"
+        variant="danger"
+        onConfirm={handleCancelQuote}
       />
 
       <CustomerQuickCreateDialog

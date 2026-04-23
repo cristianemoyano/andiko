@@ -3,7 +3,7 @@ import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, IvaRate, PaymentCondition } from '@/types'
 
-export const QUOTE_STATUSES = ['draft', 'sent', 'accepted', 'rejected', 'expired'] as const
+export const QUOTE_STATUSES = ['draft', 'sent', 'accepted', 'rejected', 'expired', 'cancelled'] as const
 export type QuoteStatus = typeof QUOTE_STATUSES[number]
 
 export interface SalesQuoteAttributes extends Timestamps, AuditFields {

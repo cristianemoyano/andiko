@@ -18,7 +18,7 @@ export const PAYMENT_CONDITION_LABEL: Record<PaymentCondition, string> = {
 
 // --- Quote ---
 
-export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired'
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'cancelled'
 
 export const QUOTE_STATUS_LABEL: Record<QuoteStatus, string> = {
   draft:    'Borrador',
@@ -26,6 +26,7 @@ export const QUOTE_STATUS_LABEL: Record<QuoteStatus, string> = {
   accepted: 'Aceptado',
   rejected: 'Rechazado',
   expired:  'Vencido',
+  cancelled: 'Cancelado',
 }
 
 export interface QuoteItem {

@@ -74,6 +74,13 @@ export function NuevoPresupuestoClient() {
       return
     }
 
+    const lineWithoutProduct = items.findIndex(item => !item.product_id)
+    if (lineWithoutProduct >= 0) {
+      setSaving(false)
+      setServerError(`Completá el producto en la línea ${lineWithoutProduct + 1} antes de guardar.`)
+      return
+    }
+
     const body = {
       contact_id:        contactId,
       branch_id:         branchId,
@@ -110,6 +117,10 @@ export function NuevoPresupuestoClient() {
     const data = await parseResponseBodyJson<{ code?: string; details?: { fieldErrors?: FieldErrors }; error?: string }>(res)
     if (data?.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
       setErrors(data.details.fieldErrors)
+      const hasItemsErrors = Object.keys(data.details.fieldErrors).some((k) => k.startsWith('items'))
+      if (hasItemsErrors) {
+        setServerError('Hay errores en los ítems. Revisá producto, descripción, cantidad y precio.')
+      }
     } else {
       setServerError(data?.error ?? `Error ${res.status}. Si persiste, revisá los logs.`)
     }

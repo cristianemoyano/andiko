@@ -20,6 +20,7 @@ const STATUS_OPTIONS: { value: QuoteStatus | ''; label: string }[] = [
   { value: 'accepted', label: 'Aceptado' },
   { value: 'rejected', label: 'Rechazado' },
   { value: 'expired',  label: 'Vencido' },
+  { value: 'cancelled', label: 'Cancelado' },
 ]
 
 const COLUMNS: Column<Quote>[] = [
