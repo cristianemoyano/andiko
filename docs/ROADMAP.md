@@ -197,6 +197,11 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] Descuentos por ítem (modales de líneas; descuento a nivel documento según backend en totales)
 - [x] Registro de cobros parciales y totales (UI en detalle de factura + listado de cobros)
 - [x] Estados de factura: borrador, emitida, cobrada, anulada (UI listado + emitir / anular / cobros en detalle)
+- [x] Rediseño UX Ventas — fase 1: `DatePicker` real con calendario (Radix Popover + react-day-picker)
+- [x] Rediseño UX Ventas — fase 2: API `GET /api/v1/catalog/products/for-sale` con precio efectivo por lista
+- [x] Rediseño UX Ventas — fase 3: `order_id` requerido en facturas (NOT NULL + Zod); conversión solo desde `delivered`; `price_list_id` en presupuestos, pedidos y facturas
+- [x] Rediseño UX Ventas — fase 4: `SalesLineItemsEditor` (búsqueda de producto con autocomplete de precio/IVA) + `StatusPipeline` (stepper horizontal por tipo de documento)
+- [x] Rediseño UX Ventas — fase 5: formularios de página completa para nuevo presupuesto y nuevo pedido; vistas de detalle rediseñadas con `StatusPipeline` + edición in-place + transiciones de estado; listas navegan a `/[id]` al hacer click; eliminación de InvoiceModal/OrderModal/QuoteModal
 - [ ] Notas de crédito internas
 - [ ] Listado de cuentas corrientes por cliente
 - [ ] Reportes: ventas por período, por cliente, por producto

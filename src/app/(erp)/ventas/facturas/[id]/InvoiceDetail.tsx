@@ -12,12 +12,12 @@ import { StatusBadge } from '@/components/primitives/Badge'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { EmptyState } from '@/components/erp/EmptyState'
-import { DateInput } from '@/components/primitives/DateInput'
+import { DatePicker } from '@/components/primitives/DatePicker'
 import { CurrencyInput, formatARS } from '@/components/primitives/CurrencyInput'
+import { StatusPipeline } from '@/components/erp/StatusPipeline'
 import { VentasSubNav } from '../../VentasSubNav'
 import type { Invoice, Payment, PaymentMethod } from '../../types'
 import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL } from '../../types'
-import { InvoiceModal } from '../InvoiceModal'
 import { cn } from '@/lib/utils'
 
 const PAYMENT_METHOD_OPTIONS = (Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map(
@@ -45,14 +45,13 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
   const [notFound, setNotFound]   = useState(false)
   const [refresh, setRefresh]     = useState(0)
 
-  const [editOpen, setEditOpen]   = useState(false)
   const [confirmIssue, setConfirmIssue]         = useState(false)
   const [confirmCancel, setConfirmCancel]       = useState(false)
   const [confirmDeleteInv, setConfirmDeleteInv] = useState(false)
 
-  const [paymentAmount, setPaymentAmount]   = useState('')
-  const [paymentMethod, setPaymentMethod]   = useState<PaymentMethod>('transfer')
-  const [paymentDate, setPaymentDate]       = useState<Date | null>(new Date())
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('transfer')
+  const [paymentDate, setPaymentDate]     = useState<Date | null>(new Date())
   const [paymentRef, setPaymentRef]         = useState('')
   const [paymentNotes, setPaymentNotes]     = useState('')
   const [paymentError, setPaymentError]     = useState<string | null>(null)
@@ -224,8 +223,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
         }
       : contact
 
-  const canEditOrDeleteDraft = invoice.status === 'draft'
-  const canIssue               = invoice.status === 'draft'
+  const canIssue = invoice.status === 'draft'
   const canCancel =
     invoice.status !== 'paid' &&
     invoice.status !== 'cancelled' &&
@@ -247,24 +245,19 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
         actions={
           <div className="flex flex-wrap gap-2 justify-end">
             {canIssue && (
-              <Button size="sm" variant="secondary" onClick={() => setConfirmIssue(true)}>
-                Emitir factura
-              </Button>
+              <>
+                <Button size="sm" variant="secondary" onClick={() => setConfirmIssue(true)}>
+                  Emitir factura
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteInv(true)}>
+                  Eliminar
+                </Button>
+              </>
             )}
             {canCancel && (
               <Button size="sm" variant="ghost" onClick={() => setConfirmCancel(true)}>
                 Anular
               </Button>
-            )}
-            {canEditOrDeleteDraft && (
-              <>
-                <Button size="sm" variant="secondary" onClick={() => setConfirmDeleteInv(true)}>
-                  Eliminar
-                </Button>
-                <Button size="sm" onClick={() => setEditOpen(true)}>
-                  Editar
-                </Button>
-              </>
             )}
           </div>
         }
@@ -273,12 +266,17 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
 
       <div className="flex-1 p-5 overflow-auto">
         <div className="max-w-3xl mx-auto flex flex-col gap-5">
+          {/* Status pipeline */}
+          <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-1">Factura</p>
+              <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">{invoice.invoice_number}</h1>
+            </div>
+            <StatusPipeline type="invoice" status={invoice.status} />
+          </div>
+
           <div className="bg-white border border-zinc-200 rounded-sm p-5">
             <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-1">Factura</p>
-                <h1 className="text-[22px] font-bold text-zinc-900 tracking-tight">{invoice.invoice_number}</h1>
-              </div>
               <StatusBadge value={INVOICE_STATUS_LABEL[invoice.status]} />
             </div>
 
@@ -436,7 +434,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                     />
                   </FormField>
                   <FormField label="Fecha del cobro" htmlFor="pay_date">
-                    <DateInput id="pay_date" value={paymentDate} onChange={setPaymentDate} placeholder="DD/MM/AAAA" />
+                    <DatePicker id="pay_date" value={paymentDate} onChange={setPaymentDate} placeholder="Seleccionar fecha" />
                   </FormField>
                 </div>
                 <FormField label="Medio de pago" htmlFor="pay_method">
@@ -512,14 +510,6 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
           )}
         </div>
       </div>
-
-      <InvoiceModal
-        key={`${invoice.id}-${String(editOpen)}`}
-        open={editOpen}
-        invoice={invoice}
-        onClose={() => setEditOpen(false)}
-        onSaved={() => { setEditOpen(false); setRefresh(r => r + 1) }}
-      />
 
       <ConfirmDialog
         open={confirmIssue}

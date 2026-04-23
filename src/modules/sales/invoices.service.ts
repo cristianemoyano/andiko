@@ -66,6 +66,15 @@ export async function getInvoice(id: string) {
 export async function createInvoice(input: InvoiceInput, orgId: string, actorId: string) {
   return sequelize.transaction(async (t) => {
     const { items, branch_id, ...invoiceFields } = input
+
+    const order = await (await import('./sales-order.model')).default.findOne({
+      where: { id: input.order_id, org_id: orgId },
+      attributes: ['id', 'status'],
+      transaction: t,
+    })
+    if (!order) throw new Error('ORDER_NOT_FOUND')
+    if (order.status !== 'delivered') throw new Error('ORDER_NOT_DELIVERED')
+
     const invoice_number = await nextDocumentNumber(orgId, branch_id, 'invoice', t)
 
     const itemTotals = items.map(item =>

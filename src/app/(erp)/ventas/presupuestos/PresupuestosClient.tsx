@@ -9,7 +9,6 @@ import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import type { Quote, QuoteStatus } from '../types'
 import { QUOTE_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../types'
-import { QuoteModal } from './QuoteModal'
 import { VentasSubNav } from '../VentasSubNav'
 
 const PAGE_SIZE = 20
@@ -89,14 +88,11 @@ const COLUMNS: Column<Quote>[] = [
 
 export function PresupuestosClient() {
   const router = useRouter()
-  const [quotes, setQuotes]       = useState<Quote[]>([])
-  const [total, setTotal]         = useState(0)
-  const [page, setPage]           = useState(1)
-  const [search, setSearch]       = useState('')
+  const [quotes, setQuotes]   = useState<Quote[]>([])
+  const [total, setTotal]     = useState(0)
+  const [page, setPage]       = useState(1)
+  const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | ''>('')
-  const [refresh, setRefresh]     = useState(0)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing]     = useState<Quote | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams({
@@ -115,47 +111,14 @@ export function PresupuestosClient() {
         const pages = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE))
         setPage(p => (p > pages ? pages : p))
       })
-  }, [page, search, statusFilter, refresh])
-
-  function openCreate() {
-    setEditing(null)
-    setModalOpen(true)
-  }
-
-  function openEdit(quote: Quote) {
-    setEditing(quote)
-    setModalOpen(true)
-  }
-
-  function handleSaved() {
-    setModalOpen(false)
-    setRefresh(r => r + 1)
-  }
-
-  const columnsWithActions: Column<Quote>[] = [
-    ...COLUMNS,
-    {
-      key: '_actions',
-      header: '',
-      render: row => (
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="xs" onClick={() => router.push(`/ventas/presupuestos/${row.id}`)}>
-            Ver
-          </Button>
-          <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>
-            Editar
-          </Button>
-        </div>
-      ),
-    },
-  ]
+  }, [page, search, statusFilter])
 
   return (
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[{ label: 'Ventas', href: '/ventas/presupuestos' }, { label: 'Presupuestos' }]}
         actions={
-          <Button size="sm" onClick={openCreate}>
+          <Button size="sm" onClick={() => router.push('/ventas/presupuestos/nuevo')}>
             + Nuevo presupuesto
           </Button>
         }
@@ -164,9 +127,10 @@ export function PresupuestosClient() {
 
       <div className="flex-1 p-5 overflow-auto">
         <DataTable
-          columns={columnsWithActions}
+          columns={COLUMNS}
           data={quotes}
           keyExtractor={r => r.id}
+          onRowClick={row => router.push(`/ventas/presupuestos/${row.id}`)}
           emptyMessage="No hay presupuestos. Creá el primero."
           toolbar={
             <>
@@ -201,14 +165,6 @@ export function PresupuestosClient() {
           }
         />
       </div>
-
-      <QuoteModal
-        key={`${editing?.id ?? 'new'}-${String(modalOpen)}`}
-        open={modalOpen}
-        quote={editing}
-        onClose={() => setModalOpen(false)}
-        onSaved={handleSaved}
-      />
     </div>
   )
 }
