@@ -205,7 +205,9 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [ ] Notas de crédito internas
 - [ ] Listado de cuentas corrientes por cliente
 - [ ] Reportes: ventas por período, por cliente, por producto
-- [ ] **Impresión y exportación de documentos** — Vista de impresión (`/ventas/presupuestos/[id]/print`, `/pedidos/[id]/print`, `/facturas/[id]/print`) con layout optimizado para papel A4. Templates configurables por organización: logo, colores corporativos, datos fiscales (CUIT, condición de IVA, domicilio), pie de página personalizado. Exportación a PDF vía `window.print()` + CSS `@media print`. Fase 2: editor visual de template (tipografía, paleta, secciones visibles). Bloquear impresión de documentos en estado `draft`.
+- [x] **Impresión y exportación de documentos (MVP)** — Módulo `printing` (registro por dominio/recurso), API `GET /api/v1/printing/[domain]/[resource]/[id]`, vistas print bajo `/ventas/...` y `/compras/...` (layout A4, PDF vía `window.print()` + `@media print`). Borradores imprimibles con marca **BORRADOR** (uso interno).
+- [ ] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página.
+- [ ] Editor visual de template (tipografía, paleta, secciones visibles).
 
 ---
 

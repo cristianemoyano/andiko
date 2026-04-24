@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { StatusBadge } from '@/components/primitives/Badge'
@@ -171,7 +172,12 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
           { label: invoice.invoice_number },
         ]}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="ghost">
+              <Link href={`/compras/facturas/${id}/print`} target="_blank" rel="noopener noreferrer">
+                Imprimir
+              </Link>
+            </Button>
             {isDraft && (
               <>
                 <Button size="sm" variant="secondary" onClick={() => setConfirmDelete(true)}>

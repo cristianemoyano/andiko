@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { ComprasSubNav } from '../ComprasSubNav'
 import type { SupplierPayment, PaymentMethod } from '../types'
@@ -56,6 +58,18 @@ const COLUMNS: Column<PaymentRow>[] = [
     key: 'amount',
     header: 'Monto',
     render: row => <span className="tabular-nums font-medium">{formatARS(row.amount)}</span>,
+  },
+  {
+    key: 'actions',
+    header: '',
+    className: 'w-[88px]',
+    render: row => (
+      <Button asChild size="xs" variant="ghost">
+        <Link href={`/compras/pagos/${row.id}/print`} target="_blank" rel="noopener noreferrer">
+          Imprimir
+        </Link>
+      </Button>
+    ),
   },
 ]
 

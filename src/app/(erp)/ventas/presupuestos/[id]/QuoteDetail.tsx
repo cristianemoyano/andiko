@@ -316,6 +316,11 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
         ]}
         actions={
           <div className="flex flex-wrap gap-2 justify-end">
+            <Button asChild size="sm" variant="ghost">
+              <Link href={`/ventas/presupuestos/${id}/print`} target="_blank" rel="noopener noreferrer">
+                Imprimir
+              </Link>
+            </Button>
             {!editMode && (
               <>
                 {transitions.map(t => (
