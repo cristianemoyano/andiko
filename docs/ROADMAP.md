@@ -35,7 +35,7 @@ Infraestructura base sin lógica de negocio.
 - [x] `src/lib/permissions.ts` con `can()`, `requirePermission()`, `ForbiddenError`, deduplicación con React `cache()`
 - [x] Sesión extendida: `role`, `orgId`, `branchId` en JWT y session callbacks
 - [x] Página de perfil de usuario (`/perfil`): nombre, email, rol, org, sucursal; avatar clickeable en Sidebar
-- [ ] UX: componente global de error de API (banner/toast) + helper `fetchJson` para evitar duplicar manejo de errores en cada pantalla
+- [x] UX: componente global de error de API (banner/toast) + helper `fetchJson` para evitar duplicar manejo de errores en cada pantalla
 - [ ] Dev tooling: comandos de seed/clear idempotentes creciendo con el sistema (incluye permisos, catálogo, ventas, tenancy)
 
 ---
