@@ -16,7 +16,7 @@ import Payment from '@/modules/sales/payment.model'
 import { calcLineItem, calcDocumentTotals, nextDocumentNumber } from '@/modules/sales/sales.utils'
 import type { IvaRate } from '@/types'
 import ProductCategory from '@/modules/catalog/product-category.model'
-import Product from '@/modules/catalog/product.model'
+import Product, { type ProductType, type IvaRate as ProductIvaRate, type UnitOfMeasure } from '@/modules/catalog/product.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
 import PriceList from '@/modules/catalog/price-list.model'
 import PriceListItem from '@/modules/catalog/price-list-item.model'
@@ -229,10 +229,14 @@ async function seedContacts(orgId: string, actorId: string, t: import('sequelize
   return seededContacts
 }
 
-async function seedCatalog(orgId: string, actorId: string, t: import('sequelize').Transaction) {
+async function seedCatalog(
+  orgId: string,
+  actorId: string,
+  t: import('sequelize').Transaction,
+): Promise<Map<string, ProductVariant>> {
   const categoriesSpec = [
     { name: 'Servicios', description: 'Servicios y horas', slug: 'servicios' },
-    { name: 'Insumos', description: 'Insumos y materiales', slug: 'insumos' },
+    { name: 'Insumos',   description: 'Insumos y materiales', slug: 'insumos' },
   ] as const
 
   const categories = new Map<string, ProductCategory>()
@@ -240,27 +244,73 @@ async function seedCatalog(orgId: string, actorId: string, t: import('sequelize'
     const [cat] = await ProductCategory.findOrCreate({
       where: { org_id: orgId, slug: c.slug },
       defaults: {
-        org_id: orgId,
-        parent_id: null,
-        name: c.name,
-        slug: c.slug,
-        description: c.description,
-        status: 'active',
-        created_by: actorId,
-        updated_by: actorId,
+        org_id: orgId, parent_id: null, name: c.name, slug: c.slug,
+        description: c.description, status: 'active',
+        created_by: actorId, updated_by: actorId,
       },
       transaction: t,
     })
     categories.set(c.slug, cat)
   }
 
-  const productsSpec = [
-    { name: 'Consultoría (hora)', categorySlug: 'servicios', product_type: 'service', unit_of_measure: 'hora', iva_rate: '21', sku: 'CONS-HORA', price: '1000.00' },
-    { name: 'Soporte (hora)', categorySlug: 'servicios', product_type: 'service', unit_of_measure: 'hora', iva_rate: '21', sku: 'SOP-HORA', price: '800.00' },
-    { name: 'Caja de guantes', categorySlug: 'insumos', product_type: 'simple', unit_of_measure: 'caja', iva_rate: '21', sku: 'GUANTES-CAJA', price: '2500.00' },
-  ] as const
+  type VariantSpec = {
+    sku: string
+    variantName: string | null
+    price: string
+    manage_stock: boolean
+    stock_quantity: number
+  }
+  type ProductSpec = {
+    name: string
+    categorySlug: 'servicios' | 'insumos'
+    product_type: ProductType
+    unit_of_measure: UnitOfMeasure
+    iva_rate: ProductIvaRate
+    variants: VariantSpec[]
+  }
 
-  const variants: ProductVariant[] = []
+  // Each entry: one product row + one or more variant rows
+  const productsSpec: ProductSpec[] = [
+    {
+      name: 'Consultoría (hora)', categorySlug: 'servicios', product_type: 'service',
+      unit_of_measure: 'hora', iva_rate: '21',
+      variants: [{ sku: 'CONS-HORA', variantName: null, price: '1000.00', manage_stock: false, stock_quantity: 0 }],
+    },
+    {
+      name: 'Soporte (hora)', categorySlug: 'servicios', product_type: 'service',
+      unit_of_measure: 'hora', iva_rate: '21',
+      variants: [{ sku: 'SOP-HORA', variantName: null, price: '800.00', manage_stock: false, stock_quantity: 0 }],
+    },
+    {
+      // Single-variant product (default variant, no variant name)
+      name: 'Caja de guantes descartables', categorySlug: 'insumos', product_type: 'simple',
+      unit_of_measure: 'caja', iva_rate: '21',
+      variants: [{ sku: 'GUANTES-CAJA', variantName: null, price: '2500.00', manage_stock: true, stock_quantity: 100 }],
+    },
+    {
+      // Multi-variant product: sizes S / M / L
+      name: 'Guantes de nitrilo', categorySlug: 'insumos', product_type: 'simple',
+      unit_of_measure: 'par', iva_rate: '21',
+      variants: [
+        { sku: 'GUANTES-NIL-S', variantName: 'Talla S', price: '350.00', manage_stock: true, stock_quantity: 200 },
+        { sku: 'GUANTES-NIL-M', variantName: 'Talla M', price: '350.00', manage_stock: true, stock_quantity: 180 },
+        { sku: 'GUANTES-NIL-L', variantName: 'Talla L', price: '350.00', manage_stock: true, stock_quantity: 150 },
+      ],
+    },
+    {
+      // Multi-variant product: con / sin válvula
+      name: 'Mascarilla FFP2', categorySlug: 'insumos', product_type: 'simple',
+      unit_of_measure: 'unidad', iva_rate: '21',
+      variants: [
+        { sku: 'MASCARILLA-SV', variantName: 'Sin válvula', price: '850.00', manage_stock: true, stock_quantity: 300 },
+        { sku: 'MASCARILLA-CV', variantName: 'Con válvula', price: '950.00', manage_stock: true, stock_quantity: 250 },
+      ],
+    },
+  ]
+
+  const allVariants    = new Map<string, ProductVariant>()
+  const pricesBySku    = new Map<string, string>()
+
   for (const p of productsSpec) {
     const slug = slugifyText(p.name)
     const category_id = categories.get(p.categorySlug)?.id ?? null
@@ -268,84 +318,72 @@ async function seedCatalog(orgId: string, actorId: string, t: import('sequelize'
     const [product] = await Product.findOrCreate({
       where: { org_id: orgId, slug },
       defaults: {
-        org_id: orgId,
-        category_id,
-        name: p.name,
-        slug,
-        description: null,
-        short_description: null,
-        product_type: p.product_type,
-        status: 'active',
-        vendor: null,
-        iva_rate: p.iva_rate,
-        unit_of_measure: p.unit_of_measure,
-        ncm_code: null,
-        tags: [],
-        images: [],
-        created_by: actorId,
-        updated_by: actorId,
+        org_id: orgId, category_id, name: p.name, slug,
+        description: null, short_description: null,
+        product_type: p.product_type, status: 'active', vendor: null,
+        iva_rate: p.iva_rate, unit_of_measure: p.unit_of_measure,
+        ncm_code: null, tags: [], images: [],
+        created_by: actorId, updated_by: actorId,
       },
       transaction: t,
     })
 
-    const [variant] = await ProductVariant.findOrCreate({
-      where: { org_id: orgId, sku: p.sku },
-      defaults: {
-        org_id: orgId,
-        product_id: product.id,
-        sku: p.sku,
-        barcode: null,
-        name: null,
-        is_default: true,
-        cost_price: null,
-        base_price: p.price,
-        manage_stock: p.product_type === 'simple',
-        stock_quantity: p.product_type === 'simple' ? 50 : 0,
-        created_by: actorId,
-        updated_by: actorId,
-      },
-      transaction: t,
-    })
-
-    variants.push(variant)
+    for (let i = 0; i < p.variants.length; i++) {
+      const v = p.variants[i]!
+      const isDefault = i === 0
+      const [variant] = await ProductVariant.findOrCreate({
+        where: { org_id: orgId, sku: v.sku },
+        defaults: {
+          org_id: orgId, product_id: product.id, sku: v.sku,
+          barcode: null, name: v.variantName,
+          is_default: isDefault,
+          cost_price: null, base_price: v.price,
+          manage_stock: v.manage_stock, stock_quantity: v.stock_quantity,
+          created_by: actorId, updated_by: actorId,
+        },
+        transaction: t,
+      })
+      allVariants.set(v.sku, variant)
+      pricesBySku.set(v.sku, v.price)
+    }
   }
 
   const [priceList] = await PriceList.findOrCreate({
     where: { org_id: orgId, name: 'Lista General' },
     defaults: {
-      org_id: orgId,
-      name: 'Lista General',
-      description: 'Lista base de ejemplo',
-      is_default: true,
-      is_active: true,
-      created_by: actorId,
-      updated_by: actorId,
+      org_id: orgId, name: 'Lista General', description: 'Lista base de ejemplo',
+      is_default: true, is_active: true, created_by: actorId, updated_by: actorId,
     },
     transaction: t,
   })
 
-  // Ensure default flag (idempotent)
   if (!priceList.is_default) {
     await priceList.update({ is_default: true, updated_by: actorId }, { transaction: t })
   }
 
-  const priceBySku = new Map<string, string>(productsSpec.map(p => [p.sku, p.price]))
-  for (const v of variants) {
-    const price = priceBySku.get(v.sku) ?? '0.00'
+  for (const [sku, variant] of allVariants) {
+    const price = pricesBySku.get(sku) ?? '0.00'
     await PriceListItem.findOrCreate({
-      where: { org_id: orgId, price_list_id: priceList.id, product_variant_id: v.id },
+      where: { org_id: orgId, price_list_id: priceList.id, product_variant_id: variant.id },
       defaults: {
-        org_id: orgId,
-        price_list_id: priceList.id,
-        product_variant_id: v.id,
-        price,
-        valid_from: new Date(),
-        created_by: actorId,
-        updated_by: actorId,
+        org_id: orgId, price_list_id: priceList.id, product_variant_id: variant.id,
+        price, valid_from: new Date(), created_by: actorId, updated_by: actorId,
       },
       transaction: t,
     })
   }
+
+  return allVariants
+}
+
+// Distribution of initial stock across warehouses when there are multiple branches.
+// First branch gets ~60%, rest split the remainder evenly.
+function distributeStock(total: number, branches: Branch[]): number[] {
+  if (branches.length === 1) return [total]
+  const first = Math.ceil(total * 0.6)
+  const rest   = total - first
+  const perRest = Math.floor(rest / (branches.length - 1))
+  return [first, ...Array(branches.length - 1).fill(perRest)]
 }
 
 async function seedInventory(
@@ -360,6 +398,7 @@ async function seedInventory(
     transaction: t,
   })
 
+  const warehouses: import('@/modules/inventory/warehouse.model').default[] = []
   for (const branch of branches) {
     const [warehouse] = await Warehouse.findOrCreate({
       where: { org_id: orgId, branch_id: branch.id, name: `Depósito ${branch.name}` },
@@ -374,12 +413,20 @@ async function seedInventory(
       },
       transaction: t,
     })
+    warehouses.push(warehouse)
+  }
 
-    for (const variant of trackableVariants) {
-      const initialQty = '50'
+  for (const variant of trackableVariants) {
+    const totalStock = Number(variant.stock_quantity) || 50
+    const distribution = distributeStock(totalStock, branches)
+
+    for (let i = 0; i < warehouses.length; i++) {
+      const warehouse = warehouses[i]!
+      const qty = String(distribution[i] ?? 0)
+
       const [item, created] = await StockItem.findOrCreate({
-        where: { variant_id: variant.id, warehouse_id: warehouse.id },
-        defaults: { variant_id: variant.id, warehouse_id: warehouse.id, org_id: orgId, quantity: initialQty },
+        where:    { variant_id: variant.id, warehouse_id: warehouse.id },
+        defaults: { variant_id: variant.id, warehouse_id: warehouse.id, org_id: orgId, quantity: qty },
         transaction: t,
       })
 
@@ -392,9 +439,9 @@ async function seedInventory(
             movement_type:   'in',
             reference_type:  'initial',
             reference_id:    null,
-            quantity_delta:  initialQty,
+            quantity_delta:  qty,
             quantity_before: '0',
-            quantity_after:  initialQty,
+            quantity_after:  qty,
             notes:           'Stock inicial (seed)',
             created_by:      actorId,
             updated_by:      actorId,
@@ -441,6 +488,7 @@ async function run() {
 
       const branches: Branch[] = []
       let defaultCustomerId: string | null = null
+      let variantsBySku = new Map<string, ProductVariant>()
       let code = 1
       for (const b of tenant.branches) {
         const [branch] = await Branch.findOrCreate({
@@ -486,7 +534,7 @@ async function run() {
 
         // Seed catalog, contacts, and inventory once per org (using the admin user as actor)
         if (u.role === 'admin') {
-          await seedCatalog(org.id, user.id, t)
+          variantsBySku = await seedCatalog(org.id, user.id, t)
           const contacts = await seedContacts(org.id, user.id, t)
           const defaultCustomer = contacts.find(c => c.type === 'customer' || c.type === 'both') ?? null
           defaultCustomerId = defaultCustomer?.id ?? null
@@ -500,18 +548,48 @@ async function run() {
           if (existing) continue
 
           const iva_rate: IvaRate = '21'
-          const line = {
-            product_id: null,
+
+          // Line 1 — service (no stock impact)
+          const lineService = {
+            product_id: null as string | null,
+            variant_id: null as string | null,
             description: 'Servicio de consultoría',
             quantity: '1',
             unit_price: '1000.00',
             discount_pct: '0.00',
             iva_rate,
             sort_order: 0,
-          } as const
+          }
 
-          const lineTotals = calcLineItem(line.quantity, line.unit_price, line.discount_pct, line.iva_rate)
-          const docTotals = calcDocumentTotals([lineTotals])
+          // Line 2 — trackable product variant (Guantes de nitrilo Talla M)
+          const guantesMVariant = variantsBySku.get('GUANTES-NIL-M') ?? null
+          const lineGuantes = {
+            product_id: guantesMVariant?.product_id ?? null,
+            variant_id: guantesMVariant?.id ?? null,
+            description: 'Guantes de nitrilo Talla M',
+            quantity: '5',
+            unit_price: '350.00',
+            discount_pct: '0.00',
+            iva_rate,
+            sort_order: 1,
+          }
+
+          // Line 3 — another trackable variant (Mascarilla FFP2 Sin válvula)
+          const mascarillaSVVariant = variantsBySku.get('MASCARILLA-SV') ?? null
+          const lineMascarilla = {
+            product_id: mascarillaSVVariant?.product_id ?? null,
+            variant_id: mascarillaSVVariant?.id ?? null,
+            description: 'Mascarilla FFP2 sin válvula',
+            quantity: '10',
+            unit_price: '850.00',
+            discount_pct: '0.00',
+            iva_rate,
+            sort_order: 2,
+          }
+
+          const lines = [lineService, lineGuantes, lineMascarilla]
+          const linesTotals = lines.map(l => calcLineItem(l.quantity, l.unit_price, l.discount_pct, l.iva_rate))
+          const docTotals = calcDocumentTotals(linesTotals)
 
           const quote_number = await nextDocumentNumber(org.id, defaultBranch.id, 'quote', t)
           const quote = await SalesQuote.create(
@@ -536,27 +614,22 @@ async function run() {
             { transaction: t },
           )
 
-          await SalesQuoteItem.create(
-            {
-              org_id: org.id,
-              quote_id: quote.id,
-              product_id: line.product_id,
-              description: line.description,
-              quantity: line.quantity,
-              unit_price: line.unit_price,
-              discount_pct: line.discount_pct,
-              iva_rate: line.iva_rate,
-              subtotal: lineTotals.subtotal,
-              discount_amount: lineTotals.discount_amount,
-              tax_base: lineTotals.tax_base,
-              tax_amount: lineTotals.tax_amount,
-              total: lineTotals.total,
-              sort_order: line.sort_order,
-              created_by: user.id,
-              updated_by: user.id,
-            },
-            { transaction: t },
-          )
+          for (let i = 0; i < lines.length; i++) {
+            const l = lines[i]!
+            const lt = linesTotals[i]!
+            await SalesQuoteItem.create(
+              {
+                org_id: org.id, quote_id: quote.id,
+                product_id: l.product_id, variant_id: l.variant_id,
+                description: l.description, quantity: l.quantity,
+                unit_price: l.unit_price, discount_pct: l.discount_pct, iva_rate: l.iva_rate,
+                subtotal: lt.subtotal, discount_amount: lt.discount_amount,
+                tax_base: lt.tax_base, tax_amount: lt.tax_amount, total: lt.total,
+                sort_order: l.sort_order, created_by: user.id, updated_by: user.id,
+              },
+              { transaction: t },
+            )
+          }
 
           const order_number = await nextDocumentNumber(org.id, defaultBranch.id, 'order', t)
           const order = await SalesOrder.create(
@@ -583,27 +656,22 @@ async function run() {
             { transaction: t },
           )
 
-          await SalesOrderItem.create(
-            {
-              org_id: org.id,
-              order_id: order.id,
-              product_id: line.product_id,
-              description: line.description,
-              quantity: line.quantity,
-              unit_price: line.unit_price,
-              discount_pct: line.discount_pct,
-              iva_rate: line.iva_rate,
-              subtotal: lineTotals.subtotal,
-              discount_amount: lineTotals.discount_amount,
-              tax_base: lineTotals.tax_base,
-              tax_amount: lineTotals.tax_amount,
-              total: lineTotals.total,
-              sort_order: line.sort_order,
-              created_by: user.id,
-              updated_by: user.id,
-            },
-            { transaction: t },
-          )
+          for (let i = 0; i < lines.length; i++) {
+            const l = lines[i]!
+            const lt = linesTotals[i]!
+            await SalesOrderItem.create(
+              {
+                org_id: org.id, order_id: order.id,
+                product_id: l.product_id, variant_id: l.variant_id,
+                description: l.description, quantity: l.quantity,
+                unit_price: l.unit_price, discount_pct: l.discount_pct, iva_rate: l.iva_rate,
+                subtotal: lt.subtotal, discount_amount: lt.discount_amount,
+                tax_base: lt.tax_base, tax_amount: lt.tax_amount, total: lt.total,
+                sort_order: l.sort_order, created_by: user.id, updated_by: user.id,
+              },
+              { transaction: t },
+            )
+          }
 
           const invoice_number = await nextDocumentNumber(org.id, defaultBranch.id, 'invoice', t)
           const invoice = await Invoice.create(
@@ -633,27 +701,22 @@ async function run() {
             { transaction: t },
           )
 
-          await InvoiceItem.create(
-            {
-              org_id: org.id,
-              invoice_id: invoice.id,
-              product_id: line.product_id,
-              description: line.description,
-              quantity: line.quantity,
-              unit_price: line.unit_price,
-              discount_pct: line.discount_pct,
-              iva_rate: line.iva_rate,
-              subtotal: lineTotals.subtotal,
-              discount_amount: lineTotals.discount_amount,
-              tax_base: lineTotals.tax_base,
-              tax_amount: lineTotals.tax_amount,
-              total: lineTotals.total,
-              sort_order: line.sort_order,
-              created_by: user.id,
-              updated_by: user.id,
-            },
-            { transaction: t },
-          )
+          for (let i = 0; i < lines.length; i++) {
+            const l = lines[i]!
+            const lt = linesTotals[i]!
+            await InvoiceItem.create(
+              {
+                org_id: org.id, invoice_id: invoice.id,
+                product_id: l.product_id, variant_id: l.variant_id,
+                description: l.description, quantity: l.quantity,
+                unit_price: l.unit_price, discount_pct: l.discount_pct, iva_rate: l.iva_rate,
+                subtotal: lt.subtotal, discount_amount: lt.discount_amount,
+                tax_base: lt.tax_base, tax_amount: lt.tax_amount, total: lt.total,
+                sort_order: l.sort_order, created_by: user.id, updated_by: user.id,
+              },
+              { transaction: t },
+            )
+          }
 
           const payment_number = await nextDocumentNumber(org.id, defaultBranch.id, 'payment', t)
           const paidAmount = docTotals.total

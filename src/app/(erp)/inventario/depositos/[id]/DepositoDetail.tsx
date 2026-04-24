@@ -8,27 +8,39 @@ import { Button } from '@/components/primitives/Button'
 import { Badge } from '@/components/primitives/Badge'
 import { InventarioSubNav } from '../../InventarioSubNav'
 import { AjusteStockModal } from './AjusteStockModal'
+import type { StockMovementType, StockReferenceType } from '@/modules/inventory/stock-movement.model'
+
+type VariantInfo = {
+  id: string
+  sku: string
+  name: string | null
+  is_default: boolean
+  product?: { id: string; name: string }
+}
 
 type StockRow = {
   id: string
   variant_id: string
   warehouse_id: string
   quantity: string
+  variant?: VariantInfo
 }
 
 type MovementRow = {
   id: string
-  movement_type: string
-  reference_type: string
+  movement_type: StockMovementType
+  reference_type: StockReferenceType
   reference_id: string | null
+  order_number: string | null
   quantity_delta: string
   quantity_before: string
   quantity_after: string
   notes: string | null
   created_at: string
+  variant?: VariantInfo
 }
 
-const MOVEMENT_TYPE_LABEL: Record<string, string> = {
+const MOVEMENT_TYPE_LABEL: Record<StockMovementType, string> = {
   in:           'Entrada',
   out:          'Salida',
   adjustment:   'Ajuste',
@@ -36,28 +48,106 @@ const MOVEMENT_TYPE_LABEL: Record<string, string> = {
   transfer_out: 'Transf. salida',
 }
 
+const REFERENCE_TYPE_LABEL: Record<StockReferenceType, string> = {
+  order:          'Pedido',
+  invoice_cancel: 'Anulación factura',
+  manual:         'Manual',
+  initial:        'Stock inicial',
+}
+
+function movementBadgeStatus(type: StockMovementType): 'success' | 'error' | 'neutral' {
+  if (type === 'in' || type === 'transfer_in')   return 'success'
+  if (type === 'out' || type === 'transfer_out') return 'error'
+  return 'neutral'
+}
+
+function variantLabel(v: VariantInfo | undefined, fallback: string): { name: string; sku: string } {
+  if (!v) return { name: '—', sku: fallback }
+  return {
+    name: v.product?.name ?? '—',
+    sku:  v.is_default ? v.sku : `${v.name ?? v.sku} · ${v.sku}`,
+  }
+}
+
+function referenceLabel(row: MovementRow): string {
+  if (row.reference_type === 'order') return row.order_number ?? REFERENCE_TYPE_LABEL.order
+  return REFERENCE_TYPE_LABEL[row.reference_type] ?? row.reference_type
+}
+
 const STOCK_COLUMNS: Column<StockRow>[] = [
-  { key: 'variant_id', header: 'Variante', render: row => <span className="font-mono text-[12px]">{row.variant_id}</span> },
-  { key: 'quantity',   header: 'Cantidad',  render: row => <span className="font-medium">{row.quantity}</span> },
+  {
+    key: 'variant_id',
+    header: 'Producto',
+    render: row => {
+      const { name, sku } = variantLabel(row.variant, row.variant_id)
+      return (
+        <div>
+          <p className="font-medium text-zinc-900 text-[13px]">{name}</p>
+          <p className="text-zinc-400 text-[11px] font-mono">{sku}</p>
+        </div>
+      )
+    },
+  },
+  {
+    key: 'quantity',
+    header: 'Cantidad',
+    render: row => <span className="font-medium tabular-nums text-[13px]">{row.quantity}</span>,
+  },
 ]
 
 const MOVEMENT_COLUMNS: Column<MovementRow>[] = [
   {
     key: 'movement_type',
     header: 'Tipo',
+    render: row => (
+      <Badge status={movementBadgeStatus(row.movement_type)}>
+        {MOVEMENT_TYPE_LABEL[row.movement_type] ?? row.movement_type}
+      </Badge>
+    ),
+  },
+  {
+    key: 'variant_id' as keyof MovementRow,
+    header: 'Producto',
     render: row => {
-      const status = (row.movement_type === 'in' || row.movement_type === 'transfer_in')
-        ? 'success'
-        : (row.movement_type === 'out' || row.movement_type === 'transfer_out')
-          ? 'error'
-          : 'neutral'
-      return <Badge status={status}>{MOVEMENT_TYPE_LABEL[row.movement_type] ?? row.movement_type}</Badge>
+      const { name, sku } = variantLabel(row.variant, '—')
+      return (
+        <div>
+          <p className="font-medium text-zinc-900 text-[13px]">{name}</p>
+          <p className="text-zinc-400 text-[11px] font-mono">{sku}</p>
+        </div>
+      )
     },
   },
-  { key: 'quantity_delta',  header: 'Delta',  render: row => <span className={Number(row.quantity_delta) < 0 ? 'text-red-600' : 'text-green-700'}>{row.quantity_delta}</span> },
-  { key: 'quantity_after',  header: 'Saldo',  render: row => <span>{row.quantity_after}</span> },
-  { key: 'reference_type',  header: 'Origen', render: row => <span className="text-zinc-500 text-[12px]">{row.reference_type}</span> },
-  { key: 'created_at',      header: 'Fecha',  render: row => <span className="text-zinc-500 text-[12px]">{new Date(row.created_at).toLocaleDateString('es-AR')}</span> },
+  {
+    key: 'reference_type',
+    header: 'Origen',
+    render: row => (
+      <span className="text-zinc-600 text-[12px]">{referenceLabel(row)}</span>
+    ),
+  },
+  {
+    key: 'quantity_delta',
+    header: 'Delta',
+    render: row => (
+      <span className={`font-medium tabular-nums text-[13px] ${Number(row.quantity_delta) < 0 ? 'text-red-600' : 'text-green-700'}`}>
+        {Number(row.quantity_delta) > 0 ? '+' : ''}{row.quantity_delta}
+      </span>
+    ),
+  },
+  {
+    key: 'quantity_after',
+    header: 'Saldo',
+    render: row => <span className="tabular-nums text-[13px]">{row.quantity_after}</span>,
+  },
+  {
+    key: 'created_at',
+    header: 'Fecha',
+    render: row => (
+      <span className="text-zinc-500 text-[12px]">
+        {new Date(row.created_at).toLocaleDateString('es-AR')}
+      </span>
+    ),
+  },
 ]
 
 const PAGE_SIZE = 20
@@ -122,8 +212,12 @@ export function DepositoDetail() {
             data={stock}
             keyExtractor={row => row.id}
             emptyMessage="Sin stock registrado."
+            footer={
+              stockTotal > 0 ? (
+                <TablePagination page={stockPage} pageSize={PAGE_SIZE} total={stockTotal} onPageChange={setStockPage} />
+              ) : undefined
+            }
           />
-          <TablePagination page={stockPage} pageSize={PAGE_SIZE} total={stockTotal} onPageChange={setStockPage} />
         </section>
 
         <section>
@@ -133,8 +227,12 @@ export function DepositoDetail() {
             data={movements}
             keyExtractor={row => row.id}
             emptyMessage="Sin movimientos registrados."
+            footer={
+              movTotal > 0 ? (
+                <TablePagination page={movPage} pageSize={PAGE_SIZE} total={movTotal} onPageChange={setMovPage} />
+              ) : undefined
+            }
           />
-          <TablePagination page={movPage} pageSize={PAGE_SIZE} total={movTotal} onPageChange={setMovPage} />
         </section>
       </div>
 

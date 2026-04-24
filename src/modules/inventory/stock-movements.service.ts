@@ -1,5 +1,6 @@
 import 'server-only'
 import Decimal from 'decimal.js'
+import { Op } from 'sequelize'
 import type { Transaction } from 'sequelize'
 import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
@@ -10,6 +11,8 @@ import StockMovement from './stock-movement.model'
 import type { StockMovementType, StockReferenceType } from './stock-movement.model'
 import { resolveDefaultWarehouse } from './warehouses.service'
 import type { StockMovementQuery } from './stock-movement.schema'
+import ProductVariant from '@/modules/catalog/product-variant.model'
+import Product from '@/modules/catalog/product.model'
 
 interface ApplyMovementParams {
   variantId:     string
@@ -178,22 +181,63 @@ export async function manualAdjustment(
 }
 
 export async function listMovements(query: StockMovementQuery, orgId: string) {
-  const { page, limit, variant_id, warehouse_id, reference_type } = query
+  const { page, limit, variant_id, warehouse_id, reference_type, search } = query
   const { offset } = paginate(page, limit)
 
   const where: Record<string, unknown> = { org_id: orgId }
-  if (variant_id)    where.variant_id    = variant_id
-  if (warehouse_id)  where.warehouse_id  = warehouse_id
+  if (variant_id)     where.variant_id     = variant_id
+  if (warehouse_id)   where.warehouse_id   = warehouse_id
   if (reference_type) where.reference_type = reference_type
+  if (search) {
+    const like = `%${search}%`
+    where[Op.or as unknown as string] = [
+      { '$variant.sku$':          { [Op.iLike]: like } },
+      { '$variant.name$':         { [Op.iLike]: like } },
+      { '$variant.product.name$': { [Op.iLike]: like } },
+    ]
+  }
 
   const { rows, count } = await StockMovement.findAndCountAll({
     where,
     limit,
     offset,
+    subQuery: false,
     order: [['created_at', 'DESC']],
+    include: [
+      {
+        model:      ProductVariant,
+        as:         'variant',
+        attributes: ['id', 'sku', 'name', 'is_default'],
+        required:   !!search,
+        include: [{ model: Product, as: 'product', attributes: ['id', 'name'] }],
+      },
+    ],
   })
 
-  return toPaginated(rows, count, page, limit)
+  // Resolve order_number for movements referencing sales orders — batch, no N+1
+  const orderIds = [...new Set(
+    rows
+      .filter(m => m.reference_type === 'order' && m.reference_id)
+      .map(m => m.reference_id as string),
+  )]
+  const orderNumbers: Record<string, string> = {}
+  if (orderIds.length > 0) {
+    const SalesOrder = (await import('@/modules/sales/sales-order.model')).default
+    const orders = await SalesOrder.findAll({
+      where:      { id: orderIds },
+      attributes: ['id', 'order_number'],
+    })
+    for (const o of orders) orderNumbers[o.id] = o.order_number
+  }
+
+  const data = rows.map(m => ({
+    ...m.toJSON(),
+    order_number: m.reference_type === 'order' && m.reference_id
+      ? (orderNumbers[m.reference_id] ?? null)
+      : null,
+  }))
+
+  return { ...toPaginated(rows, count, page, limit), data }
 }
 
 async function resolveVariantId(

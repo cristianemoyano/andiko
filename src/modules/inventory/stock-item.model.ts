@@ -2,6 +2,7 @@ import { DataTypes, Model, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
 import type { UUID } from '@/types'
 import Warehouse from './warehouse.model'
+import ProductVariant from '@/modules/catalog/product-variant.model'
 
 export interface StockItemAttributes {
   id: UUID
@@ -40,5 +41,8 @@ StockItem.init(
 
 Warehouse.hasMany(StockItem, { foreignKey: 'warehouse_id', as: 'stockItems' })
 StockItem.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' })
+
+StockItem.belongsTo(ProductVariant, { foreignKey: 'variant_id', as: 'variant' })
+ProductVariant.hasMany(StockItem, { foreignKey: 'variant_id', as: 'stockItems' })
 
 export default StockItem

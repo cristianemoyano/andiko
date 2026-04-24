@@ -12,6 +12,7 @@ export const stockMovementQuerySchema = paginationSchema.extend({
   variant_id:     z.string().uuid().optional(),
   warehouse_id:   z.string().uuid().optional(),
   reference_type: z.enum(['order', 'invoice_cancel', 'manual', 'initial']).optional(),
+  search:         z.string().optional(),
 })
 
 export type ManualAdjustmentInput = z.infer<typeof manualAdjustmentSchema>

@@ -93,18 +93,15 @@ export function DepositosClient() {
           onRowClick={row => router.push(`/inventario/depositos/${row.id}`)}
           emptyMessage="No hay depósitos. Creá uno para empezar."
           toolbar={
-            <div className="flex gap-2 items-center">
-              <span className="text-[13px] text-zinc-500">
-                {total > 0 ? `${total} depósito${total !== 1 ? 's' : ''}` : ''}
-              </span>
-            </div>
+            <span className="text-[13px] text-zinc-500">
+              {total > 0 ? `${total} depósito${total !== 1 ? 's' : ''}` : ''}
+            </span>
           }
-        />
-        <TablePagination
-          page={page}
-          pageSize={PAGE_SIZE}
-          total={total}
-          onPageChange={setPage}
+          footer={
+            total > 0 ? (
+              <TablePagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+            ) : undefined
+          }
         />
       </div>
 

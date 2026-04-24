@@ -2,6 +2,7 @@ import { DataTypes, Model, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
 import type { UUID } from '@/types'
 import Warehouse from './warehouse.model'
+import ProductVariant from '@/modules/catalog/product-variant.model'
 
 export type StockMovementType = 'in' | 'out' | 'adjustment' | 'transfer_in' | 'transfer_out'
 export type StockReferenceType = 'order' | 'invoice_cancel' | 'manual' | 'initial'
@@ -70,5 +71,8 @@ StockMovement.init(
 
 Warehouse.hasMany(StockMovement, { foreignKey: 'warehouse_id', as: 'movements' })
 StockMovement.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' })
+
+StockMovement.belongsTo(ProductVariant, { foreignKey: 'variant_id', as: 'variant' })
+ProductVariant.hasMany(StockMovement, { foreignKey: 'variant_id', as: 'stockMovements' })
 
 export default StockMovement
