@@ -27,6 +27,7 @@ export async function listPurchaseOrders(query: PurchaseOrderQuery, orgId: strin
 
   const { default: Branch }  = await import('@/modules/auth/branch.model')
   const { default: Contact } = await import('@/modules/contacts/contact.model')
+  const { default: User }    = await import('@/modules/auth/user.model')
 
   const { rows, count } = await PurchaseOrder.findAndCountAll({
     where,
@@ -34,13 +35,14 @@ export async function listPurchaseOrders(query: PurchaseOrderQuery, orgId: strin
     offset,
     order: [['created_at', 'DESC']],
     attributes: [
-      'id', 'branch_id', 'order_number', 'status', 'contact_id',
+      'id', 'branch_id', 'order_number', 'status', 'contact_id', 'buyer_id',
       'expected_date', 'payment_condition', 'currency',
       'subtotal', 'tax_amount', 'total', 'notes', 'created_at',
     ],
     include: [
       { model: Branch,  as: 'branch',  attributes: ['id', 'name', 'branch_code'] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: User,    as: 'buyer',   attributes: ['id', 'name'] },
     ],
   })
 
@@ -50,14 +52,20 @@ export async function listPurchaseOrders(query: PurchaseOrderQuery, orgId: strin
 export async function getPurchaseOrder(id: string) {
   ensurePurchasesBranchAssociations()
 
-  const { default: Branch }  = await import('@/modules/auth/branch.model')
-  const { default: Contact } = await import('@/modules/contacts/contact.model')
+  const { default: Branch }          = await import('@/modules/auth/branch.model')
+  const { default: Contact }         = await import('@/modules/contacts/contact.model')
+  const { default: User }            = await import('@/modules/auth/user.model')
+  const { default: PurchaseReceipt } = await import('./purchase-receipt.model')
+  const { default: SupplierInvoice } = await import('./supplier-invoice.model')
 
   const order = await PurchaseOrder.findByPk(id, {
     include: [
-      { model: Branch,  as: 'branch',  attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
-      { model: PurchaseOrderItem, as: 'items', order: [['sort_order', 'ASC']] },
+      { model: Branch,          as: 'branch',           attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact,         as: 'contact',          attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: User,            as: 'buyer',            attributes: ['id', 'name'] },
+      { model: PurchaseOrderItem, as: 'items',          order: [['sort_order', 'ASC']] },
+      { model: PurchaseReceipt, as: 'receipts',         attributes: ['id', 'receipt_number', 'status', 'receipt_date'] },
+      { model: SupplierInvoice, as: 'supplierInvoices', attributes: ['id', 'invoice_number', 'status', 'total'] },
     ],
   })
   if (!order) throw new Error('PURCHASE_ORDER_NOT_FOUND')
@@ -81,6 +89,7 @@ export async function createPurchaseOrder(input: PurchaseOrderInput, orgId: stri
         branch_id,
         org_id:       orgId,
         order_number: docNumber,
+        buyer_id:     actorId,
         status:       'draft',
         created_by:   actorId,
         updated_by:   actorId,

@@ -10,6 +10,7 @@ import InvoiceItem from './invoice-item.model'
 import type { SalesOrderInput, SalesOrderUpdateInput, SalesOrderQuery } from './sales-order.schema'
 import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
+import User from '@/modules/auth/user.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
@@ -38,7 +39,7 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
     offset,
     order: [['created_at', 'DESC']],
     attributes: [
-      'id', 'branch_id', 'order_number', 'status', 'contact_id', 'quote_id',
+      'id', 'branch_id', 'order_number', 'status', 'contact_id', 'quote_id', 'salesperson_id',
       'payment_condition', 'currency', 'promised_date', 'delivered_date',
       'shipping_street', 'shipping_number', 'shipping_floor', 'shipping_apartment', 'shipping_city', 'shipping_province', 'shipping_postal_code', 'shipping_country',
       'billing_street', 'billing_number', 'billing_floor', 'billing_apartment', 'billing_city', 'billing_province', 'billing_postal_code', 'billing_country',
@@ -47,6 +48,7 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: User, as: 'salesperson', attributes: ['id', 'name'] },
     ],
   })
 
@@ -60,6 +62,7 @@ export async function getOrder(id: string, ctx: TenantContext) {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: User, as: 'salesperson', attributes: ['id', 'name'] },
       { model: SalesOrderItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
   })
@@ -87,6 +90,7 @@ export async function createOrder(input: SalesOrderInput, ctx: TenantContext, ac
         ...orderFields,
         branch_id,
         order_number,
+        salesperson_id: actorId,
         org_id:     ctx.orgId,
         created_by: actorId,
         updated_by: actorId,
@@ -223,6 +227,7 @@ export async function convertOrderToInvoice(id: string, ctx: TenantContext, acto
         order_id:          order.id,
         price_list_id:     order.price_list_id,
         invoice_number,
+        salesperson_id:    actorId,
         payment_condition: order.payment_condition,
         currency:          order.currency,
         subtotal:          order.subtotal,

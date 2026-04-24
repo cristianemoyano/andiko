@@ -57,6 +57,13 @@ const COLUMNS: Column<PurchaseOrder>[] = [
     render: row => PAYMENT_CONDITION_LABEL[row.payment_condition] ?? row.payment_condition,
   },
   {
+    key: 'buyer',
+    header: 'Comprador',
+    render: row => row.buyer
+      ? <span className="text-[12px] text-zinc-700">{row.buyer.name}</span>
+      : <span className="text-zinc-400">—</span>,
+  },
+  {
     key: 'total',
     header: 'Total',
     render: row => <span className="tabular-nums font-medium">{formatARS(row.total)}</span>,

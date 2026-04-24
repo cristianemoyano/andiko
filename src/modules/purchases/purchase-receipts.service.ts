@@ -55,16 +55,22 @@ export async function listPurchaseReceipts(query: PurchaseReceiptQuery, orgId: s
 export async function getPurchaseReceipt(id: string) {
   ensurePurchasesBranchAssociations()
 
-  const { default: Branch }    = await import('@/modules/auth/branch.model')
-  const { default: Contact }   = await import('@/modules/contacts/contact.model')
-  const { default: Warehouse } = await import('@/modules/inventory/warehouse.model')
+  const { default: Branch }          = await import('@/modules/auth/branch.model')
+  const { default: Contact }         = await import('@/modules/contacts/contact.model')
+  const { default: Warehouse }       = await import('@/modules/inventory/warehouse.model')
+  const { default: User }            = await import('@/modules/auth/user.model')
+  const { default: PurchaseOrder }   = await import('./purchase-order.model')
+  const { default: SupplierInvoice } = await import('./supplier-invoice.model')
 
   const receipt = await PurchaseReceipt.findByPk(id, {
     include: [
-      { model: Branch,    as: 'branch',    attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact,   as: 'contact',   attributes: ['id', 'legal_name', 'trade_name'], required: false },
-      { model: Warehouse, as: 'warehouse', attributes: ['id', 'name'], required: false },
-      { model: PurchaseReceiptItem, as: 'items', order: [['sort_order', 'ASC']] },
+      { model: Branch,          as: 'branch',           attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact,         as: 'contact',          attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Warehouse,       as: 'warehouse',        attributes: ['id', 'name'], required: false },
+      { model: User,            as: 'buyer',            attributes: ['id', 'name'] },
+      { model: PurchaseReceiptItem, as: 'items',        order: [['sort_order', 'ASC']] },
+      { model: PurchaseOrder,   as: 'order',            attributes: ['id', 'order_number', 'status'], required: false },
+      { model: SupplierInvoice, as: 'supplierInvoices', attributes: ['id', 'invoice_number', 'status', 'total'] },
     ],
   })
   if (!receipt) throw new Error('PURCHASE_RECEIPT_NOT_FOUND')
@@ -83,6 +89,7 @@ export async function createPurchaseReceipt(input: PurchaseReceiptInput, orgId: 
         branch_id,
         org_id:         orgId,
         receipt_number: docNumber,
+        buyer_id:       actorId,
         status:         'draft',
         created_by:     actorId,
         updated_by:     actorId,

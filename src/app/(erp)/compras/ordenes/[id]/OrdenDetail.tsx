@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/erp/EmptyState'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import type { PurchaseOrder } from '../../types'
-import { PURCHASE_ORDER_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../../types'
+import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_RECEIPT_STATUS_LABEL, SUPPLIER_INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../../types'
 
 interface OrdenDetailProps {
   id: string
@@ -91,10 +91,11 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
     )
   }
 
-  const isCancelled = order.status === 'cancelled'
-  const isReceived  = order.status === 'received'
-  const isDraft     = order.status === 'draft'
-  const isSent      = order.status === 'sent'
+  const isCancelled        = order.status === 'cancelled'
+  const isReceived         = order.status === 'received'
+  const isDraft            = order.status === 'draft'
+  const isSent             = order.status === 'sent'
+  const isPartiallyReceived = order.status === 'partially_received'
 
   const subtotal = (order.items ?? []).reduce((acc, i) => acc + parseFloat(i.subtotal), 0)
   const taxAmt   = (order.items ?? []).reduce((acc, i) => acc + parseFloat(i.tax_amount), 0)
@@ -124,12 +125,21 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
                 Cancelar
               </Button>
             )}
-            {(isSent || order.status === 'partially_received') && (
+            {(isSent || isPartiallyReceived) && (
               <Button
                 size="sm"
+                variant="secondary"
                 onClick={() => router.push(`/compras/recepciones/nueva?order_id=${order.id}`)}
               >
                 Registrar recepción
+              </Button>
+            )}
+            {(isSent || isPartiallyReceived || isReceived) && (
+              <Button
+                size="sm"
+                onClick={() => router.push(`/compras/facturas/nueva?order_id=${order.id}`)}
+              >
+                Nueva factura
               </Button>
             )}
           </div>
@@ -179,6 +189,12 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
                 <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Creada</p>
                 <p className="text-zinc-800">{new Date(order.created_at).toLocaleDateString('es-AR')}</p>
               </div>
+              {order.buyer && (
+                <div>
+                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Comprador</p>
+                  <p className="text-zinc-800">{order.buyer.name}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -229,6 +245,94 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
               {order.notes}
             </div>
           )}
+
+          {/* Receipts traceability card */}
+          <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between">
+              <p className="text-[12px] font-semibold text-zinc-500 uppercase tracking-wide">Recepciones</p>
+              {(isSent || isPartiallyReceived) && (
+                <button
+                  onClick={() => router.push(`/compras/recepciones/nueva?order_id=${order.id}`)}
+                  className="text-[12px] text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  + Registrar recepción
+                </button>
+              )}
+            </div>
+            {(order.receipts ?? []).length === 0 ? (
+              <p className="px-5 py-4 text-[13px] text-zinc-400">Sin recepciones registradas.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-50 border-b border-zinc-100">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Número</th>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Fecha</th>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {(order.receipts ?? []).map(rec => (
+                    <tr
+                      key={rec.id}
+                      className="hover:bg-zinc-50/50 cursor-pointer"
+                      onClick={() => router.push(`/compras/recepciones/${rec.id}`)}
+                    >
+                      <td className="px-4 py-2.5 text-zinc-900 font-medium text-[13px]">{rec.receipt_number}</td>
+                      <td className="px-4 py-2.5 text-zinc-600 text-[13px]">
+                        {rec.receipt_date ? new Date(rec.receipt_date).toLocaleDateString('es-AR') : '—'}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge value={PURCHASE_RECEIPT_STATUS_LABEL[rec.status]} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Supplier invoices traceability card */}
+          <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between">
+              <p className="text-[12px] font-semibold text-zinc-500 uppercase tracking-wide">Facturas de proveedor</p>
+              {(isSent || isPartiallyReceived || isReceived) && (
+                <button
+                  onClick={() => router.push(`/compras/facturas/nueva?order_id=${order.id}`)}
+                  className="text-[12px] text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  + Nueva factura
+                </button>
+              )}
+            </div>
+            {(order.supplierInvoices ?? []).length === 0 ? (
+              <p className="px-5 py-4 text-[13px] text-zinc-400">Sin facturas vinculadas.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-50 border-b border-zinc-100">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Número</th>
+                    <th className="text-right px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Total</th>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {(order.supplierInvoices ?? []).map(inv => (
+                    <tr
+                      key={inv.id}
+                      className="hover:bg-zinc-50/50 cursor-pointer"
+                      onClick={() => router.push(`/compras/facturas/${inv.id}`)}
+                    >
+                      <td className="px-4 py-2.5 text-zinc-900 font-medium text-[13px]">{inv.invoice_number}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-zinc-700 text-[13px]">{formatARS(inv.total)}</td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge value={SUPPLIER_INVOICE_STATUS_LABEL[inv.status]} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
 
         </div>
       </div>

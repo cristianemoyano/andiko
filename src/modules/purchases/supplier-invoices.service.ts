@@ -60,15 +60,21 @@ export async function listSupplierInvoices(query: SupplierInvoiceQuery, orgId: s
 export async function getSupplierInvoice(id: string) {
   ensurePurchasesBranchAssociations()
 
-  const { default: Branch }  = await import('@/modules/auth/branch.model')
-  const { default: Contact } = await import('@/modules/contacts/contact.model')
+  const { default: Branch }          = await import('@/modules/auth/branch.model')
+  const { default: Contact }         = await import('@/modules/contacts/contact.model')
+  const { default: User }            = await import('@/modules/auth/user.model')
+  const { default: PurchaseOrder }   = await import('./purchase-order.model')
+  const { default: PurchaseReceipt } = await import('./purchase-receipt.model')
 
   const invoice = await SupplierInvoice.findByPk(id, {
     include: [
-      { model: Branch,  as: 'branch',  attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Branch,          as: 'branch',   attributes: ['id', 'name', 'branch_code'] },
+      { model: Contact,         as: 'contact',  attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: User,            as: 'buyer',    attributes: ['id', 'name'] },
       { model: SupplierInvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
       { model: SupplierPayment, as: 'payments', where: { deleted_at: null }, required: false },
+      { model: PurchaseOrder,   as: 'order',    attributes: ['id', 'order_number', 'status'], required: false },
+      { model: PurchaseReceipt, as: 'receipt',  attributes: ['id', 'receipt_number', 'status'], required: false },
     ],
   })
   if (!invoice) throw new Error('SUPPLIER_INVOICE_NOT_FOUND')
@@ -96,6 +102,7 @@ export async function createSupplierInvoice(input: SupplierInvoiceInput, orgId: 
         branch_id,
         org_id:         orgId,
         invoice_number: docNumber,
+        buyer_id:       actorId,
         due_date:       dueDate,
         status:         'draft',
         paid_amount:    '0.00',

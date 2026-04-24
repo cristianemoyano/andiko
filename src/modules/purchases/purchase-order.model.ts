@@ -2,6 +2,7 @@ import { DataTypes, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, PaymentCondition } from '@/types'
+import User from '@/modules/auth/user.model'
 
 export const PURCHASE_ORDER_STATUSES = ['draft', 'sent', 'partially_received', 'received', 'cancelled'] as const
 export type PurchaseOrderStatus = typeof PURCHASE_ORDER_STATUSES[number]
@@ -10,6 +11,7 @@ export interface PurchaseOrderAttributes extends Timestamps, AuditFields {
   id: UUID
   branch_id: UUID | null
   contact_id: UUID | null
+  buyer_id: UUID | null
   order_number: string
   status: PurchaseOrderStatus
   expected_date: Date | null
@@ -25,7 +27,7 @@ export interface PurchaseOrderAttributes extends Timestamps, AuditFields {
 
 type PurchaseOrderCreationAttributes = Optional<
   PurchaseOrderAttributes,
-  | 'id' | 'branch_id' | 'contact_id' | 'status' | 'expected_date' | 'currency' | 'payment_condition'
+  | 'id' | 'branch_id' | 'contact_id' | 'buyer_id' | 'status' | 'expected_date' | 'currency' | 'payment_condition'
   | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total'
   | 'notes' | 'internal_notes'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
@@ -35,6 +37,7 @@ class PurchaseOrder extends AuditModel<PurchaseOrderAttributes, PurchaseOrderCre
   declare id: UUID
   declare branch_id: UUID | null
   declare contact_id: UUID | null
+  declare buyer_id: UUID | null
   declare order_number: string
   declare status: PurchaseOrderStatus
   declare expected_date: Date | null
@@ -53,6 +56,7 @@ PurchaseOrder.init(
     id:                { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     branch_id:         { type: DataTypes.UUID },
     contact_id:        { type: DataTypes.UUID },
+    buyer_id:          { type: DataTypes.UUID },
     order_number:      { type: DataTypes.STRING(20), allowNull: false },
     status:            { type: DataTypes.ENUM(...PURCHASE_ORDER_STATUSES), allowNull: false, defaultValue: 'draft' },
     expected_date:     { type: DataTypes.DATE },
@@ -68,5 +72,8 @@ PurchaseOrder.init(
   },
   { sequelize, tableName: 'purchase_orders', paranoid: true, underscored: true },
 )
+
+PurchaseOrder.belongsTo(User, { foreignKey: 'buyer_id', as: 'buyer' })
+User.hasMany(PurchaseOrder, { foreignKey: 'buyer_id', as: 'purchaseOrders' })
 
 export default PurchaseOrder

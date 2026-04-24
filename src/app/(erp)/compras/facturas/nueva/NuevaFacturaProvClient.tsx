@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
@@ -13,18 +14,26 @@ import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/er
 import Decimal from 'decimal.js'
 import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
-import type { SearchableSelectOption } from '@/components/erp/SearchableSelect' // used in onSearch return type
+import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import { PAYMENT_CONDITION_LABEL } from '../../types'
+import type { PurchaseOrder, PurchaseReceipt } from '../../types'
+import type { IvaRate } from '@/types'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({ value, label }))
 
 export function NuevaFacturaProvClient() {
-  const router = useRouter()
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const { data: session } = useSession()
+  const actorName = session?.user?.impersonation?.name ?? session?.user?.name ?? null
+  const orderId      = searchParams.get('order_id')
+  const receiptId    = searchParams.get('receipt_id')
 
   const [branchId,               setBranchId]               = useState<string | null>(null)
   const [contactId,              setContactId]              = useState<string | null>(null)
+  const [contactOpts,            setContactOpts]            = useState<SearchableSelectOption[]>([])
   const [supplierInvoiceNumber,  setSupplierInvoiceNumber]  = useState('')
   const [invoiceDate,            setInvoiceDate]            = useState<Date | null>(new Date())
   const [paymentCondition,       setPaymentCondition]       = useState('cash')
@@ -32,6 +41,72 @@ export function NuevaFacturaProvClient() {
   const [notes,                  setNotes]                  = useState('')
   const [saving,                 setSaving]                 = useState(false)
   const [serverError,            setServerError]            = useState<string | null>(null)
+  const [linkedOrderLabel,       setLinkedOrderLabel]       = useState<string | null>(null)
+  const [linkedReceiptLabel,     setLinkedReceiptLabel]     = useState<string | null>(null)
+
+  // Pre-fill from linked purchase order
+  useEffect(() => {
+    if (!orderId) return
+    fetch(`/api/v1/purchases/orders/${orderId}`)
+      .then(r => r.json())
+      .then(d => {
+        const order = d as PurchaseOrder
+        setLinkedOrderLabel(order.order_number)
+        if (order.branch_id) setBranchId(order.branch_id)
+        if (order.contact_id) {
+          setContactId(order.contact_id)
+          if (order.contact) {
+            setContactOpts([{ value: order.contact_id, label: order.contact.legal_name, sublabel: order.contact.trade_name ?? undefined }])
+          }
+        }
+        if (order.payment_condition) setPaymentCondition(order.payment_condition)
+        if ((order.items ?? []).length > 0) {
+          setItems(order.items.map(i => ({
+            ...makeEmptyLine(),
+            product_id:  i.product_id ?? null,
+            variant_id:  i.variant_id ?? null,
+            description: i.description,
+            quantity:    String(parseFloat(i.quantity)),
+            unit_price:  i.unit_price ?? '0',
+            discount_pct: i.discount_pct ?? '0',
+            iva_rate:    (i.iva_rate ?? '21') as IvaRate,
+          })))
+        }
+      })
+      .catch(() => {/* ignore pre-fill errors */})
+  }, [orderId])
+
+  // Pre-fill from linked receipt (only contact/branch — receipt items have unit_cost not unit_price)
+  useEffect(() => {
+    if (!receiptId) return
+    fetch(`/api/v1/purchases/receipts/${receiptId}`)
+      .then(r => r.json())
+      .then(d => {
+        const receipt = d as PurchaseReceipt
+        setLinkedReceiptLabel(receipt.receipt_number)
+        if (!orderId) {
+          // Only override from receipt if not already pre-filled from order
+          if (receipt.branch_id) setBranchId(receipt.branch_id)
+          if (receipt.contact_id) {
+            setContactId(receipt.contact_id)
+            if (receipt.contact) {
+              setContactOpts([{ value: receipt.contact_id, label: receipt.contact.legal_name, sublabel: receipt.contact.trade_name ?? undefined }])
+            }
+          }
+          if ((receipt.items ?? []).length > 0) {
+            setItems(receipt.items.map(i => ({
+              ...makeEmptyLine(),
+              description: i.description,
+              quantity:    String(parseFloat(i.quantity)),
+              unit_price:  i.unit_cost ?? '0',
+              discount_pct: '0',
+              iva_rate:    '21' as IvaRate,
+            })))
+          }
+        }
+      })
+      .catch(() => {/* ignore pre-fill errors */})
+  }, [receiptId, orderId])
 
   const searchSuppliers = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
     const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=supplier`)
@@ -48,6 +123,8 @@ export function NuevaFacturaProvClient() {
     const body = {
       branch_id:               branchId,
       contact_id:              contactId,
+      order_id:                orderId   ?? null,
+      receipt_id:              receiptId ?? null,
       supplier_invoice_number: supplierInvoiceNumber.trim() || null,
       invoice_date:            invoiceDate ? invoiceDate.toISOString() : null,
       payment_condition:       paymentCondition,
@@ -70,7 +147,7 @@ export function NuevaFacturaProvClient() {
         body: JSON.stringify(body),
       })
       if (!res.ok) {
-        const d = await res.json()
+        const d = await res.json() as { error?: string }
         setServerError(d.error ?? 'Error al crear la factura')
         return
       }
@@ -112,6 +189,22 @@ export function NuevaFacturaProvClient() {
             </div>
           )}
 
+          {/* Linked document banner */}
+          {(linkedOrderLabel || linkedReceiptLabel) && (
+            <div className="px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-sm text-sm text-blue-700 flex gap-3 flex-wrap">
+              {linkedOrderLabel && (
+                <span>
+                  Vinculado a orden <span className="font-semibold">{linkedOrderLabel}</span>
+                </span>
+              )}
+              {linkedReceiptLabel && (
+                <span>
+                  · Recepción <span className="font-semibold">{linkedReceiptLabel}</span>
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Header fields card */}
           <div className="bg-white border border-zinc-200 rounded-sm p-5 flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -124,6 +217,7 @@ export function NuevaFacturaProvClient() {
                   value={contactId}
                   onChange={setContactId}
                   onSearch={searchSuppliers}
+                  options={contactOpts.length > 0 ? contactOpts : undefined}
                   placeholder="Buscar proveedor…"
                 />
               </FormField>
@@ -151,6 +245,11 @@ export function NuevaFacturaProvClient() {
                   ))}
                 </select>
               </FormField>
+              {actorName && (
+                <FormField label="Comprador">
+                  <p className="text-[13px] text-zinc-700 py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-sm">{actorName}</p>
+                </FormField>
+              )}
             </div>
           </div>
 

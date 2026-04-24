@@ -459,6 +459,12 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                     }
                   </p>
                 </div>
+                {quote.salesperson && (
+                  <div>
+                    <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Vendedor</p>
+                    <p className="text-zinc-800">{quote.salesperson.name}</p>
+                  </div>
+                )}
               </div>
             )}
 

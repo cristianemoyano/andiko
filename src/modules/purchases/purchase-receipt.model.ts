@@ -3,6 +3,7 @@ import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields } from '@/types'
 import PurchaseOrder from './purchase-order.model'
+import User from '@/modules/auth/user.model'
 
 export const PURCHASE_RECEIPT_STATUSES = ['draft', 'confirmed', 'cancelled'] as const
 export type PurchaseReceiptStatus = typeof PURCHASE_RECEIPT_STATUSES[number]
@@ -13,6 +14,7 @@ export interface PurchaseReceiptAttributes extends Timestamps, AuditFields {
   order_id: UUID | null
   contact_id: UUID | null
   warehouse_id: UUID | null
+  buyer_id: UUID | null
   receipt_number: string
   status: PurchaseReceiptStatus
   receipt_date: Date | null
@@ -22,7 +24,7 @@ export interface PurchaseReceiptAttributes extends Timestamps, AuditFields {
 
 type PurchaseReceiptCreationAttributes = Optional<
   PurchaseReceiptAttributes,
-  | 'id' | 'branch_id' | 'order_id' | 'contact_id' | 'warehouse_id'
+  | 'id' | 'branch_id' | 'order_id' | 'contact_id' | 'warehouse_id' | 'buyer_id'
   | 'status' | 'receipt_date' | 'notes' | 'internal_notes'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
@@ -33,6 +35,7 @@ class PurchaseReceipt extends AuditModel<PurchaseReceiptAttributes, PurchaseRece
   declare order_id: UUID | null
   declare contact_id: UUID | null
   declare warehouse_id: UUID | null
+  declare buyer_id: UUID | null
   declare receipt_number: string
   declare status: PurchaseReceiptStatus
   declare receipt_date: Date | null
@@ -47,6 +50,7 @@ PurchaseReceipt.init(
     order_id:       { type: DataTypes.UUID },
     contact_id:     { type: DataTypes.UUID },
     warehouse_id:   { type: DataTypes.UUID },
+    buyer_id:       { type: DataTypes.UUID },
     receipt_number: { type: DataTypes.STRING(20), allowNull: false },
     status:         { type: DataTypes.ENUM(...PURCHASE_RECEIPT_STATUSES), allowNull: false, defaultValue: 'draft' },
     receipt_date:   { type: DataTypes.DATE },
@@ -59,5 +63,8 @@ PurchaseReceipt.init(
 
 PurchaseOrder.hasMany(PurchaseReceipt, { foreignKey: 'order_id', as: 'receipts' })
 PurchaseReceipt.belongsTo(PurchaseOrder, { foreignKey: 'order_id', as: 'order' })
+
+PurchaseReceipt.belongsTo(User, { foreignKey: 'buyer_id', as: 'buyer' })
+User.hasMany(PurchaseReceipt, { foreignKey: 'buyer_id', as: 'purchaseReceipts' })
 
 export default PurchaseReceipt

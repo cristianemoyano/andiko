@@ -340,6 +340,12 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                 <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Cobrado</p>
                 <p className="text-zinc-800 tabular-nums">{formatARS(invoice.paid_amount)}</p>
               </div>
+              {invoice.salesperson && (
+                <div>
+                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Vendedor</p>
+                  <p className="text-zinc-800">{invoice.salesperson.name}</p>
+                </div>
+              )}
             </div>
 
             {(invoice.quote_id || invoice.order_id) && (

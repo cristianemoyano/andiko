@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
@@ -23,6 +24,8 @@ interface ReceiptItem {
 export function NuevaRecepcionClient() {
   const router       = useRouter()
   const searchParams = useSearchParams()
+  const { data: session } = useSession()
+  const actorName = session?.user?.impersonation?.name ?? session?.user?.name ?? null
   const orderId      = searchParams.get('order_id')
 
   const [branchId,            setBranchId]            = useState<string | null>(null)
@@ -187,6 +190,11 @@ export function NuevaRecepcionClient() {
               <FormField label="Fecha de recepción">
                 <DatePicker value={receiptDate} onChange={setReceiptDate} />
               </FormField>
+              {actorName && (
+                <FormField label="Comprador">
+                  <p className="text-[13px] text-zinc-700 py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-sm">{actorName}</p>
+                </FormField>
+              )}
             </div>
           </div>
 

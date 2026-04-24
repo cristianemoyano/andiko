@@ -4,6 +4,7 @@ import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, PaymentCondition } from '@/types'
 import PurchaseOrder from './purchase-order.model'
 import PurchaseReceipt from './purchase-receipt.model'
+import User from '@/modules/auth/user.model'
 
 export const SUPPLIER_INVOICE_STATUSES = ['draft', 'received', 'partially_paid', 'paid', 'cancelled'] as const
 export type SupplierInvoiceStatus = typeof SUPPLIER_INVOICE_STATUSES[number]
@@ -14,6 +15,7 @@ export interface SupplierInvoiceAttributes extends Timestamps, AuditFields {
   contact_id: UUID | null
   order_id: UUID | null
   receipt_id: UUID | null
+  buyer_id: UUID | null
   invoice_number: string
   supplier_invoice_number: string | null
   status: SupplierInvoiceStatus
@@ -33,7 +35,7 @@ export interface SupplierInvoiceAttributes extends Timestamps, AuditFields {
 
 type SupplierInvoiceCreationAttributes = Optional<
   SupplierInvoiceAttributes,
-  | 'id' | 'branch_id' | 'contact_id' | 'order_id' | 'receipt_id'
+  | 'id' | 'branch_id' | 'contact_id' | 'order_id' | 'receipt_id' | 'buyer_id'
   | 'supplier_invoice_number' | 'status' | 'invoice_date' | 'due_date' | 'payment_condition' | 'currency'
   | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total' | 'paid_amount' | 'balance'
   | 'notes' | 'internal_notes'
@@ -46,6 +48,7 @@ class SupplierInvoice extends AuditModel<SupplierInvoiceAttributes, SupplierInvo
   declare contact_id: UUID | null
   declare order_id: UUID | null
   declare receipt_id: UUID | null
+  declare buyer_id: UUID | null
   declare invoice_number: string
   declare supplier_invoice_number: string | null
   declare status: SupplierInvoiceStatus
@@ -70,6 +73,7 @@ SupplierInvoice.init(
     contact_id:              { type: DataTypes.UUID },
     order_id:                { type: DataTypes.UUID },
     receipt_id:              { type: DataTypes.UUID },
+    buyer_id:                { type: DataTypes.UUID },
     invoice_number:          { type: DataTypes.STRING(20), allowNull: false },
     supplier_invoice_number: { type: DataTypes.STRING(50) },
     status:                  { type: DataTypes.ENUM(...SUPPLIER_INVOICE_STATUSES), allowNull: false, defaultValue: 'draft' },
@@ -95,5 +99,8 @@ SupplierInvoice.belongsTo(PurchaseOrder, { foreignKey: 'order_id', as: 'order' }
 
 PurchaseReceipt.hasMany(SupplierInvoice, { foreignKey: 'receipt_id', as: 'supplierInvoices' })
 SupplierInvoice.belongsTo(PurchaseReceipt, { foreignKey: 'receipt_id', as: 'receipt' })
+
+SupplierInvoice.belongsTo(User, { foreignKey: 'buyer_id', as: 'buyer' })
+User.hasMany(SupplierInvoice, { foreignKey: 'buyer_id', as: 'supplierInvoices' })
 
 export default SupplierInvoice

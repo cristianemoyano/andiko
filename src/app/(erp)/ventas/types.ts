@@ -65,6 +65,7 @@ export interface Quote {
   updated_at: string
   branch?: BranchSummary | null
   contact?: { id: string; legal_name: string; trade_name: string | null } | null
+  salesperson?: { id: string; name: string } | null
   items?: QuoteItem[]
 }
 
@@ -133,6 +134,7 @@ export interface Order {
   updated_at: string
   branch?: BranchSummary | null
   contact?: { id: string; legal_name: string; trade_name: string | null } | null
+  salesperson?: { id: string; name: string } | null
   items?: OrderItem[]
 }
 
@@ -158,6 +160,7 @@ export interface Payment {
   reference: string | null
   notes: string | null
   created_at: string
+  salesperson?: { id: string; name: string } | null
 }
 
 // --- Invoice ---
@@ -213,6 +216,7 @@ export interface Invoice {
   updated_at: string
   branch?: BranchSummary | null
   contact?: { id?: string; legal_name: string; trade_name: string | null } | null
+  salesperson?: { id: string; name: string } | null
   items?: InvoiceItem[]
   /** Present on GET `/api/v1/sales/invoices/:id` when backend includes payments */
   payments?: Payment[]

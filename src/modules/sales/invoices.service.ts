@@ -10,6 +10,7 @@ import Payment from './payment.model'
 import type { InvoiceInput, InvoiceUpdateInput, InvoiceQuery } from './invoice.schema'
 import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
+import User from '@/modules/auth/user.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
@@ -40,7 +41,7 @@ export async function listInvoices(query: InvoiceQuery, orgId: string) {
     offset,
     order: [['created_at', 'DESC']],
     attributes: [
-      'id', 'branch_id', 'invoice_number', 'status', 'contact_id', 'order_id',
+      'id', 'branch_id', 'invoice_number', 'status', 'contact_id', 'order_id', 'salesperson_id',
       'issue_date', 'due_date', 'payment_condition', 'currency',
       'subtotal', 'tax_amount', 'total', 'paid_amount', 'balance',
       'notes', 'created_at',
@@ -48,6 +49,7 @@ export async function listInvoices(query: InvoiceQuery, orgId: string) {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: User, as: 'salesperson', attributes: ['id', 'name'] },
     ],
   })
 
@@ -61,6 +63,7 @@ export async function getInvoice(id: string) {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: User, as: 'salesperson', attributes: ['id', 'name'] },
       { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
       { model: Payment, as: 'payments', where: { deleted_at: null }, required: false },
     ],
@@ -95,6 +98,7 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
         branch_id,
         contact_id: order.contact_id,
         invoice_number,
+        salesperson_id: actorId,
         org_id:     orgId,
         balance:    docTotals.total,
         created_by: actorId,

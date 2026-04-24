@@ -9,7 +9,8 @@ import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { EmptyState } from '@/components/erp/EmptyState'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import type { PurchaseReceipt } from '../../types'
-import { PURCHASE_RECEIPT_STATUS_LABEL } from '../../types'
+import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_RECEIPT_STATUS_LABEL, SUPPLIER_INVOICE_STATUS_LABEL } from '../../types'
+import { formatARS } from '@/components/primitives/CurrencyInput'
 
 interface RecepcionDetailProps {
   id: string
@@ -109,6 +110,18 @@ export function RecepcionDetail({ id }: RecepcionDetailProps) {
                 </Button>
               </>
             )}
+            {isConfirmed && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  const params = new URLSearchParams({ receipt_id: receipt.id })
+                  if (receipt.order_id) params.set('order_id', receipt.order_id)
+                  router.push(`/compras/facturas/nueva?${params}`)
+                }}
+              >
+                Crear factura proveedor
+              </Button>
+            )}
           </div>
         }
       />
@@ -162,6 +175,12 @@ export function RecepcionDetail({ id }: RecepcionDetailProps) {
                 <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Creada</p>
                 <p className="text-zinc-800">{new Date(receipt.created_at).toLocaleDateString('es-AR')}</p>
               </div>
+              {receipt.buyer && (
+                <div>
+                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Comprador</p>
+                  <p className="text-zinc-800">{receipt.buyer.name}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -204,6 +223,53 @@ export function RecepcionDetail({ id }: RecepcionDetailProps) {
             <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4 text-[13px] text-zinc-700">
               <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-1.5">Notas</p>
               {receipt.notes}
+            </div>
+          )}
+
+          {/* Order traceability card */}
+          {receipt.order && (
+            <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4">
+              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-2">Orden de compra vinculada</p>
+              <div
+                className="flex items-center justify-between cursor-pointer hover:bg-zinc-50 -mx-5 px-5 py-1 rounded-sm"
+                onClick={() => router.push(`/compras/ordenes/${receipt.order!.id}`)}
+              >
+                <span className="text-[13px] font-medium text-zinc-900">{receipt.order.order_number}</span>
+                <StatusBadge value={PURCHASE_ORDER_STATUS_LABEL[receipt.order.status]} />
+              </div>
+            </div>
+          )}
+
+          {/* Supplier invoices traceability card */}
+          {(receipt.supplierInvoices ?? []).length > 0 && (
+            <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-zinc-100">
+                <p className="text-[12px] font-semibold text-zinc-500 uppercase tracking-wide">Facturas vinculadas</p>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-50 border-b border-zinc-100">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Número</th>
+                    <th className="text-right px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Total</th>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {(receipt.supplierInvoices ?? []).map(inv => (
+                    <tr
+                      key={inv.id}
+                      className="hover:bg-zinc-50/50 cursor-pointer"
+                      onClick={() => router.push(`/compras/facturas/${inv.id}`)}
+                    >
+                      <td className="px-4 py-2.5 text-zinc-900 font-medium text-[13px]">{inv.invoice_number}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-zinc-700 text-[13px]">{formatARS(inv.total)}</td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge value={SUPPLIER_INVOICE_STATUS_LABEL[inv.status]} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 

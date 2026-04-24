@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
@@ -21,6 +22,8 @@ const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, 
 
 export function NuevaOrdenClient() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const actorName = session?.user?.impersonation?.name ?? session?.user?.name ?? null
 
   const [branchId,         setBranchId]         = useState<string | null>(null)
   const [contactId,        setContactId]        = useState<string | null>(null)
@@ -146,6 +149,11 @@ export function NuevaOrdenClient() {
                   ))}
                 </select>
               </FormField>
+              {actorName && (
+                <FormField label="Comprador">
+                  <p className="text-[13px] text-zinc-700 py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-sm">{actorName}</p>
+                </FormField>
+              )}
             </div>
           </div>
 

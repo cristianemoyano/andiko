@@ -47,12 +47,14 @@ export async function getSupplierPayment(id: string, orgId: string) {
 
   const { default: Branch }  = await import('@/modules/auth/branch.model')
   const { default: Contact } = await import('@/modules/contacts/contact.model')
+  const { default: User }    = await import('@/modules/auth/user.model')
 
   const payment = await SupplierPayment.findOne({
     where: { id, org_id: orgId },
     include: [
       { model: Branch,         as: 'branch',  attributes: ['id', 'name', 'branch_code'] },
       { model: Contact,        as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: User,           as: 'buyer',   attributes: ['id', 'name'] },
       { model: SupplierInvoice, as: 'invoice', attributes: ['id', 'invoice_number', 'total', 'balance'] },
     ],
   })
@@ -84,6 +86,7 @@ export async function createSupplierPayment(input: SupplierPaymentInput, orgId: 
         contact_id:     input.contact_id ?? invoice.contact_id ?? null,
         org_id:         orgId,
         payment_number: docNumber,
+        buyer_id:       actorId,
         payment_date:   input.payment_date,
         amount:         String(input.amount),
         created_by:     actorId,

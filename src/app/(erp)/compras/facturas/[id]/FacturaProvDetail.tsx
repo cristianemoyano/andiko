@@ -13,7 +13,7 @@ import { CurrencyInput, formatARS } from '@/components/primitives/CurrencyInput'
 import { FormField } from '@/components/primitives/FormField'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import type { SupplierInvoice, SupplierPayment, PaymentMethod } from '../../types'
-import { SUPPLIER_INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL } from '../../types'
+import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_RECEIPT_STATUS_LABEL, SUPPLIER_INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL } from '../../types'
 
 interface FacturaProvDetailProps {
   id: string
@@ -239,6 +239,12 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
                   {formatARS(invoice.balance)}
                 </p>
               </div>
+              {invoice.buyer && (
+                <div>
+                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Comprador</p>
+                  <p className="text-zinc-800">{invoice.buyer.name}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -357,6 +363,39 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
               </div>
             )}
           </div>
+
+          {/* Traceability card */}
+          {(invoice.order ?? invoice.receipt) && (
+            <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4">
+              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-3">Documentos vinculados</p>
+              <div className="flex flex-col gap-2">
+                {invoice.order && (
+                  <div
+                    className="flex items-center justify-between cursor-pointer hover:bg-zinc-50 -mx-5 px-5 py-1.5 rounded-sm"
+                    onClick={() => router.push(`/compras/ordenes/${invoice.order!.id}`)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-zinc-400 uppercase tracking-wide font-medium">Orden</span>
+                      <span className="text-[13px] font-medium text-zinc-900">{invoice.order.order_number}</span>
+                    </div>
+                    <StatusBadge value={PURCHASE_ORDER_STATUS_LABEL[invoice.order.status]} />
+                  </div>
+                )}
+                {invoice.receipt && (
+                  <div
+                    className="flex items-center justify-between cursor-pointer hover:bg-zinc-50 -mx-5 px-5 py-1.5 rounded-sm"
+                    onClick={() => router.push(`/compras/recepciones/${invoice.receipt!.id}`)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-zinc-400 uppercase tracking-wide font-medium">Recepción</span>
+                      <span className="text-[13px] font-medium text-zinc-900">{invoice.receipt.receipt_number}</span>
+                    </div>
+                    <StatusBadge value={PURCHASE_RECEIPT_STATUS_LABEL[invoice.receipt.status]} />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

@@ -45,6 +45,10 @@ export type Branch = { id: string; name: string; branch_code: number }
 export type ContactSummary = { id: string; legal_name: string; trade_name: string | null }
 export type WarehouseSummary = { id: string; name: string }
 
+export type PurchaseOrderSummary = { id: string; order_number: string; status: PurchaseOrderStatus }
+export type PurchaseReceiptSummary = { id: string; receipt_number: string; status: PurchaseReceiptStatus; receipt_date: string | null }
+export type SupplierInvoiceSummary = { id: string; invoice_number: string; status: SupplierInvoiceStatus; total: string }
+
 export type LineItem = {
   id: string
   description: string
@@ -80,7 +84,10 @@ export type PurchaseOrder = {
   created_at: string
   branch: Branch | null
   contact: ContactSummary | null
+  buyer?: { id: string; name: string }
   items: LineItem[]
+  receipts?: PurchaseReceiptSummary[]
+  supplierInvoices?: SupplierInvoiceSummary[]
 }
 
 export type PurchaseReceipt = {
@@ -98,6 +105,9 @@ export type PurchaseReceipt = {
   branch: Branch | null
   contact: ContactSummary | null
   warehouse: WarehouseSummary | null
+  buyer?: { id: string; name: string }
+  order?: PurchaseOrderSummary
+  supplierInvoices?: SupplierInvoiceSummary[]
   items: Array<{
     id: string
     description: string
@@ -133,8 +143,11 @@ export type SupplierInvoice = {
   created_at: string
   branch: Branch | null
   contact: ContactSummary | null
+  buyer?: { id: string; name: string }
   items: LineItem[]
   payments: SupplierPayment[]
+  order?: PurchaseOrderSummary
+  receipt?: PurchaseReceiptSummary
 }
 
 export type SupplierPayment = {
@@ -146,4 +159,5 @@ export type SupplierPayment = {
   payment_method: string
   notes: string | null
   created_at: string
+  buyer?: { id: string; name: string }
 }
