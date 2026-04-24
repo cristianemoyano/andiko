@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { productCategorySchema, productCategoryQuerySchema } from '@/modules/catalog/product-category.schema'
 import { listCategories, createCategory } from '@/modules/catalog/product-category.service'
 
@@ -18,6 +18,6 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
-  const category = await createCategory(parsed.data, session.user.id!, session.user.orgId)
+  const category = await createCategory(parsed.data, resolveActorId(session), session.user.orgId)
   return NextResponse.json(category, { status: 201 })
 })

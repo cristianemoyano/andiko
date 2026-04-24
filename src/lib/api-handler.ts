@@ -26,6 +26,19 @@ export type RouteHandler<P extends Record<string, string>> = (
 ) => Promise<NextResponse>
 
 /**
+ * Returns the effective actor user ID for the current session.
+ * When a sys-admin is impersonating, returns the impersonated user's ID.
+ * Otherwise returns the real authenticated user's ID.
+ *
+ * Use this everywhere instead of `session.user.id` so that audit trails
+ * (created_by, updated_by) and ownership fields (salesperson_id, buyer_id)
+ * are always stamped with the impersonated identity, not the sysadmin's UUID.
+ */
+export function resolveActorId(session: AuthedSession): string {
+  return session.user.impersonation?.userId ?? session.user.id!
+}
+
+/**
  * Wraps a Next.js App Router route handler with auth + permission check.
  *
  * Usage:

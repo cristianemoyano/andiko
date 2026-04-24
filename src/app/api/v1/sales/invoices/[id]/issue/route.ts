@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { issueInvoice } from '@/modules/sales/invoices.service'
 
 type P = { id: string }
@@ -7,7 +7,7 @@ type P = { id: string }
 export const POST = withPermission<P>('sales:write', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const invoice = await issueInvoice(id, session.user.id!)
+    const invoice = await issueInvoice(id, resolveActorId(session))
     return NextResponse.json(invoice)
   } catch (err: unknown) {
     if (err instanceof Error) {

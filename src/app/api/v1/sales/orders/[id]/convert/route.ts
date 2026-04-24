@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { convertOrderToInvoice } from '@/modules/sales/sales-orders.service'
 
@@ -9,7 +9,7 @@ export const POST = withPermission<P>('sales:write', async (_req, ctx, session) 
   const { id } = await ctx.params
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const invoice = await convertOrderToInvoice(id, ctxTenant, session.user.id!)
+    const invoice = await convertOrderToInvoice(id, ctxTenant, resolveActorId(session))
     return NextResponse.json(invoice, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof TenancyError) {

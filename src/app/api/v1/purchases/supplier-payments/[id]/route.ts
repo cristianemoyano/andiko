@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
 import { supplierPaymentUpdateSchema } from '@/modules/purchases/supplier-payment.schema'
 import { getSupplierPayment, updateSupplierPayment, deleteSupplierPayment } from '@/modules/purchases/supplier-payments.service'
@@ -36,7 +36,7 @@ export const PATCH = withPermission('purchases:write', async (req, ctx, session)
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
   try {
-    const payment = await updateSupplierPayment(id, parsed.data, orgId, session.user.id!)
+    const payment = await updateSupplierPayment(id, parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(payment)
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'SUPPLIER_PAYMENT_NOT_FOUND') {
@@ -52,7 +52,7 @@ export const DELETE = withPermission('purchases:delete', async (_req, ctx, sessi
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
   try {
-    await deleteSupplierPayment(id, orgId, session.user.id!)
+    await deleteSupplierPayment(id, orgId, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'SUPPLIER_PAYMENT_NOT_FOUND') {

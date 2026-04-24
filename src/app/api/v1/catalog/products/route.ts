@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { productSchema, productQuerySchema } from '@/modules/catalog/product.schema'
 import { listProducts, createProduct } from '@/modules/catalog/products.service'
@@ -29,7 +29,7 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
   }
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const product = await createProduct(parsed.data, session.user.id!, ctxTenant)
+    const product = await createProduct(parsed.data, resolveActorId(session), ctxTenant)
     return NextResponse.json(product, { status: 201 })
   } catch (err) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
 import { cancelPurchaseOrder } from '@/modules/purchases/purchase-orders.service'
 
@@ -14,7 +14,7 @@ export const POST = withPermission('purchases:write', async (_req, ctx, session)
   }
 
   try {
-    const order = await cancelPurchaseOrder(id, orgId, session.user.id!)
+    const order = await cancelPurchaseOrder(id, orgId, resolveActorId(session))
     return NextResponse.json(order)
   } catch (err: unknown) {
     if (err instanceof Error) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
 import { purchaseReceiptUpdateSchema } from '@/modules/purchases/purchase-receipt.schema'
 import { getPurchaseReceipt, updatePurchaseReceipt, deletePurchaseReceipt } from '@/modules/purchases/purchase-receipts.service'
@@ -33,7 +33,7 @@ export const PATCH = withPermission('purchases:write', async (req, ctx, session)
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
   try {
-    const receipt = await updatePurchaseReceipt(id, parsed.data, orgId, session.user.id!)
+    const receipt = await updatePurchaseReceipt(id, parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(receipt)
   } catch (err: unknown) {
     if (err instanceof Error) {
@@ -50,7 +50,7 @@ export const DELETE = withPermission('purchases:delete', async (_req, ctx, sessi
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
   try {
-    await deletePurchaseReceipt(id, orgId, session.user.id!)
+    await deletePurchaseReceipt(id, orgId, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {
     if (err instanceof Error) {

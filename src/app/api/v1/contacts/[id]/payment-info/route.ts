@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { contactPaymentInfoSchema } from '@/modules/contacts/contact-payment-info.schema'
 import { listPaymentInfo, createPaymentInfo } from '@/modules/contacts/contact-payment-info.service'
@@ -30,7 +30,7 @@ export const POST = withPermission<P>('contacts:write', async (req, ctx, session
 
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const item = await createPaymentInfo(id, parsed.data, ctxTenant, session.user.id!)
+    const item = await createPaymentInfo(id, parsed.data, ctxTenant, resolveActorId(session))
     return NextResponse.json(item.toJSON(), { status: 201 })
   } catch (err) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { productCategoryUpdateSchema } from '@/modules/catalog/product-category.schema'
 import { getCategory, updateCategory, deleteCategory } from '@/modules/catalog/product-category.service'
 
@@ -23,7 +23,7 @@ export const PATCH = withPermission<P>('products:write', async (req, ctx, sessio
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const category = await updateCategory(id, parsed.data, session.user.id!, session.user.orgId)
+    const category = await updateCategory(id, parsed.data, resolveActorId(session), session.user.orgId)
     return NextResponse.json(category)
   } catch (err) {
     if (err instanceof Error && err.message === 'CATEGORY_NOT_FOUND') {
@@ -36,7 +36,7 @@ export const PATCH = withPermission<P>('products:write', async (req, ctx, sessio
 export const DELETE = withPermission<P>('products:delete', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    await deleteCategory(id, session.user.id!, session.user.orgId)
+    await deleteCategory(id, resolveActorId(session), session.user.orgId)
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     if (err instanceof Error && err.message === 'CATEGORY_NOT_FOUND') {

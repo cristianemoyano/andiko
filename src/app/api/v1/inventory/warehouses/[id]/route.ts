@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { warehouseUpdateSchema } from '@/modules/inventory/warehouse.schema'
 import { getWarehouse, updateWarehouse, deleteWarehouse } from '@/modules/inventory/warehouses.service'
@@ -32,7 +32,7 @@ export const PATCH = withPermission<P>('inventory:write', async (req, ctx, sessi
   }
   try {
     const tenant = await makeTenantContext(session.user)
-    const warehouse = await updateWarehouse(id, parsed.data, tenant, session.user.id!)
+    const warehouse = await updateWarehouse(id, parsed.data, tenant, resolveActorId(session))
     return NextResponse.json(warehouse)
   } catch (err: unknown) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
@@ -49,7 +49,7 @@ export const DELETE = withPermission<P>('inventory:delete', async (_req, ctx, se
   const { id } = await ctx.params
   try {
     const tenant = await makeTenantContext(session.user)
-    await deleteWarehouse(id, tenant, session.user.id!)
+    await deleteWarehouse(id, tenant, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {

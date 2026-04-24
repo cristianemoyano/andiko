@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { salesQuoteSchema, salesQuoteQuerySchema } from '@/modules/sales/sales-quote.schema'
 import { listQuotes, createQuote } from '@/modules/sales/sales-quotes.service'
@@ -29,7 +29,7 @@ export const POST = withPermission('sales:write', async (req, _ctx, session) => 
   }
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const quote = await createQuote(parsed.data, ctxTenant, session.user.id!)
+    const quote = await createQuote(parsed.data, ctxTenant, resolveActorId(session))
     return NextResponse.json(quote, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof TenancyError) {

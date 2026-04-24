@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { invoiceUpdateSchema } from '@/modules/sales/invoice.schema'
 import { getInvoice, updateInvoice, deleteInvoice } from '@/modules/sales/invoices.service'
 
@@ -23,7 +23,7 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const invoice = await updateInvoice(id, parsed.data, session.user.id!)
+    const invoice = await updateInvoice(id, parsed.data, resolveActorId(session))
     return NextResponse.json(invoice)
   } catch (err: unknown) {
     if (err instanceof Error) {
@@ -37,7 +37,7 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
 export const DELETE = withPermission<P>('sales:delete', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    await deleteInvoice(id, session.user.id!)
+    await deleteInvoice(id, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {
     if (err instanceof Error) {

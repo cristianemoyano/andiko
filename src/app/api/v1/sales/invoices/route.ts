@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
 import { invoiceSchema, invoiceQuerySchema } from '@/modules/sales/invoice.schema'
 import { listInvoices, createInvoice } from '@/modules/sales/invoices.service'
@@ -42,7 +42,7 @@ export const POST = withPermission('sales:write', async (req, _ctx, session) => 
     )
   }
   try {
-    const invoice = await createInvoice(parsed.data, orgId, session.user.id!)
+    const invoice = await createInvoice(parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(invoice, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof Error) {

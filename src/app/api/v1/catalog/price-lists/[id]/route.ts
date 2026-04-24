@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { priceListUpdateSchema } from '@/modules/catalog/price-list.schema'
 import { getPriceList, updatePriceList, deletePriceList } from '@/modules/catalog/price-list.service'
 
@@ -23,7 +23,7 @@ export const PATCH = withPermission<P>('products:write', async (req, ctx, sessio
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const priceList = await updatePriceList(id, parsed.data, session.user.id!, session.user.orgId)
+    const priceList = await updatePriceList(id, parsed.data, resolveActorId(session), session.user.orgId)
     return NextResponse.json(priceList)
   } catch (err) {
     if (err instanceof Error && err.message === 'PRICE_LIST_NOT_FOUND') {
@@ -36,7 +36,7 @@ export const PATCH = withPermission<P>('products:write', async (req, ctx, sessio
 export const DELETE = withPermission<P>('products:delete', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    await deletePriceList(id, session.user.id!, session.user.orgId)
+    await deletePriceList(id, resolveActorId(session), session.user.orgId)
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     if (err instanceof Error && err.message === 'PRICE_LIST_NOT_FOUND') {
