@@ -215,14 +215,28 @@ Gestión de stock integrada con ventas y compras.
 
 **Entidades:** `warehouses`, `stock_items`, `stock_movements`
 
-- [ ] Depósitos múltiples
-- [ ] Stock actual por producto y depósito
-- [ ] Movimientos de entrada y salida con trazabilidad
-- [ ] Descuento automático de stock al facturar
-- [ ] Reposición automática de stock al anular factura
+### Backend (completado)
+- [x] Migraciones: `warehouses`, `stock_items`, `stock_movements` + `variant_id` en ítems de venta
+- [x] Modelos Sequelize con tipos estrictos: `Warehouse`, `StockItem`, `StockMovement`
+- [x] `warehouses.service.ts`: CRUD + `resolveDefaultWarehouse` (fallback sucursal → org)
+- [x] `stock-movements.service.ts`: `applyMovement` (ledger atómico con lock), `deductStockForOrder`, `restoreStockForOrder`, `manualAdjustment`, `listMovements`
+- [x] `stock-items.service.ts`: `getStockLevels` (paginado), `getVariantStock`
+- [x] Integración con ventas: descuento automático al confirmar pedido, restauración al cancelar pedido y al anular factura
+- [x] `variant_id` propagado en `SalesOrderItem`, `SalesQuoteItem`, `InvoiceItem` (modelos + schemas Zod + tipos frontend)
+- [x] API REST: `GET/POST /api/v1/inventory/warehouses`, `GET/PATCH/DELETE /api/v1/inventory/warehouses/[id]`, `GET /api/v1/inventory/stock`, `GET/POST /api/v1/inventory/movements`
+- [x] Tests unitarios: `applyMovement` (happy path, stock insuficiente, ítem nuevo), `restoreStockForOrder`, `manualAdjustment` (delta positivo y negativo)
+
+### Frontend
+- [x] Módulo `/inventario` con sub-nav (Depósitos / Stock / Movimientos)
+- [x] Depósitos múltiples: listado + CRUD modal + detalle con stock y movimientos por depósito
+- [x] Ajuste manual de stock desde detalle de depósito
+- [x] Vista global de stock variante × depósito (`/inventario/stock`)
+- [x] Historial de movimientos global con filtros (`/inventario/movimientos`)
+
+### Pendientes
 - [ ] Alertas de stock mínimo
-- [ ] Ajustes de inventario
 - [ ] Remitos de entrega
+- [ ] Vista de stock por variante con nombre de producto (en lugar de UUID)
 
 ---
 
@@ -272,6 +286,20 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 - [ ] Estado de resultados
 - [ ] Cierre de período
 - [ ] Exportación para estudio contable
+
+---
+
+---
+
+## Comunicaciones / Email
+
+Envío de documentos e notificaciones por email desde el ERP.
+
+- [ ] Templates de email por tipo de documento (presupuesto, pedido, factura)
+- [ ] Envío de documentos al cliente desde el detalle (botón "Enviar por email")
+- [ ] Configuración SMTP por organización (o servicio transaccional tipo Resend/SendGrid)
+- [ ] Historial de envíos por documento
+- [ ] Notificaciones internas: alertas de stock mínimo, vencimiento de presupuestos
 
 ---
 

@@ -215,6 +215,12 @@ export async function cancelInvoice(id: string, actorId: string) {
       { transaction: t },
     )
 
+    // Restore stock: cancelling an invoice returns goods to inventory
+    if (invoice.order_id && invoice.org_id) {
+      const { restoreStockForOrder } = await import('@/modules/inventory/stock-movements.service')
+      await restoreStockForOrder(invoice.order_id, invoice.org_id, actorId, t)
+    }
+
     logger.info({ invoiceId: id, actorId }, 'invoice cancelled')
     return invoice.reload({ transaction: t })
   })

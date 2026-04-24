@@ -200,6 +200,7 @@ export function NuevoPedidoClient() {
       internal_notes:    internalNotes.trim() || null,
       items: items.map((item, idx) => ({
         product_id:   item.product_id ?? null,
+        variant_id:   item.variant_id ?? null,
         description:  item.description,
         quantity:     parseFloat(item.quantity) || 0,
         unit_price:   parseFloat(item.unit_price) || 0,

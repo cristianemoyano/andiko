@@ -164,6 +164,7 @@ export async function listProductsForSale(
   priceListId: string | undefined,
   limit: number,
   orgId: string,
+  manageStock?: boolean,
 ): Promise<SaleProductOption[]> {
   const { getEffectivePrice } = await import('./price-list.service')
 
@@ -175,6 +176,9 @@ export async function listProductsForSale(
     ]
   }
 
+  const variantWhere: Record<string, unknown> = { is_default: true }
+  if (manageStock !== undefined) variantWhere.manage_stock = manageStock
+
   const rows = await Product.findAll({
     where,
     limit,
@@ -184,7 +188,7 @@ export async function listProductsForSale(
     include: [{
       model: ProductVariant,
       as: 'variants',
-      where: { is_default: true },
+      where: variantWhere,
       required: true,
       attributes: ['id', 'sku', 'base_price'],
     }],

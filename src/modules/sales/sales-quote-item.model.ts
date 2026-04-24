@@ -8,6 +8,7 @@ export interface SalesQuoteItemAttributes extends Timestamps, AuditFields {
   id: UUID
   quote_id: UUID
   product_id: UUID | null
+  variant_id: UUID | null
   description: string
   quantity: string
   unit_price: string
@@ -23,7 +24,7 @@ export interface SalesQuoteItemAttributes extends Timestamps, AuditFields {
 
 type SalesQuoteItemCreationAttributes = Optional<
   SalesQuoteItemAttributes,
-  | 'id' | 'product_id' | 'discount_pct' | 'iva_rate' | 'sort_order'
+  | 'id' | 'product_id' | 'variant_id' | 'discount_pct' | 'iva_rate' | 'sort_order'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -31,6 +32,7 @@ class SalesQuoteItem extends AuditModel<SalesQuoteItemAttributes, SalesQuoteItem
   declare id: UUID
   declare quote_id: UUID
   declare product_id: UUID | null
+  declare variant_id: UUID | null
   declare description: string
   declare quantity: string
   declare unit_price: string
@@ -49,6 +51,7 @@ SalesQuoteItem.init(
     id:              { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     quote_id:        { type: DataTypes.UUID, allowNull: false },
     product_id:      { type: DataTypes.UUID },
+    variant_id:      { type: DataTypes.UUID },
     description:     { type: DataTypes.STRING(500), allowNull: false },
     quantity:        { type: DataTypes.DECIMAL(15, 4), allowNull: false },
     unit_price:      { type: DataTypes.DECIMAL(15, 2), allowNull: false },

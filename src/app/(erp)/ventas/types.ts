@@ -32,6 +32,7 @@ export const QUOTE_STATUS_LABEL: Record<QuoteStatus, string> = {
 export interface QuoteItem {
   id: string
   product_id: string | null
+  variant_id: string | null
   description: string
   quantity: string
   unit_price: string
@@ -82,6 +83,7 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
 export interface OrderItem {
   id: string
   product_id: string | null
+  variant_id: string | null
   description: string
   quantity: string
   unit_price: string
@@ -173,6 +175,7 @@ export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
 export interface InvoiceItem {
   id: string
   product_id: string | null
+  variant_id: string | null
   description: string
   quantity: string
   unit_price: string

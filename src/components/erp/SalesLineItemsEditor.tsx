@@ -10,6 +10,7 @@ import type { IvaRate } from '@/types'
 export interface LineItemInput {
   id: string
   product_id: string | null
+  variant_id: string | null
   description: string
   quantity: string
   unit_price: string
@@ -26,6 +27,7 @@ export interface SalesLineItemsEditorProps {
 
 type SaleProduct = {
   product_id: string
+  variant_id: string
   name: string
   sku: string
   iva_rate: string
@@ -43,6 +45,7 @@ export function makeEmptyLine(): LineItemInput {
   return {
     id:           crypto.randomUUID(),
     product_id:   null,
+    variant_id:   null,
     description:  '',
     quantity:     '1',
     unit_price:   '0',
@@ -138,11 +141,12 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
 
   function handleProductSelect(itemId: string, productId: string | null, product?: SaleProduct) {
     if (!productId || !product) {
-      updateItem(itemId, { product_id: productId ?? null })
+      updateItem(itemId, { product_id: productId ?? null, variant_id: null })
       return
     }
     updateItem(itemId, {
       product_id:  productId,
+      variant_id:  product.variant_id,
       description: product.name,
       unit_price:  product.price,
       iva_rate:    (product.iva_rate as IvaRate) || '21',

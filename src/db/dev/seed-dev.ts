@@ -21,6 +21,9 @@ import ProductVariant from '@/modules/catalog/product-variant.model'
 import PriceList from '@/modules/catalog/price-list.model'
 import PriceListItem from '@/modules/catalog/price-list-item.model'
 import { slugifyText } from '@/lib/slug'
+import Warehouse from '@/modules/inventory/warehouse.model'
+import StockItem from '@/modules/inventory/stock-item.model'
+import StockMovement from '@/modules/inventory/stock-movement.model'
 
 const DEV_SEED = {
   sysAdmin: {
@@ -345,6 +348,66 @@ async function seedCatalog(orgId: string, actorId: string, t: import('sequelize'
   }
 }
 
+async function seedInventory(
+  orgId: string,
+  branches: Branch[],
+  actorId: string,
+  t: import('sequelize').Transaction,
+) {
+  const trackableVariants = await ProductVariant.findAll({
+    where: { org_id: orgId, manage_stock: true },
+    attributes: ['id', 'sku', 'stock_quantity'],
+    transaction: t,
+  })
+
+  for (const branch of branches) {
+    const [warehouse] = await Warehouse.findOrCreate({
+      where: { org_id: orgId, branch_id: branch.id, name: `Depósito ${branch.name}` },
+      defaults: {
+        org_id:      orgId,
+        branch_id:   branch.id,
+        name:        `Depósito ${branch.name}`,
+        description: null,
+        is_active:   true,
+        created_by:  actorId,
+        updated_by:  actorId,
+      },
+      transaction: t,
+    })
+
+    for (const variant of trackableVariants) {
+      const initialQty = '50'
+      const [item, created] = await StockItem.findOrCreate({
+        where: { variant_id: variant.id, warehouse_id: warehouse.id },
+        defaults: { variant_id: variant.id, warehouse_id: warehouse.id, org_id: orgId, quantity: initialQty },
+        transaction: t,
+      })
+
+      if (created) {
+        await StockMovement.create(
+          {
+            variant_id:      variant.id,
+            warehouse_id:    warehouse.id,
+            org_id:          orgId,
+            movement_type:   'in',
+            reference_type:  'initial',
+            reference_id:    null,
+            quantity_delta:  initialQty,
+            quantity_before: '0',
+            quantity_after:  initialQty,
+            notes:           'Stock inicial (seed)',
+            created_by:      actorId,
+            updated_by:      actorId,
+          },
+          { transaction: t },
+        )
+      }
+
+      void item
+    }
+  }
+}
+
 async function run() {
   if (process.env.NODE_ENV !== 'development') {
     throw new Error('seed-dev is only allowed in development')
@@ -421,12 +484,13 @@ async function run() {
           })
         }
 
-        // Seed catalog and contacts once per org (using the admin user as actor)
+        // Seed catalog, contacts, and inventory once per org (using the admin user as actor)
         if (u.role === 'admin') {
           await seedCatalog(org.id, user.id, t)
           const contacts = await seedContacts(org.id, user.id, t)
           const defaultCustomer = contacts.find(c => c.type === 'customer' || c.type === 'both') ?? null
           defaultCustomerId = defaultCustomer?.id ?? null
+          await seedInventory(org.id, branches, user.id, t)
         }
 
         // Seed a minimal sales flow for the first user of the first tenant only

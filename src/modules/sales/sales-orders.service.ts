@@ -100,6 +100,7 @@ export async function createOrder(input: SalesOrderInput, ctx: TenantContext, ac
         order_id:     order.id,
         org_id:       ctx.orgId,
         product_id:   item.product_id ?? null,
+        variant_id:   item.variant_id ?? null,
         description:  item.description,
         quantity:     String(item.quantity),
         unit_price:   String(item.unit_price),
@@ -129,6 +130,7 @@ export async function updateOrder(id: string, input: SalesOrderUpdateInput, ctx:
       throw new Error('ORDER_NOT_EDITABLE')
     }
 
+    const prevStatus = order.status
     const updateData: Record<string, unknown> = { updated_by: actorId }
 
     if (input.items) {
@@ -144,6 +146,7 @@ export async function updateOrder(id: string, input: SalesOrderUpdateInput, ctx:
           order_id:     id,
           org_id:       order.org_id,
           product_id:   item.product_id ?? null,
+          variant_id:   item.variant_id ?? null,
           description:  item.description,
           quantity:     String(item.quantity),
           unit_price:   String(item.unit_price),
@@ -164,6 +167,15 @@ export async function updateOrder(id: string, input: SalesOrderUpdateInput, ctx:
     void discardedItems
     void discardedBranch
     await order.update({ ...rest, ...updateData }, { transaction: t })
+
+    // Stock hooks: deduct when confirmed, restore when cancelled from confirmed
+    if (input.status === 'confirmed' && prevStatus !== 'confirmed') {
+      const { deductStockForOrder } = await import('@/modules/inventory/stock-movements.service')
+      await deductStockForOrder(id, ctx.orgId, actorId, t)
+    } else if (input.status === 'cancelled' && prevStatus === 'confirmed') {
+      const { restoreStockForOrder } = await import('@/modules/inventory/stock-movements.service')
+      await restoreStockForOrder(id, ctx.orgId, actorId, t)
+    }
 
     logger.info({ orderId: id, actorId }, 'order updated')
     return getOrderInTransaction(id, ctx, t)
@@ -230,6 +242,7 @@ export async function convertOrderToInvoice(id: string, ctx: TenantContext, acto
         invoice_id:      invoice.id,
         org_id:          ctx.orgId,
         product_id:      item.product_id,
+        variant_id:      item.variant_id,
         description:     item.description,
         quantity:        item.quantity,
         unit_price:      item.unit_price,
