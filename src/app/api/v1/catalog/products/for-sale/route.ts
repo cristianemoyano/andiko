@@ -7,6 +7,7 @@ import { listProductsForSale } from '@/modules/catalog/products.service'
 const querySchema = z.object({
   search:        z.string().min(1).max(100).optional(),
   price_list_id: z.string().uuid().optional(),
+  manage_stock:  z.enum(['true', 'false']).optional(),
   limit:         z.coerce.number().int().min(1).max(50).default(20),
 })
 
@@ -17,8 +18,9 @@ export const GET = withPermission('sales:read', async (req, _ctx, session) => {
   }
   try {
     const ctx = await makeTenantContext(session.user)
-    const { search, price_list_id, limit } = parsed.data
-    const data = await listProductsForSale(search, price_list_id, limit, ctx.orgId)
+    const { search, price_list_id, manage_stock, limit } = parsed.data
+    const manageStockFilter = manage_stock === 'true' ? true : manage_stock === 'false' ? false : undefined
+    const data = await listProductsForSale(search, price_list_id, limit, ctx.orgId, manageStockFilter)
     return NextResponse.json({ data })
   } catch (err: unknown) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {

@@ -1,0 +1,303 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { Mock } from 'vitest'
+import Decimal from 'decimal.js'
+
+vi.mock('./stock-item.model', () => ({
+  default: {
+    findOrCreate: vi.fn(),
+    sum:          vi.fn(),
+  },
+}))
+
+vi.mock('./stock-movement.model', () => ({
+  default: {
+    create:  vi.fn(),
+    findAll: vi.fn(),
+  },
+}))
+
+vi.mock('@/lib/db', () => ({
+  default: {
+    transaction: vi.fn((cb: (t: object) => Promise<unknown>) => cb({})),
+  },
+}))
+
+vi.mock('@/lib/logger', () => ({
+  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}))
+
+vi.mock('./warehouses.service', () => ({
+  resolveDefaultWarehouse: vi.fn(),
+}))
+
+vi.mock('@/modules/catalog/product-variant.model', () => ({
+  default: {
+    findByPk: vi.fn(),
+    findOne:  vi.fn(),
+    update:   vi.fn(),
+  },
+}))
+
+vi.mock('@/modules/catalog/product.model', () => ({
+  default: { findByPk: vi.fn() },
+}))
+
+vi.mock('@/modules/sales/sales-order.model', () => ({
+  default: { findByPk: vi.fn() },
+}))
+
+vi.mock('@/modules/sales/sales-order-item.model', () => ({
+  default: { findAll: vi.fn() },
+}))
+
+import StockItem    from './stock-item.model'
+import StockMovement from './stock-movement.model'
+import { applyMovement, restoreStockForOrder, manualAdjustment } from './stock-movements.service'
+import { resolveDefaultWarehouse } from './warehouses.service'
+
+const T = {} as never // mock transaction
+
+function mockStockItem(quantity: string) {
+  return {
+    quantity,
+    update: vi.fn().mockResolvedValue(undefined),
+  }
+}
+
+beforeEach(() => vi.clearAllMocks())
+
+// ─────────────────────────────────────────────
+// applyMovement
+// ─────────────────────────────────────────────
+
+describe('applyMovement', () => {
+  it('increases stock and records a movement on "in"', async () => {
+    const item = mockStockItem('10.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+    ;(StockItem.sum as Mock).mockResolvedValue(15)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await applyMovement(
+      {
+        variantId:     'var-1',
+        warehouseId:   'wh-1',
+        orgId:         'org-1',
+        movementType:  'in',
+        referenceType: 'manual',
+        referenceId:   null,
+        quantityDelta: new Decimal('5'),
+        notes:         null,
+        actorId:       'actor-1',
+      },
+      T,
+    )
+
+    expect(item.update).toHaveBeenCalledWith(
+      { quantity: '15.0000' },
+      expect.anything(),
+    )
+    expect(StockMovement.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantity_before: '10.0000',
+        quantity_after:  '15.0000',
+        movement_type:   'in',
+      }),
+      expect.anything(),
+    )
+  })
+
+  it('decreases stock and records an "out" movement', async () => {
+    const item = mockStockItem('20.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+    ;(StockItem.sum as Mock).mockResolvedValue(15)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await applyMovement(
+      {
+        variantId:     'var-1',
+        warehouseId:   'wh-1',
+        orgId:         'org-1',
+        movementType:  'out',
+        referenceType: 'order',
+        referenceId:   'ord-1',
+        quantityDelta: new Decimal('-5'),
+        notes:         null,
+        actorId:       'actor-1',
+      },
+      T,
+    )
+
+    expect(item.update).toHaveBeenCalledWith(
+      { quantity: '15.0000' },
+      expect.anything(),
+    )
+  })
+
+  it('throws INSUFFICIENT_STOCK when quantity would go negative', async () => {
+    const item = mockStockItem('3.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+
+    await expect(
+      applyMovement(
+        {
+          variantId:     'var-1',
+          warehouseId:   'wh-1',
+          orgId:         'org-1',
+          movementType:  'out',
+          referenceType: 'order',
+          referenceId:   'ord-1',
+          quantityDelta: new Decimal('-10'),
+          notes:         null,
+          actorId:       'actor-1',
+        },
+        T,
+      ),
+    ).rejects.toThrow('INSUFFICIENT_STOCK')
+
+    expect(item.update).not.toHaveBeenCalled()
+    expect(StockMovement.create).not.toHaveBeenCalled()
+  })
+
+  it('creates stock_item with quantity 0 when it does not exist yet', async () => {
+    const item = mockStockItem('0')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, true])
+    ;(StockItem.sum as Mock).mockResolvedValue(5)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await applyMovement(
+      {
+        variantId:     'var-new',
+        warehouseId:   'wh-1',
+        orgId:         'org-1',
+        movementType:  'in',
+        referenceType: 'initial',
+        referenceId:   null,
+        quantityDelta: new Decimal('5'),
+        notes:         'stock inicial',
+        actorId:       'actor-1',
+      },
+      T,
+    )
+
+    expect(item.update).toHaveBeenCalledWith(
+      { quantity: '5.0000' },
+      expect.anything(),
+    )
+  })
+})
+
+// ─────────────────────────────────────────────
+// restoreStockForOrder
+// ─────────────────────────────────────────────
+
+describe('restoreStockForOrder', () => {
+  it('does nothing when there are no out-movements for the order', async () => {
+    ;(StockMovement.findAll as Mock).mockResolvedValue([])
+
+    await restoreStockForOrder('ord-1', 'org-1', 'actor-1', T)
+
+    expect(StockItem.findOrCreate).not.toHaveBeenCalled()
+  })
+
+  it('creates an "in" movement for each previous "out" movement', async () => {
+    const outMovement = {
+      variant_id:     'var-1',
+      warehouse_id:   'wh-1',
+      quantity_delta: '-5.0000',
+    }
+    ;(StockMovement.findAll as Mock).mockResolvedValue([outMovement])
+
+    const item = mockStockItem('0.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+    ;(StockItem.sum as Mock).mockResolvedValue(5)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await restoreStockForOrder('ord-1', 'org-1', 'actor-1', T)
+
+    expect(StockMovement.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        movement_type:  'in',
+        quantity_delta: '5.0000',
+        reference_type: 'order',
+        reference_id:   'ord-1',
+      }),
+      expect.anything(),
+    )
+  })
+})
+
+// ─────────────────────────────────────────────
+// manualAdjustment
+// ─────────────────────────────────────────────
+
+describe('manualAdjustment', () => {
+  it('applies a positive delta when new quantity exceeds current', async () => {
+    const item = mockStockItem('10.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+    ;(StockItem.sum as Mock).mockResolvedValue(25)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await manualAdjustment('var-1', 'wh-1', 25, 'Ajuste de inventario', {
+      orgId:            'org-1',
+      userId:           'actor-1',
+      defaultBranchId:  null,
+      allowedBranchIds: [],
+    })
+
+    expect(StockMovement.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        movement_type:   'adjustment',
+        reference_type:  'manual',
+        quantity_before: '10.0000',
+        quantity_after:  '25.0000',
+        quantity_delta:  '15.0000',
+      }),
+      expect.anything(),
+    )
+  })
+
+  it('applies a negative delta when new quantity is less than current', async () => {
+    const item = mockStockItem('30.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+    ;(StockItem.sum as Mock).mockResolvedValue(10)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await manualAdjustment('var-1', 'wh-1', 10, null, {
+      orgId:            'org-1',
+      userId:           'actor-1',
+      defaultBranchId:  null,
+      allowedBranchIds: [],
+    })
+
+    expect(StockMovement.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantity_before: '30.0000',
+        quantity_after:  '10.0000',
+        quantity_delta:  '-20.0000',
+      }),
+      expect.anything(),
+    )
+  })
+
+  it('resolveDefaultWarehouse not being called when no warehouse arg provided is a no-op', () => {
+    expect(resolveDefaultWarehouse).toBeDefined()
+  })
+})

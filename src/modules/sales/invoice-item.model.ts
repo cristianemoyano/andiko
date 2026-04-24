@@ -8,6 +8,7 @@ export interface InvoiceItemAttributes extends Timestamps, AuditFields {
   id: UUID
   invoice_id: UUID
   product_id: UUID | null
+  variant_id: UUID | null
   description: string
   quantity: string
   unit_price: string
@@ -23,7 +24,7 @@ export interface InvoiceItemAttributes extends Timestamps, AuditFields {
 
 type InvoiceItemCreationAttributes = Optional<
   InvoiceItemAttributes,
-  | 'id' | 'product_id' | 'discount_pct' | 'iva_rate' | 'sort_order'
+  | 'id' | 'product_id' | 'variant_id' | 'discount_pct' | 'iva_rate' | 'sort_order'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -31,6 +32,7 @@ class InvoiceItem extends AuditModel<InvoiceItemAttributes, InvoiceItemCreationA
   declare id: UUID
   declare invoice_id: UUID
   declare product_id: UUID | null
+  declare variant_id: UUID | null
   declare description: string
   declare quantity: string
   declare unit_price: string
@@ -49,6 +51,7 @@ InvoiceItem.init(
     id:              { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     invoice_id:      { type: DataTypes.UUID, allowNull: false },
     product_id:      { type: DataTypes.UUID },
+    variant_id:      { type: DataTypes.UUID },
     description:     { type: DataTypes.STRING(500), allowNull: false },
     quantity:        { type: DataTypes.DECIMAL(15, 4), allowNull: false },
     unit_price:      { type: DataTypes.DECIMAL(15, 2), allowNull: false },

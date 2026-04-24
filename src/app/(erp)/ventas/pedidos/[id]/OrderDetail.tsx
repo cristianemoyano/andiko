@@ -121,6 +121,7 @@ function itemsToLineInput(items: Order['items']): LineItemInput[] {
   return items.map((item, idx) => ({
     id:           item.id ?? String(idx),
     product_id:   item.product_id ?? null,
+    variant_id:   item.variant_id ?? null,
     description:  item.description,
     quantity:     item.quantity,
     unit_price:   item.unit_price,
@@ -295,6 +296,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
       internal_notes:    internalNotes.trim() || null,
       items: items.map((item, idx) => ({
         product_id:   item.product_id ?? null,
+        variant_id:   item.variant_id ?? null,
         description:  item.description,
         quantity:     parseFloat(item.quantity) || 0,
         unit_price:   parseFloat(item.unit_price) || 0,
