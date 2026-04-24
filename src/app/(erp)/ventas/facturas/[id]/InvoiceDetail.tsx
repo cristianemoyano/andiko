@@ -244,6 +244,11 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
         ]}
         actions={
           <div className="flex flex-wrap gap-2 justify-end">
+            <Button asChild size="sm" variant="ghost">
+              <Link href={`/ventas/facturas/${id}/print`} target="_blank" rel="noopener noreferrer">
+                Imprimir
+              </Link>
+            </Button>
             {canIssue && (
               <>
                 <Button size="sm" variant="secondary" onClick={() => setConfirmIssue(true)}>
