@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { salesQuoteUpdateSchema } from '@/modules/sales/sales-quote.schema'
 import { getQuote, updateQuote, deleteQuote } from '@/modules/sales/sales-quotes.service'
@@ -29,7 +29,7 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
   }
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const quote = await updateQuote(id, parsed.data, ctxTenant, session.user.id!)
+    const quote = await updateQuote(id, parsed.data, ctxTenant, resolveActorId(session))
     return NextResponse.json(quote)
   } catch (err: unknown) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
@@ -47,7 +47,7 @@ export const DELETE = withPermission<P>('sales:delete', async (_req, ctx, sessio
   const { id } = await ctx.params
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    await deleteQuote(id, ctxTenant, session.user.id!)
+    await deleteQuote(id, ctxTenant, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {

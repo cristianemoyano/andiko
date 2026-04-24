@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { warehouseSchema, warehouseQuerySchema } from '@/modules/inventory/warehouse.schema'
 import { listWarehouses, createWarehouse } from '@/modules/inventory/warehouses.service'
@@ -29,7 +29,7 @@ export const POST = withPermission('inventory:write', async (req, _ctx, session)
   }
   try {
     const ctx = await makeTenantContext(session.user)
-    const warehouse = await createWarehouse(parsed.data, ctx, session.user.id!)
+    const warehouse = await createWarehouse(parsed.data, ctx, resolveActorId(session))
     return NextResponse.json(warehouse, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {

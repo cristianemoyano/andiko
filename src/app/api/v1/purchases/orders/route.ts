@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
 import { purchaseOrderSchema, purchaseOrderQuerySchema } from '@/modules/purchases/purchase-order.schema'
 import { listPurchaseOrders, createPurchaseOrder } from '@/modules/purchases/purchase-orders.service'
@@ -31,7 +31,7 @@ export const POST = withPermission('purchases:write', async (req, _ctx, session)
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
   try {
-    const order = await createPurchaseOrder(parsed.data, orgId, session.user.id!)
+    const order = await createPurchaseOrder(parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(order, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof Error) {

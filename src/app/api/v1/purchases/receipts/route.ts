@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
 import { purchaseReceiptSchema, purchaseReceiptQuerySchema } from '@/modules/purchases/purchase-receipt.schema'
 import { listPurchaseReceipts, createPurchaseReceipt } from '@/modules/purchases/purchase-receipts.service'
@@ -31,7 +31,7 @@ export const POST = withPermission('purchases:write', async (req, _ctx, session)
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
   try {
-    const receipt = await createPurchaseReceipt(parsed.data, orgId, session.user.id!)
+    const receipt = await createPurchaseReceipt(parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(receipt, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof Error) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { salesOrderSchema, salesOrderQuerySchema } from '@/modules/sales/sales-order.schema'
 import { listOrders, createOrder } from '@/modules/sales/sales-orders.service'
@@ -29,7 +29,7 @@ export const POST = withPermission('sales:write', async (req, _ctx, session) => 
   }
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const order = await createOrder(parsed.data, ctxTenant, session.user.id!)
+    const order = await createOrder(parsed.data, ctxTenant, resolveActorId(session))
     return NextResponse.json(order, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof TenancyError) {

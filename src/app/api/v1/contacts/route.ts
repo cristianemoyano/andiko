@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { contactSchema, contactQuerySchema } from '@/modules/contacts/contact.schema'
 import { listContacts, createContact } from '@/modules/contacts/contacts.service'
@@ -31,7 +31,7 @@ export const POST = withPermission('contacts:write', async (req, _ctx, session) 
 
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const contact = await createContact(parsed.data, ctxTenant, session.user.id!)
+    const contact = await createContact(parsed.data, ctxTenant, resolveActorId(session))
     return NextResponse.json(contact, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {

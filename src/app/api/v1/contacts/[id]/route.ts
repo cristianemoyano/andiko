@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { contactUpdateSchema } from '@/modules/contacts/contact.schema'
 import { getContact, updateContact, deleteContact } from '@/modules/contacts/contacts.service'
@@ -30,7 +30,7 @@ export const PATCH = withPermission<P>('contacts:write', async (req, ctx, sessio
 
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const contact = await updateContact(id, parsed.data, ctxTenant, session.user.id!)
+    const contact = await updateContact(id, parsed.data, ctxTenant, resolveActorId(session))
     return NextResponse.json(contact)
   } catch (err: unknown) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
@@ -47,7 +47,7 @@ export const DELETE = withPermission<P>('contacts:delete', async (_req, ctx, ses
   const { id } = await ctx.params
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    await deleteContact(id, ctxTenant, session.user.id!)
+    await deleteContact(id, ctxTenant, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {

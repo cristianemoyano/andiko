@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { convertQuoteToOrder } from '@/modules/sales/sales-quotes.service'
 
@@ -9,7 +9,7 @@ export const POST = withPermission<P>('sales:write', async (_req, ctx, session) 
   const { id } = await ctx.params
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const order = await convertQuoteToOrder(id, ctxTenant, session.user.id!)
+    const order = await convertQuoteToOrder(id, ctxTenant, resolveActorId(session))
     return NextResponse.json(order, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof TenancyError) {

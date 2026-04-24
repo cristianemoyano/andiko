@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { priceListItemSchema } from '@/modules/catalog/price-list.schema'
 import { listPriceListItems, setPriceListItem } from '@/modules/catalog/price-list.service'
 
@@ -26,7 +26,7 @@ export const POST = withPermission<P>('products:write', async (req, ctx, session
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const item = await setPriceListItem(id, parsed.data, session.user.id!, session.user.orgId)
+    const item = await setPriceListItem(id, parsed.data, resolveActorId(session), session.user.orgId)
     return NextResponse.json(item, { status: 201 })
   } catch (err) {
     if (err instanceof Error && err.message === 'PRICE_LIST_NOT_FOUND') {

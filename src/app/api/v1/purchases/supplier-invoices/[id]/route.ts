@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
 import { supplierInvoiceUpdateSchema } from '@/modules/purchases/supplier-invoice.schema'
 import { getSupplierInvoice, updateSupplierInvoice, deleteSupplierInvoice } from '@/modules/purchases/supplier-invoices.service'
@@ -33,7 +33,7 @@ export const PATCH = withPermission('purchases:write', async (req, ctx, session)
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
   try {
-    const invoice = await updateSupplierInvoice(id, parsed.data, orgId, session.user.id!)
+    const invoice = await updateSupplierInvoice(id, parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(invoice)
   } catch (err: unknown) {
     if (err instanceof Error) {
@@ -50,7 +50,7 @@ export const DELETE = withPermission('purchases:delete', async (_req, ctx, sessi
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
   try {
-    await deleteSupplierInvoice(id, orgId, session.user.id!)
+    await deleteSupplierInvoice(id, orgId, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {
     if (err instanceof Error) {

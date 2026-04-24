@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { productUpdateSchema } from '@/modules/catalog/product.schema'
 import { getProduct, updateProduct, deleteProduct } from '@/modules/catalog/products.service'
@@ -26,7 +26,7 @@ export const PATCH = withPermission<P>('products:write', async (req, ctx, sessio
   }
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const product = await updateProduct(id, parsed.data, session.user.id!, ctxTenant)
+    const product = await updateProduct(id, parsed.data, resolveActorId(session), ctxTenant)
     return NextResponse.json(product)
   } catch (err) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
@@ -46,7 +46,7 @@ export const DELETE = withPermission<P>('products:delete', async (_req, ctx, ses
   const { id } = await ctx.params
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    await deleteProduct(id, session.user.id!, ctxTenant)
+    await deleteProduct(id, resolveActorId(session), ctxTenant)
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {

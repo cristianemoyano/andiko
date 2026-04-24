@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
 import { supplierInvoiceSchema, supplierInvoiceQuerySchema } from '@/modules/purchases/supplier-invoice.schema'
 import { listSupplierInvoices, createSupplierInvoice } from '@/modules/purchases/supplier-invoices.service'
@@ -31,7 +31,7 @@ export const POST = withPermission('purchases:write', async (req, _ctx, session)
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
   try {
-    const invoice = await createSupplierInvoice(parsed.data, orgId, session.user.id!)
+    const invoice = await createSupplierInvoice(parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(invoice, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof Error) {

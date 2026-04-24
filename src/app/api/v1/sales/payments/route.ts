@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
 import { paymentSchema, paymentQuerySchema } from '@/modules/sales/payment.schema'
 import { listPayments, createPayment } from '@/modules/sales/payments.service'
@@ -31,7 +31,7 @@ export const POST = withPermission('sales:write', async (req, _ctx, session) => 
     )
   }
   try {
-    const payment = await createPayment(parsed.data, orgId, session.user.id!)
+    const payment = await createPayment(parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(payment, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof Error) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { withPermission } from '@/lib/api-handler'
+import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { paymentUpdateSchema } from '@/modules/sales/payment.schema'
 import { getPayment, updatePayment, deletePayment } from '@/modules/sales/payments.service'
 
@@ -23,7 +23,7 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const payment = await updatePayment(id, parsed.data, session.user.id!)
+    const payment = await updatePayment(id, parsed.data, resolveActorId(session))
     return NextResponse.json(payment)
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'PAYMENT_NOT_FOUND') {
@@ -36,7 +36,7 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
 export const DELETE = withPermission<P>('sales:delete', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    await deletePayment(id, session.user.id!)
+    await deletePayment(id, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'PAYMENT_NOT_FOUND') {
