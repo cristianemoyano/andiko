@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Input } from '@/components/primitives/Input'
+import { Button } from '@/components/primitives/Button'
+import { Badge } from '@/components/primitives/Badge'
 import { InventarioSubNav } from '../InventarioSubNav'
+import { STOCK_EXPIRY_WARNING_DAYS } from '@/modules/inventory/inventory.constants'
 
 type StockRow = {
   id: string
@@ -12,6 +15,8 @@ type StockRow = {
   warehouse_id: string
   org_id: string
   quantity: string
+  minimum_quantity?: string
+  expires_on?: string | null
   warehouse?: { id: string; name: string; branch_id: string | null }
   variant?: {
     id: string
@@ -23,6 +28,36 @@ type StockRow = {
 }
 
 const PAGE_SIZE = 20
+
+function utcDay(d: Date): number {
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+}
+
+function parseExpiresOn(iso: string | null | undefined): Date | null {
+  if (!iso) return null
+  const s = String(iso).slice(0, 10)
+  const [y, m, d] = s.split('-').map(Number)
+  if (!y || !m || !d) return null
+  return new Date(Date.UTC(y, m - 1, d))
+}
+
+function expiryFlags(expiresOn: string | null | undefined): { expired: boolean; soon: boolean } {
+  const exp = parseExpiresOn(expiresOn ?? null)
+  if (!exp) return { expired: false, soon: false }
+  const today = new Date()
+  const t0 = utcDay(today)
+  const tExp = utcDay(exp)
+  if (tExp < t0) return { expired: true, soon: false }
+  const limit = t0 + STOCK_EXPIRY_WARNING_DAYS * 86400000
+  if (tExp <= limit) return { expired: false, soon: true }
+  return { expired: false, soon: false }
+}
+
+function belowMinimum(row: StockRow): boolean {
+  const min = Number(row.minimum_quantity ?? 0)
+  if (min <= 0) return false
+  return Number(row.quantity) <= min
+}
 
 const COLUMNS: Column<StockRow>[] = [
   {
@@ -53,15 +88,58 @@ const COLUMNS: Column<StockRow>[] = [
     header: 'Cantidad',
     render: row => <span className="font-medium tabular-nums text-[13px]">{row.quantity}</span>,
   },
+  {
+    key: 'minimum_quantity' as keyof StockRow,
+    header: 'Mín.',
+    render: row => (
+      <span className="tabular-nums text-[13px] text-zinc-600">{row.minimum_quantity ?? '0'}</span>
+    ),
+  },
+  {
+    key: 'expires_on' as keyof StockRow,
+    header: 'Vence',
+    render: row => (
+      <span className="text-[13px] text-zinc-600">
+        {row.expires_on ? String(row.expires_on).slice(0, 10).split('-').reverse().join('/') : '—'}
+      </span>
+    ),
+  },
+  {
+    key: 'id',
+    header: 'Alertas',
+    render: row => {
+      const { expired, soon } = expiryFlags(row.expires_on)
+      const low = belowMinimum(row)
+      return (
+        <div className="flex flex-wrap gap-1">
+          {low && (
+            <Badge status="pending" dot>Bajo mínimo</Badge>
+          )}
+          {expired && (
+            <Badge status="error" dot>Vencido</Badge>
+          )}
+          {!expired && soon && (
+            <Badge status="pending" dot>Vence pronto</Badge>
+          )}
+          {!low && !expired && !soon && (
+            <span className="text-zinc-400 text-[12px]">—</span>
+          )}
+        </div>
+      )
+    },
+  },
 ]
 
 export function StockClient() {
-  const [rows, setRows]       = useState<StockRow[] | null>(null)
-  const [total, setTotal]     = useState(0)
-  const [page, setPage]       = useState(1)
-  const [error, setError]     = useState<string | null>(null)
-  const [search, setSearch]   = useState('')
+  const [rows, setRows]                 = useState<StockRow[] | null>(null)
+  const [total, setTotal]               = useState(0)
+  const [page, setPage]                 = useState(1)
+  const [error, setError]               = useState<string | null>(null)
+  const [search, setSearch]             = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [belowMin, setBelowMin]         = useState(false)
+  const [expired, setExpired]           = useState(false)
+  const [expiring30, setExpiring30]     = useState(false)
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search), 300)
@@ -74,11 +152,14 @@ export function StockClient() {
     setError(null)
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
     if (debouncedSearch) params.set('search', debouncedSearch)
+    if (belowMin)       params.set('below_minimum', 'true')
+    if (expired)        params.set('expired', 'true')
+    if (expiring30)    params.set('expiring_within_days', '30')
     fetch(`/api/v1/inventory/stock?${params}`)
       .then(r => r.json())
       .then(data => { setRows(data.data ?? []); setTotal(data.total ?? 0) })
       .catch(() => { setError('Error al cargar stock'); setRows([]) })
-  }, [page, debouncedSearch])
+  }, [page, debouncedSearch, belowMin, expired, expiring30])
 
   return (
     <div className="flex flex-col h-full">
@@ -92,12 +173,38 @@ export function StockClient() {
           keyExtractor={row => row.id}
           emptyMessage="Sin stock registrado. Creá un depósito y registrá stock inicial."
           toolbar={
-            <Input
-              placeholder="Buscar por producto o SKU…"
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1) }}
-              className="w-64"
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                placeholder="Buscar por producto o SKU…"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1) }}
+                className="w-64"
+              />
+              <Button
+                type="button"
+                variant={belowMin ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => { setBelowMin(v => !v); setPage(1) }}
+              >
+                Bajo mínimo
+              </Button>
+              <Button
+                type="button"
+                variant={expired ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => { setExpired(v => !v); setPage(1) }}
+              >
+                Vencidos
+              </Button>
+              <Button
+                type="button"
+                variant={expiring30 ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => { setExpiring30(v => !v); setPage(1) }}
+              >
+                Vencen en 30 días
+              </Button>
+            </div>
           }
           footer={
             total > 0 ? (

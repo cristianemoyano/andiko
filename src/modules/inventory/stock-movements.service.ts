@@ -166,6 +166,10 @@ export async function manualAdjustment(
     const after  = new Decimal(newQuantity)
     const delta  = after.minus(before)
 
+    if (delta.isZero()) {
+      return
+    }
+
     await applyMovement({
       variantId,
       warehouseId,
