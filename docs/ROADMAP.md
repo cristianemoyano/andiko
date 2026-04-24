@@ -246,13 +246,32 @@ Ciclo de compras: orden → recepción → factura proveedor → pago.
 
 **Entidades:** `purchase_orders`, `purchase_receipts`, `supplier_invoices`, `supplier_payments`
 
-- [ ] Órdenes de compra a proveedores
-- [ ] Recepción parcial o total de mercadería
-- [ ] Registro de facturas de proveedor (A, B, C)
-- [ ] Conciliación orden → recepción → factura
-- [ ] Registro de pagos a proveedores
-- [ ] Cuentas corrientes de proveedores
-- [ ] Reportes: compras por período, por proveedor
+### Backend (completado)
+- [x] Migraciones: `purchase_orders`, `purchase_order_items`, `purchase_receipts`, `purchase_receipt_items`, `supplier_invoices`, `supplier_invoice_items`, `supplier_payments`
+- [x] Modelos Sequelize con tipos estrictos para los 7 modelos
+- [x] Numeración automática de documentos por org+sucursal (OC-, REC-, FP-, PAG-) con secuencias atómicas
+- [x] Cálculo de IVA discriminado + descuentos con `Decimal.js`
+- [x] Condiciones de pago con cálculo automático de `due_date`
+- [x] Schemas Zod para todos los recursos
+- [x] Service órdenes de compra: CRUD + cambio de estado (`draft → sent → partially_received → received`)
+- [x] Service recepciones: CRUD + `confirmPurchaseReceipt` (aplica stock via `applyMovement`, actualiza `received_qty` en ítems de OC, recalcula estado de la orden)
+- [x] Service facturas proveedor: CRUD + `receiveInvoice` + `cancelInvoice`
+- [x] Service pagos a proveedor: CRUD + `recalcInvoiceBalance` (recalcula `paid_amount`, `balance`, `status`)
+- [x] API REST: `purchase-orders`, `purchase-receipts`, `supplier-invoices`, `supplier-payments` — CRUD + acciones de estado
+- [x] Integración inventario: recepción confirmada → `applyMovement` en depósito destino
+
+### Frontend (completado)
+- [x] Módulo `/compras` con sub-nav (Órdenes / Recepciones / Facturas / Pagos)
+- [x] Listado + detalle de órdenes de compra con acciones de estado
+- [x] Creación de recepción desde orden (pre-completa proveedor, ítems y cantidades pendientes)
+- [x] Listado + detalle de recepciones con confirmación (actualiza stock)
+- [x] Listado + detalle de facturas de proveedor con registro de pagos parciales
+- [x] Listado de pagos a proveedores
+
+### Pendientes
+- [ ] Cuentas corrientes por proveedor — vista `/compras/proveedores/[id]/cuenta-corriente` con historial unificado de órdenes, recepciones, facturas y pagos del proveedor; saldo corriente en tiempo real; similar a la cuenta corriente de cliente en Ventas
+- [ ] Conciliación orden → recepción → factura (alertas de diferencias de precio/cantidad)
+- [ ] Reportes: compras por período, por proveedor, por categoría de producto
 
 ---
 

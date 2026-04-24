@@ -48,7 +48,7 @@ export function ProductDetailClient({ product }: { product: ProductForEdit }) {
     const res = await fetch(`/api/v1/catalog/products/${product.id}`, { method: 'DELETE' })
     setConfirmDelete(false)
     if (!res.ok && res.status !== 204) return
-    router.push('/catalogo')
+    router.push('/catalogo/productos')
   }
 
   return (

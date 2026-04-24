@@ -24,6 +24,14 @@ import { slugifyText } from '@/lib/slug'
 import Warehouse from '@/modules/inventory/warehouse.model'
 import StockItem from '@/modules/inventory/stock-item.model'
 import StockMovement from '@/modules/inventory/stock-movement.model'
+import PurchaseOrder from '@/modules/purchases/purchase-order.model'
+import PurchaseOrderItem from '@/modules/purchases/purchase-order-item.model'
+import PurchaseReceipt from '@/modules/purchases/purchase-receipt.model'
+import PurchaseReceiptItem from '@/modules/purchases/purchase-receipt-item.model'
+import SupplierInvoice from '@/modules/purchases/supplier-invoice.model'
+import SupplierInvoiceItem from '@/modules/purchases/supplier-invoice-item.model'
+import SupplierPayment from '@/modules/purchases/supplier-payment.model'
+import { nextPurchaseDocNumber, calcLineItem as calcPurchaseLine, calcDocumentTotals as calcPurchaseTotals } from '@/modules/purchases/purchases.utils'
 
 const DEV_SEED = {
   sysAdmin: {
@@ -455,6 +463,271 @@ async function seedInventory(
   }
 }
 
+async function seedPurchases(
+  orgId: string,
+  branch: Branch,
+  actorId: string,
+  variantsBySku: Map<string, ProductVariant>,
+  contacts: Contact[],
+  t: import('sequelize').Transaction,
+) {
+  // Guard: only seed once
+  const existing = await PurchaseOrder.findOne({ where: { org_id: orgId, notes: 'Orden de compra de prueba' }, transaction: t })
+  if (existing) return
+
+  const supplier = contacts.find(c => c.legal_name === 'Proveedora Central SRL') ?? null
+
+  // ── Items ─────────────────────────────────────────────────────────────────
+  const iva_rate: IvaRate = '21'
+
+  const guantesMVariant = variantsBySku.get('GUANTES-NIL-M') ?? null
+  const mascarillaSVVariant = variantsBySku.get('MASCARILLA-SV') ?? null
+
+  const purchaseLines = [
+    {
+      product_id:   guantesMVariant?.product_id ?? null,
+      variant_id:   guantesMVariant?.id ?? null,
+      description:  'Guantes de nitrilo Talla M',
+      quantity:     '50',
+      unit_price:   '280.00',
+      discount_pct: '0.00',
+      iva_rate,
+      sort_order: 0,
+    },
+    {
+      product_id:   mascarillaSVVariant?.product_id ?? null,
+      variant_id:   mascarillaSVVariant?.id ?? null,
+      description:  'Mascarilla FFP2 sin válvula',
+      quantity:     '100',
+      unit_price:   '650.00',
+      discount_pct: '0.00',
+      iva_rate,
+      sort_order: 1,
+    },
+  ]
+
+  const linesTotals  = purchaseLines.map(l => calcPurchaseLine(l.quantity, l.unit_price, l.discount_pct, l.iva_rate))
+  const docTotals    = calcPurchaseTotals(linesTotals)
+
+  // ── 1. Purchase Order (received) ──────────────────────────────────────────
+  const order_number = await nextPurchaseDocNumber(orgId, branch.id, 'purchase_order', t)
+  const order = await PurchaseOrder.create(
+    {
+      org_id:            orgId,
+      branch_id:         branch.id,
+      contact_id:        supplier?.id ?? null,
+      order_number,
+      status:            'received',
+      expected_date:     null,
+      currency:          'ARS',
+      payment_condition: 'net_30',
+      subtotal:          docTotals.subtotal,
+      discount_amount:   docTotals.discount_amount,
+      tax_amount:        docTotals.tax_amount,
+      total:             docTotals.total,
+      notes:             'Orden de compra de prueba',
+      internal_notes:    null,
+      created_by:        actorId,
+      updated_by:        actorId,
+    },
+    { transaction: t },
+  )
+
+  const orderItems: PurchaseOrderItem[] = []
+  for (let i = 0; i < purchaseLines.length; i++) {
+    const l  = purchaseLines[i]!
+    const lt = linesTotals[i]!
+    const item = await PurchaseOrderItem.create(
+      {
+        org_id:          orgId,
+        order_id:        order.id,
+        product_id:      l.product_id,
+        variant_id:      l.variant_id,
+        description:     l.description,
+        quantity:        l.quantity,
+        received_qty:    l.quantity, // fully received
+        unit_price:      l.unit_price,
+        discount_pct:    l.discount_pct,
+        iva_rate:        l.iva_rate,
+        subtotal:        lt.subtotal,
+        discount_amount: lt.discount_amount,
+        tax_amount:      lt.tax_amount,
+        total:           lt.total,
+        sort_order:      l.sort_order,
+        created_by:      actorId,
+        updated_by:      actorId,
+      },
+      { transaction: t },
+    )
+    orderItems.push(item)
+  }
+
+  // ── 2. Purchase Receipt (confirmed) + stock movements ─────────────────────
+  const warehouse = await Warehouse.findOne({
+    where: { org_id: orgId, branch_id: branch.id },
+    transaction: t,
+  })
+
+  const receipt_number = await nextPurchaseDocNumber(orgId, branch.id, 'receipt', t)
+  const receipt = await PurchaseReceipt.create(
+    {
+      org_id:         orgId,
+      branch_id:      branch.id,
+      order_id:       order.id,
+      contact_id:     supplier?.id ?? null,
+      warehouse_id:   warehouse?.id ?? null,
+      receipt_number,
+      status:         'confirmed',
+      receipt_date:   new Date(),
+      notes:          null,
+      internal_notes: null,
+      created_by:     actorId,
+      updated_by:     actorId,
+    },
+    { transaction: t },
+  )
+
+  for (let i = 0; i < purchaseLines.length; i++) {
+    const l       = purchaseLines[i]!
+    const orderItem = orderItems[i]!
+
+    await PurchaseReceiptItem.create(
+      {
+        org_id:        orgId,
+        receipt_id:    receipt.id,
+        order_item_id: orderItem.id,
+        product_id:    l.product_id,
+        variant_id:    l.variant_id,
+        description:   l.description,
+        quantity:      l.quantity,
+        unit_cost:     l.unit_price,
+        sort_order:    i,
+        created_by:    actorId,
+        updated_by:    actorId,
+      },
+      { transaction: t },
+    )
+
+    // Stock: only tracked variants
+    if (!l.variant_id || !warehouse) continue
+
+    const delta = parseFloat(l.quantity)
+    const stockItem = await StockItem.findOne({
+      where: { variant_id: l.variant_id, warehouse_id: warehouse.id },
+      transaction: t,
+      lock: true,
+    })
+
+    const before = stockItem ? parseFloat(String(stockItem.quantity)) : 0
+    const after  = before + delta
+
+    if (stockItem) {
+      await stockItem.update({ quantity: String(after) }, { transaction: t })
+    } else {
+      await StockItem.create(
+        { variant_id: l.variant_id, warehouse_id: warehouse.id, org_id: orgId, quantity: String(after) },
+        { transaction: t },
+      )
+    }
+
+    await StockMovement.create(
+      {
+        variant_id:      l.variant_id,
+        warehouse_id:    warehouse.id,
+        org_id:          orgId,
+        movement_type:   'in',
+        reference_type:  'purchase_receipt',
+        reference_id:    receipt.id,
+        quantity_delta:  String(delta),
+        quantity_before: String(before),
+        quantity_after:  String(after),
+        notes:           `Recepción ${receipt_number}`,
+        created_by:      actorId,
+        updated_by:      actorId,
+      },
+      { transaction: t },
+    )
+  }
+
+  // ── 3. Supplier Invoice (partially_paid) ──────────────────────────────────
+  const invoice_number = await nextPurchaseDocNumber(orgId, branch.id, 'supplier_invoice', t)
+  const partialPayment = '40000.00'
+  const balance        = String((parseFloat(docTotals.total) - parseFloat(partialPayment)).toFixed(2))
+
+  const invoice = await SupplierInvoice.create(
+    {
+      org_id:                  orgId,
+      branch_id:               branch.id,
+      contact_id:              supplier?.id ?? null,
+      order_id:                order.id,
+      receipt_id:              receipt.id,
+      invoice_number,
+      supplier_invoice_number: '0001-00001234',
+      status:                  'partially_paid',
+      invoice_date:            new Date(),
+      due_date:                new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      payment_condition:       'net_30',
+      currency:                'ARS',
+      subtotal:                docTotals.subtotal,
+      discount_amount:         docTotals.discount_amount,
+      tax_amount:              docTotals.tax_amount,
+      total:                   docTotals.total,
+      paid_amount:             partialPayment,
+      balance,
+      notes:                   null,
+      internal_notes:          null,
+      created_by:              actorId,
+      updated_by:              actorId,
+    },
+    { transaction: t },
+  )
+
+  for (let i = 0; i < purchaseLines.length; i++) {
+    const l  = purchaseLines[i]!
+    const lt = linesTotals[i]!
+    await SupplierInvoiceItem.create(
+      {
+        org_id:          orgId,
+        invoice_id:      invoice.id,
+        product_id:      l.product_id,
+        variant_id:      l.variant_id,
+        description:     l.description,
+        quantity:        l.quantity,
+        unit_price:      l.unit_price,
+        discount_pct:    l.discount_pct,
+        iva_rate:        l.iva_rate,
+        subtotal:        lt.subtotal,
+        discount_amount: lt.discount_amount,
+        tax_amount:      lt.tax_amount,
+        total:           lt.total,
+        sort_order:      i,
+        created_by:      actorId,
+        updated_by:      actorId,
+      },
+      { transaction: t },
+    )
+  }
+
+  // ── 4. Supplier Payment (partial) ─────────────────────────────────────────
+  const payment_number = await nextPurchaseDocNumber(orgId, branch.id, 'supplier_payment', t)
+  await SupplierPayment.create(
+    {
+      org_id:         orgId,
+      branch_id:      branch.id,
+      invoice_id:     invoice.id,
+      contact_id:     supplier?.id ?? null,
+      payment_number,
+      payment_date:   new Date(),
+      amount:         partialPayment,
+      payment_method: 'transfer',
+      notes:          'Pago parcial de prueba',
+      created_by:     actorId,
+      updated_by:     actorId,
+    },
+    { transaction: t },
+  )
+}
+
 async function run() {
   if (process.env.NODE_ENV !== 'development') {
     throw new Error('seed-dev is only allowed in development')
@@ -539,6 +812,12 @@ async function run() {
           const defaultCustomer = contacts.find(c => c.type === 'customer' || c.type === 'both') ?? null
           defaultCustomerId = defaultCustomer?.id ?? null
           await seedInventory(org.id, branches, user.id, t)
+
+          // Purchases seed (demo tenant only)
+          if (tenant.slug === 'demo') {
+            const defaultBranch = branches[0]!
+            await seedPurchases(org.id, defaultBranch, user.id, variantsBySku, contacts, t)
+          }
         }
 
         // Seed a minimal sales flow for the first user of the first tenant only

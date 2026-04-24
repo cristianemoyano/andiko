@@ -8,6 +8,7 @@ import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
+import { CatalogoSubNav } from '../CatalogoSubNav'
 
 type Category = {
   id: string
@@ -262,11 +263,12 @@ export function CategoriesClient() {
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[
-          { label: 'Catálogo', href: '/catalogo' },
+          { label: 'Catálogo', href: '/catalogo/productos' },
           { label: 'Categorías' },
         ]}
         actions={<Button size="sm" onClick={openCreate}>+ Nueva categoría</Button>}
       />
+      <CatalogoSubNav />
 
       <div className="flex-1 p-5 overflow-auto">
         {view === 'table' ? (
