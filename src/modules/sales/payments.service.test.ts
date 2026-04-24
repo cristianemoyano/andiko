@@ -18,6 +18,9 @@ vi.mock('./invoices.service', () => ({
 vi.mock('@/lib/db', () => ({
   default: { transaction: vi.fn((cb) => cb({})) },
 }))
+vi.mock('@/modules/auth/user.model', () => ({
+  default: class User {},
+}))
 vi.mock('@/lib/logger', () => ({ default: { info: vi.fn() } }))
 vi.mock('./sales.utils', () => ({
   nextDocumentNumber: vi.fn().mockResolvedValue('COB-0001'),

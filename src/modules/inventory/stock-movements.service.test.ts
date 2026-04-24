@@ -297,6 +297,20 @@ describe('manualAdjustment', () => {
     )
   })
 
+  it('does not record a movement when new quantity equals current', async () => {
+    const item = mockStockItem('10.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+
+    await manualAdjustment('var-1', 'wh-1', 10, null, {
+      orgId:            'org-1',
+      userId:           'actor-1',
+      defaultBranchId:  null,
+      allowedBranchIds: [],
+    })
+
+    expect(StockMovement.create).not.toHaveBeenCalled()
+  })
+
   it('resolveDefaultWarehouse not being called when no warehouse arg provided is a no-op', () => {
     expect(resolveDefaultWarehouse).toBeDefined()
   })

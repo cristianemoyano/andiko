@@ -9,6 +9,7 @@ import { Badge } from '@/components/primitives/Badge'
 import { InventarioSubNav } from '../../InventarioSubNav'
 import { AjusteStockModal } from './AjusteStockModal'
 import type { StockMovementType, StockReferenceType } from '@/modules/inventory/stock-movement.model'
+import { STOCK_EXPIRY_WARNING_DAYS } from '@/modules/inventory/inventory.constants'
 
 type VariantInfo = {
   id: string
@@ -23,7 +24,39 @@ type StockRow = {
   variant_id: string
   warehouse_id: string
   quantity: string
+  minimum_quantity?: string
+  expires_on?: string | null
   variant?: VariantInfo
+}
+
+function utcDay(d: Date): number {
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+}
+
+function parseExpiresOn(iso: string | null | undefined): Date | null {
+  if (!iso) return null
+  const s = String(iso).slice(0, 10)
+  const [y, m, d] = s.split('-').map(Number)
+  if (!y || !m || !d) return null
+  return new Date(Date.UTC(y, m - 1, d))
+}
+
+function expiryFlags(expiresOn: string | null | undefined): { expired: boolean; soon: boolean } {
+  const exp = parseExpiresOn(expiresOn ?? null)
+  if (!exp) return { expired: false, soon: false }
+  const today = new Date()
+  const t0 = utcDay(today)
+  const tExp = utcDay(exp)
+  if (tExp < t0) return { expired: true, soon: false }
+  const limit = t0 + STOCK_EXPIRY_WARNING_DAYS * 86400000
+  if (tExp <= limit) return { expired: false, soon: true }
+  return { expired: false, soon: false }
+}
+
+function belowMinimum(row: StockRow): boolean {
+  const min = Number(row.minimum_quantity ?? 0)
+  if (min <= 0) return false
+  return Number(row.quantity) <= min
 }
 
 type MovementRow = {
@@ -93,6 +126,38 @@ const STOCK_COLUMNS: Column<StockRow>[] = [
     key: 'quantity',
     header: 'Cantidad',
     render: row => <span className="font-medium tabular-nums text-[13px]">{row.quantity}</span>,
+  },
+  {
+    key: 'minimum_quantity' as keyof StockRow,
+    header: 'Mín.',
+    render: row => (
+      <span className="tabular-nums text-[13px] text-zinc-600">{row.minimum_quantity ?? '0'}</span>
+    ),
+  },
+  {
+    key: 'expires_on' as keyof StockRow,
+    header: 'Vence',
+    render: row => (
+      <span className="text-[13px] text-zinc-600">
+        {row.expires_on ? String(row.expires_on).slice(0, 10).split('-').reverse().join('/') : '—'}
+      </span>
+    ),
+  },
+  {
+    key: 'id',
+    header: 'Alertas',
+    render: row => {
+      const { expired, soon } = expiryFlags(row.expires_on)
+      const low = belowMinimum(row)
+      return (
+        <div className="flex flex-wrap gap-1">
+          {low && <Badge status="pending" dot>Bajo mínimo</Badge>}
+          {expired && <Badge status="error" dot>Vencido</Badge>}
+          {!expired && soon && <Badge status="pending" dot>Vence pronto</Badge>}
+          {!low && !expired && !soon && <span className="text-zinc-400 text-[12px]">—</span>}
+        </div>
+      )
+    },
   },
 ]
 
@@ -199,7 +264,7 @@ export function DepositoDetail() {
         ]}
         actions={
           <Button size="sm" onClick={() => setAjusteOpen(true)}>
-            Ajuste de stock
+            Stock y alertas
           </Button>
         }
       />

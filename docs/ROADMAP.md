@@ -220,11 +220,11 @@ Gestión de stock integrada con ventas y compras.
 - [x] Modelos Sequelize con tipos estrictos: `Warehouse`, `StockItem`, `StockMovement`
 - [x] `warehouses.service.ts`: CRUD + `resolveDefaultWarehouse` (fallback sucursal → org)
 - [x] `stock-movements.service.ts`: `applyMovement` (ledger atómico con lock), `deductStockForOrder`, `restoreStockForOrder`, `manualAdjustment`, `listMovements`
-- [x] `stock-items.service.ts`: `getStockLevels` (paginado), `getVariantStock`
+- [x] `stock-items.service.ts`: `getStockLevels` (paginado + filtros de alertas), `getVariantStock`, `updateStockItemAlerts`
 - [x] Integración con ventas: descuento automático al confirmar pedido, restauración al cancelar pedido y al anular factura
 - [x] `variant_id` propagado en `SalesOrderItem`, `SalesQuoteItem`, `InvoiceItem` (modelos + schemas Zod + tipos frontend)
-- [x] API REST: `GET/POST /api/v1/inventory/warehouses`, `GET/PATCH/DELETE /api/v1/inventory/warehouses/[id]`, `GET /api/v1/inventory/stock`, `GET/POST /api/v1/inventory/movements`
-- [x] Tests unitarios: `applyMovement` (happy path, stock insuficiente, ítem nuevo), `restoreStockForOrder`, `manualAdjustment` (delta positivo y negativo)
+- [x] API REST: `GET/POST /api/v1/inventory/warehouses`, `GET/PATCH/DELETE /api/v1/inventory/warehouses/[id]`, `GET` + `PATCH /api/v1/inventory/stock`, `GET/POST /api/v1/inventory/movements`
+- [x] Tests unitarios: `applyMovement` (happy path, stock insuficiente, ítem nuevo), `restoreStockForOrder`, `manualAdjustment` (delta positivo, negativo y cero), `getStockLevels` / `updateStockItemAlerts`
 
 ### Frontend
 - [x] Módulo `/inventario` con sub-nav (Depósitos / Stock / Movimientos)
@@ -232,11 +232,12 @@ Gestión de stock integrada con ventas y compras.
 - [x] Ajuste manual de stock desde detalle de depósito
 - [x] Vista global de stock variante × depósito (`/inventario/stock`)
 - [x] Historial de movimientos global con filtros (`/inventario/movimientos`)
+- [x] Vista de stock por variante con nombre de producto (en lugar de UUID)
+- [x] Alertas de stock mínimo y vencimiento MVP (`minimum_quantity` + `expires_on` por variante×depósito; UI + filtros)
 
 ### Pendientes
-- [ ] Alertas de stock mínimo
 - [ ] Remitos de entrega
-- [ ] Vista de stock por variante con nombre de producto (en lugar de UUID)
+- [ ] Trazabilidad por lotes (lote + vencimiento por cantidad) con salidas FEFO y vínculo explícito en `stock_movements`
 
 ---
 

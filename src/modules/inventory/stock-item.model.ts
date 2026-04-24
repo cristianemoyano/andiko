@@ -10,11 +10,16 @@ export interface StockItemAttributes {
   warehouse_id: UUID
   org_id: UUID
   quantity: string
+  minimum_quantity: string
+  expires_on: string | null
   created_at: Date
   updated_at: Date
 }
 
-type StockItemCreationAttributes = Optional<StockItemAttributes, 'id' | 'quantity' | 'created_at' | 'updated_at'>
+type StockItemCreationAttributes = Optional<
+  StockItemAttributes,
+  'id' | 'quantity' | 'minimum_quantity' | 'expires_on' | 'created_at' | 'updated_at'
+>
 
 class StockItem extends Model<StockItemAttributes, StockItemCreationAttributes> {
   declare id: UUID
@@ -22,6 +27,8 @@ class StockItem extends Model<StockItemAttributes, StockItemCreationAttributes> 
   declare warehouse_id: UUID
   declare org_id: UUID
   declare quantity: string
+  declare minimum_quantity: string
+  declare expires_on: string | null
   declare created_at: Date
   declare updated_at: Date
 }
@@ -31,10 +38,12 @@ StockItem.init(
     id:           { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     variant_id:   { type: DataTypes.UUID, allowNull: false },
     warehouse_id: { type: DataTypes.UUID, allowNull: false },
-    org_id:       { type: DataTypes.UUID, allowNull: false },
-    quantity:     { type: DataTypes.DECIMAL(15, 4), allowNull: false, defaultValue: '0' },
-    created_at:   { type: DataTypes.DATE, allowNull: false },
-    updated_at:   { type: DataTypes.DATE, allowNull: false },
+    org_id:             { type: DataTypes.UUID, allowNull: false },
+    quantity:           { type: DataTypes.DECIMAL(15, 4), allowNull: false, defaultValue: '0' },
+    minimum_quantity:   { type: DataTypes.DECIMAL(15, 4), allowNull: false, defaultValue: '0' },
+    expires_on:         { type: DataTypes.DATEONLY, allowNull: true },
+    created_at:         { type: DataTypes.DATE, allowNull: false },
+    updated_at:         { type: DataTypes.DATE, allowNull: false },
   },
   { sequelize, tableName: 'stock_items', paranoid: false, underscored: true }
 )
