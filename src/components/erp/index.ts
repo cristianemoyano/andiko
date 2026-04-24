@@ -1,5 +1,7 @@
 export { DataTable } from './DataTable'
 export type { Column } from './DataTable'
+export { GroupedDataTable } from './GroupedDataTable'
+export type { GroupedColumn, RowGroup } from './GroupedDataTable'
 export { TablePagination } from './TablePagination'
 export type { TablePaginationProps } from './TablePagination'
 export { ConfirmDialog } from './ConfirmDialog'

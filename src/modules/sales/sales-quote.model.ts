@@ -2,6 +2,7 @@ import { DataTypes, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, IvaRate, PaymentCondition } from '@/types'
+import User from '@/modules/auth/user.model'
 
 export const QUOTE_STATUSES = ['draft', 'sent', 'accepted', 'rejected', 'expired', 'cancelled'] as const
 export type QuoteStatus = typeof QUOTE_STATUSES[number]
@@ -11,6 +12,7 @@ export interface SalesQuoteAttributes extends Timestamps, AuditFields {
   branch_id: UUID | null
   contact_id: UUID | null
   price_list_id: UUID | null
+  salesperson_id: UUID | null
   quote_number: string
   status: QuoteStatus
   valid_until: Date | null
@@ -26,7 +28,7 @@ export interface SalesQuoteAttributes extends Timestamps, AuditFields {
 
 type SalesQuoteCreationAttributes = Optional<
   SalesQuoteAttributes,
-  | 'id' | 'branch_id' | 'contact_id' | 'price_list_id' | 'status' | 'valid_until' | 'payment_condition' | 'currency'
+  | 'id' | 'branch_id' | 'contact_id' | 'price_list_id' | 'salesperson_id' | 'status' | 'valid_until' | 'payment_condition' | 'currency'
   | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total' | 'notes' | 'internal_notes'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
@@ -36,6 +38,7 @@ class SalesQuote extends AuditModel<SalesQuoteAttributes, SalesQuoteCreationAttr
   declare branch_id: UUID | null
   declare contact_id: UUID | null
   declare price_list_id: UUID | null
+  declare salesperson_id: UUID | null
   declare quote_number: string
   declare status: QuoteStatus
   declare valid_until: Date | null
@@ -55,6 +58,7 @@ SalesQuote.init(
     branch_id:         { type: DataTypes.UUID },
     contact_id:        { type: DataTypes.UUID },
     price_list_id:     { type: DataTypes.UUID },
+    salesperson_id:    { type: DataTypes.UUID },
     quote_number:      { type: DataTypes.STRING(20), allowNull: false },
     status:            { type: DataTypes.ENUM(...QUOTE_STATUSES), allowNull: false, defaultValue: 'draft' },
     valid_until:       { type: DataTypes.DATE },
@@ -70,6 +74,9 @@ SalesQuote.init(
   },
   { sequelize, tableName: 'sales_quotes', paranoid: true, underscored: true }
 )
+
+SalesQuote.belongsTo(User, { foreignKey: 'salesperson_id', as: 'salesperson' })
+User.hasMany(SalesQuote, { foreignKey: 'salesperson_id', as: 'salesQuotes' })
 
 export default SalesQuote
 

@@ -7,6 +7,7 @@ import { makeTenantContext } from '@/lib/tenancy'
 import { getProduct } from '@/modules/catalog/products.service'
 import type ProductVariant from '@/modules/catalog/product-variant.model'
 import { ProductDetailClient } from './ProductDetailClient'
+import { CatalogoSubNav } from '../CatalogoSubNav'
 
 export const metadata = { title: 'Producto — Andiko ERP' }
 
@@ -50,11 +51,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[
-          { label: 'Catálogo', href: '/catalogo' },
+          { label: 'Catálogo', href: '/catalogo/productos' },
+          { label: 'Productos', href: '/catalogo/productos' },
           { label: product.name },
         ]}
         actions={<ProductDetailClient product={product.toJSON() as unknown as Parameters<typeof ProductDetailClient>[0]['product']} />}
       />
+      <CatalogoSubNav />
 
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-2xl space-y-4">

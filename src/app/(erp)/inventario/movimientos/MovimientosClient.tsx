@@ -37,10 +37,11 @@ const MOVEMENT_TYPE_LABEL: Record<StockMovementType, string> = {
 }
 
 const REFERENCE_TYPE_LABEL: Record<StockReferenceType, string> = {
-  order:          'Pedido',
-  invoice_cancel: 'Anulación factura',
-  manual:         'Manual',
-  initial:        'Stock inicial',
+  order:            'Pedido',
+  invoice_cancel:   'Anulación factura',
+  manual:           'Manual',
+  initial:          'Stock inicial',
+  purchase_receipt: 'Recepción compra',
 }
 
 const PAGE_SIZE = 20
@@ -52,7 +53,8 @@ function movementBadgeStatus(type: StockMovementType): 'success' | 'error' | 'ne
 }
 
 function referenceLabel(row: MovementRow): string {
-  if (row.reference_type === 'order') return row.order_number ?? REFERENCE_TYPE_LABEL.order
+  if (row.reference_type === 'order')            return row.order_number ?? REFERENCE_TYPE_LABEL.order
+  if (row.reference_type === 'purchase_receipt') return row.notes ?? REFERENCE_TYPE_LABEL.purchase_receipt
   return REFERENCE_TYPE_LABEL[row.reference_type] ?? row.reference_type
 }
 

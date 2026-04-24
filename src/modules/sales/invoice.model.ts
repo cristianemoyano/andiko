@@ -4,6 +4,7 @@ import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, PaymentCondition } from '@/types'
 import SalesQuote from './sales-quote.model'
 import SalesOrder from './sales-order.model'
+import User from '@/modules/auth/user.model'
 
 export const INVOICE_STATUSES = ['draft', 'issued', 'partially_paid', 'paid', 'cancelled'] as const
 export type InvoiceStatus = typeof INVOICE_STATUSES[number]
@@ -15,6 +16,7 @@ export interface InvoiceAttributes extends Timestamps, AuditFields {
   order_id: UUID
   quote_id: UUID | null
   price_list_id: UUID | null
+  salesperson_id: UUID | null
   invoice_number: string
   status: InvoiceStatus
   issue_date: Date | null
@@ -33,7 +35,7 @@ export interface InvoiceAttributes extends Timestamps, AuditFields {
 
 type InvoiceCreationAttributes = Optional<
   InvoiceAttributes,
-  | 'id' | 'branch_id' | 'contact_id' | 'quote_id' | 'price_list_id' | 'status' | 'issue_date' | 'due_date'
+  | 'id' | 'branch_id' | 'contact_id' | 'quote_id' | 'price_list_id' | 'salesperson_id' | 'status' | 'issue_date' | 'due_date'
   | 'payment_condition' | 'currency' | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total'
   | 'paid_amount' | 'balance' | 'notes' | 'internal_notes'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
@@ -46,6 +48,7 @@ class Invoice extends AuditModel<InvoiceAttributes, InvoiceCreationAttributes> {
   declare order_id: UUID
   declare quote_id: UUID | null
   declare price_list_id: UUID | null
+  declare salesperson_id: UUID | null
   declare invoice_number: string
   declare status: InvoiceStatus
   declare issue_date: Date | null
@@ -70,6 +73,7 @@ Invoice.init(
     order_id:          { type: DataTypes.UUID, allowNull: false },
     quote_id:          { type: DataTypes.UUID },
     price_list_id:     { type: DataTypes.UUID },
+    salesperson_id:    { type: DataTypes.UUID },
     invoice_number:    { type: DataTypes.STRING(20), allowNull: false },
     status:            { type: DataTypes.ENUM(...INVOICE_STATUSES), allowNull: false, defaultValue: 'draft' },
     issue_date:        { type: DataTypes.DATE },
@@ -94,5 +98,8 @@ SalesOrder.hasMany(Invoice, { foreignKey: 'order_id', as: 'invoices' })
 
 Invoice.belongsTo(SalesQuote, { foreignKey: 'quote_id', as: 'quote' })
 SalesQuote.hasMany(Invoice, { foreignKey: 'quote_id', as: 'invoices' })
+
+Invoice.belongsTo(User, { foreignKey: 'salesperson_id', as: 'salesperson' })
+User.hasMany(Invoice, { foreignKey: 'salesperson_id', as: 'salesInvoices' })
 
 export default Invoice

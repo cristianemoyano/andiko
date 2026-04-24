@@ -4,6 +4,7 @@ import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
 import Payment from './payment.model'
 import Invoice from './invoice.model'
+import User from '@/modules/auth/user.model'
 import { recalcInvoiceBalance } from './invoices.service'
 import type { PaymentInput, PaymentUpdateInput, PaymentQuery } from './payment.schema'
 import { nextDocumentNumber } from './sales.utils'
@@ -33,7 +34,9 @@ export async function listPayments(query: PaymentQuery) {
 }
 
 export async function getPayment(id: string) {
-  const payment = await Payment.findByPk(id)
+  const payment = await Payment.findByPk(id, {
+    include: [{ model: User, as: 'salesperson', attributes: ['id', 'name'] }],
+  })
   if (!payment) throw new Error('PAYMENT_NOT_FOUND')
   return payment
 }
@@ -54,6 +57,7 @@ export async function createPayment(input: PaymentInput, orgId: string, actorId:
         ...input,
         branch_id:      invoice.branch_id,
         payment_number,
+        salesperson_id: actorId,
         org_id:     orgId,
         amount:     String(input.amount),
         created_by: actorId,

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
@@ -28,6 +29,8 @@ type FieldErrors = Record<string, string[]>
 
 export function NuevoPresupuestoClient() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const actorName = session?.user?.impersonation?.name ?? session?.user?.name ?? null
 
   const [contactId, setContactId]               = useState<string | null>(null)
   const [contactOption, setContactOption]       = useState<SearchableSelectOption | null>(null)
@@ -192,8 +195,9 @@ export function NuevoPresupuestoClient() {
               </FormField>
             </div>
 
-            <FormField label="Condición de pago">
-              <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Condición de pago">
+                <div className="flex gap-2 flex-wrap">
                 {PAYMENT_CONDITIONS.map(pc => (
                   <button
                     key={pc.value}
@@ -209,8 +213,14 @@ export function NuevoPresupuestoClient() {
                     {pc.label}
                   </button>
                 ))}
-              </div>
-            </FormField>
+                </div>
+              </FormField>
+              {actorName && (
+                <FormField label="Vendedor">
+                  <p className="text-[13px] text-zinc-700 py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-sm">{actorName}</p>
+                </FormField>
+              )}
+            </div>
           </div>
 
           {/* Line items */}

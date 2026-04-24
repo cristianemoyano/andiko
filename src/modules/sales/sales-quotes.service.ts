@@ -10,6 +10,7 @@ import SalesOrderItem from './sales-order-item.model'
 import type { SalesQuoteInput, SalesQuoteUpdateInput, SalesQuoteQuery } from './sales-quote.schema'
 import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
+import User from '@/modules/auth/user.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
@@ -36,13 +37,14 @@ export async function listQuotes(query: SalesQuoteQuery, ctx: TenantContext) {
     offset,
     order: [['created_at', 'DESC']],
     attributes: [
-      'id', 'branch_id', 'quote_number', 'status', 'contact_id', 'valid_until',
+      'id', 'branch_id', 'quote_number', 'status', 'contact_id', 'salesperson_id', 'valid_until',
       'payment_condition', 'currency', 'subtotal', 'tax_amount', 'total',
       'notes', 'created_at',
     ],
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: User, as: 'salesperson', attributes: ['id', 'name'] },
     ],
   })
 
@@ -55,6 +57,7 @@ export async function getQuote(id: string, ctx: TenantContext) {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: User, as: 'salesperson', attributes: ['id', 'name'] },
       { model: SalesQuoteItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
   })
@@ -83,6 +86,7 @@ export async function createQuote(input: SalesQuoteInput, ctx: TenantContext, ac
         ...quoteFields,
         branch_id,
         quote_number,
+        salesperson_id: actorId,
         org_id:     ctx.orgId,
         created_by: actorId,
         updated_by: actorId,
@@ -205,6 +209,7 @@ export async function convertQuoteToOrder(id: string, ctx: TenantContext, actorI
         quote_id:          quote.id,
         price_list_id:     quote.price_list_id,
         order_number,
+        salesperson_id:    actorId,
         payment_condition: quote.payment_condition,
         currency:          quote.currency,
         subtotal:          quote.subtotal,

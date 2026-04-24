@@ -49,10 +49,11 @@ const MOVEMENT_TYPE_LABEL: Record<StockMovementType, string> = {
 }
 
 const REFERENCE_TYPE_LABEL: Record<StockReferenceType, string> = {
-  order:          'Pedido',
-  invoice_cancel: 'Anulación factura',
-  manual:         'Manual',
-  initial:        'Stock inicial',
+  order:            'Pedido',
+  invoice_cancel:   'Anulación factura',
+  manual:           'Manual',
+  initial:          'Stock inicial',
+  purchase_receipt: 'Recepción compra',
 }
 
 function movementBadgeStatus(type: StockMovementType): 'success' | 'error' | 'neutral' {

@@ -3,6 +3,7 @@ import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, PaymentCondition } from '@/types'
 import SalesQuote from './sales-quote.model'
+import User from '@/modules/auth/user.model'
 
 export const ORDER_STATUSES = ['draft', 'confirmed', 'in_progress', 'delivered', 'cancelled'] as const
 export type OrderStatus = typeof ORDER_STATUSES[number]
@@ -13,6 +14,7 @@ export interface SalesOrderAttributes extends Timestamps, AuditFields {
   contact_id: UUID | null
   quote_id: UUID | null
   price_list_id: UUID | null
+  salesperson_id: UUID | null
   order_number: string
   status: OrderStatus
   payment_condition: PaymentCondition
@@ -45,7 +47,7 @@ export interface SalesOrderAttributes extends Timestamps, AuditFields {
 
 type SalesOrderCreationAttributes = Optional<
   SalesOrderAttributes,
-  | 'id' | 'branch_id' | 'contact_id' | 'quote_id' | 'price_list_id' | 'status' | 'payment_condition' | 'currency'
+  | 'id' | 'branch_id' | 'contact_id' | 'quote_id' | 'price_list_id' | 'salesperson_id' | 'status' | 'payment_condition' | 'currency'
   | 'promised_date' | 'delivered_date'
   | 'shipping_street' | 'shipping_number' | 'shipping_floor' | 'shipping_apartment' | 'shipping_city' | 'shipping_province' | 'shipping_postal_code' | 'shipping_country'
   | 'billing_street' | 'billing_number' | 'billing_floor' | 'billing_apartment' | 'billing_city' | 'billing_province' | 'billing_postal_code' | 'billing_country'
@@ -60,6 +62,7 @@ class SalesOrder extends AuditModel<SalesOrderAttributes, SalesOrderCreationAttr
   declare contact_id: UUID | null
   declare quote_id: UUID | null
   declare price_list_id: UUID | null
+  declare salesperson_id: UUID | null
   declare order_number: string
   declare status: OrderStatus
   declare payment_condition: PaymentCondition
@@ -97,6 +100,7 @@ SalesOrder.init(
     contact_id:        { type: DataTypes.UUID },
     quote_id:          { type: DataTypes.UUID },
     price_list_id:     { type: DataTypes.UUID },
+    salesperson_id:    { type: DataTypes.UUID },
     order_number:      { type: DataTypes.STRING(20), allowNull: false },
     status:            { type: DataTypes.ENUM(...ORDER_STATUSES), allowNull: false, defaultValue: 'draft' },
     payment_condition: { type: DataTypes.ENUM('cash', 'net_30', 'net_60', 'net_90'), allowNull: false, defaultValue: 'cash' },
@@ -132,5 +136,8 @@ SalesOrder.init(
 
 SalesOrder.belongsTo(SalesQuote, { foreignKey: 'quote_id', as: 'quote' })
 SalesQuote.hasMany(SalesOrder, { foreignKey: 'quote_id', as: 'orders' })
+
+SalesOrder.belongsTo(User, { foreignKey: 'salesperson_id', as: 'salesperson' })
+User.hasMany(SalesOrder, { foreignKey: 'salesperson_id', as: 'salesOrders' })
 
 export default SalesOrder

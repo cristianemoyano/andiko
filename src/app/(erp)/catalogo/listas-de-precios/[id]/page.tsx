@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import type { AuthedSession } from '@/lib/api-handler'
 import { getPriceList } from '@/modules/catalog/price-list.service'
 import { PriceListDetailClient } from './price-list-detail-client'
+import { CatalogoSubNav } from '../../CatalogoSubNav'
 
 export const metadata = { title: 'Lista de precios — Andiko ERP' }
 
@@ -33,12 +34,13 @@ export default async function PriceListDetailPage({ params }: { params: Promise<
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[
-          { label: 'Catálogo', href: '/catalogo' },
+          { label: 'Catálogo', href: '/catalogo/productos' },
           { label: 'Listas de precios', href: '/catalogo/listas-de-precios' },
           { label: priceList.name },
         ]}
       />
 
+      <CatalogoSubNav />
       <PriceListDetailClient priceList={pl} />
     </div>
   )

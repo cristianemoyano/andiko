@@ -72,6 +72,13 @@ const COLUMNS: Column<Order>[] = [
         : <span className="text-zinc-400">—</span>,
   },
   {
+    key: 'salesperson',
+    header: 'Vendedor',
+    render: row => row.salesperson
+      ? <span className="text-[12px] text-zinc-700">{row.salesperson.name}</span>
+      : <span className="text-zinc-400">—</span>,
+  },
+  {
     key: 'total',
     header: 'Total',
     render: row => (

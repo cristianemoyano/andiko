@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
@@ -85,6 +86,8 @@ function addressLabel(address: ContactAddress): string {
 
 export function NuevoPedidoClient() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const actorName = session?.user?.impersonation?.name ?? session?.user?.name ?? null
 
   const [contactId, setContactId]               = useState<string | null>(null)
   const [contactOption, setContactOption]       = useState<SearchableSelectOption | null>(null)
@@ -297,25 +300,32 @@ export function NuevoPedidoClient() {
               </FormField>
             </div>
 
-            <FormField label="Condición de pago">
-              <div className="flex gap-2 flex-wrap">
-                {PAYMENT_CONDITIONS.map(pc => (
-                  <button
-                    key={pc.value}
-                    type="button"
-                    onClick={() => setPaymentCondition(pc.value)}
-                    className={cn(
-                      'px-3 py-1 text-[12px] rounded-sm border transition-colors',
-                      paymentCondition === pc.value
-                        ? 'border-brand-600 bg-brand-50 text-brand-600 font-medium'
-                        : 'border-zinc-300 text-zinc-600 hover:border-zinc-400'
-                    )}
-                  >
-                    {pc.label}
-                  </button>
-                ))}
-              </div>
-            </FormField>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Condición de pago">
+                <div className="flex gap-2 flex-wrap">
+                  {PAYMENT_CONDITIONS.map(pc => (
+                    <button
+                      key={pc.value}
+                      type="button"
+                      onClick={() => setPaymentCondition(pc.value)}
+                      className={cn(
+                        'px-3 py-1 text-[12px] rounded-sm border transition-colors',
+                        paymentCondition === pc.value
+                          ? 'border-brand-600 bg-brand-50 text-brand-600 font-medium'
+                          : 'border-zinc-300 text-zinc-600 hover:border-zinc-400'
+                      )}
+                    >
+                      {pc.label}
+                    </button>
+                  ))}
+                </div>
+              </FormField>
+              {actorName && (
+                <FormField label="Vendedor">
+                  <p className="text-[13px] text-zinc-700 py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-sm">{actorName}</p>
+                </FormField>
+              )}
+            </div>
           </div>
 
           {/* Line items */}

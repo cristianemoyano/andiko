@@ -628,6 +628,12 @@ export function OrderDetail({ id }: OrderDetailProps) {
                     }
                   </p>
                 </div>
+                {order.salesperson && (
+                  <div>
+                    <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Vendedor</p>
+                    <p className="text-zinc-800">{order.salesperson.name}</p>
+                  </div>
+                )}
               </div>
             )}
 

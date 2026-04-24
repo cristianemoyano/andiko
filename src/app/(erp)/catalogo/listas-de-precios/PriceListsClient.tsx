@@ -9,6 +9,7 @@ import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
+import { CatalogoSubNav } from '../CatalogoSubNav'
 
 type PriceList = {
   id: string
@@ -122,13 +123,14 @@ export function PriceListsClient() {
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[
-          { label: 'Catálogo', href: '/catalogo' },
+          { label: 'Catálogo', href: '/catalogo/productos' },
           { label: 'Listas de precios' },
         ]}
         actions={
           <Button size="sm" onClick={() => setModalOpen(true)}>+ Nueva lista</Button>
         }
       />
+      <CatalogoSubNav />
 
       <div className="flex-1 overflow-auto p-6">
         <DataTable
