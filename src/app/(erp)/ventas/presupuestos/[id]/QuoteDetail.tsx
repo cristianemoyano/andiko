@@ -22,7 +22,10 @@ import type { Quote, PaymentCondition } from '../../types'
 import { ORDER_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
 import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
-import { cn, parseResponseBodyJson } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { notifyApiError } from '@/lib/notify'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
   value: value as PaymentCondition,
@@ -101,13 +104,15 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      await Promise.resolve()
       setLoading(true)
-      const r = await fetch(`/api/v1/sales/quotes/${id}`)
-      const data = await r.json() as Quote
-      if (cancelled) return
-      setQuote(data)
-      setLoading(false)
+      try {
+        const data = await fetchJson<Quote>(`/api/v1/sales/quotes/${id}`)
+        if (!cancelled) setQuote(data)
+      } catch {
+        if (!cancelled) setQuote(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     })()
     return () => { cancelled = true }
   }, [id, refresh])
@@ -121,20 +126,17 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
         page: '1',
         limit: '50',
       })
-      const res = await fetch(`/api/v1/sales/orders?${params}`)
-      if (!res.ok) {
-        if (!cancelled) {
-          setRelatedOrders([])
-          setLoadingTraceability(false)
-        }
-        return
+      try {
+        const payload = await fetchJson<{
+          data?: Array<{ id: string; order_number: string; status: keyof typeof ORDER_STATUS_LABEL; created_at: string }>
+        }>(`/api/v1/sales/orders?${params}`)
+        if (cancelled) return
+        setRelatedOrders(Array.isArray(payload.data) ? payload.data : [])
+      } catch {
+        if (!cancelled) setRelatedOrders([])
+      } finally {
+        if (!cancelled) setLoadingTraceability(false)
       }
-      const payload = await res.json() as {
-        data?: Array<{ id: string; order_number: string; status: keyof typeof ORDER_STATUS_LABEL; created_at: string }>
-      }
-      if (cancelled) return
-      setRelatedOrders(Array.isArray(payload.data) ? payload.data : [])
-      setLoadingTraceability(false)
     }
 
     void loadRelatedOrders()
@@ -209,72 +211,87 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
       })),
     }
 
-    const res = await fetch(`/api/v1/sales/quotes/${id}`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
-    })
-
-    setSaving(false)
-
-    if (res.ok) {
+    try {
+      await fetchJson(`/api/v1/sales/quotes/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      })
       setEditMode(false)
       setRefresh(r => r + 1)
-      return
-    }
-
-    const data = await parseResponseBodyJson<{ code?: string; details?: { fieldErrors?: FieldErrors }; error?: string }>(res)
-    if (data?.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
-      setErrors(data.details.fieldErrors)
-      const hasItemsErrors = Object.keys(data.details.fieldErrors).some((k) => k.startsWith('items'))
-      if (hasItemsErrors) {
-        setServerError('Hay errores en los ítems. Revisá producto, descripción, cantidad y precio.')
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) {
+        setErrors(fe)
+        const hasItemsErrors = Object.keys(fe).some(k => k.startsWith('items'))
+        if (hasItemsErrors) {
+          setServerError('Hay errores en los ítems. Revisá producto, descripción, cantidad y precio.')
+        }
+      } else {
+        setServerError(getApiErrorMessage(err))
       }
-    } else {
-      setServerError(data?.error ?? `Error ${res.status}. Revisá los datos e intentá de nuevo.`)
+    } finally {
+      setSaving(false)
     }
   }
 
   async function handleTransition(nextStatus: QuoteStatus) {
     setTransitioning(true)
-    const res = await fetch(`/api/v1/sales/quotes/${id}`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ status: nextStatus }),
-    })
-    setTransitioning(false)
-    if (res.ok) setRefresh(r => r + 1)
+    try {
+      await fetchJson(`/api/v1/sales/quotes/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
+    } finally {
+      setTransitioning(false)
+    }
   }
 
   async function handleConvertToOrder() {
-    const res = await fetch(`/api/v1/sales/quotes/${id}/convert`, { method: 'POST' })
     setConfirmConvert(false)
-    if (res.ok) {
-      const order = await res.json() as { id: string }
+    try {
+      const order = await fetchJson<{ id: string }>(`/api/v1/sales/quotes/${id}/convert`, { method: 'POST' })
       router.push(`/ventas/pedidos/${order.id}`)
+    } catch (e) {
+      notifyApiError(e)
     }
   }
 
   async function handleCancelQuote() {
-    const res = await fetch(`/api/v1/sales/quotes/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'cancelled' satisfies QuoteStatus }),
-    })
     setConfirmCancel(false)
-    if (res.ok) setRefresh(r => r + 1)
+    try {
+      await fetchJson(`/api/v1/sales/quotes/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'cancelled' satisfies QuoteStatus }),
+      })
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   const searchContacts = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=customer`)
-    const data = await res.json() as { data: Array<{ id: string; legal_name: string; trade_name: string | null }> }
-    return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    try {
+      const data = await fetchJson<{ data: Array<{ id: string; legal_name: string; trade_name: string | null }> }>(
+        `/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=customer`,
+      )
+      return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    } catch {
+      return []
+    }
   }, [])
 
   const searchPriceLists = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    const res = await fetch(`/api/v1/catalog/price-lists?search=${encodeURIComponent(q)}&limit=20`)
-    const data = await res.json() as { data: Array<{ id: string; name: string }> }
-    return (data.data ?? []).map(pl => ({ value: pl.id, label: pl.name }))
+    try {
+      const data = await fetchJson<{ data: Array<{ id: string; name: string }> }>(
+        `/api/v1/catalog/price-lists?search=${encodeURIComponent(q)}&limit=20`,
+      )
+      return (data.data ?? []).map(pl => ({ value: pl.id, label: pl.name }))
+    } catch {
+      return []
+    }
   }, [])
 
   if (loading) {

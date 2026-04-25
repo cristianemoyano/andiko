@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { PrintableDocument } from '@/types/printing'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { Button } from '@/components/primitives/Button'
 import { PrintDocumentRenderer } from './PrintDocumentRenderer'
 
@@ -21,17 +22,19 @@ export function PrintDocumentPageClient({ domain, resource, id }: PrintDocumentP
     void (async () => {
       setLoading(true)
       setError(null)
-      const res = await fetch(`/api/v1/printing/${domain}/${resource}/${id}`)
-      const body = (await res.json()) as { data?: PrintableDocument; error?: string; code?: string }
-      if (cancelled) return
-      if (!res.ok) {
+      try {
+        const body = await fetchJson<{ data?: PrintableDocument }>(
+          `/api/v1/printing/${domain}/${resource}/${id}`,
+        )
+        if (cancelled) return
+        setDoc(body.data ?? null)
+      } catch (e) {
+        if (cancelled) return
         setDoc(null)
-        setError(body.error ?? 'No se pudo cargar el documento')
-        setLoading(false)
-        return
+        setError(getApiErrorMessage(e))
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setDoc(body.data ?? null)
-      setLoading(false)
     })()
     return () => {
       cancelled = true

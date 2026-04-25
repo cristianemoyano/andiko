@@ -8,6 +8,8 @@ import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { ContactModal } from '../ContactModal'
 import { AddressesSection } from './AddressesSection'
 import { PaymentInfoSection } from './PaymentInfoSection'
+import { fetchJson } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
 import type { PaymentInfo } from './PaymentInfoSection'
 
 type Contact = {
@@ -63,18 +65,24 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
 
   async function handleSaved() {
     setModalOpen(false)
-    const res = await fetch(`/api/v1/contacts/${contact.id}`)
-    if (res.ok) {
-      const updated = await res.json() as Contact
+    try {
+      const updated = await fetchJson<Contact>(`/api/v1/contacts/${contact.id}`)
       setContact(updated)
+    } catch (e) {
+      notifyApiError(e)
     }
   }
 
   async function handleDelete() {
-    const res = await fetch(`/api/v1/contacts/${contact.id}`, { method: 'DELETE' })
-    setConfirmDelete(false)
-    if (!res.ok && res.status !== 204) return
-    window.location.assign('/contactos')
+    try {
+      await fetchJson(`/api/v1/contacts/${contact.id}`, { method: 'DELETE' })
+      setConfirmDelete(false)
+      notifySuccess('Contacto eliminado')
+      window.location.assign('/contactos')
+    } catch (e) {
+      setConfirmDelete(false)
+      notifyApiError(e)
+    }
   }
 
   const createdAt = new Date(contact.created_at).toLocaleDateString('es-AR', {

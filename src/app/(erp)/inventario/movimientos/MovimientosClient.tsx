@@ -7,6 +7,7 @@ import { Badge } from '@/components/primitives/Badge'
 import { Input } from '@/components/primitives/Input'
 import { InventarioSubNav } from '../InventarioSubNav'
 import type { StockMovementType, StockReferenceType } from '@/modules/inventory/stock-movement.model'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 type MovementRow = {
   id: string
@@ -157,10 +158,16 @@ export function MovimientosClient() {
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
     if (debouncedSearch) params.set('search', debouncedSearch)
     if (refType)         params.set('reference_type', refType)
-    fetch(`/api/v1/inventory/movements?${params}`)
-      .then(r => r.json())
-      .then(data => { setRows(data.data ?? []); setTotal(data.total ?? 0) })
-      .catch(() => { setError('Error al cargar movimientos'); setRows([]) })
+    ;(async () => {
+      try {
+        const data = await fetchJson<{ data: MovementRow[]; total: number }>(`/api/v1/inventory/movements?${params}`)
+        setRows(data.data ?? [])
+        setTotal(data.total ?? 0)
+      } catch (e) {
+        setError(getApiErrorMessage(e))
+        setRows([])
+      }
+    })()
   }, [page, debouncedSearch, refType])
 
   return (

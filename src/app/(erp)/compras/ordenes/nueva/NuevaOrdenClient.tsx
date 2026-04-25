@@ -17,6 +17,7 @@ import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import { PAYMENT_CONDITION_LABEL } from '../../types'
 import Decimal from 'decimal.js'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({ value, label }))
 
@@ -36,9 +37,14 @@ export function NuevaOrdenClient() {
   const [serverError,      setServerError]      = useState<string | null>(null)
 
   const searchSuppliers = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=supplier`)
-    const data = await res.json() as { data: Array<{ id: string; legal_name: string; trade_name: string | null }> }
-    return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    try {
+      const data = await fetchJson<{ data: Array<{ id: string; legal_name: string; trade_name: string | null }> }>(
+        `/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=supplier`,
+      )
+      return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    } catch {
+      return []
+    }
   }, [])
 
   const subtotal = items.reduce((acc, i) => acc + (parseFloat(i.unit_price || '0') * parseFloat(i.quantity || '0')), 0)
@@ -70,20 +76,13 @@ export function NuevaOrdenClient() {
     }
 
     try {
-      const res = await fetch('/api/v1/purchases/orders', {
+      const order = await fetchJson<{ id: string }>('/api/v1/purchases/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (!res.ok) {
-        const d = await res.json()
-        setServerError(d.error ?? 'Error al crear la orden')
-        return
-      }
-      const order = await res.json() as { id: string }
       router.push(`/compras/ordenes/${order.id}`)
-    } catch {
-      setServerError('Error de red. Intentá de nuevo.')
+    } catch (e) {
+      setServerError(getApiErrorMessage(e))
     } finally {
       setSaving(false)
     }

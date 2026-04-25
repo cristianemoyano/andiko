@@ -19,6 +19,8 @@ import { VentasSubNav } from '../../VentasSubNav'
 import type { Invoice, Payment, PaymentMethod } from '../../types'
 import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL } from '../../types'
 import { cn } from '@/lib/utils'
+import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
 
 const PAYMENT_METHOD_OPTIONS = (Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map(
   m => ({ value: m, label: PAYMENT_METHOD_LABEL[m] })
@@ -29,13 +31,6 @@ interface InvoiceDetailProps {
 }
 
 type ContactLabel = { id: string; legal_name: string; trade_name: string | null }
-
-function parseApiError(data: unknown): string {
-  if (data && typeof data === 'object' && 'error' in data && typeof (data as { error: string }).error === 'string') {
-    return (data as { error: string }).error
-  }
-  return 'Ocurrió un error. Intentá de nuevo.'
-}
 
 export function InvoiceDetail({ id }: InvoiceDetailProps) {
   const router = useRouter()
@@ -62,41 +57,44 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      await Promise.resolve()
       setLoading(true)
-      const res = await fetch(`/api/v1/sales/invoices/${id}`)
-      if (cancelled) return
-      if (res.status === 404) {
-        setNotFound(true)
-        setInvoice(null)
-        setContact(null)
-        setLoading(false)
-        return
-      }
-      const data = await res.json() as Invoice
-      let nextContact: ContactLabel | null = null
-      if (data.contact_id && data.contact) {
-        nextContact = {
-          id: data.contact_id,
-          legal_name: data.contact.legal_name,
-          trade_name: data.contact.trade_name ?? null,
+      try {
+        const data = await fetchJson<Invoice>(`/api/v1/sales/invoices/${id}`)
+        if (cancelled) return
+        let nextContact: ContactLabel | null = null
+        if (data.contact_id && data.contact) {
+          nextContact = {
+            id: data.contact_id,
+            legal_name: data.contact.legal_name,
+            trade_name: data.contact.trade_name ?? null,
+          }
+        } else if (data.contact_id) {
+          try {
+            nextContact = await fetchJson<ContactLabel>(`/api/v1/contacts/${data.contact_id}`)
+          } catch {
+            nextContact = null
+          }
         }
-      } else if (data.contact_id) {
-        try {
-          const cr = await fetch(`/api/v1/contacts/${data.contact_id}`)
-          if (cr.ok) nextContact = await cr.json() as ContactLabel
-        } catch {
-          nextContact = null
+        if (cancelled) return
+        setInvoice(data)
+        setContact(nextContact)
+        setNotFound(false)
+        const bal = parseFloat(data.balance)
+        if (!Number.isNaN(bal) && bal > 0) setPaymentAmount(data.balance)
+        else setPaymentAmount('')
+      } catch (e) {
+        if (cancelled) return
+        if (isApiRequestError(e) && e.status === 404) {
+          setNotFound(true)
+          setInvoice(null)
+          setContact(null)
+        } else {
+          notifyApiError(e)
+          setInvoice(null)
         }
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      if (cancelled) return
-      setInvoice(data)
-      setContact(nextContact)
-      setNotFound(false)
-      const bal = parseFloat(data.balance)
-      if (!Number.isNaN(bal) && bal > 0) setPaymentAmount(data.balance)
-      else setPaymentAmount('')
-      setLoading(false)
     })()
     return () => {
       cancelled = true
@@ -106,36 +104,36 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
   const payments: Payment[] = invoice?.payments ?? []
 
   async function handleIssue() {
-    const res = await fetch(`/api/v1/sales/invoices/${id}/issue`, { method: 'POST' })
     setConfirmIssue(false)
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      alert(parseApiError(data))
-      return
+    try {
+      await fetchJson(`/api/v1/sales/invoices/${id}/issue`, { method: 'POST' })
+      notifySuccess('Factura emitida')
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
     }
-    setRefresh(r => r + 1)
   }
 
   async function handleCancelInvoice() {
-    const res = await fetch(`/api/v1/sales/invoices/${id}/cancel`, { method: 'POST' })
     setConfirmCancel(false)
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      alert(parseApiError(data))
-      return
+    try {
+      await fetchJson(`/api/v1/sales/invoices/${id}/cancel`, { method: 'POST' })
+      notifySuccess('Factura anulada')
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
     }
-    setRefresh(r => r + 1)
   }
 
   async function handleDeleteInvoice() {
-    const res = await fetch(`/api/v1/sales/invoices/${id}`, { method: 'DELETE' })
     setConfirmDeleteInv(false)
-    if (!res.ok && res.status !== 204) {
-      const data = await res.json().catch(() => ({}))
-      alert(parseApiError(data))
-      return
+    try {
+      await fetchJson(`/api/v1/sales/invoices/${id}`, { method: 'DELETE' })
+      notifySuccess('Factura eliminada')
+      router.push('/ventas/facturas')
+    } catch (e) {
+      notifyApiError(e)
     }
-    router.push('/ventas/facturas')
   }
 
   async function handleRegisterPayment(e: React.FormEvent) {
@@ -162,34 +160,33 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
     }
     if (paymentDate) body.payment_date = paymentDate.toISOString()
 
-    const res = await fetch('/api/v1/sales/payments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    setPaymentSaving(false)
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      setPaymentError(parseApiError(data))
-      return
+    try {
+      await fetchJson('/api/v1/sales/payments', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+      setPaymentRef('')
+      setPaymentNotes('')
+      setPaymentDate(new Date())
+      notifySuccess('Cobro registrado')
+      setRefresh(r => r + 1)
+    } catch (e) {
+      setPaymentError(getApiErrorMessage(e))
+    } finally {
+      setPaymentSaving(false)
     }
-    setPaymentRef('')
-    setPaymentNotes('')
-    setPaymentDate(new Date())
-    setRefresh(r => r + 1)
   }
 
   async function handleDeletePayment() {
     if (!paymentToDelete) return
-    const res = await fetch(`/api/v1/sales/payments/${paymentToDelete.id}`, { method: 'DELETE' })
-    if (!res.ok && res.status !== 204) {
-      const data = await res.json().catch(() => ({}))
-      alert(parseApiError(data))
-      return
+    try {
+      await fetchJson(`/api/v1/sales/payments/${paymentToDelete.id}`, { method: 'DELETE' })
+      setPaymentToDelete(null)
+      notifySuccess('Cobro eliminado')
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
     }
-    setPaymentToDelete(null)
-    setRefresh(r => r + 1)
   }
 
   if (loading) {

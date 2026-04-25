@@ -9,6 +9,7 @@ import { formatARS } from '@/components/primitives/CurrencyInput'
 import { ComprasSubNav } from '../ComprasSubNav'
 import type { SupplierPayment, PaymentMethod } from '../types'
 import { PAYMENT_METHOD_LABEL } from '../types'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 type PaymentRow = SupplierPayment & {
   invoice?: { id: string; invoice_number: string } | null
@@ -80,11 +81,23 @@ export function PagosProvClient() {
   const [error, setError]       = useState<string | null>(null)
 
   useEffect(() => {
+    let mounted = true
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
-    fetch(`/api/v1/purchases/supplier-payments?${params}`)
-      .then(r => r.json())
-      .then(d => { setPayments(d.data ?? []); setTotal(d.total ?? 0); setError(null) })
-      .catch(() => setError('Error al cargar los pagos'))
+    ;(async () => {
+      try {
+        const d = await fetchJson<{ data: PaymentRow[]; total: number }>(`/api/v1/purchases/supplier-payments?${params}`)
+        if (!mounted) return
+        setPayments(d.data ?? [])
+        setTotal(d.total ?? 0)
+        setError(null)
+      } catch (e) {
+        if (!mounted) return
+        setError(getApiErrorMessage(e))
+        setPayments([])
+        setTotal(0)
+      }
+    })()
+    return () => { mounted = false }
   }, [page])
 
   return (

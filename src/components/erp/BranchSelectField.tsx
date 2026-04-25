@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { FormField } from '@/components/primitives/FormField'
 import { SearchableSelect } from './SearchableSelect'
 import type { SearchableSelectOption } from './SearchableSelect'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 export type BranchListItem = { id: string; name: string; branch_code: number }
 
@@ -51,20 +52,21 @@ export function BranchSelectField({
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const res = await fetch(fetchUrl)
-      if (cancelled) return
-      if (!res.ok) {
-        setLoadError('No se pudieron cargar las sucursales.')
-        return
+      try {
+        const j = await fetchJson<{ data?: BranchListItem[] }>(fetchUrl)
+        if (cancelled) return
+        const rows = Array.isArray(j.data) ? j.data : []
+        const opts = rows.map(b => ({
+          value: b.id,
+          label: optionLabel(b),
+        }))
+        setOptions(opts)
+        setLoadError(null)
+      } catch (e) {
+        if (cancelled) return
+        setOptions([])
+        setLoadError(getApiErrorMessage(e))
       }
-      const j = await res.json() as { data?: BranchListItem[] }
-      const rows = Array.isArray(j.data) ? j.data : []
-      const opts = rows.map(b => ({
-        value: b.id,
-        label: optionLabel(b),
-      }))
-      setOptions(opts)
-      setLoadError(null)
     })()
     return () => {
       cancelled = true

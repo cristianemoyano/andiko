@@ -18,7 +18,9 @@ import type { PaymentCondition } from '../../types'
 import { PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
 import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
-import { cn, parseResponseBodyJson } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
   value: value as PaymentCondition,
@@ -50,15 +52,25 @@ export function NuevoPresupuestoClient() {
   const totals = calcTotals(items)
 
   const searchContacts = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=customer`)
-    const data = await res.json() as { data: Array<{ id: string; legal_name: string; trade_name: string | null }> }
-    return data.data.map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    try {
+      const data = await fetchJson<{ data: Array<{ id: string; legal_name: string; trade_name: string | null }> }>(
+        `/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=customer`,
+      )
+      return data.data.map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    } catch {
+      return []
+    }
   }, [])
 
   const searchPriceLists = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    const res = await fetch(`/api/v1/catalog/price-lists?search=${encodeURIComponent(q)}&limit=20`)
-    const data = await res.json() as { data: Array<{ id: string; name: string }> }
-    return (data.data ?? []).map(pl => ({ value: pl.id, label: pl.name }))
+    try {
+      const data = await fetchJson<{ data: Array<{ id: string; name: string }> }>(
+        `/api/v1/catalog/price-lists?search=${encodeURIComponent(q)}&limit=20`,
+      )
+      return (data.data ?? []).map(pl => ({ value: pl.id, label: pl.name }))
+    } catch {
+      return []
+    }
   }, [])
 
   async function handleSave() {
@@ -104,29 +116,25 @@ export function NuevoPresupuestoClient() {
       })),
     }
 
-    const res = await fetch('/api/v1/sales/quotes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-
-    setSaving(false)
-
-    if (res.ok) {
-      const quote = await res.json() as { id: string }
+    try {
+      const quote = await fetchJson<{ id: string }>('/api/v1/sales/quotes', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
       router.push(`/ventas/presupuestos/${quote.id}`)
-      return
-    }
-
-    const data = await parseResponseBodyJson<{ code?: string; details?: { fieldErrors?: FieldErrors }; error?: string }>(res)
-    if (data?.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
-      setErrors(data.details.fieldErrors)
-      const hasItemsErrors = Object.keys(data.details.fieldErrors).some((k) => k.startsWith('items'))
-      if (hasItemsErrors) {
-        setServerError('Hay errores en los ítems. Revisá producto, descripción, cantidad y precio.')
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) {
+        setErrors(fe)
+        const hasItemsErrors = Object.keys(fe).some(k => k.startsWith('items'))
+        if (hasItemsErrors) {
+          setServerError('Hay errores en los ítems. Revisá producto, descripción, cantidad y precio.')
+        }
+      } else {
+        setServerError(getApiErrorMessage(err))
       }
-    } else {
-      setServerError(data?.error ?? `Error ${res.status}. Si persiste, revisá los logs.`)
+    } finally {
+      setSaving(false)
     }
   }
 

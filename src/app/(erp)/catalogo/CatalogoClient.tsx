@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
 import { GroupedDataTable, TablePagination, ConfirmDialog, type GroupedColumn, type RowGroup } from '@/components/erp'
 import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
@@ -97,12 +99,6 @@ export function CatalogoClient() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
   const [refresh, setRefresh]       = useState(0)
 
-  async function safeJson(res: Response): Promise<unknown | null> {
-    const text = await res.text()
-    if (!text) return null
-    try { return JSON.parse(text) } catch { return { error: text } }
-  }
-
   useEffect(() => {
     let mounted = true
     ;(async () => {
@@ -110,17 +106,16 @@ export function CatalogoClient() {
       const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
       if (search) params.set('search', search)
       if (status) params.set('status', status)
-      const res = await fetch(`/api/v1/catalog/products?${params}`)
-      const data = (await safeJson(res)) as { data?: Product[]; total?: number; error?: string; code?: string } | null
-      if (!mounted) return
-      if (res.ok) {
+      try {
+        const data = await fetchJson<{ data?: Product[]; total?: number }>(
+          `/api/v1/catalog/products?${params}`,
+        )
+        if (!mounted) return
         setProducts(data?.data ?? [])
         setTotal(data?.total ?? 0)
-      } else {
-        const msg = data?.error
-          ? `${data.error}${data.code ? ` (${data.code})` : ''}`
-          : `No se pudo cargar el catálogo (HTTP ${res.status}).`
-        setServerError(msg)
+      } catch (e) {
+        if (!mounted) return
+        setServerError(getApiErrorMessage(e))
         setProducts([])
         setTotal(0)
       }
@@ -130,18 +125,27 @@ export function CatalogoClient() {
 
   async function openEdit(id: string) {
     setLoadingEdit(true)
-    const res = await fetch(`/api/v1/catalog/products/${id}`, { cache: 'no-store' })
-    const data = (await safeJson(res)) as ProductForEdit
-    setEditing(data ?? null)
-    setModalOpen(true)
-    setLoadingEdit(false)
+    try {
+      const data = await fetchJson<ProductForEdit>(`/api/v1/catalog/products/${id}`, { cache: 'no-store' })
+      setEditing(data ?? null)
+      setModalOpen(true)
+    } catch (e) {
+      notifyApiError(e)
+    } finally {
+      setLoadingEdit(false)
+    }
   }
 
   async function handleDeleteProduct() {
     if (!productToDelete) return
-    await fetch(`/api/v1/catalog/products/${productToDelete.id}`, { method: 'DELETE' })
-    setProductToDelete(null)
-    setRefresh(r => r + 1)
+    try {
+      await fetchJson(`/api/v1/catalog/products/${productToDelete.id}`, { method: 'DELETE' })
+      setProductToDelete(null)
+      notifySuccess('Producto eliminado')
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   // ── Column definitions ───────────────────────────────────────────────────────
@@ -222,7 +226,7 @@ export function CatalogoClient() {
         </div>
       ),
     },
-  ], [loadingEdit, router]) // eslint-disable-line react-hooks/exhaustive-deps
+  ], [loadingEdit, router])  
 
   const childColumns = useMemo<GroupedColumn<Variant>[]>(() => [
     {

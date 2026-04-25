@@ -5,6 +5,9 @@ import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
 import { cn } from '@/lib/utils'
+import { fetchJson, isApiRequestError } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 import type { AccountType } from '@/modules/contacts/contact-payment-info.model'
 
 export type PaymentInfo = {
@@ -36,8 +39,12 @@ export function PaymentInfoSection({ contactId, initialPaymentInfo }: PaymentInf
   const [editing, setEditing] = useState<PaymentInfo | null>(null)
 
   async function refresh() {
-    const res = await fetch(`/api/v1/contacts/${contactId}/payment-info`)
-    if (res.ok) setItems(await res.json() as PaymentInfo[])
+    try {
+      const list = await fetchJson<PaymentInfo[]>(`/api/v1/contacts/${contactId}/payment-info`)
+      setItems(Array.isArray(list) ? list : [])
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   function openCreate() { setEditing(null); setModalOpen(true) }
@@ -130,20 +137,35 @@ function PaymentInfoModal({ contactId, item, onClose, onSaved }: {
 
     const url    = isEdit ? `/api/v1/contacts/${contactId}/payment-info/${item.id}` : `/api/v1/contacts/${contactId}/payment-info`
     const method = isEdit ? 'PATCH' : 'POST'
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    setSaving(false)
-
-    if (res.ok) { onSaved(); return }
-    const data = await res.json() as { code: string; details?: { fieldErrors?: FieldErrors } }
-    if (data.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) setErrors(data.details.fieldErrors)
-    if (data.code === 'DUPLICATE_CBU') setErrors({ cbu: ['El CBU ya está registrado en otro contacto'] })
+    try {
+      await fetchJson(url, { method, body: JSON.stringify(body) })
+      onSaved()
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) {
+        setErrors(fe)
+        return
+      }
+      if (isApiRequestError(err) && err.code === 'DUPLICATE_CBU') {
+        setErrors({ cbu: ['El CBU ya está registrado en otro contacto'] })
+        return
+      }
+      notifyApiError(err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleDelete() {
     if (!item) return
     if (!confirm('¿Eliminar este dato de pago?')) return
-    await fetch(`/api/v1/contacts/${contactId}/payment-info/${item.id}`, { method: 'DELETE' })
-    onSaved()
+    try {
+      await fetchJson(`/api/v1/contacts/${contactId}/payment-info/${item.id}`, { method: 'DELETE' })
+      notifySuccess('Dato de pago eliminado')
+      onSaved()
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   return (

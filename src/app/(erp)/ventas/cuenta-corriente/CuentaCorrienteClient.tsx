@@ -16,6 +16,7 @@ import {
   ACCOUNT_DEBT_STATUS_LABEL,
   ACCOUNT_MOVEMENT_TYPE_LABEL,
 } from '../types'
+import { fetchJson } from '@/lib/fetch-json'
 
 const CONTACT_PAGE_SIZE = 20
 const LINE_PAGE_SIZE = 20
@@ -176,8 +177,16 @@ export function CuentaCorrienteClient() {
         type: 'customer',
         ...(contactSearch ? { search: contactSearch } : {}),
       })
-      const res = await fetch(`/api/v1/contacts?${params}`)
-      const payload = await res.json() as { data: ContactApiRow[]; total: number }
+      let payload: { data: ContactApiRow[]; total: number }
+      try {
+        payload = await fetchJson<{ data: ContactApiRow[]; total: number }>(`/api/v1/contacts?${params}`)
+      } catch {
+        if (cancelled) return
+        setContactRows([])
+        setContactsTotal(0)
+        setSelectedContactId(null)
+        return
+      }
       if (cancelled) return
 
       const sourceRows = Array.isArray(payload?.data) ? payload.data : []
@@ -185,9 +194,9 @@ export function CuentaCorrienteClient() {
       const summaries = await Promise.all(
         sourceRows.map(async (row) => {
           try {
-            const summaryRes = await fetch(`/api/v1/sales/contacts/${row.id}/account-statement?summary_only=true&limit=1&page=1`)
-            if (!summaryRes.ok) return { contactId: row.id, summary: DEFAULT_SUMMARY }
-            const statement = await summaryRes.json() as AccountStatementResponse
+            const statement = await fetchJson<AccountStatementResponse>(
+              `/api/v1/sales/contacts/${row.id}/account-statement?summary_only=true&limit=1&page=1`,
+            )
             return { contactId: row.id, summary: statement.summary ?? DEFAULT_SUMMARY }
           } catch {
             return { contactId: row.id, summary: DEFAULT_SUMMARY }
@@ -238,9 +247,14 @@ export function CuentaCorrienteClient() {
         ...(fromDate ? { from: fromDate } : {}),
         ...(toDate ? { to: toDate } : {}),
       })
-      const res = await fetch(`/api/v1/sales/contacts/${selectedContactId}/account-statement?${params}`)
-      if (!res.ok) return
-      const payload = await res.json() as AccountStatementResponse
+      let payload: AccountStatementResponse
+      try {
+        payload = await fetchJson<AccountStatementResponse>(
+          `/api/v1/sales/contacts/${selectedContactId}/account-statement?${params}`,
+        )
+      } catch {
+        return
+      }
       if (cancelled) return
 
       const rows = Array.isArray(payload?.data) ? payload.data : []

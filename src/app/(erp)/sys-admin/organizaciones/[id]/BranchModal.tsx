@@ -6,6 +6,8 @@ import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { Textarea } from '@/components/primitives/Textarea'
 import { FormField } from '@/components/primitives/FormField'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 export interface BranchRow {
   id: string
@@ -55,25 +57,19 @@ function BranchModalForm({ orgId, branch, onClose, onSaved }: BranchModalFormPro
       ? { name: name.trim(), address: address.trim() || null }
       : { name: name.trim(), address: address.trim() || null }
 
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-
-    setSaving(false)
-
-    if (res.ok) {
+    try {
+      await fetchJson(url, {
+        method,
+        body: JSON.stringify(body),
+      })
       onSaved()
       onClose()
-      return
-    }
-
-    const data = await res.json() as { code: string; details?: { fieldErrors?: FieldErrors }; error?: string }
-    if (data.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
-      setErrors(data.details.fieldErrors)
-    } else {
-      setServerError(data.error ?? 'Error al guardar.')
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) setErrors(fe)
+      else setServerError(getApiErrorMessage(err))
+    } finally {
+      setSaving(false)
     }
   }
 

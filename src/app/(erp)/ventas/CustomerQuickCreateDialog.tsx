@@ -6,7 +6,8 @@ import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
 import { Button } from '@/components/primitives/Button'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
-import { parseResponseBodyJson } from '@/lib/utils'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 type FieldErrors = Record<string, string[]>
 
@@ -62,36 +63,32 @@ export function CustomerQuickCreateDialog({
     setErrors({})
     setServerError(null)
 
-    const res = await fetch('/api/v1/contacts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'customer',
-        legal_name: legalName.trim(),
-        cuit: cuit.trim(),
-        iva_condition: ivaCondition,
-      }),
-    })
-
-    setSaving(false)
-
-    if (res.ok) {
-      const contact = await res.json() as { id: string; legal_name: string; trade_name: string | null }
+    try {
+      const contact = await fetchJson<{ id: string; legal_name: string; trade_name: string | null }>('/api/v1/contacts', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'customer',
+          legal_name: legalName.trim(),
+          cuit: cuit.trim(),
+          iva_condition: ivaCondition,
+        }),
+      })
       onCreated({
         value: contact.id,
         label: contact.legal_name,
         sublabel: contact.trade_name ?? undefined,
       })
       onOpenChange(false)
-      return
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) {
+        setErrors(fe)
+        return
+      }
+      setServerError(getApiErrorMessage(err))
+    } finally {
+      setSaving(false)
     }
-
-    const data = await parseResponseBodyJson<{ code?: string; details?: { fieldErrors?: FieldErrors }; error?: string }>(res)
-    if (data?.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
-      setErrors(data.details.fieldErrors)
-      return
-    }
-    setServerError(data?.error ?? `Error ${res.status}.`)
   }
 
   return (

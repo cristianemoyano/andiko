@@ -6,6 +6,7 @@ import { CurrencyInput } from '@/components/primitives/CurrencyInput'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import type { IvaRate } from '@/types'
+import { fetchJson } from '@/lib/fetch-json'
 
 export interface LineItemInput {
   id: string
@@ -106,9 +107,12 @@ function ProductCell({ productId, priceListId, disabled, onSelect }: ProductCell
   const searchProducts = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
     const params = new URLSearchParams({ search: q, limit: '20' })
     if (priceListId) params.set('price_list_id', priceListId)
-    const res = await fetch(`/api/v1/catalog/products/for-sale?${params}`)
-    const data = await res.json() as { data: SaleProduct[] }
-    cacheRef.current = data.data ?? []
+    try {
+      const data = await fetchJson<{ data: SaleProduct[] }>(`/api/v1/catalog/products/for-sale?${params}`)
+      cacheRef.current = data.data ?? []
+    } catch {
+      cacheRef.current = []
+    }
     return cacheRef.current.map(p => ({
       value:    p.product_id,
       label:    p.name,

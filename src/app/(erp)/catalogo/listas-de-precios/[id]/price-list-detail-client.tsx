@@ -7,6 +7,8 @@ import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
 
 type PriceList = {
   id: string
@@ -82,9 +84,19 @@ function RemoveItemButton({ priceListItemId }: { priceListItemId: string }) {
 
   async function handleRemove() {
     setRemoving(true)
-    await fetch(`/api/v1/catalog/price-lists/${encodeURIComponent(priceListIdFromPath())}/items/${priceListItemId}`, { method: 'DELETE' })
-    setConfirmOpen(false)
-    location.reload()
+    try {
+      await fetchJson(
+        `/api/v1/catalog/price-lists/${encodeURIComponent(priceListIdFromPath())}/items/${priceListItemId}`,
+        { method: 'DELETE' },
+      )
+      setConfirmOpen(false)
+      notifySuccess('Ítem quitado de la lista')
+      location.reload()
+    } catch (e) {
+      notifyApiError(e)
+    } finally {
+      setRemoving(false)
+    }
   }
 
   return (
@@ -137,20 +149,21 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
     return map
   }, [variants])
 
-  async function safeJson(res: Response): Promise<unknown | null> {
-    const text = await res.text()
-    if (!text) return null
-    try { return JSON.parse(text) } catch { return { error: text } }
-  }
-
   useEffect(() => {
     let mounted = true
     ;(async () => {
       setLoadingItems(true)
-      const res = await fetch(`/api/v1/catalog/price-lists/${priceList.id}/items`)
-      const data = await safeJson(res)
-      if (mounted) setItems(Array.isArray(data) ? (data as PriceListItem[]) : [])
-      if (mounted) setLoadingItems(false)
+      try {
+        const data = await fetchJson<PriceListItem[]>(`/api/v1/catalog/price-lists/${priceList.id}/items`)
+        if (mounted) setItems(Array.isArray(data) ? data : [])
+      } catch (e) {
+        if (mounted) {
+          setItems([])
+          notifyApiError(e)
+        }
+      } finally {
+        if (mounted) setLoadingItems(false)
+      }
     })()
     return () => { mounted = false }
   }, [priceList.id])
@@ -167,10 +180,15 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
       setFormError(null)
 
       const params = new URLSearchParams({ page: '1', limit: '20', search: q })
-      const res = await fetch(`/api/v1/catalog/products?${params}`, { signal: abort.signal })
-      const data = await safeJson(res)
-      const payload = data as { data?: ProductRow[] } | null
-      setResults(Array.isArray(payload?.data) ? payload!.data : [])
+      try {
+        const payload = await fetchJson<{ data?: ProductRow[] }>(`/api/v1/catalog/products?${params}`, {
+          signal: abort.signal,
+        })
+        setResults(Array.isArray(payload?.data) ? payload.data : [])
+      } catch (e) {
+        if (e instanceof Error && e.name === 'AbortError') return
+        setResults([])
+      }
       setSearching(false)
     }, 250)
 
@@ -182,35 +200,35 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
     setSaving(true)
     setFormError(null)
 
-    const res = await fetch(`/api/v1/catalog/price-lists/${priceList.id}/items`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_variant_id: selectedVariantId, price }),
-    })
-    const data = await safeJson(res)
-    if (!res.ok) {
-      const payload = data as { error?: string } | null
-      setFormError(payload?.error ?? 'Error inesperado')
+    try {
+      await fetchJson(`/api/v1/catalog/price-lists/${priceList.id}/items`, {
+        method: 'POST',
+        body: JSON.stringify({ product_variant_id: selectedVariantId, price }),
+      })
+      setPrice('')
+      setSelectedVariantId('')
+      notifySuccess('Precio agregado a la lista')
+      setLoadingItems(true)
+      const reloadData = await fetchJson<PriceListItem[]>(`/api/v1/catalog/price-lists/${priceList.id}/items`)
+      setItems(Array.isArray(reloadData) ? reloadData : [])
+    } catch (e) {
+      setFormError(getApiErrorMessage(e))
+    } finally {
+      setLoadingItems(false)
       setSaving(false)
-      return
     }
-
-    setPrice('')
-    setSelectedVariantId('')
-    // Reload list
-    setLoadingItems(true)
-    const reload = await fetch(`/api/v1/catalog/price-lists/${priceList.id}/items`)
-    const reloadData = await safeJson(reload)
-    setItems(Array.isArray(reloadData) ? (reloadData as PriceListItem[]) : [])
-    setLoadingItems(false)
-    setSaving(false)
   }
 
   async function handleDeleteList() {
-    const res = await fetch(`/api/v1/catalog/price-lists/${priceList.id}`, { method: 'DELETE' })
-    setConfirmDeleteList(false)
-    if (!res.ok && res.status !== 204) return
-    window.location.assign('/catalogo/listas-de-precios')
+    try {
+      await fetchJson(`/api/v1/catalog/price-lists/${priceList.id}`, { method: 'DELETE' })
+      setConfirmDeleteList(false)
+      notifySuccess('Lista eliminada')
+      window.location.assign('/catalogo/listas-de-precios')
+    } catch (e) {
+      setConfirmDeleteList(false)
+      notifyApiError(e)
+    }
   }
 
   return (

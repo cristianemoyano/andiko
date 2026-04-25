@@ -10,6 +10,7 @@ import { formatARS } from '@/components/primitives/CurrencyInput'
 import { ComprasSubNav } from '../ComprasSubNav'
 import type { PurchaseOrder, PurchaseOrderStatus } from '../types'
 import { PURCHASE_ORDER_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../types'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 const PAGE_SIZE = 20
 
@@ -80,13 +81,25 @@ export function OrdenesClient() {
   const [error, setError]     = useState<string | null>(null)
 
   useEffect(() => {
+    let mounted = true
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
     if (search) params.set('search', search)
     if (status) params.set('status', status)
-    fetch(`/api/v1/purchases/orders?${params}`)
-      .then(r => r.json())
-      .then(d => { setOrders(d.data ?? []); setTotal(d.total ?? 0); setError(null) })
-      .catch(() => setError('Error al cargar las órdenes de compra'))
+    ;(async () => {
+      try {
+        const d = await fetchJson<{ data: PurchaseOrder[]; total: number }>(`/api/v1/purchases/orders?${params}`)
+        if (!mounted) return
+        setOrders(d.data ?? [])
+        setTotal(d.total ?? 0)
+        setError(null)
+      } catch (e) {
+        if (!mounted) return
+        setError(getApiErrorMessage(e))
+        setOrders([])
+        setTotal(0)
+      }
+    })()
+    return () => { mounted = false }
   }, [page, search, status])
 
   return (

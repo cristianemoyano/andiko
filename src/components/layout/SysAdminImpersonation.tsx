@@ -6,6 +6,7 @@ import { Dialog } from '@/components/primitives/Dialog'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { cn } from '@/lib/utils'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 type UserHit = {
   id: string
@@ -61,8 +62,7 @@ export function SysAdminImpersonation() {
       void (async () => {
         setLoading(true)
         try {
-          const res = await fetch(`/api/v1/sys-admin/users?q=${encodeURIComponent(q)}&limit=20`)
-          const j = await res.json() as { data?: UserHit[] }
+          const j = await fetchJson<{ data?: UserHit[] }>(`/api/v1/sys-admin/users?q=${encodeURIComponent(q)}&limit=20`)
           if (!cancelled) setHits(j.data ?? [])
         } catch {
           if (!cancelled) setHits([])
@@ -84,20 +84,16 @@ export function SysAdminImpersonation() {
     setSubmittingId(userId)
     setError(null)
     try {
-      const res = await fetch('/api/v1/session/impersonate', {
+      await fetchJson('/api/v1/session/impersonate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       })
-      const body = await res.json().catch(() => ({})) as { error?: string; ok?: boolean }
-      if (!res.ok) {
-        setError(body.error ?? `Error ${res.status}`)
-        return
-      }
       await update({ impersonation: { userId } })
       setModalOpen(false)
       setQuery('')
       setHits([])
+    } catch (e) {
+      setError(getApiErrorMessage(e))
     } finally {
       setSubmittingId(null)
     }

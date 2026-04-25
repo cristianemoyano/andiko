@@ -5,6 +5,9 @@ import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
 import { cn } from '@/lib/utils'
+import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 type Contact = {
   id: string
@@ -68,35 +71,35 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
     const url    = isEdit ? `/api/v1/contacts/${contact.id}` : '/api/v1/contacts'
     const method = isEdit ? 'PATCH' : 'POST'
 
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-
-    setSaving(false)
-
-    if (res.ok) {
+    try {
+      await fetchJson(url, { method, body: JSON.stringify(body) })
       onSaved()
-      return
-    }
-
-    const data = await res.json() as { code: string; details?: { fieldErrors?: FieldErrors }; error?: string }
-
-    if (data.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
-      setErrors(data.details.fieldErrors)
-    } else if (data.code === 'DUPLICATE_CUIT') {
-      setErrors({ cuit: ['El CUIT ya está registrado.'] })
-    } else {
-      setServerError(data.error ?? 'Ocurrió un error. Intentá de nuevo.')
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) {
+        setErrors(fe)
+        return
+      }
+      if (isApiRequestError(err) && err.code === 'DUPLICATE_CUIT') {
+        setErrors({ cuit: ['El CUIT ya está registrado.'] })
+        return
+      }
+      setServerError(getApiErrorMessage(err))
+    } finally {
+      setSaving(false)
     }
   }
 
   async function handleDelete() {
     if (!contact) return
     if (!confirm(`¿Eliminar a ${contact.legal_name}? Esta acción no se puede deshacer.`)) return
-    await fetch(`/api/v1/contacts/${contact.id}`, { method: 'DELETE' })
-    onSaved()
+    try {
+      await fetchJson(`/api/v1/contacts/${contact.id}`, { method: 'DELETE' })
+      notifySuccess('Contacto eliminado')
+      onSaved()
+    } catch (err) {
+      notifyApiError(err)
+    }
   }
 
   return (

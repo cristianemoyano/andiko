@@ -19,3 +19,5 @@ export { SalesLineItemsEditor, makeEmptyLine, calcLine, calcTotals } from './Sal
 export type { LineItemInput, SalesLineItemsEditorProps } from './SalesLineItemsEditor'
 export { StatusPipeline } from './StatusPipeline'
 export type { StatusPipelineProps } from './StatusPipeline'
+export { ImportModal } from './ImportModal'
+export type { ImportModalProps, ImportAction, ImportResult } from './ImportModal'

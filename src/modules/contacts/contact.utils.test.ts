@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { validateCuit, formatCuit, formatContactPersonLabel } from './contact.utils'
+import {
+  validateCuit,
+  formatCuit,
+  formatContactPersonLabel,
+  normalizeContactTypeForImport,
+  normalizeContactImportRow,
+} from './contact.utils'
 
 describe('validateCuit', () => {
   it('validates a correct CUIT with dashes', () => {
@@ -38,6 +44,47 @@ describe('formatCuit', () => {
 
   it('returns raw value if not 11 digits after stripping', () => {
     expect(formatCuit('123')).toBe('123')
+  })
+})
+
+describe('normalizeContactTypeForImport', () => {
+  it('keeps canonical API values', () => {
+    expect(normalizeContactTypeForImport('customer')).toBe('customer')
+    expect(normalizeContactTypeForImport('SUPPLIER')).toBe('supplier')
+    expect(normalizeContactTypeForImport(' both ')).toBe('both')
+  })
+
+  it('maps Spanish labels from the CSV template', () => {
+    expect(normalizeContactTypeForImport('Cliente')).toBe('customer')
+    expect(normalizeContactTypeForImport('Proveedor')).toBe('supplier')
+    expect(normalizeContactTypeForImport('Ambos')).toBe('both')
+  })
+
+  it('maps combined labels', () => {
+    expect(normalizeContactTypeForImport('Cliente y proveedor')).toBe('both')
+    expect(normalizeContactTypeForImport('Proveedor y cliente')).toBe('both')
+  })
+
+  it('returns undefined for empty input', () => {
+    expect(normalizeContactTypeForImport(undefined)).toBeUndefined()
+    expect(normalizeContactTypeForImport('')).toBeUndefined()
+    expect(normalizeContactTypeForImport('   ')).toBeUndefined()
+  })
+
+  it('passes through unknown values for Zod to reject', () => {
+    expect(normalizeContactTypeForImport('socio')).toBe('socio')
+  })
+})
+
+describe('normalizeContactImportRow', () => {
+  it('normalizes type only', () => {
+    expect(
+      normalizeContactImportRow({
+        type: 'Cliente',
+        legal_name: 'ACME S.A.',
+        cuit: '30-69345023-9',
+      }).type,
+    ).toBe('customer')
   })
 })
 

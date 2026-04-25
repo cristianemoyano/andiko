@@ -14,6 +14,8 @@ import { Dialog } from '@/components/primitives/Dialog'
 import { BranchModal, type BranchRow } from './BranchModal'
 import { OrgUserModal, type OrgUserRow } from './OrgUserModal'
 import { slugifyText } from '@/lib/slug'
+import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
+import { notifyApiError } from '@/lib/notify'
 
 interface OrgPayload {
   id: string
@@ -62,23 +64,29 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     let cancelled = false
     void (async () => {
       await Promise.resolve()
-      setLoading(true)
-      const res = await fetch(`/api/v1/sys-admin/organizations/${id}`)
       if (cancelled) return
-      if (res.status === 404) {
-        setNotFound(true)
-        setDetail(null)
-        setLoading(false)
-        return
+      setLoading(true)
+      try {
+        const data = await fetchJson<DetailResponse>(`/api/v1/sys-admin/organizations/${id}`)
+        if (cancelled) return
+        setDetail(data)
+        setOrgName(data.organization.name)
+        setOrgSlug(data.organization.slug)
+        setOrgActive(data.organization.is_active)
+        setSlugTouched(false)
+        setNotFound(false)
+      } catch (e) {
+        if (cancelled) return
+        if (isApiRequestError(e) && e.status === 404) {
+          setNotFound(true)
+          setDetail(null)
+        } else {
+          setNotFound(false)
+          setDetail(null)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      const data = await res.json() as DetailResponse
-      setDetail(data)
-      setOrgName(data.organization.name)
-      setOrgSlug(data.organization.slug)
-      setOrgActive(data.organization.is_active)
-      setSlugTouched(false)
-      setNotFound(false)
-      setLoading(false)
     })()
     return () => {
       cancelled = true
@@ -88,14 +96,13 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const res = await fetch(`/api/v1/sys-admin/organizations/${id}/users`)
-      if (cancelled) return
-      if (!res.ok) {
-        setUsers([])
-        return
+      try {
+        const j = await fetchJson<{ data: OrgUserRow[] }>(`/api/v1/sys-admin/organizations/${id}/users`)
+        if (cancelled) return
+        setUsers(j.data ?? [])
+      } catch {
+        if (!cancelled) setUsers([])
       }
-      const j = await res.json() as { data: OrgUserRow[] }
-      setUsers(j.data ?? [])
     })()
     return () => {
       cancelled = true
@@ -106,47 +113,56 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     e.preventDefault()
     setOrgSaving(true)
     setOrgError(null)
-    const res = await fetch(`/api/v1/sys-admin/organizations/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: orgName.trim(),
-        slug: orgSlug.trim().toLowerCase(),
-        is_active: orgActive,
-      }),
-    })
-    setOrgSaving(false)
-    if (res.ok) {
+    try {
+      await fetchJson(`/api/v1/sys-admin/organizations/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: orgName.trim(),
+          slug: orgSlug.trim().toLowerCase(),
+          is_active: orgActive,
+        }),
+      })
       setEditOrgOpen(false)
       setRefresh(r => r + 1)
-      return
+    } catch (e) {
+      setOrgError(getApiErrorMessage(e))
+    } finally {
+      setOrgSaving(false)
     }
-    const data = await res.json() as { error?: string }
-    setOrgError(data.error ?? 'No se pudo guardar.')
   }
 
   async function handleDeleteOrg() {
-    const res = await fetch(`/api/v1/sys-admin/organizations/${id}`, { method: 'DELETE' })
     setConfirmDeleteOrg(false)
-    if (res.ok || res.status === 204) {
+    try {
+      await fetchJson(`/api/v1/sys-admin/organizations/${id}`, { method: 'DELETE' })
       router.push('/sys-admin/organizaciones')
+    } catch (e) {
+      notifyApiError(e)
     }
   }
 
   async function handleDeleteBranch() {
     if (!confirmDeleteBranch) return
-    const res = await fetch(`/api/v1/sys-admin/branches/${confirmDeleteBranch.id}`, { method: 'DELETE' })
+    const branchId = confirmDeleteBranch.id
     setConfirmDeleteBranch(null)
-    if (res.ok || res.status === 204) setRefresh(r => r + 1)
+    try {
+      await fetchJson(`/api/v1/sys-admin/branches/${branchId}`, { method: 'DELETE' })
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   async function handleDeleteUser() {
     if (!confirmDeleteUser) return
-    const res = await fetch(`/api/v1/sys-admin/organizations/${id}/users/${confirmDeleteUser.id}`, {
-      method: 'DELETE',
-    })
+    const userId = confirmDeleteUser.id
     setConfirmDeleteUser(null)
-    if (res.ok || res.status === 204) setRefresh(r => r + 1)
+    try {
+      await fetchJson(`/api/v1/sys-admin/organizations/${id}/users/${userId}`, { method: 'DELETE' })
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   const roleLabel: Record<string, string> = {

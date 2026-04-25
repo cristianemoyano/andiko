@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
+import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 interface ProductModalProps {
   product?: {
@@ -67,21 +69,19 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
     }
   }
 
-  async function safeJson(res: Response): Promise<unknown | null> {
-    const text = await res.text()
-    if (!text) return null
-    try { return JSON.parse(text) } catch { return { error: text } }
-  }
-
   useEffect(() => {
     let mounted = true
     async function loadCategories() {
       setLoadingCategories(true)
-      const res = await fetch('/api/v1/catalog/categories?limit=100&status=active')
-      const data = await safeJson(res) as { data?: Category[] } | null
-      if (mounted) {
-        setCategories(Array.isArray(data?.data) ? data.data : [])
-        setLoadingCategories(false)
+      try {
+        const data = await fetchJson<{ data?: Category[] }>(
+          '/api/v1/catalog/categories?limit=100&status=active',
+        )
+        if (mounted) setCategories(Array.isArray(data?.data) ? data.data : [])
+      } catch {
+        if (mounted) setCategories([])
+      } finally {
+        if (mounted) setLoadingCategories(false)
       }
     }
     loadCategories()
@@ -114,19 +114,24 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
     const url    = isEdit ? `/api/v1/catalog/products/${product!.id}` : '/api/v1/catalog/products'
     const method = isEdit ? 'PATCH' : 'POST'
 
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    const data = await safeJson(res) as unknown as { code?: string; details?: { fieldErrors?: FieldErrors }; error?: unknown }
-
-    if (!res.ok) {
-      if (data?.code === 'VALIDATION_ERROR') setErrors(data.details?.fieldErrors ?? {})
-      else if (data.code === 'DUPLICATE_SKU') setServerError('El SKU ya existe para otro producto.')
-      else if (typeof data?.error === 'string' && data.error.includes('<!DOCTYPE')) setServerError('Tu sesión expiró. Volvé a iniciar sesión.')
-      else setServerError(typeof data?.error === 'string' ? data.error : 'Error inesperado')
+    try {
+      await fetchJson(url, { method, body: JSON.stringify(body) })
+      onSaved()
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) {
+        setErrors(fe)
+        return
+      }
+      if (isApiRequestError(err) && err.code === 'DUPLICATE_SKU') {
+        setServerError('El SKU ya existe para otro producto.')
+        return
+      }
+      const msg = getApiErrorMessage(err)
+      setServerError(msg.includes('<!DOCTYPE') ? 'Tu sesión expiró. Volvé a iniciar sesión.' : msg)
+    } finally {
       setSaving(false)
-      return
     }
-
-    onSaved()
   }
 
   return (

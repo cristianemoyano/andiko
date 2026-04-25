@@ -8,7 +8,11 @@ import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { ContactModal } from './ContactModal'
+import { ImportModal } from '@/components/erp/ImportModal'
 import { formatContactPersonLabel } from '@/modules/contacts/contact.utils'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { CONTACT_CSV_HEADERS } from '@/modules/contacts/contacts-csv-adapter'
 
 type Contact = {
   id: string
@@ -120,22 +124,35 @@ export function ContactosClient() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing]     = useState<Contact | null>(null)
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
+  const [importSession, setImportSession] = useState(0)
+  const [serverError, setServerError] = useState<string | null>(null)
 
   useEffect(() => {
+    let mounted = true
     const params = new URLSearchParams({
       page: String(page),
       limit: String(PAGE_SIZE),
       ...(search     ? { search }     : {}),
       ...(typeFilter ? { type: typeFilter } : {}),
     })
-    fetch(`/api/v1/contacts?${params}`)
-      .then(r => r.json() as Promise<{ data: Contact[]; total: number }>)
-      .then(data => {
+    ;(async () => {
+      setServerError(null)
+      try {
+        const data = await fetchJson<{ data: Contact[]; total: number }>(`/api/v1/contacts?${params}`)
+        if (!mounted) return
         setContacts(data.data)
         setTotal(data.total)
         const pages = Math.max(1, Math.ceil(data.total / PAGE_SIZE))
         setPage(p => (p > pages ? pages : p))
-      })
+      } catch (e) {
+        if (!mounted) return
+        setServerError(getApiErrorMessage(e))
+        setContacts([])
+        setTotal(0)
+      }
+    })()
+    return () => { mounted = false }
   }, [page, search, typeFilter, refresh])
 
   function openCreate() {
@@ -155,9 +172,14 @@ export function ContactosClient() {
 
   async function handleDeleteContact() {
     if (!contactToDelete) return
-    await fetch(`/api/v1/contacts/${contactToDelete.id}`, { method: 'DELETE' })
-    setContactToDelete(null)
-    setRefresh(r => r + 1)
+    try {
+      await fetchJson(`/api/v1/contacts/${contactToDelete.id}`, { method: 'DELETE' })
+      setContactToDelete(null)
+      notifySuccess('Contacto eliminado')
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   const columnsWithAction: Column<Contact>[] = [
@@ -181,18 +203,47 @@ export function ContactosClient() {
     },
   ]
 
+  function handleExport() {
+    const params = new URLSearchParams({
+      ...(search     ? { search }          : {}),
+      ...(typeFilter ? { type: typeFilter } : {}),
+    })
+    const url = `/api/v1/contacts/export${params.size ? `?${params}` : ''}`
+    window.location.href = url
+  }
+
   return (
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[{ label: 'Contactos' }]}
         actions={
-          <Button size="sm" onClick={openCreate}>
-            + Nuevo contacto
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setImportSession(s => s + 1)
+                setImportOpen(true)
+              }}
+            >
+              Importar CSV
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleExport}>
+              Exportar CSV
+            </Button>
+            <Button size="sm" onClick={openCreate}>
+              + Nuevo contacto
+            </Button>
+          </div>
         }
       />
 
       <div className="flex-1 p-5 overflow-auto">
+        {serverError && (
+          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            {serverError}
+          </div>
+        )}
         <DataTable
           columns={columnsWithAction}
           data={contacts}
@@ -255,6 +306,21 @@ export function ContactosClient() {
         confirmLabel="Eliminar"
         variant="danger"
         onConfirm={handleDeleteContact}
+      />
+
+      <ImportModal
+        key={importSession}
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Importar contactos"
+        fields={CONTACT_CSV_HEADERS}
+        requiredFields={['type', 'legal_name', 'iva_condition']}
+        importUrl="/api/v1/contacts/import"
+        onImported={() => {
+          notifySuccess('Contactos importados correctamente')
+          setRefresh(r => r + 1)
+          setImportOpen(false)
+        }}
       />
     </div>
   )

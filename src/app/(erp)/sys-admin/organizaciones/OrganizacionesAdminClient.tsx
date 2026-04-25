@@ -7,6 +7,7 @@ import { DataTable, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { OrganizationModal } from './OrganizationModal'
+import { fetchJson } from '@/lib/fetch-json'
 
 export interface OrgAdminRow {
   id: string
@@ -53,10 +54,12 @@ export function OrganizacionesAdminClient() {
     let cancelled = false
     void (async () => {
       await Promise.resolve()
-      const res = await fetch('/api/v1/sys-admin/organizations')
-      if (!res.ok || cancelled) return
-      const j = await res.json() as { data: OrgAdminRow[] }
-      if (!cancelled) setRows(j.data ?? [])
+      try {
+        const j = await fetchJson<{ data: OrgAdminRow[] }>('/api/v1/sys-admin/organizations')
+        if (!cancelled) setRows(j.data ?? [])
+      } catch {
+        if (!cancelled) setRows([])
+      }
     })()
     return () => {
       cancelled = true

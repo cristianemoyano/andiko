@@ -19,6 +19,7 @@ import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import { PAYMENT_CONDITION_LABEL } from '../../types'
 import type { PurchaseOrder, PurchaseReceipt } from '../../types'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import type { IvaRate } from '@/types'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({ value, label }))
@@ -47,10 +48,11 @@ export function NuevaFacturaProvClient() {
   // Pre-fill from linked purchase order
   useEffect(() => {
     if (!orderId) return
-    fetch(`/api/v1/purchases/orders/${orderId}`)
-      .then(r => r.json())
-      .then(d => {
-        const order = d as PurchaseOrder
+    let cancelled = false
+    void (async () => {
+      try {
+        const order = await fetchJson<PurchaseOrder>(`/api/v1/purchases/orders/${orderId}`)
+        if (cancelled) return
         setLinkedOrderLabel(order.order_number)
         if (order.branch_id) setBranchId(order.branch_id)
         if (order.contact_id) {
@@ -72,20 +74,23 @@ export function NuevaFacturaProvClient() {
             iva_rate:    (i.iva_rate ?? '21') as IvaRate,
           })))
         }
-      })
-      .catch(() => {/* ignore pre-fill errors */})
+      } catch {
+        /* ignore pre-fill errors */
+      }
+    })()
+    return () => { cancelled = true }
   }, [orderId])
 
   // Pre-fill from linked receipt (only contact/branch — receipt items have unit_cost not unit_price)
   useEffect(() => {
     if (!receiptId) return
-    fetch(`/api/v1/purchases/receipts/${receiptId}`)
-      .then(r => r.json())
-      .then(d => {
-        const receipt = d as PurchaseReceipt
+    let cancelled = false
+    void (async () => {
+      try {
+        const receipt = await fetchJson<PurchaseReceipt>(`/api/v1/purchases/receipts/${receiptId}`)
+        if (cancelled) return
         setLinkedReceiptLabel(receipt.receipt_number)
         if (!orderId) {
-          // Only override from receipt if not already pre-filled from order
           if (receipt.branch_id) setBranchId(receipt.branch_id)
           if (receipt.contact_id) {
             setContactId(receipt.contact_id)
@@ -104,14 +109,22 @@ export function NuevaFacturaProvClient() {
             })))
           }
         }
-      })
-      .catch(() => {/* ignore pre-fill errors */})
+      } catch {
+        /* ignore pre-fill errors */
+      }
+    })()
+    return () => { cancelled = true }
   }, [receiptId, orderId])
 
   const searchSuppliers = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=supplier`)
-    const data = await res.json() as { data: Array<{ id: string; legal_name: string; trade_name: string | null }> }
-    return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    try {
+      const data = await fetchJson<{ data: Array<{ id: string; legal_name: string; trade_name: string | null }> }>(
+        `/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=supplier`,
+      )
+      return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    } catch {
+      return []
+    }
   }, [])
 
   async function handleSave() {
@@ -141,20 +154,13 @@ export function NuevaFacturaProvClient() {
     }
 
     try {
-      const res = await fetch('/api/v1/purchases/supplier-invoices', {
+      const invoice = await fetchJson<{ id: string }>('/api/v1/purchases/supplier-invoices', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (!res.ok) {
-        const d = await res.json() as { error?: string }
-        setServerError(d.error ?? 'Error al crear la factura')
-        return
-      }
-      const invoice = await res.json() as { id: string }
       router.push(`/compras/facturas/${invoice.id}`)
-    } catch {
-      setServerError('Error de red. Intentá de nuevo.')
+    } catch (e) {
+      setServerError(getApiErrorMessage(e))
     } finally {
       setSaving(false)
     }
