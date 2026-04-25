@@ -20,4 +20,4 @@ export type { LineItemInput, SalesLineItemsEditorProps } from './SalesLineItemsE
 export { StatusPipeline } from './StatusPipeline'
 export type { StatusPipelineProps } from './StatusPipeline'
 export { ImportModal } from './ImportModal'
-export type { ImportModalProps, ImportAction, ImportResult } from './ImportModal'
+export type { ImportModalProps, ImportAction, ImportResult, ImportDefaultFieldConfig } from './ImportModal'

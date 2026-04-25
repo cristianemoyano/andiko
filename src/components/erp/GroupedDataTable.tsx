@@ -92,7 +92,7 @@ export function GroupedDataTable<P extends object, C extends object>({
                       <td
                         key={col.key}
                         className={cn(
-                          'h-10 px-3 text-[13px] text-zinc-900',
+                          'px-3 py-2.5 text-[13px] text-zinc-900 align-middle',
                           col.align === 'right' && 'text-right',
                           col.className,
                         )}
@@ -119,7 +119,7 @@ export function GroupedDataTable<P extends object, C extends object>({
                               <td
                                 key={col.key}
                                 className={cn(
-                                  'h-9 px-3 text-[13px] text-zinc-700',
+                                  'px-3 py-2 text-[13px] text-zinc-700 align-middle',
                                   col.align === 'right' && 'text-right',
                                   col.className,
                                 )}

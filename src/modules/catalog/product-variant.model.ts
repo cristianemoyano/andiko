@@ -15,11 +15,14 @@ interface ProductVariantAttributes extends Timestamps, AuditFields {
   base_price: string | null
   manage_stock: boolean
   stock_quantity: number
+  /** ID de fila / variación en el sistema del cliente */
+  import_external_id: string | null
 }
 
 type ProductVariantCreationAttributes = Optional<
   ProductVariantAttributes,
   'id' | 'barcode' | 'name' | 'is_default' | 'cost_price' | 'base_price' | 'manage_stock' | 'stock_quantity' |
+  'import_external_id' |
   'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
 >
 
@@ -34,6 +37,7 @@ class ProductVariant extends AuditModel<ProductVariantAttributes, ProductVariant
   declare base_price: string | null
   declare manage_stock: boolean
   declare stock_quantity: number
+  declare import_external_id: string | null
 }
 
 ProductVariant.init(
@@ -48,6 +52,7 @@ ProductVariant.init(
     base_price:     { type: DataTypes.DECIMAL(15, 2) },
     manage_stock:   { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     stock_quantity: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    import_external_id: { type: DataTypes.STRING(64) },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'product_variants', paranoid: true, underscored: true }

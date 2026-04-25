@@ -7,6 +7,12 @@ const productTypeEnum     = z.enum(['simple', 'service'] as const)
 const ivaRateEnum         = z.enum(['0', '10.5', '21', '27'] as const)
 const unitOfMeasureEnum   = z.enum(['unidad', 'kg', 'g', 'litro', 'ml', 'metro', 'cm', 'm2', 'm3', 'hora', 'caja', 'paquete', 'docena', 'par', 'rollo'] as const)
 
+const productImageSchema = z.object({
+  url:      z.string().max(2048),
+  alt:      z.string().max(500).nullable().optional(),
+  position: z.number().int().min(0),
+})
+
 export const productSchema = z.object({
   name:              z.string().min(1).max(255),
   category_id:       z.string().uuid().nullable().optional(),
@@ -19,6 +25,7 @@ export const productSchema = z.object({
   unit_of_measure:   unitOfMeasureEnum.optional(),
   ncm_code:          z.string().length(8).regex(/^\d{8}$/, 'NCM debe ser 8 dígitos').nullable().optional(),
   tags:              z.array(z.string().max(50)).max(20).optional(),
+  images:            z.array(productImageSchema).max(20).optional(),
   // Variante default — requerida al crear
   sku:               z.string().min(1).max(100),
   barcode:           z.string().max(100).nullable().optional(),
