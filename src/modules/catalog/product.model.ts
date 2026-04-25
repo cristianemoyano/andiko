@@ -29,12 +29,17 @@ interface ProductAttributes extends Timestamps, AuditFields {
   ncm_code: string | null
   tags: string[]
   images: Array<{ url: string; alt: string | null; position: number }>
+  /** Origen del import (ej. woocommerce); va con import_external_id del cliente */
+  import_source: string | null
+  /** ID de fila / entidad en el sistema del cliente, no UUID Andiko */
+  import_external_id: string | null
 }
 
 type ProductCreationAttributes = Optional<
   ProductAttributes,
   'id' | 'category_id' | 'description' | 'short_description' | 'product_type' | 'status' |
   'vendor' | 'iva_rate' | 'unit_of_measure' | 'ncm_code' | 'tags' | 'images' |
+  'import_source' | 'import_external_id' |
   'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
 >
 
@@ -53,6 +58,8 @@ class Product extends AuditModel<ProductAttributes, ProductCreationAttributes> {
   declare ncm_code: string | null
   declare tags: string[]
   declare images: Array<{ url: string; alt: string | null; position: number }>
+  declare import_source: string | null
+  declare import_external_id: string | null
 }
 
 Product.init(
@@ -71,6 +78,8 @@ Product.init(
     ncm_code:          { type: DataTypes.STRING(8) },
     tags:              { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
     images:            { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+    import_source:       { type: DataTypes.STRING(32) },
+    import_external_id:  { type: DataTypes.STRING(64) },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'products', paranoid: true, underscored: true }

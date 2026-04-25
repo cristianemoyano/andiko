@@ -18,6 +18,7 @@ type ProductForEdit = {
   vendor: string | null
   category_id: string | null
   description: string | null
+  images?: Array<{ url: string; alt: string | null; position: number }>
   variants: Array<{
     sku: string
     base_price: string | null

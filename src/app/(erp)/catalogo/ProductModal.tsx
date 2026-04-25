@@ -44,6 +44,10 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
   const [categories, setCategories]   = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
 
+  const initialImagesUrls = ((product as unknown as { images?: Array<{ url: string }> } | undefined)?.images ?? [])
+    .map((im) => im.url)
+    .join('\n')
+
   const [form, setForm] = useState({
     name:            product?.name ?? '',
     product_type:    product?.product_type ?? 'simple',
@@ -59,6 +63,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
     cost_price:      variant?.cost_price ?? '',
     manage_stock:    variant?.manage_stock ?? true,
     stock_quantity:  variant?.stock_quantity ?? 0,
+    images_urls:     initialImagesUrls,
   })
 
   function fieldString(key: Exclude<keyof typeof form, 'manage_stock' | 'stock_quantity'>) {
@@ -94,6 +99,14 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
     setErrors({})
     setServerError(null)
 
+    const images = form.images_urls
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((u) => u.startsWith('http'))
+      .slice(0, 20)
+      .map((url, idx) => ({ url: url.slice(0, 2048), alt: null, position: idx }))
+
     const body = {
       name:            form.name,
       product_type:    form.product_type,
@@ -103,6 +116,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
       vendor:          form.vendor || null,
       category_id:     form.category_id ? form.category_id : null,
       description:     form.description || null,
+      images,
       sku:             form.sku,
       barcode:         form.barcode || null,
       base_price:      form.base_price || null,
@@ -261,6 +275,17 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                       : 'border-zinc-300 focus-visible:ring-blue-200 focus-visible:border-blue-500'}`
                   }
                   placeholder="Opcional"
+                />
+              </FormField>
+
+              <FormField label="Imágenes (URLs)" htmlFor="product_images_urls" error={errors.images?.[0]}>
+                <textarea
+                  id="product_images_urls"
+                  value={form.images_urls}
+                  onChange={(e) => setForm(f => ({ ...f, images_urls: e.target.value }))}
+                  rows={3}
+                  placeholder="Pegá URLs separadas por coma, punto y coma o salto de línea (máx 20)."
+                  className="w-full rounded-sm border border-zinc-300 bg-white px-2.5 py-2 text-[13px] text-zinc-900 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
                 />
               </FormField>
             </>

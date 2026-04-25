@@ -5,11 +5,68 @@ import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
-import { GroupedDataTable, TablePagination, ConfirmDialog, type GroupedColumn, type RowGroup } from '@/components/erp'
+import {
+  GroupedDataTable,
+  TablePagination,
+  ConfirmDialog,
+  ImportModal,
+  type GroupedColumn,
+  type RowGroup,
+  type ImportDefaultFieldConfig,
+} from '@/components/erp'
 import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
+import { Image } from '@/components/primitives/Image'
 import { ProductModal } from './ProductModal'
 import { CatalogoSubNav } from './CatalogoSubNav'
+import { PRODUCT_CSV_HEADERS_FOR_IMPORT } from '@/modules/catalog/products-csv-adapter'
+
+const CATALOG_IMPORT_DEFAULT_FIELDS: ImportDefaultFieldConfig[] = [
+  {
+    key: 'product_type',
+    label: 'Tipo de producto',
+    description:
+      'Si la celda mapeada a "Tipo" está vacía, se usa este valor (p. ej. simple para catálogos que no distinguen servicios).',
+    inputKind: 'select',
+    options: [
+      { value: '', label: '— Sin valor por defecto —' },
+      { value: 'simple', label: 'Simple' },
+      { value: 'service', label: 'Servicio' },
+    ],
+  },
+  {
+    key: 'status',
+    label: 'Estado',
+    description: 'Si la columna de estado del CSV está vacía.',
+    inputKind: 'select',
+    options: [
+      { value: '', label: '— Sin valor por defecto —' },
+      { value: 'active', label: 'Activo' },
+      { value: 'draft', label: 'Borrador' },
+      { value: 'archived', label: 'Archivado' },
+    ],
+  },
+  {
+    key: 'stock_quantity',
+    label: 'Stock',
+    description: 'Si la celda de cantidad en stock está vacía (número entero ≥ 0).',
+    inputKind: 'text',
+    placeholder: 'ej. 0',
+  },
+  {
+    key: 'manage_stock',
+    label: 'Gestionar stock',
+    description: 'Si la celda está vacía: sí / no (se interpreta como en el resto del import).',
+    inputKind: 'select',
+    options: [
+      { value: '', label: '— Sin valor por defecto —' },
+      { value: '1', label: 'Sí (1)' },
+      { value: '0', label: 'No (0)' },
+      { value: 'true', label: 'true' },
+      { value: 'false', label: 'false' },
+    ],
+  },
+]
 
 type Variant = {
   id: string
@@ -30,6 +87,7 @@ type Product = {
   vendor: string | null
   category_id: string | null
   category?: { id: string; name: string } | null
+  images?: Array<{ url: string; alt: string | null; position: number }>
   variants: Variant[]
 }
 
@@ -43,6 +101,7 @@ type ProductForEdit = {
   vendor: string | null
   category_id: string | null
   description: string | null
+  images?: Array<{ url: string; alt: string | null; position: number }>
   variants: Array<{
     sku: string
     base_price: string | null
@@ -98,6 +157,31 @@ export function CatalogoClient() {
   const [loadingEdit, setLoadingEdit] = useState(false)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
   const [refresh, setRefresh]       = useState(0)
+  const [importOpen, setImportOpen] = useState(false)
+  const [importSession, setImportSession] = useState(0)
+  const [savedImportFieldMaps, setSavedImportFieldMaps] = useState<
+    Array<{ external_header: string; internal_field_key: string }>
+  >([])
+
+  useEffect(() => {
+    if (!importOpen) return
+    let mounted = true
+    ;(async () => {
+      try {
+        const data = await fetchJson<{
+          data?: Array<{ external_header: string; internal_field_key: string }>
+        }>('/api/v1/catalog/import-field-maps')
+        if (!mounted) return
+        setSavedImportFieldMaps(data?.data ?? [])
+      } catch {
+        if (!mounted) return
+        setSavedImportFieldMaps([])
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [importOpen])
 
   useEffect(() => {
     let mounted = true
@@ -148,14 +232,30 @@ export function CatalogoClient() {
     }
   }
 
+  function handleExport() {
+    const params = new URLSearchParams({
+      ...(search ? { search } : {}),
+      ...(status ? { status } : {}),
+    })
+    const url = `/api/v1/catalog/products/export${params.size > 0 ? `?${params}` : ''}`
+    window.location.href = url
+  }
+
   // ── Column definitions ───────────────────────────────────────────────────────
   const parentColumns = useMemo<GroupedColumn<Product>[]>(() => [
     {
       key: 'name',
       header: 'Nombre / Variante',
       render: p => (
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-zinc-900">{p.name}</span>
+        <div className="flex items-center gap-3">
+          <Image
+            src={p.images?.[0]?.url}
+            alt={p.images?.[0]?.alt ?? p.name}
+            width={56}
+            height={56}
+            className="h-14 w-14 flex-shrink-0"
+          />
+          <span className="font-medium text-zinc-900 leading-tight">{p.name}</span>
           {p.variants.length > 1 && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-500 border border-zinc-200">
               {p.variants.length} variantes
@@ -218,11 +318,21 @@ export function CatalogoClient() {
     {
       key: 'actions',
       header: '',
+      className: 'w-[140px]',
       render: p => (
-        <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="xs" onClick={e => { e.stopPropagation(); router.push(`/catalogo/${p.id}`) }}>Ver</Button>
-          <Button variant="ghost" size="xs" disabled={loadingEdit} onClick={e => { e.stopPropagation(); void openEdit(p.id) }}>Editar</Button>
-          <Button variant="ghost" size="xs" onClick={e => { e.stopPropagation(); setProductToDelete(p) }}>Eliminar</Button>
+        <div className="flex items-center gap-1 justify-end">
+          <Button
+            variant="ghost"
+            size="xs"
+            disabled={loadingEdit}
+            onClick={e => { e.stopPropagation(); void openEdit(p.id) }}
+          >
+            Editar
+          </Button>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+            <Button variant="ghost" size="xs" onClick={e => { e.stopPropagation(); router.push(`/catalogo/${p.id}`) }}>Ver</Button>
+            <Button variant="ghost" size="xs" onClick={e => { e.stopPropagation(); setProductToDelete(p) }}>Eliminar</Button>
+          </div>
         </div>
       ),
     },
@@ -274,9 +384,24 @@ export function CatalogoClient() {
       <TopBar
         breadcrumbs={[{ label: 'Catálogo', href: '/catalogo/productos' }, { label: 'Productos' }]}
         actions={
-          <Button size="sm" onClick={() => { setEditing(null); setModalOpen(true) }}>
-            + Nuevo producto
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setImportSession((session) => session + 1)
+                setImportOpen(true)
+              }}
+            >
+              Importar CSV
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleExport}>
+              Exportar CSV
+            </Button>
+            <Button size="sm" onClick={() => { setEditing(null); setModalOpen(true) }}>
+              + Nuevo producto
+            </Button>
+          </div>
         }
       />
       <CatalogoSubNav />
@@ -347,6 +472,42 @@ export function CatalogoClient() {
         confirmLabel="Eliminar"
         variant="danger"
         onConfirm={handleDeleteProduct}
+      />
+
+      <ImportModal
+        key={importSession}
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Importar productos"
+        fields={PRODUCT_CSV_HEADERS_FOR_IMPORT}
+        savedFieldMaps={savedImportFieldMaps}
+        requiredFields={['name']}
+        importUrl="/api/v1/catalog/products/import"
+        importSource="catalog_csv"
+        defaultFillFields={CATALOG_IMPORT_DEFAULT_FIELDS}
+        onImported={async (_result, effectiveMapping) => {
+          notifySuccess('Productos importados correctamente')
+          if (effectiveMapping && Object.keys(effectiveMapping).length > 0) {
+            try {
+              await fetch('/api/v1/catalog/import-field-maps', {
+                method: 'PUT',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  profile: null,
+                  maps: Object.entries(effectiveMapping).map(([internal_field_key, external_header]) => ({
+                    internal_field_key,
+                    external_header,
+                  })),
+                }),
+              })
+            } catch {
+              /* el import ya se aplicó; el guardado del mapa es opcional */
+            }
+          }
+          setRefresh((value) => value + 1)
+          setImportOpen(false)
+        }}
       />
     </div>
   )
