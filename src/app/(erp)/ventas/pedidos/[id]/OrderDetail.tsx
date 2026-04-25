@@ -23,7 +23,10 @@ import type { Order, PaymentCondition } from '../../types'
 import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
 import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
-import { cn, parseResponseBodyJson } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { notifyApiError } from '@/lib/notify'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
   value: value as PaymentCondition,
@@ -179,13 +182,15 @@ export function OrderDetail({ id }: OrderDetailProps) {
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      await Promise.resolve()
       setLoading(true)
-      const r = await fetch(`/api/v1/sales/orders/${id}`)
-      const data = await r.json() as Order
-      if (cancelled) return
-      setOrder(data)
-      setLoading(false)
+      try {
+        const data = await fetchJson<Order>(`/api/v1/sales/orders/${id}`)
+        if (!cancelled) setOrder(data)
+      } catch {
+        if (!cancelled) setOrder(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     })()
     return () => { cancelled = true }
   }, [id, refresh])
@@ -199,26 +204,23 @@ export function OrderDetail({ id }: OrderDetailProps) {
         page: '1',
         limit: '50',
       })
-      const res = await fetch(`/api/v1/sales/invoices?${params}`)
-      if (!res.ok) {
-        if (!cancelled) {
-          setRelatedInvoices([])
-          setLoadingTraceability(false)
-        }
-        return
+      try {
+        const payload = await fetchJson<{
+          data?: Array<{
+            id: string
+            invoice_number: string
+            status: keyof typeof INVOICE_STATUS_LABEL
+            issue_date: string | null
+            created_at: string
+          }>
+        }>(`/api/v1/sales/invoices?${params}`)
+        if (cancelled) return
+        setRelatedInvoices(Array.isArray(payload.data) ? payload.data : [])
+      } catch {
+        if (!cancelled) setRelatedInvoices([])
+      } finally {
+        if (!cancelled) setLoadingTraceability(false)
       }
-      const payload = await res.json() as {
-        data?: Array<{
-          id: string
-          invoice_number: string
-          status: keyof typeof INVOICE_STATUS_LABEL
-          issue_date: string | null
-          created_at: string
-        }>
-      }
-      if (cancelled) return
-      setRelatedInvoices(Array.isArray(payload.data) ? payload.data : [])
-      setLoadingTraceability(false)
     }
 
     void loadRelatedInvoices()
@@ -306,79 +308,95 @@ export function OrderDetail({ id }: OrderDetailProps) {
       })),
     }
 
-    const res = await fetch(`/api/v1/sales/orders/${id}`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
-    })
-
-    setSaving(false)
-
-    if (res.ok) {
+    try {
+      await fetchJson(`/api/v1/sales/orders/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      })
       setEditMode(false)
       setRefresh(r => r + 1)
-      return
-    }
-
-    const data = await parseResponseBodyJson<{ code?: string; details?: { fieldErrors?: FieldErrors }; error?: string }>(res)
-    if (data?.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
-      setErrors(data.details.fieldErrors)
-    } else {
-      setServerError(data?.error ?? `Error ${res.status}. Revisá los datos e intentá de nuevo.`)
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) setErrors(fe)
+      else setServerError(getApiErrorMessage(err))
+    } finally {
+      setSaving(false)
     }
   }
 
   async function handleTransition(nextStatus: OrderStatus) {
     setTransitioning(true)
-    const res = await fetch(`/api/v1/sales/orders/${id}`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ status: nextStatus }),
-    })
-    setTransitioning(false)
-    if (res.ok) setRefresh(r => r + 1)
+    try {
+      await fetchJson(`/api/v1/sales/orders/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
+    } finally {
+      setTransitioning(false)
+    }
   }
 
   async function handleCancelOrder() {
     setTransitioning(true)
-    const res = await fetch(`/api/v1/sales/orders/${id}`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ status: 'cancelled' }),
-    })
     setConfirmCancel(false)
-    setTransitioning(false)
-    if (res.ok) setRefresh(r => r + 1)
+    try {
+      await fetchJson(`/api/v1/sales/orders/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'cancelled' }),
+      })
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
+    } finally {
+      setTransitioning(false)
+    }
   }
 
   async function handleConvertToInvoice() {
-    const res = await fetch(`/api/v1/sales/orders/${id}/convert`, { method: 'POST' })
     setConfirmConvert(false)
-    if (res.ok) {
-      const invoice = await res.json() as { id: string }
+    try {
+      const invoice = await fetchJson<{ id: string }>(`/api/v1/sales/orders/${id}/convert`, { method: 'POST' })
       router.push(`/ventas/facturas/${invoice.id}`)
+    } catch (e) {
+      notifyApiError(e)
     }
   }
 
   const searchContacts = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=customer`)
-    const data = await res.json() as { data: Array<{ id: string; legal_name: string; trade_name: string | null }> }
-    return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    try {
+      const data = await fetchJson<{ data: Array<{ id: string; legal_name: string; trade_name: string | null }> }>(
+        `/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=customer`,
+      )
+      return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    } catch {
+      return []
+    }
   }, [])
 
   const searchPriceLists = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    const res = await fetch(`/api/v1/catalog/price-lists?search=${encodeURIComponent(q)}&limit=20`)
-    const data = await res.json() as { data: Array<{ id: string; name: string }> }
-    return (data.data ?? []).map(pl => ({ value: pl.id, label: pl.name }))
+    try {
+      const data = await fetchJson<{ data: Array<{ id: string; name: string }> }>(
+        `/api/v1/catalog/price-lists?search=${encodeURIComponent(q)}&limit=20`,
+      )
+      return (data.data ?? []).map(pl => ({ value: pl.id, label: pl.name }))
+    } catch {
+      return []
+    }
   }, [])
 
   useEffect(() => {
     if (!editMode || !contactId) return
     let cancelled = false
     void (async () => {
-      const res = await fetch(`/api/v1/contacts/${contactId}/addresses`)
-      if (!res.ok) return
-      const addresses = await res.json() as ContactAddress[]
+      let addresses: ContactAddress[] = []
+      try {
+        addresses = await fetchJson<ContactAddress[]>(`/api/v1/contacts/${contactId}/addresses`)
+      } catch {
+        return
+      }
       if (cancelled) return
       const rows = Array.isArray(addresses) ? addresses : []
       setContactAddresses(rows)

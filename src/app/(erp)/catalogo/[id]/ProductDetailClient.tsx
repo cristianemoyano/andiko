@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/primitives/Button'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { ProductModal } from '../ProductModal'
+import { fetchJson } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
 
 type ProductForEdit = {
   id: string
@@ -45,10 +47,15 @@ export function ProductDetailClient({ product }: { product: ProductForEdit }) {
   }, [product])
 
   async function handleDelete() {
-    const res = await fetch(`/api/v1/catalog/products/${product.id}`, { method: 'DELETE' })
-    setConfirmDelete(false)
-    if (!res.ok && res.status !== 204) return
-    router.push('/catalogo/productos')
+    try {
+      await fetchJson(`/api/v1/catalog/products/${product.id}`, { method: 'DELETE' })
+      setConfirmDelete(false)
+      notifySuccess('Producto eliminado')
+      router.push('/catalogo/productos')
+    } catch (e) {
+      setConfirmDelete(false)
+      notifyApiError(e)
+    }
   }
 
   return (

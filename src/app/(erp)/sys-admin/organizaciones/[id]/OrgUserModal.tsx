@@ -6,6 +6,8 @@ import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
 import type { BranchRow } from './BranchModal'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 export interface OrgUserRow {
   id: string
@@ -125,22 +127,19 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
       }
       if (password.trim()) body.password = password.trim()
 
-      const res = await fetch(`/api/v1/sys-admin/organizations/${orgId}/users/${user!.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      setSaving(false)
-      if (res.ok) {
+      try {
+        await fetchJson(`/api/v1/sys-admin/organizations/${orgId}/users/${user!.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        })
         onSaved()
         onClose()
-        return
-      }
-      const data = await res.json() as { code: string; details?: { fieldErrors?: FieldErrors }; error?: string }
-      if (data.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
-        setErrors(data.details.fieldErrors)
-      } else {
-        setServerError(data.error ?? 'No se pudo guardar.')
+      } catch (err) {
+        const fe = fieldErrorsFromApiError(err)
+        if (fe) setErrors(fe)
+        else setServerError(getApiErrorMessage(err))
+      } finally {
+        setSaving(false)
       }
       return
     }
@@ -151,29 +150,26 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
       return
     }
 
-    const res = await fetch(`/api/v1/sys-admin/organizations/${orgId}/users`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        name: name.trim(),
-        password: password.trim(),
-        role,
-        branchIds: ids,
-        defaultBranchId: def,
-      }),
-    })
-    setSaving(false)
-    if (res.ok) {
+    try {
+      await fetchJson(`/api/v1/sys-admin/organizations/${orgId}/users`, {
+        method: 'POST',
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          name: name.trim(),
+          password: password.trim(),
+          role,
+          branchIds: ids,
+          defaultBranchId: def,
+        }),
+      })
       onSaved()
       onClose()
-      return
-    }
-    const data = await res.json() as { code: string; details?: { fieldErrors?: FieldErrors }; error?: string }
-    if (data.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
-      setErrors(data.details.fieldErrors)
-    } else {
-      setServerError(data.error ?? 'No se pudo crear el usuario.')
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) setErrors(fe)
+      else setServerError(getApiErrorMessage(err))
+    } finally {
+      setSaving(false)
     }
   }
 

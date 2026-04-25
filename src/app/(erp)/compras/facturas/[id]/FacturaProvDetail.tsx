@@ -15,6 +15,7 @@ import { FormField } from '@/components/primitives/FormField'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import type { SupplierInvoice, SupplierPayment, PaymentMethod } from '../../types'
 import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_RECEIPT_STATUS_LABEL, SUPPLIER_INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL } from '../../types'
+import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
 
 interface FacturaProvDetailProps {
   id: string
@@ -49,17 +50,15 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
     ;(async () => {
       setLoading(true)
       try {
-        const r = await fetch(`/api/v1/purchases/supplier-invoices/${id}`)
-        if (!mounted) return
-        if (r.status === 404) { setNotFound(true); return }
-        const inv = await r.json() as SupplierInvoice
+        const inv = await fetchJson<SupplierInvoice>(`/api/v1/purchases/supplier-invoices/${id}`)
         if (!mounted) return
         setInvoice(inv)
         setNotFound(false)
         const bal = parseFloat(inv.balance)
         setPaymentAmount(!Number.isNaN(bal) && bal > 0 ? inv.balance : '')
-      } catch {
-        // network error — leave current state
+      } catch (e) {
+        if (!mounted) return
+        if (isApiRequestError(e) && e.status === 404) setNotFound(true)
       } finally {
         if (mounted) setLoading(false)
       }
@@ -69,18 +68,14 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
 
   async function doAction(endpoint: string, method = 'POST') {
     setActionError(null)
-    const res = await fetch(`/api/v1/purchases/supplier-invoices/${id}${endpoint}`, { method })
-    if (!res.ok) {
-      try {
-        const d = await res.json() as { error?: string }
-        setActionError(d.error ?? 'Ocurrió un error')
-      } catch {
-        setActionError('Ocurrió un error inesperado')
-      }
+    try {
+      await fetchJson(`/api/v1/purchases/supplier-invoices/${id}${endpoint}`, { method })
+      setRefresh(r => r + 1)
+      return true
+    } catch (e) {
+      setActionError(getApiErrorMessage(e))
       return false
     }
-    setRefresh(r => r + 1)
-    return true
   }
 
   async function handleDelete() {
@@ -96,9 +91,8 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
     setPaymentSaving(true)
     setPaymentError(null)
     try {
-      const res = await fetch('/api/v1/purchases/supplier-payments', {
+      await fetchJson('/api/v1/purchases/supplier-payments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           invoice_id:    invoice.id,
           branch_id:     invoice.branch_id,
@@ -109,27 +103,23 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
           notes:         paymentNotes.trim() || null,
         }),
       })
-      if (!res.ok) {
-        const d = await res.json()
-        setPaymentError(d.error ?? 'Error al registrar el pago')
-        return
-      }
       setPaymentNotes('')
       setRefresh(r => r + 1)
+    } catch (e) {
+      setPaymentError(getApiErrorMessage(e))
     } finally {
       setPaymentSaving(false)
     }
   }
 
   async function handleDeletePayment(payment: SupplierPayment) {
-    const res = await fetch(`/api/v1/purchases/supplier-payments/${payment.id}`, { method: 'DELETE' })
-    if (!res.ok) {
-      const d = await res.json()
-      setActionError(d.error ?? 'Error al eliminar el pago')
-      return
+    try {
+      await fetchJson(`/api/v1/purchases/supplier-payments/${payment.id}`, { method: 'DELETE' })
+      setPaymentToDelete(null)
+      setRefresh(r => r + 1)
+    } catch (e) {
+      setActionError(getApiErrorMessage(e))
     }
-    setPaymentToDelete(null)
-    setRefresh(r => r + 1)
   }
 
   if (loading) {

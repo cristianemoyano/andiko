@@ -13,6 +13,7 @@ import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import type { PurchaseOrder } from '../../types'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 interface ReceiptItem {
   order_item_id: string | null
@@ -40,23 +41,34 @@ export function NuevaRecepcionClient() {
   const [serverError,         setServerError]         = useState<string | null>(null)
 
   const searchSuppliers = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    const res = await fetch(`/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=supplier`)
-    const data = await res.json() as { data: Array<{ id: string; legal_name: string; trade_name: string | null }> }
-    return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    try {
+      const data = await fetchJson<{ data: Array<{ id: string; legal_name: string; trade_name: string | null }> }>(
+        `/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=supplier`,
+      )
+      return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
+    } catch {
+      return []
+    }
   }, [])
 
   const searchWarehouses = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    const res = await fetch(`/api/v1/inventory/warehouses?search=${encodeURIComponent(q)}&limit=20`)
-    const data = await res.json() as { data: Array<{ id: string; name: string }> }
-    return (data.data ?? []).map(w => ({ value: w.id, label: w.name }))
+    try {
+      const data = await fetchJson<{ data: Array<{ id: string; name: string }> }>(
+        `/api/v1/inventory/warehouses?search=${encodeURIComponent(q)}&limit=20`,
+      )
+      return (data.data ?? []).map(w => ({ value: w.id, label: w.name }))
+    } catch {
+      return []
+    }
   }, [])
 
   useEffect(() => {
     if (!orderId) return
-    fetch(`/api/v1/purchases/orders/${orderId}`)
-      .then(r => r.json())
-      .then(d => {
-        const o = d as PurchaseOrder
+    let cancelled = false
+    void (async () => {
+      try {
+        const o = await fetchJson<PurchaseOrder>(`/api/v1/purchases/orders/${orderId}`)
+        if (cancelled) return
         setOrder(o)
         if (o.branch_id) setBranchId(o.branch_id)
         if (o.contact_id) {
@@ -71,10 +83,13 @@ export function NuevaRecepcionClient() {
             variant_id:    i.variant_id,
             description:   i.description,
             quantity:      String(parseFloat(i.quantity) - parseFloat(i.received_qty ?? '0')),
-          }))
+          })),
         )
-      })
-      .catch(() => setServerError('Error al cargar la orden de compra'))
+      } catch {
+        if (!cancelled) setServerError('Error al cargar la orden de compra')
+      }
+    })()
+    return () => { cancelled = true }
   }, [orderId])
 
   function updateItem(idx: number, qty: string) {
@@ -107,20 +122,13 @@ export function NuevaRecepcionClient() {
     }
 
     try {
-      const res = await fetch('/api/v1/purchases/receipts', {
+      const receipt = await fetchJson<{ id: string }>('/api/v1/purchases/receipts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (!res.ok) {
-        const d = await res.json()
-        setServerError(d.error ?? 'Error al crear la recepción')
-        return
-      }
-      const receipt = await res.json() as { id: string }
       router.push(`/compras/recepciones/${receipt.id}`)
-    } catch {
-      setServerError('Error de red. Intentá de nuevo.')
+    } catch (e) {
+      setServerError(getApiErrorMessage(e))
     } finally {
       setSaving(false)
     }

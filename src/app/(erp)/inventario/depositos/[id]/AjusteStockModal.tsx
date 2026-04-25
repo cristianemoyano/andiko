@@ -9,6 +9,7 @@ import { Button } from '@/components/primitives/Button'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 interface AjusteStockModalProps {
   warehouseId: string
@@ -46,10 +47,9 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
     setLoadingRow(true)
     void (async () => {
       try {
-        const res = await fetch(
+        const data = await fetchJson<{ data: Array<{ quantity: string; minimum_quantity?: string; expires_on?: string | null }> }>(
           `/api/v1/inventory/stock?warehouse_id=${encodeURIComponent(warehouseId)}&variant_id=${encodeURIComponent(variantId)}&page=1&limit=1`,
         )
-        const data = await res.json()
         const row = (data.data ?? [])[0] as
           | { quantity: string; minimum_quantity?: string; expires_on?: string | null }
           | undefined
@@ -66,6 +66,13 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
           setMinimumQty('0')
           setExpiresOn(null)
         }
+      } catch {
+        if (!cancelled) {
+          loadedQuantityRef.current = null
+          setQuantity('')
+          setMinimumQty('0')
+          setExpiresOn(null)
+        }
       } finally {
         if (!cancelled) setLoadingRow(false)
       }
@@ -74,13 +81,18 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
   }, [variantId, warehouseId])
 
   async function searchVariants(q: string): Promise<SearchableSelectOption[]> {
-    const res = await fetch(`/api/v1/catalog/products/for-sale?search=${encodeURIComponent(q)}&manage_stock=true&limit=20`)
-    const data = await res.json()
-    return (data.data ?? []).map((p: { variant_id: string; name: string; sku: string }) => ({
-      value: p.variant_id,
-      label: p.name,
-      sublabel: p.sku,
-    }))
+    try {
+      const data = await fetchJson<{ data: Array<{ variant_id: string; name: string; sku: string }> }>(
+        `/api/v1/catalog/products/for-sale?search=${encodeURIComponent(q)}&manage_stock=true&limit=20`,
+      )
+      return (data.data ?? []).map(p => ({
+        value: p.variant_id,
+        label: p.name,
+        sublabel: p.sku,
+      }))
+    } catch {
+      return []
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -99,36 +111,34 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
       const qtyUnchanged = new Decimal(quantity.trim() || '0').equals(loaded)
 
       if (!qtyUnchanged) {
-        const movRes = await fetch('/api/v1/inventory/movements', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            variant_id:   variantId,
-            warehouse_id: warehouseId,
-            quantity:     Number(quantity),
-            notes:        notes.trim() || null,
-          }),
-        })
-        if (!movRes.ok) {
-          const data = await movRes.json()
-          setServerError(data.error ?? 'Error al registrar ajuste')
+        try {
+          await fetchJson('/api/v1/inventory/movements', {
+            method: 'POST',
+            body: JSON.stringify({
+              variant_id:   variantId,
+              warehouse_id: warehouseId,
+              quantity:     Number(quantity),
+              notes:        notes.trim() || null,
+            }),
+          })
+        } catch (e) {
+          setServerError(getApiErrorMessage(e))
           return
         }
       }
 
-      const patchRes = await fetch('/api/v1/inventory/stock', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          variant_id:       variantId,
-          warehouse_id:     warehouseId,
-          minimum_quantity: minN,
-          expires_on:       toIsoDateUtc(expiresOn),
-        }),
-      })
-      if (!patchRes.ok) {
-        const data = await patchRes.json()
-        setServerError(data.error ?? 'Error al guardar mínimo / vencimiento')
+      try {
+        await fetchJson('/api/v1/inventory/stock', {
+          method: 'PATCH',
+          body: JSON.stringify({
+            variant_id:       variantId,
+            warehouse_id:     warehouseId,
+            minimum_quantity: minN,
+            expires_on:       toIsoDateUtc(expiresOn),
+          }),
+        })
+      } catch (e) {
+        setServerError(getApiErrorMessage(e))
         return
       }
       onSaved()

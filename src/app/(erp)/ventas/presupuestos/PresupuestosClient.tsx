@@ -10,6 +10,7 @@ import { formatARS } from '@/components/primitives/CurrencyInput'
 import type { Quote, QuoteStatus } from '../types'
 import { QUOTE_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../types'
 import { VentasSubNav } from '../VentasSubNav'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 const PAGE_SIZE = 20
 
@@ -101,24 +102,35 @@ export function PresupuestosClient() {
   const [page, setPage]       = useState(1)
   const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | ''>('')
+  const [listError, setListError] = useState<string | null>(null)
 
   useEffect(() => {
+    let mounted = true
     const params = new URLSearchParams({
       page:  String(page),
       limit: String(PAGE_SIZE),
       ...(search       ? { search }             : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
     })
-    fetch(`/api/v1/sales/quotes?${params}`)
-      .then(r => r.json() as Promise<{ data: Quote[]; total: number }>)
-      .then(data => {
+    ;(async () => {
+      setListError(null)
+      try {
+        const data = await fetchJson<{ data: Quote[]; total: number }>(`/api/v1/sales/quotes?${params}`)
+        if (!mounted) return
         const rows = Array.isArray(data?.data) ? data.data : []
         const nextTotal = typeof data?.total === 'number' ? data.total : 0
         setQuotes(rows)
         setTotal(nextTotal)
         const pages = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE))
         setPage(p => (p > pages ? pages : p))
-      })
+      } catch (e) {
+        if (!mounted) return
+        setListError(getApiErrorMessage(e))
+        setQuotes([])
+        setTotal(0)
+      }
+    })()
+    return () => { mounted = false }
   }, [page, search, statusFilter])
 
   return (
@@ -134,6 +146,11 @@ export function PresupuestosClient() {
       <VentasSubNav />
 
       <div className="flex-1 p-5 overflow-auto">
+        {listError && (
+          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            {listError}
+          </div>
+        )}
         <DataTable
           columns={COLUMNS}
           data={quotes}

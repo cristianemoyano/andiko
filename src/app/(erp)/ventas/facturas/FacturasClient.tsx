@@ -9,6 +9,7 @@ import { formatARS } from '@/components/primitives/CurrencyInput'
 import type { Invoice, InvoiceStatus } from '../types'
 import { INVOICE_STATUS_LABEL } from '../types'
 import { VentasSubNav } from '../VentasSubNav'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 const PAGE_SIZE = 20
 
@@ -109,24 +110,35 @@ export function FacturasClient() {
   const [page, setPage]         = useState(1)
   const [search, setSearch]     = useState('')
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | ''>('')
+  const [listError, setListError] = useState<string | null>(null)
 
   useEffect(() => {
+    let mounted = true
     const params = new URLSearchParams({
       page:  String(page),
       limit: String(PAGE_SIZE),
       ...(search       ? { search }             : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
     })
-    fetch(`/api/v1/sales/invoices?${params}`)
-      .then(r => r.json() as Promise<{ data: Invoice[]; total: number }>)
-      .then(data => {
+    ;(async () => {
+      setListError(null)
+      try {
+        const data = await fetchJson<{ data: Invoice[]; total: number }>(`/api/v1/sales/invoices?${params}`)
+        if (!mounted) return
         const rows = Array.isArray(data?.data) ? data.data : []
         const nextTotal = typeof data?.total === 'number' ? data.total : 0
         setInvoices(rows)
         setTotal(nextTotal)
         const pages = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE))
         setPage(p => (p > pages ? pages : p))
-      })
+      } catch (e) {
+        if (!mounted) return
+        setListError(getApiErrorMessage(e))
+        setInvoices([])
+        setTotal(0)
+      }
+    })()
+    return () => { mounted = false }
   }, [page, search, statusFilter])
 
   return (
@@ -137,6 +149,11 @@ export function FacturasClient() {
       <VentasSubNav />
 
       <div className="flex-1 p-5 overflow-auto">
+        {listError && (
+          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            {listError}
+          </div>
+        )}
         <DataTable
           columns={COLUMNS}
           data={invoices}

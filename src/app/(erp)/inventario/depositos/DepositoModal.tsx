@@ -7,6 +7,7 @@ import { Input } from '@/components/primitives/Input'
 import { Textarea } from '@/components/primitives/Textarea'
 import { Button } from '@/components/primitives/Button'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 type Warehouse = {
   id: string
@@ -51,31 +52,27 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
     try {
       const url    = isEdit ? `/api/v1/inventory/warehouses/${warehouse.id}` : '/api/v1/inventory/warehouses'
       const method = isEdit ? 'PATCH' : 'POST'
-      const res = await fetch(url, {
+      await fetchJson(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), description: description.trim() || null }),
       })
-      if (!res.ok) {
-        const data = await res.json()
-        setServerError(data.error ?? 'Error al guardar el depósito')
-        return
-      }
       onSaved()
+    } catch (e) {
+      setServerError(getApiErrorMessage(e))
     } finally {
       setSubmitting(false)
     }
   }
 
   async function handleDelete() {
-    const res = await fetch(`/api/v1/inventory/warehouses/${warehouse!.id}`, { method: 'DELETE' })
-    if (!res.ok) {
-      const data = await res.json()
-      setServerError(data.error ?? 'Error al eliminar')
+    try {
+      await fetchJson(`/api/v1/inventory/warehouses/${warehouse!.id}`, { method: 'DELETE' })
       setConfirmDelete(false)
-      return
+      onSaved()
+    } catch (e) {
+      setServerError(getApiErrorMessage(e))
+      setConfirmDelete(false)
     }
-    onSaved()
   }
 
   return (

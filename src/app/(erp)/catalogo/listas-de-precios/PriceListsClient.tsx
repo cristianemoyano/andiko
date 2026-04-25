@@ -10,6 +10,8 @@ import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { CatalogoSubNav } from '../CatalogoSubNav'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
 
 type PriceList = {
   id: string
@@ -64,13 +66,17 @@ export function PriceListsClient() {
     let mounted = true
     ;(async () => {
       setLoading(true)
-      const res = await fetch('/api/v1/catalog/price-lists?limit=100')
-      if (!mounted) return
-      if (res.ok) {
-        const data = await res.json() as { data: PriceList[] }
-        setLists(data.data)
+      try {
+        const data = await fetchJson<{ data: PriceList[] }>('/api/v1/catalog/price-lists?limit=100')
+        if (mounted) setLists(data.data)
+      } catch (e) {
+        if (mounted) {
+          setLists([])
+          notifyApiError(e)
+        }
+      } finally {
+        if (mounted) setLoading(false)
       }
-      setLoading(false)
     })()
     return () => { mounted = false }
   }, [])
@@ -79,44 +85,44 @@ export function PriceListsClient() {
     e.preventDefault()
     setSaving(true)
     setFormError(null)
-    const res = await fetch('/api/v1/catalog/price-lists', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: form.name, description: form.description || null, is_default: form.is_default }),
-    })
-    if (res.ok) {
+    try {
+      await fetchJson('/api/v1/catalog/price-lists', {
+        method: 'POST',
+        body: JSON.stringify({ name: form.name, description: form.description || null, is_default: form.is_default }),
+      })
       setModalOpen(false)
       setForm({ name: '', description: '', is_default: false })
-      // Simple reload
-      setLoading(true)
-      const reload = await fetch('/api/v1/catalog/price-lists?limit=100')
-      if (reload.ok) {
-        const data = await reload.json() as { data: PriceList[] }
-        setLists(data.data)
-      }
-      setLoading(false)
-    } else {
-      const data = await res.json()
-      setFormError(data.error ?? 'Error inesperado')
+      notifySuccess('Lista creada')
+      await reloadLists()
+    } catch (e) {
+      setFormError(getApiErrorMessage(e))
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   async function reloadLists() {
     setLoading(true)
-    const reload = await fetch('/api/v1/catalog/price-lists?limit=100')
-    if (reload.ok) {
-      const data = await reload.json() as { data: PriceList[] }
+    try {
+      const data = await fetchJson<{ data: PriceList[] }>('/api/v1/catalog/price-lists?limit=100')
       setLists(data.data)
+    } catch (e) {
+      notifyApiError(e)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function handleDeletePriceList() {
     if (!listToDelete) return
-    await fetch(`/api/v1/catalog/price-lists/${listToDelete.id}`, { method: 'DELETE' })
-    setListToDelete(null)
-    await reloadLists()
+    try {
+      await fetchJson(`/api/v1/catalog/price-lists/${listToDelete.id}`, { method: 'DELETE' })
+      setListToDelete(null)
+      notifySuccess('Lista eliminada')
+      await reloadLists()
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   return (

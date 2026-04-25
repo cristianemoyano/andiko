@@ -9,6 +9,9 @@ import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { CatalogoSubNav } from '../CatalogoSubNav'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 type Category = {
   id: string
@@ -53,35 +56,37 @@ export function CategoriesClient() {
     parent_id: '',
   })
 
-  async function safeJson(res: Response): Promise<unknown | null> {
-    const text = await res.text()
-    if (!text) return null
-    try { return JSON.parse(text) } catch { return { error: text } }
-  }
-
   const loadFiltered = useCallback(async () => {
     setLoading(true)
     setLoadingAll(true)
     const params = new URLSearchParams({ page: '1', limit: '100' })
     if (search) params.set('search', search)
     if (status) params.set('status', status)
-    const res = await fetch(`/api/v1/catalog/categories?${params}`)
-    const data = await safeJson(res) as { data?: Category[] } | null
-    const list = Array.isArray(data?.data) ? data.data : []
-    setRows(list)
-    // Tree view uses same filtered dataset.
-    setAllCategories(list)
-    setLoading(false)
-    setLoadingAll(false)
+    try {
+      const data = await fetchJson<{ data?: Category[] }>(`/api/v1/catalog/categories?${params}`)
+      const list = Array.isArray(data?.data) ? data.data : []
+      setRows(list)
+      setAllCategories(list)
+    } catch (e) {
+      setRows([])
+      setAllCategories([])
+      notifyApiError(e)
+    } finally {
+      setLoading(false)
+      setLoadingAll(false)
+    }
   }, [search, status])
 
   const loadAllForParentSelect = useCallback(async () => {
     setLoadingAll(true)
-    // Parent selection should show the full universe.
-    const res = await fetch('/api/v1/catalog/categories?page=1&limit=100')
-    const data = await safeJson(res) as { data?: Category[] } | null
-    setAllCategories(Array.isArray(data?.data) ? data.data : [])
-    setLoadingAll(false)
+    try {
+      const data = await fetchJson<{ data?: Category[] }>('/api/v1/catalog/categories?page=1&limit=100')
+      setAllCategories(Array.isArray(data?.data) ? data.data : [])
+    } catch (e) {
+      notifyApiError(e)
+    } finally {
+      setLoadingAll(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -173,28 +178,29 @@ export function CategoriesClient() {
     const url = editing ? `/api/v1/catalog/categories/${editing.id}` : '/api/v1/catalog/categories'
     const method = editing ? 'PATCH' : 'POST'
 
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    const data = await safeJson(res) as unknown as {
-      code?: string
-      details?: { fieldErrors?: FieldErrors }
-      error?: unknown
-    } | null
-    if (!res.ok) {
-      if (data?.code === 'VALIDATION_ERROR') setErrors(data.details?.fieldErrors ?? {})
-      else setServerError(typeof data?.error === 'string' ? data.error : 'Error inesperado')
+    try {
+      await fetchJson(url, { method, body: JSON.stringify(body) })
+      setModalOpen(false)
+      await loadFiltered()
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) setErrors(fe)
+      else setServerError(getApiErrorMessage(err))
+    } finally {
       setSaving(false)
-      return
     }
-    setModalOpen(false)
-    await loadFiltered()
-    setSaving(false)
   }
 
   async function handleDeleteConfirmed() {
     if (!categoryToDelete) return
-    await fetch(`/api/v1/catalog/categories/${categoryToDelete.id}`, { method: 'DELETE' })
-    setCategoryToDelete(null)
-    await loadFiltered()
+    try {
+      await fetchJson(`/api/v1/catalog/categories/${categoryToDelete.id}`, { method: 'DELETE' })
+      setCategoryToDelete(null)
+      notifySuccess('Categoría eliminada')
+      await loadFiltered()
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   const columnsWithActions: Column<Category>[] = [

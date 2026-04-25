@@ -10,6 +10,8 @@ import { InventarioSubNav } from '../../InventarioSubNav'
 import { AjusteStockModal } from './AjusteStockModal'
 import type { StockMovementType, StockReferenceType } from '@/modules/inventory/stock-movement.model'
 import { STOCK_EXPIRY_WARNING_DAYS } from '@/modules/inventory/inventory.constants'
+import { fetchJson } from '@/lib/fetch-json'
+import { notifyApiError } from '@/lib/notify'
 
 type VariantInfo = {
   id: string
@@ -236,17 +238,28 @@ export function DepositoDetail() {
   const fetchData = useCallback(async () => {
     setStock(null)
     setMovements(null)
-    const [stockRes, movRes, whRes] = await Promise.all([
-      fetch(`/api/v1/inventory/stock?warehouse_id=${id}&page=${stockPage}&limit=${PAGE_SIZE}`),
-      fetch(`/api/v1/inventory/movements?warehouse_id=${id}&page=${movPage}&limit=${PAGE_SIZE}`),
-      fetch(`/api/v1/inventory/warehouses/${id}`),
-    ])
-    const [stockData, movData, whData] = await Promise.all([stockRes.json(), movRes.json(), whRes.json()])
-    setStock(stockData.data ?? [])
-    setStockTotal(stockData.total ?? 0)
-    setMovements(movData.data ?? [])
-    setMovTotal(movData.total ?? 0)
-    setName(whData.name ?? '')
+    try {
+      const [stockData, movData, whData] = await Promise.all([
+        fetchJson<{ data: StockRow[]; total: number }>(
+          `/api/v1/inventory/stock?warehouse_id=${id}&page=${stockPage}&limit=${PAGE_SIZE}`,
+        ),
+        fetchJson<{ data: MovementRow[]; total: number }>(
+          `/api/v1/inventory/movements?warehouse_id=${id}&page=${movPage}&limit=${PAGE_SIZE}`,
+        ),
+        fetchJson<{ name: string }>(`/api/v1/inventory/warehouses/${id}`),
+      ])
+      setStock(stockData.data ?? [])
+      setStockTotal(stockData.total ?? 0)
+      setMovements(movData.data ?? [])
+      setMovTotal(movData.total ?? 0)
+      setName(whData.name ?? '')
+    } catch (e) {
+      notifyApiError(e)
+      setStock([])
+      setStockTotal(0)
+      setMovements([])
+      setMovTotal(0)
+    }
   }, [id, stockPage, movPage])
 
   useEffect(() => {

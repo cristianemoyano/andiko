@@ -6,6 +6,8 @@ import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
 import { slugifyText } from '@/lib/slug'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 interface OrganizationModalProps {
   open: boolean
@@ -39,28 +41,22 @@ export function OrganizationModal({ open, onClose, onSaved }: OrganizationModalP
     const s = slug.trim()
     if (s) body.slug = s
 
-    const res = await fetch('/api/v1/sys-admin/organizations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-
-    setSaving(false)
-
-    if (res.ok) {
+    try {
+      await fetchJson('/api/v1/sys-admin/organizations', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
       setName('')
       setSlug('')
       setSlugTouched(false)
       onSaved()
       onClose()
-      return
-    }
-
-    const data = await res.json() as { code: string; details?: { fieldErrors?: FieldErrors }; error?: string }
-    if (data.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) {
-      setErrors(data.details.fieldErrors)
-    } else {
-      setServerError(data.error ?? 'No se pudo crear la organización.')
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) setErrors(fe)
+      else setServerError(getApiErrorMessage(err))
+    } finally {
+      setSaving(false)
     }
   }
 

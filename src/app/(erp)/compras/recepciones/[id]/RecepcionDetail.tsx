@@ -12,6 +12,7 @@ import { ComprasSubNav } from '../../ComprasSubNav'
 import type { PurchaseReceipt } from '../../types'
 import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_RECEIPT_STATUS_LABEL, SUPPLIER_INVOICE_STATUS_LABEL } from '../../types'
 import { formatARS } from '@/components/primitives/CurrencyInput'
+import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
 
 interface RecepcionDetailProps {
   id: string
@@ -32,13 +33,11 @@ export function RecepcionDetail({ id }: RecepcionDetailProps) {
     ;(async () => {
       setLoading(true)
       try {
-        const r = await fetch(`/api/v1/purchases/receipts/${id}`)
-        if (!mounted) return
-        if (r.status === 404) { setNotFound(true); return }
-        const d = await r.json() as PurchaseReceipt
+        const d = await fetchJson<PurchaseReceipt>(`/api/v1/purchases/receipts/${id}`)
         if (mounted) { setReceipt(d); setNotFound(false) }
-      } catch {
-        // network error — leave current state
+      } catch (e) {
+        if (!mounted) return
+        if (isApiRequestError(e) && e.status === 404) setNotFound(true)
       } finally {
         if (mounted) setLoading(false)
       }
@@ -48,18 +47,14 @@ export function RecepcionDetail({ id }: RecepcionDetailProps) {
 
   async function doAction(endpoint: string, method = 'POST') {
     setActionError(null)
-    const res = await fetch(`/api/v1/purchases/receipts/${id}${endpoint}`, { method })
-    if (!res.ok) {
-      try {
-        const d = await res.json() as { error?: string }
-        setActionError(d.error ?? 'Ocurrió un error')
-      } catch {
-        setActionError('Ocurrió un error inesperado')
-      }
+    try {
+      await fetchJson(`/api/v1/purchases/receipts/${id}${endpoint}`, { method })
+      setRefresh(r => r + 1)
+      return true
+    } catch (e) {
+      setActionError(getApiErrorMessage(e))
       return false
     }
-    setRefresh(r => r + 1)
-    return true
   }
 
   async function handleDelete() {

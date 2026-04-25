@@ -8,6 +8,7 @@ import { Button } from '@/components/primitives/Button'
 import { Badge } from '@/components/primitives/Badge'
 import { InventarioSubNav } from '../InventarioSubNav'
 import { STOCK_EXPIRY_WARNING_DAYS } from '@/modules/inventory/inventory.constants'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 type StockRow = {
   id: string
@@ -155,10 +156,16 @@ export function StockClient() {
     if (belowMin)       params.set('below_minimum', 'true')
     if (expired)        params.set('expired', 'true')
     if (expiring30)    params.set('expiring_within_days', '30')
-    fetch(`/api/v1/inventory/stock?${params}`)
-      .then(r => r.json())
-      .then(data => { setRows(data.data ?? []); setTotal(data.total ?? 0) })
-      .catch(() => { setError('Error al cargar stock'); setRows([]) })
+    ;(async () => {
+      try {
+        const data = await fetchJson<{ data: StockRow[]; total: number }>(`/api/v1/inventory/stock?${params}`)
+        setRows(data.data ?? [])
+        setTotal(data.total ?? 0)
+      } catch (e) {
+        setError(getApiErrorMessage(e))
+        setRows([])
+      }
+    })()
   }, [page, debouncedSearch, belowMin, expired, expiring30])
 
   return (

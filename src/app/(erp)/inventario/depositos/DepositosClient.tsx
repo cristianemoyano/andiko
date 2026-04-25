@@ -8,6 +8,7 @@ import { Button } from '@/components/primitives/Button'
 import { Badge } from '@/components/primitives/Badge'
 import { InventarioSubNav } from '../InventarioSubNav'
 import { DepositoModal } from './DepositoModal'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 type Warehouse = {
   id: string
@@ -57,13 +58,16 @@ export function DepositosClient() {
     setWarehouses(null)
     setError(null)
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
-    fetch(`/api/v1/inventory/warehouses?${params}`)
-      .then(r => r.json())
-      .then(data => {
+    ;(async () => {
+      try {
+        const data = await fetchJson<{ data: Warehouse[]; total: number }>(`/api/v1/inventory/warehouses?${params}`)
         setWarehouses(data.data ?? [])
         setTotal(data.total ?? 0)
-      })
-      .catch(() => { setError('Error al cargar depósitos'); setWarehouses([]) })
+      } catch (e) {
+        setError(getApiErrorMessage(e))
+        setWarehouses([])
+      }
+    })()
   }, [page, refresh])
 
   function openCreate() {

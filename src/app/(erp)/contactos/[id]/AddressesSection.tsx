@@ -6,6 +6,9 @@ import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
 import { Badge } from '@/components/primitives/Badge'
 import { cn } from '@/lib/utils'
+import { fetchJson } from '@/lib/fetch-json'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 type Address = {
   id: string
@@ -55,8 +58,12 @@ export function AddressesSection({ contactId, initialAddresses }: AddressesSecti
   const [editing, setEditing] = useState<Address | null>(null)
 
   async function refresh() {
-    const res = await fetch(`/api/v1/contacts/${contactId}/addresses`)
-    if (res.ok) setAddresses(await res.json() as Address[])
+    try {
+      const list = await fetchJson<Address[]>(`/api/v1/contacts/${contactId}/addresses`)
+      setAddresses(Array.isArray(list) ? list : [])
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   function openCreate() { setEditing(null); setModalOpen(true) }
@@ -146,19 +153,28 @@ function AddressModal({ contactId, address, onClose, onSaved }: {
 
     const url    = isEdit ? `/api/v1/contacts/${contactId}/addresses/${address.id}` : `/api/v1/contacts/${contactId}/addresses`
     const method = isEdit ? 'PATCH' : 'POST'
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    setSaving(false)
-
-    if (res.ok) { onSaved(); return }
-    const data = await res.json() as { code: string; details?: { fieldErrors?: FieldErrors } }
-    if (data.code === 'VALIDATION_ERROR' && data.details?.fieldErrors) setErrors(data.details.fieldErrors)
+    try {
+      await fetchJson(url, { method, body: JSON.stringify(body) })
+      onSaved()
+    } catch (err) {
+      const fe = fieldErrorsFromApiError(err)
+      if (fe) setErrors(fe)
+      else notifyApiError(err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleDelete() {
     if (!address) return
     if (!confirm('¿Eliminar esta dirección?')) return
-    await fetch(`/api/v1/contacts/${contactId}/addresses/${address.id}`, { method: 'DELETE' })
-    onSaved()
+    try {
+      await fetchJson(`/api/v1/contacts/${contactId}/addresses/${address.id}`, { method: 'DELETE' })
+      notifySuccess('Dirección eliminada')
+      onSaved()
+    } catch (e) {
+      notifyApiError(e)
+    }
   }
 
   return (

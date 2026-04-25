@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/primitives/Badge'
 import { ComprasSubNav } from '../ComprasSubNav'
 import type { PurchaseReceipt, PurchaseReceiptStatus } from '../types'
 import { PURCHASE_RECEIPT_STATUS_LABEL } from '../types'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 const PAGE_SIZE = 20
 
@@ -69,13 +70,25 @@ export function RecepcionesClient() {
   const [error, setError]       = useState<string | null>(null)
 
   useEffect(() => {
+    let mounted = true
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
     if (search) params.set('search', search)
     if (status) params.set('status', status)
-    fetch(`/api/v1/purchases/receipts?${params}`)
-      .then(r => r.json())
-      .then(d => { setReceipts(d.data ?? []); setTotal(d.total ?? 0); setError(null) })
-      .catch(() => setError('Error al cargar las recepciones'))
+    ;(async () => {
+      try {
+        const d = await fetchJson<{ data: PurchaseReceipt[]; total: number }>(`/api/v1/purchases/receipts?${params}`)
+        if (!mounted) return
+        setReceipts(d.data ?? [])
+        setTotal(d.total ?? 0)
+        setError(null)
+      } catch (e) {
+        if (!mounted) return
+        setError(getApiErrorMessage(e))
+        setReceipts([])
+        setTotal(0)
+      }
+    })()
+    return () => { mounted = false }
   }, [page, search, status])
 
   return (
