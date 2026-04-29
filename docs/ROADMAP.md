@@ -83,12 +83,34 @@ Ningún componente se usa en producción sin su story.
 - [x] EmptyState (pantalla vacía con acción primaria e ícono configurable)
 - [x] ConfirmDialog (danger/warning, loading state, Radix Dialog)
 - [x] FormField (label + input + mensaje de error — envuelve cualquier control)
+- [x] Sparkline (Recharts LineChart sin ejes, para KPI cards)
+- [x] PanelBarChart (Recharts BarChart con estilos Andiko, tooltip ARS, toggle período)
+- [x] PanelDonutChart (Recharts PieChart con leyenda y hover)
 
 ### Principios del design system
 - Accesibilidad primero: todos los componentes deben ser navegables por teclado y compatibles con lectores de pantalla.
 - Densidad de información alta: ERP, no landing page. Tablas compactas, formularios en columnas.
 - Sin animaciones innecesarias. Transiciones solo donde ayudan a orientar al usuario.
 - Cada componente tiene: story de estados, story de edge cases, y props documentadas en Storybook.
+
+---
+
+## Panel General (Dashboard)
+
+Vista ejecutiva del negocio. Primer pantalla post-login.
+
+- [x] KPI cards: Facturado, Cobrado, Cuentas por cobrar, Saldo en cuenta (con sparklines y tendencia vs período anterior)
+- [x] Count cards: Productos activos, Clientes, Proveedores, Comprobantes del período
+- [x] Flujo de caja — gráfico de barras con toggle Semanal / Mensual / Anual
+- [x] Gastos por proveedor — gráfico donut con top 6 proveedores del período
+- [x] Facturas recientes — últimas 5 con número, cliente, fecha, total y estado
+- [x] Actividad reciente — feed de eventos con tiempo relativo
+- [x] Filtro por período: Última semana / Último mes / Últimos 3 meses / Último año / Personalizado (date range)
+- [x] Filtro por sucursal: todas o sucursal específica
+- [x] Filtros persistidos en URL params (links compartibles, survive refresh)
+- [ ] Actividad reciente: ampliar con eventos de stock, pagos y compras (hoy solo facturas)
+- [ ] Saldo en cuenta: conectar cuando Contabilidad esté disponible
+- [ ] Exportar dashboard como PDF
 
 ---
 

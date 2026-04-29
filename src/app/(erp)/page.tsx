@@ -1,19 +1,12 @@
-import { auth } from '@/lib/auth'
-import { TopBar } from '@/components/layout/TopBar'
+import { Suspense } from 'react'
+import { PanelClient } from './PanelClient'
 
 export const metadata = { title: 'Panel — Andiko ERP' }
 
-export default async function HomePage() {
-  const session = await auth()
-
+export default function HomePage() {
   return (
-    <div className="flex flex-col h-full">
-      <TopBar breadcrumbs={[{ label: 'Panel' }]} />
-      <div className="p-6">
-        <p className="text-sm text-zinc-500">
-          Bienvenido, {session?.user?.name}. Dashboard en construcción.
-        </p>
-      </div>
-    </div>
+    <Suspense>
+      <PanelClient />
+    </Suspense>
   )
 }
