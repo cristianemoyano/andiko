@@ -72,6 +72,7 @@ export async function createOrgUser(orgId: string, input: OrgUserCreateInput) {
   if (emailTaken) throw new Error('EMAIL_TAKEN')
 
   const password_hash = await hashPassword(input.password)
+  const pos_pin_hash = input.posPin ? await hashPassword(input.posPin) : null
 
   return sequelize.transaction(async (t) => {
     const user = await User.create(
@@ -79,6 +80,7 @@ export async function createOrgUser(orgId: string, input: OrgUserCreateInput) {
         email: input.email.trim().toLowerCase(),
         name: input.name.trim(),
         password_hash,
+        pos_pin_hash,
         role: input.role,
         org_id: orgId,
         branch_id: input.defaultBranchId,
@@ -128,6 +130,7 @@ export async function updateOrgUser(orgId: string, userId: string, input: OrgUse
       role: 'admin' | 'operator' | 'readonly'
       branch_id: string | null
       password_hash: string
+      pos_pin_hash: string | null
       is_active: boolean
     }> = {}
 
@@ -135,6 +138,7 @@ export async function updateOrgUser(orgId: string, userId: string, input: OrgUse
     if (input.role !== undefined) patch.role = input.role
     if (input.is_active !== undefined) patch.is_active = input.is_active
     if (input.password !== undefined) patch.password_hash = await hashPassword(input.password)
+    if (input.posPin !== undefined) patch.pos_pin_hash = input.posPin ? await hashPassword(input.posPin) : null
 
     if (nextBranchIds) {
       let newDefault: string | null

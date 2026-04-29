@@ -11,6 +11,7 @@ interface UserAttributes extends Timestamps {
   is_active: boolean
   org_id: UUID | null
   branch_id: UUID | null
+  pos_pin_hash: string | null
 }
 
 type UserCreationAttributes = Optional<
@@ -27,6 +28,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> {
   declare is_active: boolean
   declare org_id: UUID | null
   declare branch_id: UUID | null
+  declare pos_pin_hash: string | null
   declare created_at: Date
   declare updated_at: Date
   declare deleted_at: Date | null
@@ -42,6 +44,7 @@ User.init(
     is_active:     { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     org_id:        { type: DataTypes.UUID },
     branch_id:     { type: DataTypes.UUID },
+    pos_pin_hash:  { type: DataTypes.STRING(255) },
     created_at:    { type: DataTypes.DATE, allowNull: false },
     updated_at:    { type: DataTypes.DATE, allowNull: false },
     deleted_at:    { type: DataTypes.DATE },

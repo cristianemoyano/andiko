@@ -78,7 +78,7 @@ function Dialog({ open, onOpenChange, title, description, children, size, classN
               </RadixDialog.Close>
             )}
           </div>
-          <div className="px-5 py-4">{children}</div>
+          <div className="min-w-0 overflow-hidden">{children}</div>
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>
