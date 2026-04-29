@@ -10,11 +10,15 @@ export type OrderStatus = typeof ORDER_STATUSES[number]
 
 export interface SalesOrderAttributes extends Timestamps, AuditFields {
   id: UUID
+  org_id: UUID | null
   branch_id: UUID | null
   contact_id: UUID | null
   quote_id: UUID | null
   price_list_id: UUID | null
   salesperson_id: UUID | null
+  source: 'erp' | 'pos'
+  pos_device_id: string | null
+  pos_sale_id: string | null
   order_number: string
   status: OrderStatus
   payment_condition: PaymentCondition
@@ -47,7 +51,9 @@ export interface SalesOrderAttributes extends Timestamps, AuditFields {
 
 type SalesOrderCreationAttributes = Optional<
   SalesOrderAttributes,
-  | 'id' | 'branch_id' | 'contact_id' | 'quote_id' | 'price_list_id' | 'salesperson_id' | 'status' | 'payment_condition' | 'currency'
+  | 'id' | 'org_id' | 'branch_id' | 'contact_id' | 'quote_id' | 'price_list_id' | 'salesperson_id'
+  | 'source' | 'pos_device_id' | 'pos_sale_id'
+  | 'status' | 'payment_condition' | 'currency'
   | 'promised_date' | 'delivered_date'
   | 'shipping_street' | 'shipping_number' | 'shipping_floor' | 'shipping_apartment' | 'shipping_city' | 'shipping_province' | 'shipping_postal_code' | 'shipping_country'
   | 'billing_street' | 'billing_number' | 'billing_floor' | 'billing_apartment' | 'billing_city' | 'billing_province' | 'billing_postal_code' | 'billing_country'
@@ -58,11 +64,15 @@ type SalesOrderCreationAttributes = Optional<
 
 class SalesOrder extends AuditModel<SalesOrderAttributes, SalesOrderCreationAttributes> {
   declare id: UUID
+  declare org_id: UUID | null
   declare branch_id: UUID | null
   declare contact_id: UUID | null
   declare quote_id: UUID | null
   declare price_list_id: UUID | null
   declare salesperson_id: UUID | null
+  declare source: 'erp' | 'pos'
+  declare pos_device_id: string | null
+  declare pos_sale_id: string | null
   declare order_number: string
   declare status: OrderStatus
   declare payment_condition: PaymentCondition
@@ -101,6 +111,9 @@ SalesOrder.init(
     quote_id:          { type: DataTypes.UUID },
     price_list_id:     { type: DataTypes.UUID },
     salesperson_id:    { type: DataTypes.UUID },
+    source:            { type: DataTypes.ENUM('erp', 'pos'), allowNull: false, defaultValue: 'erp' },
+    pos_device_id:     { type: DataTypes.STRING(128) },
+    pos_sale_id:       { type: DataTypes.STRING(128) },
     order_number:      { type: DataTypes.STRING(20), allowNull: false },
     status:            { type: DataTypes.ENUM(...ORDER_STATUSES), allowNull: false, defaultValue: 'draft' },
     payment_condition: { type: DataTypes.ENUM('cash', 'net_30', 'net_60', 'net_90'), allowNull: false, defaultValue: 'cash' },
@@ -134,10 +147,19 @@ SalesOrder.init(
   { sequelize, tableName: 'sales_orders', paranoid: true, underscored: true }
 )
 
-SalesOrder.belongsTo(SalesQuote, { foreignKey: 'quote_id', as: 'quote' })
-SalesQuote.hasMany(SalesOrder, { foreignKey: 'quote_id', as: 'orders' })
+// Guard associations to avoid Next.js dev double-evaluation issues.
+if (!SalesOrder.associations.quote) {
+  SalesOrder.belongsTo(SalesQuote, { foreignKey: 'quote_id', as: 'quote' })
+}
+if (!SalesQuote.associations.orders) {
+  SalesQuote.hasMany(SalesOrder, { foreignKey: 'quote_id', as: 'orders' })
+}
 
-SalesOrder.belongsTo(User, { foreignKey: 'salesperson_id', as: 'salesperson' })
-User.hasMany(SalesOrder, { foreignKey: 'salesperson_id', as: 'salesOrders' })
+if (!SalesOrder.associations.salesperson) {
+  SalesOrder.belongsTo(User, { foreignKey: 'salesperson_id', as: 'salesperson' })
+}
+if (!User.associations.salesOrders) {
+  User.hasMany(SalesOrder, { foreignKey: 'salesperson_id', as: 'salesOrders' })
+}
 
 export default SalesOrder
