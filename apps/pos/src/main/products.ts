@@ -7,9 +7,10 @@ import type { PosProduct } from '@andiko/shared'
 export function registerProductsHandlers(ipc: IpcMain) {
   ipc.handle('products:search', async (_e, query: string): Promise<PosProduct[]> => {
     const d = db()
-    const term = `%${query.trim()}%`
+    const trimmed = query.trim()
+    const term = `%${trimmed}%`
 
-    const rows = query.trim()
+    const rows = trimmed
       ? d
           .select()
           .from(products)
@@ -17,6 +18,7 @@ export function registerProductsHandlers(ipc: IpcMain) {
             and(
               eq(products.is_active, true),
               or(
+                eq(products.barcode, trimmed),   // exact barcode match first
                 like(products.name, term),
                 like(products.sku, term),
               ),
