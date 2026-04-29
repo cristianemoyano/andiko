@@ -161,6 +161,7 @@ Productos y servicios. Requisito mínimo para facturar.
 - [x] Alícuota IVA por producto (0%, 10.5%, 21%, 27%)
 - [x] Listas de precios (múltiples listas por cliente/canal)
 - [x] Historial de precios
+- [x] Etiquetas de góndola — pantalla de selección masiva por categoría, impresión browser-native (CSS @media print)
 - [ ] Ajustes masivos de precios (por categoría / % / canal) y reglas
 - [ ] Datos de logística / shipping por SKU (peso, dimensiones, bultos/presentaciones)
 
@@ -381,6 +382,8 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] Sidebar: sección POS con link a Dispositivos
 
 ### Pendientes
+- [x] Barcode sync — `barcode` incluido en `PosProduct` y en payload de sync cloud→POS
+- [x] Barcode search — búsqueda por match exacto de barcode en POS (compatible con lectores HID)
 - [ ] `GET /api/v1/pos/sales/sync` — pull de ventas sincronizadas (para reconciliación offline)
 - [ ] Renovación de licencia desde el ERP admin (extender `license_valid_until`)
 - [ ] App Electron: pantalla de venta, carrito, cierre de caja

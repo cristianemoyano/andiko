@@ -91,7 +91,7 @@ export async function listProducts(query: ProductQuery, ctx: TenantContext) {
         model: ProductVariant,
         as: 'variants',
         required: false,
-        attributes: ['id', 'sku', 'name', 'base_price', 'stock_quantity', 'manage_stock', 'is_default'],
+        attributes: ['id', 'sku', 'barcode', 'name', 'base_price', 'stock_quantity', 'manage_stock', 'is_default'],
       },
       {
         model: ProductCategory,

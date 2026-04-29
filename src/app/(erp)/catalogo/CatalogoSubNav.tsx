@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/catalogo/productos',        label: 'Productos' },
   { href: '/catalogo/categorias',       label: 'Categorías' },
   { href: '/catalogo/listas-de-precios', label: 'Listas de precios' },
+  { href: '/catalogo/etiquetas',        label: 'Etiquetas' },
 ] as const
 
 export function CatalogoSubNav() {

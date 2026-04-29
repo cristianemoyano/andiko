@@ -21,6 +21,7 @@ export type ApiError = {
 export type PosProduct = {
   id: UUID
   sku: string | null
+  barcode: string | null
   name: string
   price: string     // NUMERIC as string to preserve precision
   iva_rate: IvaRate

@@ -111,10 +111,10 @@ export async function syncCatalog() {
   )
   for (const p of productList) {
     db().insert(products).values({
-      id: p.id, sku: p.sku ?? null, name: p.name,
+      id: p.id, sku: p.sku ?? null, barcode: p.barcode ?? null, name: p.name,
       price: p.price, iva_rate: p.iva_rate, is_active: p.is_active, synced_at: p.updated_at,
     }).onConflictDoUpdate({ target: products.id, set: {
-      sku: p.sku ?? null, name: p.name, price: p.price, iva_rate: p.iva_rate, is_active: p.is_active, synced_at: p.updated_at,
+      sku: p.sku ?? null, barcode: p.barcode ?? null, name: p.name, price: p.price, iva_rate: p.iva_rate, is_active: p.is_active, synced_at: p.updated_at,
     }}).run()
   }
 

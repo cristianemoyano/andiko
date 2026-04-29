@@ -141,4 +141,5 @@ function runMigrations(sqlite: Database.Database) {
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN cashier_name TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN cashier_user_id TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE pos_users ADD COLUMN pos_pin_hash TEXT;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE products ADD COLUMN barcode TEXT;`) } catch { /* ignore */ }
 }
