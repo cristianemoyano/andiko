@@ -82,6 +82,7 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
   const [email, setEmail] = useState(() => (isEdit ? user!.email : ''))
   const [name, setName] = useState(() => (isEdit ? user!.name : ''))
   const [password, setPassword] = useState('')
+  const [posPin, setPosPin] = useState('')
   const [role, setRole] = useState<TenantRole>(() => (isEdit ? (user!.role as TenantRole) : 'operator'))
   const [branchAccess, dispatchBranch] = useReducer(
     branchAccessReducer,
@@ -126,6 +127,7 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
         is_active: isActive,
       }
       if (password.trim()) body.password = password.trim()
+      if (posPin.trim()) body.posPin = posPin.trim()
 
       try {
         await fetchJson(`/api/v1/sys-admin/organizations/${orgId}/users/${user!.id}`, {
@@ -157,6 +159,7 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
           email: email.trim().toLowerCase(),
           name: name.trim(),
           password: password.trim(),
+          posPin: posPin.trim() ? posPin.trim() : undefined,
           role,
           branchIds: ids,
           defaultBranchId: def,
@@ -230,6 +233,18 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
           autoComplete="new-password"
           required={!isEdit}
           error={!!errors.password}
+        />
+      </FormField>
+
+      <FormField label="PIN de POS (opcional)" htmlFor="org_user_pos_pin" error={errors.posPin?.[0]}>
+        <Input
+          id="org_user_pos_pin"
+          type="password"
+          value={posPin}
+          onChange={e => setPosPin(e.target.value)}
+          autoComplete="off"
+          placeholder={isEdit ? 'Dejar vacío para no cambiar' : 'Opcional'}
+          error={!!errors.posPin}
         />
       </FormField>
       <FormField label="Rol" htmlFor="org_user_role" error={errors.role?.[0]}>

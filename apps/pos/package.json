@@ -1,0 +1,37 @@
+{
+  "name": "@andiko/pos",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist-electron/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "rebuild-native": "CXXFLAGS='-std=c++20' electron-rebuild -f -w better-sqlite3 --arch=x64 && cp ../../node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node ../../node_modules/better-sqlite3/build/Release/better_sqlite3.node"
+  },
+  "dependencies": {
+    "@andiko/shared": "workspace:*",
+    "better-sqlite3": "^11.10.0",
+    "drizzle-orm": "^0.44.0",
+    "electron-store": "^10.0.1"
+  },
+  "devDependencies": {
+    "@andiko/ui": "workspace:*",
+    "@electron/rebuild": "^4.0.4",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.0",
+    "drizzle-kit": "^0.30.0",
+    "electron": "^35.0.0",
+    "electron-vite": "^3.0.0",
+    "postcss": "^8.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^6.0.0"
+  }
+}

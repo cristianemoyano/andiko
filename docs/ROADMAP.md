@@ -347,6 +347,48 @@ Envío de documentos e notificaciones por email desde el ERP.
 
 ---
 
+## POS — Punto de venta offline (Electron + SQLite)
+
+App de escritorio para locales físicos. Sincronización eventual con el cloud ERP.
+
+### Infraestructura monorepo
+- [x] `pnpm-workspace.yaml` — workspace con `apps/*` y `packages/*`
+- [x] `apps/pos/` — app Electron + Vite + React + SQLite (better-sqlite3)
+- [x] `packages/ui/` — componentes compartidos `@andiko/ui`
+- [x] `packages/db/` — tipos compartidos `@andiko/db`
+
+### Backend cloud (Next.js API)
+- [x] Tabla `pos_devices` — `device_id`, `api_token`, `branch_id`, `license_valid_until`, `is_active`
+- [x] Migración `create-pos-devices` con índice único `(org_id, device_id)` y fix posterior
+- [x] `pos_pin_hash` en `users` — PIN numérico hasheado para autenticación de cajeros en POS
+- [x] Migración `add-pos-pin-to-users`
+- [x] `source` en `sales_orders` — enum `erp | pos` para trazabilidad de ventas POS
+- [x] Migración `add-pos-traceability-to-sales-orders`
+- [x] `withPosDevice()` — middleware de auth por Bearer token (valida device activo, bumps `last_seen_at`)
+- [x] `GET /api/v1/pos/devices` — listado de dispositivos por org (ERP admin)
+- [x] `POST /api/v1/pos/devices` — alta de dispositivo con `api_token` aleatorio
+- [x] `PATCH /api/v1/pos/devices/:id` — editar nombre, branch, licencia, estado
+- [x] `DELETE /api/v1/pos/devices/:id` — soft delete
+- [x] `GET /api/v1/pos/license` — info de licencia + org/branch para el dispositivo autenticado
+- [x] `GET /api/v1/pos/products` — catálogo con variantes y precio efectivo (delta por `since`)
+- [x] `GET /api/v1/pos/customers` — clientes con delta por `since`
+- [x] `GET /api/v1/pos/users` — cajeros autorizados con `pos_pin_hash` (delta por `since`)
+- [x] `POST /api/v1/pos/sales/sync` — batch de ventas offline → `sales_orders` con trazabilidad POS
+
+### Frontend ERP (gestión de dispositivos)
+- [x] `/pos/dispositivos` — listado de dispositivos con estado de licencia
+- [x] Modal alta/edición de dispositivo (`DeviceEditModal`) con renovación de licencia
+- [x] Sidebar: sección POS con link a Dispositivos
+
+### Pendientes
+- [ ] `GET /api/v1/pos/sales/sync` — pull de ventas sincronizadas (para reconciliación offline)
+- [ ] Renovación de licencia desde el ERP admin (extender `license_valid_until`)
+- [ ] App Electron: pantalla de venta, carrito, cierre de caja
+- [ ] App Electron: sincronización automática en background cuando hay conexión
+- [ ] Registro de cierre de caja en cloud
+
+---
+
 ## Backlog / Fases futuras
 
 Ideas validadas pero sin fecha definida.

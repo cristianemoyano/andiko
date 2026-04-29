@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@andiko/shared": ["../../packages/shared/src/index.ts"],
+      "@andiko/ui": ["../../packages/ui/src/index.ts"]
+    }
+  },
+  "include": [
+    "src/renderer/**/*",
+    "../../packages/shared/src/index.ts",
+    "../../packages/ui/src/index.ts"
+  ]
+}
