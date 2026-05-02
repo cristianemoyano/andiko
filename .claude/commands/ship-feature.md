@@ -1,6 +1,6 @@
 # ship-feature
 
-Ship the current feature: branch → lint → typecheck → test → commit → push → PR into `develop`.
+Ship the current feature: branch → quality checks → commit → push → PR into `develop`.
 
 ## Branching model
 
@@ -16,58 +16,74 @@ Never push directly to `main` or `develop`.
 
 ## Steps
 
-### 1. Identify the feature
-Summarize what was built in this session in one sentence — this becomes the PR title.  
+### 1. Identify the feature and context
+
+Summarize what was built in this session in one sentence — this becomes the PR title.
 Derive a branch slug: `feature/<kebab-case-description>` (max 5 words).
 
+**Detect context** by running `git diff --name-only origin/develop...HEAD` (or checking unstaged changes if not yet committed). Then classify:
+
+- **POS context**: majority of changes are under `apps/pos/`, `.github/workflows/pos-*.yml`, or `packages/` touched only by the POS
+- **ERP context**: majority of changes are under `src/`, `apps/web/`, or migrations
+- **Mixed**: changes span both — treat as ERP context but run POS checks too
+
+---
+
 ### 2. Create or verify the feature branch
+
 ```bash
-# Must branch off develop, not main
 git fetch origin
 git checkout -b feature/<slug> origin/develop
 ```
+
 If already on a `feature/*` branch, continue. If on `main` or `develop`, create the branch now.
 
-### 3. Verify scripts exist in `package.json`
-Required scripts — add them if missing:
+---
+
+### 3. Quality checks — run based on context
+
+#### ERP context
+
+**Verify root scripts exist** (`package.json` at repo root) — add if missing:
 - `"lint"` → `"eslint src/"` (not `next lint` — broken in Next.js 16)
 - `"typecheck"` → `"tsc --noEmit"`
 - `"test"` → `"vitest run --passWithNoTests"`
 
-Package manager: **pnpm**. Never `npm run` or `yarn`.
-
-### 4. Typecheck
 ```bash
-pnpm typecheck
+pnpm typecheck   # run from repo root
+pnpm lint        # run from repo root
+pnpm test        # run from repo root
 ```
-Fix all errors. No `@ts-ignore` without an inline comment explaining the exception.
 
-### 5. Lint
-```bash
-pnpm lint
-```
-Fix all errors. Never disable a lint rule without an inline `// eslint-disable-next-line` comment with a reason.
+Fix all errors. No `@ts-ignore` without an inline comment. Never disable lint rules without a reason comment.
 
-### 6. Unit tests
-
-#### 6a. Check coverage of changed files
-Scan for test files (`*.test.ts`, `*.spec.ts`) alongside each modified service or utility.
-
-#### 6b. Write missing tests
-If a service function was created or modified and has no test coverage, write it now:
-- Framework: **Vitest** (`describe`, `it`, `expect`, `vi`)
-- File location: beside the source (`foo.service.test.ts` next to `foo.service.ts`)
+**Unit tests** — scan for `*.test.ts` / `*.spec.ts` beside each modified service. Write missing tests for new/modified service functions:
+- Framework: Vitest (`describe`, `it`, `expect`, `vi`)
 - Mock Sequelize models with `vi.mock`
 - Cover: happy path, validation failure, ERP edge cases (zero amounts, duplicate fiscal numbers, negative stock)
 - Skip route handlers and React components — services only
 
-#### 6c. Run tests
-```bash
-pnpm test
-```
-All must pass. Fix failures before continuing.
+#### POS context
 
-### 7. Update ROADMAP.md
+```bash
+cd apps/pos && pnpm typecheck   # tsc --noEmit in apps/pos
+```
+
+The POS has no lint config or test suite — skip `pnpm lint` and `pnpm test`.
+
+Optionally verify the build compiles without errors:
+```bash
+cd apps/pos && pnpm build
+```
+(This is slow — only run if you changed main process, preload, or vite config. Skip for renderer-only changes.)
+
+#### Mixed context
+
+Run all ERP checks from root, then run POS typecheck from `apps/pos/`.
+
+---
+
+### 4. Update ROADMAP.md
 
 Read `docs/ROADMAP.md` and update it to reflect what was just built:
 
@@ -78,14 +94,20 @@ Read `docs/ROADMAP.md` and update it to reflect what was just built:
 
 Always include `docs/ROADMAP.md` in the commit if it was modified.
 
-### 8. Stage files
+---
+
+### 5. Stage files
+
 ```bash
 git diff --stat        # review what changed
 git add <specific files>
 ```
-Never `git add .` blindly. Exclude: `.env*`, debug files, unrelated changes.
 
-### 9. Commit (Conventional Commits)
+Never `git add .` blindly. Exclude: `.env*`, debug files, `dist-electron/`, `out/`, `apps/pos/dist/`, unrelated changes.
+
+---
+
+### 6. Commit (Conventional Commits)
 
 Format: `<type>(<scope>): <short description>`
 
@@ -98,20 +120,31 @@ Format: `<type>(<scope>): <short description>`
 | `chore` | tooling, deps, config |
 | `docs` | documentation only |
 
-Scope = ERP module: `sales`, `inventory`, `purchases`, `contacts`, `accounting`, `auth`, `core`
+**Scope:**
+- ERP modules: `sales`, `inventory`, `purchases`, `contacts`, `accounting`, `auth`
+- Cross-cutting / infra: `core`
+- Use `core` for POS features, CI/CD, monorepo config, shared packages
+
+Header max 100 characters. Body lines max 100 characters.
 
 ```bash
-git commit -m "feat(sales): add invoice creation with IVA 21% breakdown"
+git commit -m "feat(core): add barcode scanner support to POS sale screen"
 ```
 
 If husky/lint-staged hooks fail → fix the reported issue and retry. Never `--no-verify`.
 
-### 10. Push
+---
+
+### 7. Push
+
 ```bash
 git push -u origin feature/<slug>
 ```
 
-### 11. Open PR → develop
+---
+
+### 8. Open PR → develop
+
 ```bash
 gh pr create \
   --base develop \
@@ -124,17 +157,26 @@ gh pr create \
 - <bullet per significant file or behavior change>
 
 ## Testing
-- [ ] Unit tests written and passing
-- [ ] `pnpm typecheck` clean
-- [ ] `pnpm lint` clean
+- [ ] `pnpm typecheck` clean (ERP)
+- [ ] `pnpm lint` clean (ERP)
+- [ ] `pnpm test` passing (ERP)
+- [ ] `pnpm typecheck` clean in apps/pos (POS)
 
 ## ERP / Fiscal notes
 <AFIP implications, tax fields, fiscal document changes — omit if none>
+
+## POS notes
+<Electron main/preload changes, IPC handlers, SQLite schema changes, sync impact — omit if none>
 EOF
 )"
 ```
 
-### 12. Report
+Remove checklist items that don't apply to the context.
+
+---
+
+### 9. Report
+
 Print the PR URL and a one-line summary of what was shipped.
 
 ---
@@ -144,38 +186,59 @@ Print the PR URL and a one-line summary of what was shipped.
 - **Never target `main` in a PR.** Features go to `develop`. Releases go to `main` via `/release`.
 - **Never skip failing tests.** Fix the code or the test — never both without understanding why.
 - **Never commit secrets, `.env` files, or unintended migration files.**
+- **Never commit POS build artifacts** (`dist-electron/`, `out/`, `apps/pos/dist/`).
 - If the feature touches financial flows (invoices, payments, stock), flag it explicitly in the PR body.
-- **No magic strings or numbers.** Status values, document types, tax codes, ENUMs, and other fixed domain values must be defined as TypeScript constants or enum types — never hardcoded inline. Scan the diff for string literals that represent domain concepts and extract them before committing.
-- **Every list endpoint must support pagination.** Any `GET` route that returns an array of resources must accept `page` and `limit` query params and return `{ data, total, page, limit, pages }`. Use `paginationSchema`, `paginate()`, and `toPaginated()` from `src/lib/pagination.ts` — never roll your own offset logic or response shape.
+- If the feature touches POS IPC handlers or SQLite schema, flag it in the PR body.
+- **No magic strings or numbers** in ERP code. Status values, document types, tax codes must be constants or enums.
+- **Every ERP list endpoint must support pagination.** Use `paginationSchema`, `paginate()`, and `toPaginated()` from `src/lib/pagination.ts`.
 
 ---
 
-## Next.js 16 — Patrones obligatorios
+## ERP — Next.js 16 patterns
 
-Leer `node_modules/next/dist/docs/` antes de escribir código que toque routing, proxy o config.
+Read `node_modules/next/dist/docs/` before touching routing, proxy, or config.
 
-### Proxy (antes Middleware)
-- El archivo se llama `src/proxy.ts`, no `middleware.ts`.
-- Exportar como `export { auth as proxy }` o `export default function proxy()`. No `export default auth` con nombre distinto.
-- El proxy corre en **Edge runtime**: sin Node.js nativo (`pg`, `sequelize`, `bcryptjs`, `pino`).
-- Si necesitás auth en el proxy, usá un `auth.config.ts` Edge-compatible (sin imports de DB) separado del `auth.ts` completo.
+### Proxy (formerly Middleware)
+- File is `src/proxy.ts`, not `middleware.ts`.
+- Export as `export { auth as proxy }`. Edge runtime — no Node.js native modules.
+- Use a separate `auth.config.ts` (Edge-compatible, no DB imports) if auth is needed in proxy.
 
-### Bundler — paquetes server-only
-Agregar a `next.config.ts` cualquier paquete Node.js que no debe bundlearse para cliente:
+### Bundler — server-only packages
+Add to `next.config.ts`:
 ```typescript
 serverExternalPackages: ['sequelize', 'pg', 'pg-hstore', 'pino', 'pino-pretty']
 ```
-Si ves `"Please install pg package manually"` en el browser → falta este config.
 
 ### Server-only imports
-Agregar `import 'server-only'` al tope de cualquier módulo que use pino, Sequelize, o secretos,
-para que Next.js falle en build si se importa desde un Client Component.
+Add `import 'server-only'` to any module using pino, Sequelize, or secrets.
 
 ### Route groups
-- `src/app/(auth)/` → páginas públicas (login, etc.)
-- `src/app/(erp)/` → páginas protegidas, con auth guard en `layout.tsx`
-- Los route groups no afectan la URL.
+- `src/app/(auth)/` → public pages
+- `src/app/(erp)/` → protected pages with auth guard in `layout.tsx`
 
 ### Scripts
-- `pnpm lint` → `eslint src/` (no `next lint`, roto en v16)
-- `pnpm migrate` → `tsx --env-file=.env.local src/db/migrate.ts` (tsx no carga `.env.local` solo)
+- `pnpm lint` → `eslint src/` (not `next lint`)
+- `pnpm migrate` → `tsx --env-file=.env.local src/db/migrate.ts`
+
+---
+
+## POS — Electron patterns
+
+### IPC
+- Handlers registered in `src/main/` via `ipcMain.handle`.
+- Exposed in `src/preload/index.ts` via `contextBridge.exposeInMainWorld`.
+- Types declared in `src/renderer/env.d.ts`.
+- Never call Node.js APIs directly from renderer — always go through preload.
+
+### SQLite / Drizzle
+- Schema in `src/db/schema.ts`. Always add migrations for schema changes.
+- Never use `better-sqlite3` from the renderer process.
+
+### Version
+- App version is injected at build-time as `__APP_VERSION__` via `electron.vite.config.ts`.
+- Always sourced from `apps/pos/package.json` — bump it there before releasing.
+
+### Release
+- Releases are triggered by pushing a `pos/v*` tag to origin.
+- Tag format: `pos/v<semver>` (e.g. `pos/v1.0.0`).
+- Never tag without first bumping the version in `apps/pos/package.json`.
