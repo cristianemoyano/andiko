@@ -1,16 +1,16 @@
 # ship-feature
 
-Ship the current feature: branch → quality checks → commit → push → PR into `develop`.
+Ship the current feature: quality checks → commit → push directly to `develop`.
 
 ## Branching model
 
 ```
 main         ← versioned releases only (tags + changelog)
-develop      ← integration branch, always deployable
-feature/*    ← one branch per feature, branched off develop
+develop      ← integration branch — commit and push here directly
+feature/*    ← only for large multi-session features or collaboration
 ```
 
-Never push directly to `main` or `develop`.
+Push directly to `develop`. Skip feature branches and PRs unless explicitly asked.
 
 ---
 
@@ -29,14 +29,15 @@ Derive a branch slug: `feature/<kebab-case-description>` (max 5 words).
 
 ---
 
-### 2. Create or verify the feature branch
+### 2. Ensure you're on develop
 
 ```bash
 git fetch origin
-git checkout -b feature/<slug> origin/develop
+git checkout develop
+git pull origin develop
 ```
 
-If already on a `feature/*` branch, continue. If on `main` or `develop`, create the branch now.
+If already on `develop`, continue. Never commit to `main`.
 
 ---
 
@@ -135,49 +136,17 @@ If husky/lint-staged hooks fail → fix the reported issue and retry. Never `--n
 
 ---
 
-### 7. Push
+### 7. Push to develop
 
 ```bash
-git push -u origin feature/<slug>
+git push origin develop
 ```
 
 ---
 
-### 8. Open PR → develop
+### 8. Report
 
-```bash
-gh pr create \
-  --base develop \
-  --title "feat(<scope>): <description>" \
-  --body "$(cat <<'EOF'
-## What
-<one paragraph describing the feature and its business purpose>
-
-## Changes
-- <bullet per significant file or behavior change>
-
-## Testing
-- [ ] `pnpm typecheck` clean (ERP)
-- [ ] `pnpm lint` clean (ERP)
-- [ ] `pnpm test` passing (ERP)
-- [ ] `pnpm typecheck` clean in apps/pos (POS)
-
-## ERP / Fiscal notes
-<AFIP implications, tax fields, fiscal document changes — omit if none>
-
-## POS notes
-<Electron main/preload changes, IPC handlers, SQLite schema changes, sync impact — omit if none>
-EOF
-)"
-```
-
-Remove checklist items that don't apply to the context.
-
----
-
-### 9. Report
-
-Print the PR URL and a one-line summary of what was shipped.
+Print a one-line summary of what was shipped and the commit hash.
 
 ---
 
