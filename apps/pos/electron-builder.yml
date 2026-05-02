@@ -10,7 +10,6 @@ directories:
 # Files to include in the package — whitelist approach so nothing sensitive leaks
 files:
   - dist-electron/**/*
-  - out/**/*
   - package.json
   - "!**/*.map"
   - "!**/*.d.ts"

@@ -25,6 +25,7 @@ export default defineConfig({
   renderer: {
     root: 'src/renderer',
     plugins: [react()],
+    build: { outDir: 'dist-electron/renderer' },
     define: {
       __APP_VERSION__: JSON.stringify(version),
     },

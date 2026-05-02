@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron'
 import { join } from 'path'
 import { initDb } from './db'
 import { registerSyncHandlers } from './sync'
@@ -28,6 +28,11 @@ function createWindow() {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  // Cmd+Option+I (mac) / Ctrl+Shift+I (win/linux) — toggle DevTools for debugging
+  globalShortcut.register('CommandOrControl+Alt+I', () => {
+    mainWindow?.webContents.toggleDevTools()
+  })
 }
 
 app.whenReady().then(async () => {
