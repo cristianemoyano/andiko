@@ -18,7 +18,6 @@ files:
 # macOS
 mac:
   category: public.app-category.business
-  icon: resources/icon.icns
   target:
     - target: dmg
       arch: [x64, arm64]
@@ -38,7 +37,6 @@ dmg:
 
 # Windows
 win:
-  icon: resources/icon.ico
   target:
     - target: nsis
       arch: [x64]
@@ -46,9 +44,6 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
-  installerIcon: resources/icon.ico
-  uninstallerIcon: resources/icon.ico
-  installerHeaderIcon: resources/icon.ico
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Andiko POS
