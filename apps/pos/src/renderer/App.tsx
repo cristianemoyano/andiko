@@ -93,6 +93,9 @@ export function App() {
         {/* Spacer */}
         <div className="flex-1" />
 
+        {/* App version */}
+        <span className="text-[9px] text-zinc-600 font-mono select-none">v{__APP_VERSION__}</span>
+
         {/* Connectivity indicator */}
         <div
           title={online ? 'Conectado al cloud' : 'Sin conexión — modo offline'}

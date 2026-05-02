@@ -124,4 +124,5 @@ declare global {
   interface Window {
     pos: PosAPI
   }
+  const __APP_VERSION__: string
 }
