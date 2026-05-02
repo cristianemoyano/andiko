@@ -381,6 +381,14 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] Modal alta/edición de dispositivo (`DeviceEditModal`) con renovación de licencia
 - [x] Sidebar: sección POS con link a Dispositivos
 
+### Build y distribución
+- [x] `electron-builder` configurado — DMG para macOS (x64 + arm64), NSIS installer para Windows x64
+- [x] GitHub Actions workflow (`pos-release.yml`) — build nativo por plataforma, publish a repo público `andiko-pos-releases` vía tag `pos/v*`
+- [x] Versión de la app inyectada en build-time (`__APP_VERSION__`) y mostrada en la UI
+- [ ] Íconos de la app (`resources/icon.icns`, `icon.ico`) — pendiente diseño
+- [ ] Firma de código macOS (Apple Developer) y Windows (Authenticode)
+- [ ] `electron-updater` — auto-update desde repo público de releases
+
 ### Pendientes
 - [x] Barcode sync — `barcode` incluido en `PosProduct` y en payload de sync cloud→POS
 - [x] Barcode search — búsqueda por match exacto de barcode en POS (compatible con lectores HID)

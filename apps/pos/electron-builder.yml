@@ -1,0 +1,61 @@
+appId: com.andiko.pos
+productName: Andiko POS
+copyright: Copyright © 2025 Andiko
+
+# Directories
+directories:
+  buildResources: resources
+  output: dist
+
+# Files to include in the package — whitelist approach so nothing sensitive leaks
+files:
+  - dist-electron/**/*
+  - out/**/*
+  - package.json
+  - "!**/*.map"
+  - "!**/*.d.ts"
+
+# macOS
+mac:
+  category: public.app-category.business
+  icon: resources/icon.icns
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  # Code signing — set CSC_LINK + CSC_KEY_PASSWORD env vars to enable
+  # identity: null disables signing for unsigned dev builds
+  identity: null
+
+dmg:
+  title: "Andiko POS ${version}"
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# Windows
+win:
+  icon: resources/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  installerHeaderIcon: resources/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Andiko POS
+
+# Auto-update feed — points to the public releases repo
+publish:
+  provider: github
+  owner: cristianemoyano
+  repo: andiko-pos-releases
+  private: false

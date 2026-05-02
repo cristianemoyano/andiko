@@ -1,0 +1,136 @@
+name: POS Release
+
+on:
+  push:
+    tags:
+      - "pos/v*"   # trigger: git tag pos/v1.0.0
+
+permissions:
+  contents: read
+
+jobs:
+  build-mac:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild better-sqlite3 for Electron
+        working-directory: apps/pos
+        run: |
+          CXXFLAGS='-std=c++20' pnpm exec electron-rebuild -f -w better-sqlite3 --arch=x64
+        env:
+          npm_config_target: ${{ steps.get-electron-version.outputs.version }}
+
+      - name: Build renderer + main
+        working-directory: apps/pos
+        run: pnpm run build
+
+      - name: Package macOS DMG
+        working-directory: apps/pos
+        run: pnpm exec electron-builder --mac --config electron-builder.yml
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          # CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pos-mac
+          path: apps/pos/dist/*.dmg
+          retention-days: 7
+
+  build-win:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild better-sqlite3 for Electron
+        working-directory: apps/pos
+        shell: pwsh
+        run: pnpm exec electron-rebuild -f -w better-sqlite3 --arch=x64
+
+      - name: Build renderer + main
+        working-directory: apps/pos
+        run: pnpm run build
+
+      - name: Package Windows installer
+        working-directory: apps/pos
+        run: pnpm exec electron-builder --win --config electron-builder.yml
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pos-win
+          path: apps/pos/dist/*.exe
+          retention-days: 7
+
+  publish:
+    name: Publish to public releases repo
+    needs: [build-mac, build-win]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#pos/}" >> $GITHUB_OUTPUT
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pos-mac
+          path: artifacts/
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pos-win
+          path: artifacts/
+
+      - name: Create GitHub Release in public repo
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: cristianemoyano/andiko-pos-releases
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "Andiko POS ${{ steps.version.outputs.version }}"
+          body: |
+            ## Andiko POS ${{ steps.version.outputs.version }}
+
+            ### Instalación
+            - **macOS**: descargá el `.dmg`, abrilo y arrastrá la app a Aplicaciones
+            - **Windows**: descargá el `.exe` y seguí el instalador
+
+            ### Actualizaciones automáticas
+            La app se actualiza sola cuando hay una nueva versión disponible.
+          files: artifacts/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
