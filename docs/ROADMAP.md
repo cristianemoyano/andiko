@@ -393,9 +393,12 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 ### Pendientes
 - [x] Barcode sync — `barcode` incluido en `PosProduct` y en payload de sync cloud→POS
 - [x] Barcode search — búsqueda por match exacto de barcode en POS (compatible con lectores HID)
+- [x] Cierre de caja — pantalla con totales del día por método de pago (efectivo, tarjeta, transferencia)
+- [x] Modo pantalla completa — fullscreen en producción, F11 para toggle
+- [x] Listas de precios en POS — endpoint `/api/v1/pos/products` resuelve precio desde lista default del ERP
+- [ ] Gestión de turnos (cash sessions) — apertura con monto inicial, cierre con diferencia, sync al cloud
 - [ ] `GET /api/v1/pos/sales/sync` — pull de ventas sincronizadas (para reconciliación offline)
 - [ ] Renovación de licencia desde el ERP admin (extender `license_valid_until`)
-- [ ] App Electron: pantalla de venta, carrito, cierre de caja
 - [ ] App Electron: sincronización automática en background cuando hay conexión
 - [ ] Registro de cierre de caja en cloud
 
