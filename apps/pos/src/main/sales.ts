@@ -3,7 +3,7 @@ import { db } from './db'
 import { sales, saleItems, syncQueue, products, settings } from '../db/schema'
 import { randomUUID } from 'crypto'
 import type { PosSale } from '@andiko/shared'
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 
 export function registerSalesHandlers(ipc: IpcMain) {
   ipc.handle('sales:create', async (_e, payload: PosSale) => {
@@ -63,5 +63,31 @@ export function registerSalesHandlers(ipc: IpcMain) {
     if (!s) return null
     const items = db().select().from(saleItems).where(eq(saleItems.sale_id, saleId)).all()
     return { sale: s, items }
+  })
+
+  ipc.handle('sales:closingReport', async (_e, date?: string) => {
+    const day = date ?? new Date().toISOString().slice(0, 10)
+    const rows = db()
+      .select({
+        payment_method: sales.payment_method,
+        count: sql<number>`count(*)`,
+        total: sql<string>`coalesce(sum(cast(${sales.total} as real)), 0)`,
+      })
+      .from(sales)
+      .where(sql`strftime('%Y-%m-%d', ${sales.sold_at}) = ${day}`)
+      .groupBy(sales.payment_method)
+      .all()
+
+    const report = { cash: 0, card: 0, transfer: 0, total: 0, count: 0 }
+    for (const row of rows) {
+      const amount = Number(row.total)
+      const count = Number(row.count)
+      if (row.payment_method === 'cash')     report.cash     += amount
+      if (row.payment_method === 'card')     report.card     += amount
+      if (row.payment_method === 'transfer') report.transfer += amount
+      report.total += amount
+      report.count += count
+    }
+    return { ...report, date: day }
   })
 }

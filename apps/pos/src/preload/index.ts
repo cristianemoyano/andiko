@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('pos', {
     listToday: () => ipcRenderer.invoke('sales:list-today'),
     list: (args?: { limit?: number }) => ipcRenderer.invoke('sales:list', args),
     get: (saleId: string) => ipcRenderer.invoke('sales:get', saleId),
+    closingReport: (date?: string) => ipcRenderer.invoke('sales:closingReport', date),
   },
   sync: {
     checkLicense: () => ipcRenderer.invoke('license:check'),

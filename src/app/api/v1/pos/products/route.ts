@@ -4,6 +4,8 @@ import { Op } from 'sequelize'
 import { withPosDevice } from '@/lib/pos-auth'
 import Product from '@/modules/catalog/product.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
+import PriceList from '@/modules/catalog/price-list.model'
+import PriceListItem from '@/modules/catalog/price-list-item.model'
 
 const querySchema = z.object({
   since: z.string().datetime({ offset: true }).optional(),
@@ -40,20 +42,38 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
         where: variantWhere,
         required: false,
         attributes: ['id', 'sku', 'barcode', 'name', 'base_price', 'is_default'],
+        include: [
+          {
+            model: PriceListItem,
+            as: 'price_list_items',
+            required: false,
+            attributes: ['price'],
+            where: { deleted_at: null },
+            include: [
+              {
+                model: PriceList,
+                as: 'price_list',
+                required: true,
+                attributes: [],
+                where: { org_id: ctx.orgId, is_default: true, is_active: true, deleted_at: null },
+              },
+            ],
+          },
+        ],
       },
     ],
     limit: 5000,
   })
 
   const rows = products.flatMap((p) => {
-    const variants = (p as unknown as { variants: ProductVariant[] }).variants ?? []
+    const variants = (p as unknown as { variants: (ProductVariant & { price_list_items: PriceListItem[] })[] }).variants ?? []
     return variants.map((v) => ({
       id: v.id,
       product_id: p.id,
       sku: v.sku,
       barcode: v.barcode,
       name: v.name ?? p.name,
-      price: v.base_price,
+      price: v.price_list_items?.[0]?.price ?? v.base_price,
       iva_rate: p.iva_rate,
       is_active: p.status === 'active',
       updated_at: (p.updated_at as unknown as Date).toISOString(),

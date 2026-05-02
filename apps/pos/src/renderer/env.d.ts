@@ -86,6 +86,7 @@ interface PosAPI {
       cloud_id: string | null
       synced_at: string | null
     }>>
+    closingReport: (date?: string) => Promise<{ cash: number; card: number; transfer: number; total: number; count: number; date: string }>
     get: (saleId: string) => Promise<null | {
       sale: {
         id: string

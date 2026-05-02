@@ -15,6 +15,7 @@ function createWindow() {
     height: 800,
     minWidth: 1024,
     minHeight: 600,
+    fullscreen: process.env.NODE_ENV !== 'development',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -28,6 +29,11 @@ function createWindow() {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  // F11 — toggle fullscreen
+  globalShortcut.register('F11', () => {
+    mainWindow?.setFullScreen(!mainWindow.isFullScreen())
+  })
 
   // Cmd+Option+I (mac) / Ctrl+Shift+I (win/linux) — toggle DevTools for debugging
   globalShortcut.register('CommandOrControl+Alt+I', () => {
