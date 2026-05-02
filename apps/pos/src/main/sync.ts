@@ -221,17 +221,11 @@ export async function syncPendingSales() {
 }
 
 export async function syncPendingCashSessions() {
-  // Sync sessions that haven't been synced or were updated (closed) after last sync
-  const pending = db().select().from(cashSessions)
-    .where(sql`${cashSessions.synced_at} IS NULL OR (${cashSessions.status} = 'closed' AND ${cashSessions.synced_at} IS NULL)`)
+  // Sync: never synced OR closed but no cloud_id (closed after last sync)
+  const toSync = db().select().from(cashSessions)
+    .where(sql`${cashSessions.synced_at} IS NULL OR ${cashSessions.cloud_id} IS NULL`)
     .all()
 
-  // Also re-sync recently closed sessions not yet confirmed by cloud
-  const recentlyClosed = db().select().from(cashSessions)
-    .where(sql`${cashSessions.status} = 'closed' AND ${cashSessions.cloud_id} IS NULL`)
-    .all()
-
-  const toSync = [...pending, ...recentlyClosed.filter(r => !pending.find(p => p.id === r.id))]
   if (toSync.length === 0) return
 
   const payload = toSync.map(s => ({
@@ -315,11 +309,13 @@ export function registerSyncHandlers(ipc: IpcMain) {
   })
 
   ipc.handle('sync:sales', async () => {
-    try {
-      await syncPendingSales()
-      await syncPendingCashSessions()
-      return { ok: true }
-    } catch (e) { return { ok: false, error: String(e) } }
+    const errors: string[] = []
+    try { await syncPendingSales() }
+    catch (e) { errors.push(`ventas: ${String(e)}`) }
+    try { await syncPendingCashSessions() }
+    catch (e) { errors.push(`turnos: ${String(e)}`) }
+    if (errors.length > 0) return { ok: false, error: errors.join(' | ') }
+    return { ok: true }
   })
 
   ipc.handle('settings:save', async (_e, kv: Record<string, string>) => {
