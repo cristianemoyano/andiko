@@ -11,6 +11,8 @@ interface CashSession {
   closing_amount_expected: string | null
   difference: string | null
   status: 'open' | 'closed'
+  cloud_id: string | null
+  synced_at: string | null
 }
 
 interface SalesTotals {
@@ -64,17 +66,35 @@ async function fetchSessionTotals(openedAt: string): Promise<SalesTotals> {
 
 // ── Open Turn ───────────────────────────────────────────────────────────────
 
+interface PosUser { id: string; name: string; email: string; role: string }
+
 function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
+  const [users, setUsers] = useState<PosUser[]>([])
+  const [selectedUserId, setSelectedUserId] = useState('')
   const [amount, setAmount] = useState('0')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+   
+  useEffect(() => {
+    window.pos.users.search('').then(r => {
+      if (r.ok) setUsers(r.data)
+    }).catch(() => {})
+  }, [])
+
   async function handleOpen() {
+    if (!selectedUserId) { setError('Seleccioná un cajero para abrir el turno'); return }
     const val = parseFloat(amount.replace(',', '.'))
-    if (isNaN(val) || val < 0) { setError('Ingresá un monto válido'); return }
+    if (isNaN(val) || val < 0) { setError('Ingresá un monto inicial válido'); return }
+
+    const cashier = users.find(u => u.id === selectedUserId)
     setLoading(true)
     setError(null)
-    const result = await window.pos.cashSessions.open({ opening_amount: val.toFixed(2) })
+    const result = await window.pos.cashSessions.open({
+      cashier_user_id: selectedUserId,
+      cashier_name: cashier?.name ?? null,
+      opening_amount: val.toFixed(2),
+    })
     setLoading(false)
     if (result.ok && result.session) {
       onOpened(result.session as CashSession)
@@ -94,10 +114,47 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
           </div>
           <div>
             <h2 className="text-base font-semibold text-zinc-900">Abrir turno</h2>
-            <p className="text-xs text-zinc-500">Ingresá el efectivo disponible al inicio.</p>
+            <p className="text-xs text-zinc-500">Elegí el cajero y el efectivo inicial.</p>
           </div>
         </div>
 
+        {/* Cashier selector */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-zinc-600">Cajero</label>
+          {users.length === 0 ? (
+            <p className="text-xs text-zinc-400 py-2">Sin usuarios sincronizados. Sincronizá el catálogo primero.</p>
+          ) : (
+            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
+              {users.map(u => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => setSelectedUserId(u.id)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                    selectedUserId === u.id
+                      ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500'
+                      : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+                  }`}
+                >
+                  <div className="w-7 h-7 rounded-full bg-zinc-200 flex items-center justify-center shrink-0 text-[11px] font-semibold text-zinc-600">
+                    {u.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-zinc-900 truncate">{u.name}</p>
+                    <p className="text-[10px] text-zinc-400 truncate">{u.role}</p>
+                  </div>
+                  {selectedUserId === u.id && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 shrink-0">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Opening amount */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-zinc-600">Efectivo inicial en caja</label>
           <input
@@ -107,7 +164,6 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
             onChange={e => setAmount(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleOpen()}
             className="border border-zinc-300 rounded-lg px-3 py-2.5 text-lg font-mono text-zinc-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-right"
-            autoFocus
           />
         </div>
 
@@ -115,8 +171,8 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
 
         <button
           onClick={handleOpen}
-          disabled={loading}
-          className="bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg py-2.5 text-sm transition-colors disabled:opacity-50"
+          disabled={loading || !selectedUserId}
+          className="bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg py-2.5 text-sm transition-colors disabled:opacity-40"
         >
           {loading ? 'Abriendo…' : 'Abrir turno de caja'}
         </button>
@@ -305,7 +361,7 @@ function SessionHistory({ sessions }: { sessions: CashSession[] }) {
       <table className="w-full border-collapse">
         <thead>
           <tr className="bg-zinc-50 border-b border-zinc-100">
-            {['Apertura', 'Cajero', 'Ventas', 'Diferencia', 'Estado'].map(h => (
+            {['Apertura', 'Cajero', 'Ventas', 'Diferencia', 'Estado', 'Sync'].map(h => (
               <th key={h} className="text-[10px] font-semibold text-zinc-400 px-4 py-2 text-left uppercase">{h}</th>
             ))}
           </tr>
@@ -313,6 +369,7 @@ function SessionHistory({ sessions }: { sessions: CashSession[] }) {
         <tbody>
           {sessions.map(s => {
             const diff = s.difference !== null ? Number(s.difference) : null
+            const synced = !!s.synced_at
             return (
               <tr key={s.id} className="border-b border-zinc-50 last:border-0 hover:bg-zinc-50">
                 <td className="font-mono text-[11px] px-4 py-2 text-zinc-600">{formatDatetime(s.opened_at)}</td>
@@ -324,6 +381,11 @@ function SessionHistory({ sessions }: { sessions: CashSession[] }) {
                 <td className="px-4 py-2">
                   <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${s.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-zinc-100 text-zinc-500'}`}>
                     {s.status === 'open' ? 'Abierto' : 'Cerrado'}
+                  </span>
+                </td>
+                <td className="px-4 py-2">
+                  <span className={`text-[10px] font-medium ${synced ? 'text-green-700' : 'text-amber-600'}`}>
+                    {synced ? 'synced' : 'pendiente'}
                   </span>
                 </td>
               </tr>
