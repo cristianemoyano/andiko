@@ -6,7 +6,7 @@ on:
       - "pos/v*"   # trigger: git tag pos/v1.0.0
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-mac:
@@ -29,10 +29,7 @@ jobs:
 
       - name: Rebuild better-sqlite3 for Electron
         working-directory: apps/pos
-        run: |
-          CXXFLAGS='-std=c++20' pnpm exec electron-rebuild -f -w better-sqlite3 --arch=x64
-        env:
-          npm_config_target: ${{ steps.get-electron-version.outputs.version }}
+        run: CXXFLAGS='-std=c++20' pnpm exec electron-rebuild -f -w better-sqlite3 --arch=x64
 
       - name: Build renderer + main
         working-directory: apps/pos
@@ -40,11 +37,7 @@ jobs:
 
       - name: Package macOS DMG
         working-directory: apps/pos
-        run: pnpm exec electron-builder --mac --config electron-builder.yml
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          # CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
-          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: pnpm exec electron-builder --mac --publish never --config electron-builder.yml
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -82,9 +75,7 @@ jobs:
 
       - name: Package Windows installer
         working-directory: apps/pos
-        run: pnpm exec electron-builder --win --config electron-builder.yml
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: pnpm exec electron-builder --win --publish never --config electron-builder.yml
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -117,17 +108,15 @@ jobs:
       - name: Create tag in public repo
         run: |
           VERSION=${{ steps.version.outputs.version }}
-          # Get the SHA of the latest commit in the public repo
           SHA=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
             https://api.github.com/repos/cristianemoyano/andiko-pos-releases/git/ref/heads/main \
             | jq -r '.object.sha')
-          # Create the tag via API
+          echo "Creating tag ${VERSION} at ${SHA}"
           curl -s -X POST \
             -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
             -H "Content-Type: application/json" \
             https://api.github.com/repos/cristianemoyano/andiko-pos-releases/git/refs \
-            -d "{\"ref\":\"refs/tags/${VERSION}\",\"sha\":\"${SHA}\"}" \
-            | jq .
+            -d "{\"ref\":\"refs/tags/${VERSION}\",\"sha\":\"${SHA}\"}"
 
       - name: Create GitHub Release in public repo
         uses: softprops/action-gh-release@v2
