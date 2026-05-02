@@ -29,6 +29,15 @@ contextBridge.exposeInMainWorld('pos', {
     remove: (args: { draft_sale_id: string; product_id: string }) =>
       ipcRenderer.invoke('draftSaleItems:remove', args),
   },
+  cashSessions: {
+    getCurrent: () => ipcRenderer.invoke('cashSessions:getCurrent'),
+    open: (args: { cashier_user_id?: string | null; cashier_name?: string | null; opening_amount: string }) =>
+      ipcRenderer.invoke('cashSessions:open', args),
+    close: (args: { session_id: string; closing_amount_declared: string }) =>
+      ipcRenderer.invoke('cashSessions:close', args),
+    list: (args?: { limit?: number }) => ipcRenderer.invoke('cashSessions:list', args),
+    get: (sessionId: string) => ipcRenderer.invoke('cashSessions:get', sessionId),
+  },
   sales: {
     create: (sale: PosSale) => ipcRenderer.invoke('sales:create', sale),
     listToday: () => ipcRenderer.invoke('sales:list-today'),

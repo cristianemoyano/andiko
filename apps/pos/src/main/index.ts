@@ -6,6 +6,7 @@ import { registerSalesHandlers } from './sales'
 import { registerProductsHandlers } from './products'
 import { registerCustomersHandlers } from './customers'
 import { registerDraftSalesHandlers } from './draft-sales'
+import { registerCashSessionHandlers } from './cash-sessions'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -51,6 +52,7 @@ app.whenReady().then(async () => {
   registerProductsHandlers(ipcMain)
   registerCustomersHandlers(ipcMain)
   registerDraftSalesHandlers(ipcMain)
+  registerCashSessionHandlers(ipcMain)
   registerSyncHandlers(ipcMain)
   createWindow()
 })

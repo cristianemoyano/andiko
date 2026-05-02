@@ -127,6 +127,21 @@ function runMigrations(sqlite: Database.Database) {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS cash_sessions (
+      id TEXT PRIMARY KEY,
+      cashier_user_id TEXT,
+      cashier_name TEXT,
+      opened_at TEXT NOT NULL,
+      closed_at TEXT,
+      opening_amount TEXT NOT NULL DEFAULT '0',
+      closing_amount_declared TEXT,
+      closing_amount_expected TEXT,
+      difference TEXT,
+      status TEXT NOT NULL DEFAULT 'open',
+      cloud_id TEXT,
+      synced_at TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
     CREATE INDEX IF NOT EXISTS idx_sync_queue_sale_id ON sync_queue(sale_id);
     CREATE INDEX IF NOT EXISTS idx_products_is_active ON products(is_active);
@@ -142,4 +157,10 @@ function runMigrations(sqlite: Database.Database) {
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN cashier_user_id TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE pos_users ADD COLUMN pos_pin_hash TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE products ADD COLUMN barcode TEXT;`) } catch { /* ignore */ }
+
+  // cash_sessions added in Sprint 3 — CREATE TABLE IF NOT EXISTS handles new installs
+  // For existing DBs that don't have the table yet, catch and ignore the error
+  try {
+    sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_cash_sessions_status ON cash_sessions(status);`)
+  } catch { /* ignore */ }
 }

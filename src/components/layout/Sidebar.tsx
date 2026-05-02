@@ -186,7 +186,20 @@ export function Sidebar({
               </svg>
             ),
           }}
-          active={pathname.startsWith('/pos')}
+          active={pathname === '/pos/dispositivos'}
+        />
+        <NavLink
+          item={{
+            id: 'pos-cajas',
+            label: 'Turnos de caja',
+            href: '/pos/cajas',
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            ),
+          }}
+          active={pathname.startsWith('/pos/cajas')}
         />
 
         <SectionLabel>Sistema</SectionLabel>

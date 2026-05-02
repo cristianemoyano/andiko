@@ -399,11 +399,13 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] Cierre de caja — pantalla con totales del día por método de pago (efectivo, tarjeta, transferencia)
 - [x] Modo pantalla completa — fullscreen en producción, F11 para toggle
 - [x] Listas de precios en POS — endpoint `/api/v1/pos/products` resuelve precio desde lista default del ERP
-- [ ] Gestión de turnos (cash sessions) — apertura con monto inicial, cierre con diferencia, sync al cloud
+- [x] Gestión de turnos (cash sessions) — apertura con monto inicial, cierre con conteo físico + diferencia automática, sync cloud
+- [x] `POST /api/v1/pos/cash-sessions/sync` — batch sync de turnos POS → `pos_cash_sessions`
+- [x] `GET /api/v1/pos/cash-sessions` — historial de turnos con filtros (estado, rango de fechas, sucursal)
+- [x] `/pos/cajas` — vista ERP de turnos de caja con tabla, filtros y paginación
 - [ ] `GET /api/v1/pos/sales/sync` — pull de ventas sincronizadas (para reconciliación offline)
 - [ ] Renovación de licencia desde el ERP admin (extender `license_valid_until`)
 - [ ] App Electron: sincronización automática en background cuando hay conexión
-- [ ] Registro de cierre de caja en cloud
 
 ---
 

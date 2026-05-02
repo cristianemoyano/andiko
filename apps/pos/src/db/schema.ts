@@ -104,3 +104,18 @@ export const settings = sqliteTable('settings', {
   key:   text('key').primaryKey(),
   value: text('value').notNull(),
 })
+
+export const cashSessions = sqliteTable('cash_sessions', {
+  id:                        text('id').primaryKey(),
+  cashier_user_id:           text('cashier_user_id'),
+  cashier_name:              text('cashier_name'),
+  opened_at:                 text('opened_at').notNull(),
+  closed_at:                 text('closed_at'),
+  opening_amount:            text('opening_amount').notNull().default('0'),
+  closing_amount_declared:   text('closing_amount_declared'),
+  closing_amount_expected:   text('closing_amount_expected'),
+  difference:                text('difference'),
+  status:                    text('status').notNull().default('open'), // 'open' | 'closed'
+  cloud_id:                  text('cloud_id'),
+  synced_at:                 text('synced_at'),
+})
