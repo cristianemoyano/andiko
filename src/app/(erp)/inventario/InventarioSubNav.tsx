@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 const LINKS = [
-  { href: '/inventario/depositos', label: 'Depósitos' },
-  { href: '/inventario/stock',     label: 'Stock' },
+  { href: '/inventario/depositos',   label: 'Depósitos' },
+  { href: '/inventario/stock',       label: 'Stock' },
   { href: '/inventario/movimientos', label: 'Movimientos' },
+  { href: '/inventario/reposicion',  label: 'Reposición' },
 ] as const
 
 export function InventarioSubNav() {

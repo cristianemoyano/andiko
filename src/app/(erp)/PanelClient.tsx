@@ -12,6 +12,12 @@ import type { BarChartDataPoint, DonutSegment } from '@/components/erp'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
+interface StockAlerts {
+  expired: number
+  expiring_soon: number
+  below_minimum: number
+}
+
 type Period = 'last_week' | 'last_month' | 'last_3months' | 'last_year' | 'custom'
 
 interface KpisData {
@@ -142,6 +148,7 @@ export function PanelClient() {
   const [cashView, setCashView] = useState<'semanal' | 'mensual' | 'anual'>('mensual')
   const [loading, setLoading] = useState(true)
   const [branches, setBranches] = useState<{ value: string; label: string }[]>([])
+  const [stockAlerts, setStockAlerts] = useState<StockAlerts | null>(null)
 
   const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -151,6 +158,19 @@ export function PanelClient() {
     })
     router.replace(`${pathname}?${params.toString()}`)
   }, [router, pathname, searchParams])
+
+  // Load stock alerts once (independent of period filter)
+  useEffect(() => {
+    Promise.all([
+      fetchJson<{ total: number }>('/api/v1/inventory/stock?expired=true&limit=1'),
+      fetchJson<{ total: number }>('/api/v1/inventory/stock?expiring_within_days=7&limit=1'),
+      fetchJson<{ total: number }>('/api/v1/inventory/stock?below_minimum=true&limit=1'),
+    ])
+      .then(([exp, soon, low]) => {
+        setStockAlerts({ expired: exp.total ?? 0, expiring_soon: soon.total ?? 0, below_minimum: low.total ?? 0 })
+      })
+      .catch(() => {})
+  }, [])
 
   // Load branches once
   useEffect(() => {
@@ -297,6 +317,51 @@ export function PanelClient() {
           <CountCard label="Proveedores"       value={counts ? counts.proveedores.toLocaleString('es-AR') : '—'} icon={<IconBuilding />} />
           <CountCard label="Comprobantes"      value={counts ? counts.comprobantes.toLocaleString('es-AR') : '—'} icon={<IconFile />} />
         </div>
+
+        {/* Stock alerts */}
+        {stockAlerts && (stockAlerts.expired > 0 || stockAlerts.expiring_soon > 0 || stockAlerts.below_minimum > 0) && (
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
+            {stockAlerts.expired > 0 && (
+              <Link href="/inventario/stock?expired=true" className="bg-red-50 border border-red-200 rounded-[4px] p-4 flex items-center gap-3 hover:bg-red-100 transition-colors">
+                <div className="w-9 h-9 rounded-[4px] bg-red-100 flex items-center justify-center shrink-0 text-red-600">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="font-mono text-xl font-medium text-red-700 leading-none">{stockAlerts.expired}</div>
+                  <div className="text-[11px] text-red-600 mt-0.5">Producto{stockAlerts.expired > 1 ? 's' : ''} vencido{stockAlerts.expired > 1 ? 's' : ''}</div>
+                </div>
+              </Link>
+            )}
+            {stockAlerts.expiring_soon > 0 && (
+              <Link href="/inventario/stock?expiring_within_days=7" className="bg-amber-50 border border-amber-200 rounded-[4px] p-4 flex items-center gap-3 hover:bg-amber-100 transition-colors">
+                <div className="w-9 h-9 rounded-[4px] bg-amber-100 flex items-center justify-center shrink-0 text-amber-600">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="font-mono text-xl font-medium text-amber-700 leading-none">{stockAlerts.expiring_soon}</div>
+                  <div className="text-[11px] text-amber-600 mt-0.5">Vence{stockAlerts.expiring_soon > 1 ? 'n' : ''} en 7 días</div>
+                </div>
+              </Link>
+            )}
+            {stockAlerts.below_minimum > 0 && (
+              <Link href="/inventario/stock?below_minimum=true" className="bg-orange-50 border border-orange-200 rounded-[4px] p-4 flex items-center gap-3 hover:bg-orange-100 transition-colors">
+                <div className="w-9 h-9 rounded-[4px] bg-orange-100 flex items-center justify-center shrink-0 text-orange-600">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="font-mono text-xl font-medium text-orange-700 leading-none">{stockAlerts.below_minimum}</div>
+                  <div className="text-[11px] text-orange-600 mt-0.5">Bajo stock mínimo</div>
+                </div>
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Charts row */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">

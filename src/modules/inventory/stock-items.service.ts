@@ -119,6 +119,62 @@ export async function updateStockItemAlerts(ctx: TenantContext, input: StockItem
   })
 }
 
+export interface ReplenishmentRow {
+  stock_item_id: string
+  variant_id: string
+  sku: string | null
+  product_name: string
+  variant_name: string | null
+  warehouse_id: string
+  warehouse_name: string
+  quantity: string
+  minimum_quantity: string
+  suggested_qty: string
+}
+
+export async function getReplenishmentList(orgId: string): Promise<ReplenishmentRow[]> {
+  const items = await StockItem.findAll({
+    where: {
+      org_id: orgId,
+      [Op.and]: [
+        literal('"StockItem"."minimum_quantity" > 0'),
+        literal('"StockItem"."quantity" <= "StockItem"."minimum_quantity"'),
+      ],
+    },
+    attributes: ['id', 'variant_id', 'warehouse_id', 'quantity', 'minimum_quantity'],
+    include: [
+      { model: Warehouse, as: 'warehouse', attributes: ['id', 'name'] },
+      {
+        model: ProductVariant,
+        as: 'variant',
+        attributes: ['id', 'sku', 'name'],
+        include: [{ model: Product, as: 'product', attributes: ['id', 'name'] }],
+      },
+    ],
+    order: [['quantity', 'ASC']],
+    limit: 500,
+  })
+
+  return items.map((item) => {
+    const variant = (item as unknown as { variant: ProductVariant & { product: Product } }).variant
+    const warehouse = (item as unknown as { warehouse: Warehouse }).warehouse
+    const qty = new Decimal(item.quantity)
+    const minQty = new Decimal(item.minimum_quantity)
+    return {
+      stock_item_id:   item.id,
+      variant_id:      item.variant_id,
+      sku:             variant?.sku ?? null,
+      product_name:    variant?.product?.name ?? '',
+      variant_name:    variant?.name ?? null,
+      warehouse_id:    item.warehouse_id,
+      warehouse_name:  warehouse?.name ?? '',
+      quantity:        qty.toFixed(2),
+      minimum_quantity: minQty.toFixed(2),
+      suggested_qty:   Decimal.max(minQty.minus(qty), 0).toFixed(2),
+    }
+  })
+}
+
 export async function getVariantStock(variantId: string, warehouseId: string): Promise<string> {
   const item = await StockItem.findOne({ where: { variant_id: variantId, warehouse_id: warehouseId } })
   return item?.quantity ?? '0'

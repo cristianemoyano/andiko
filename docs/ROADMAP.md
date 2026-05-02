@@ -108,6 +108,7 @@ Vista ejecutiva del negocio. Primer pantalla post-login.
 - [x] Filtro por período: Última semana / Último mes / Últimos 3 meses / Último año / Personalizado (date range)
 - [x] Filtro por sucursal: todas o sucursal específica
 - [x] Filtros persistidos en URL params (links compartibles, survive refresh)
+- [x] Widgets de alertas de stock en dashboard: productos vencidos, próximos a vencer (7 días), bajo stock mínimo — con links al listado filtrado
 - [ ] Actividad reciente: ampliar con eventos de stock, pagos y compras (hoy solo facturas)
 - [ ] Saldo en cuenta: conectar cuando Contabilidad esté disponible
 - [ ] Exportar dashboard como PDF
@@ -259,6 +260,8 @@ Gestión de stock integrada con ventas y compras.
 - [x] Historial de movimientos global con filtros (`/inventario/movimientos`)
 - [x] Vista de stock por variante con nombre de producto (en lugar de UUID)
 - [x] Alertas de stock mínimo y vencimiento MVP (`minimum_quantity` + `expires_on` por variante×depósito; UI + filtros)
+- [x] Stock UI: leer filtros desde URL params al montar (para deep-links desde dashboard)
+- [x] Lista de reposición por depósito: productos con stock ≤ mínimo, cantidad sugerida, exportación CSV (`/inventario/reposicion`)
 
 ### Pendientes
 - [ ] Remitos de entrega

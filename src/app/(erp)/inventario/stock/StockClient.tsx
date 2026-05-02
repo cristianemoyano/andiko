@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Input } from '@/components/primitives/Input'
@@ -132,15 +133,17 @@ const COLUMNS: Column<StockRow>[] = [
 ]
 
 export function StockClient() {
+  const searchParams = useSearchParams()
+
   const [rows, setRows]                 = useState<StockRow[] | null>(null)
   const [total, setTotal]               = useState(0)
   const [page, setPage]                 = useState(1)
   const [error, setError]               = useState<string | null>(null)
   const [search, setSearch]             = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [belowMin, setBelowMin]         = useState(false)
-  const [expired, setExpired]           = useState(false)
-  const [expiring30, setExpiring30]     = useState(false)
+  const [belowMin, setBelowMin]         = useState(() => searchParams.get('below_minimum') === 'true')
+  const [expired, setExpired]           = useState(() => searchParams.get('expired') === 'true')
+  const [expiring30, setExpiring30]     = useState(() => searchParams.get('expiring_within_days') != null)
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search), 300)
