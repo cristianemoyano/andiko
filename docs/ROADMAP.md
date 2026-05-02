@@ -386,8 +386,9 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] GitHub Actions workflow (`pos-release.yml`) — build nativo por plataforma, publish a repo público `andiko-pos-releases` vía tag `pos/v*`
 - [x] Versión de la app inyectada en build-time (`__APP_VERSION__`) y mostrada en la UI
 - [ ] Íconos de la app (`resources/icon.icns`, `icon.ico`) — pendiente diseño
-- [ ] Firma de código macOS (Apple Developer) y Windows (Authenticode)
-- [ ] `electron-updater` — auto-update desde repo público de releases
+- [ ] Firma de código macOS (Apple Developer ~USD 99/año) — necesario para clientes no técnicos
+- [ ] Firma de código Windows (Authenticode EV ~USD 300-500/año) — elimina SmartScreen warning
+- [ ] `electron-updater` — auto-update en background desde repo público (requiere firma de código en macOS)
 
 ### Pendientes
 - [x] Barcode sync — `barcode` incluido en `PosProduct` y en payload de sync cloud→POS
