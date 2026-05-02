@@ -70,6 +70,7 @@ interface PosUser { id: string; name: string; email: string; role: string }
 
 function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
   const [users, setUsers] = useState<PosUser[]>([])
+  const [search, setSearch] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
   const [amount, setAmount] = useState('0')
   const [loading, setLoading] = useState(false)
@@ -81,6 +82,10 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
       if (r.ok) setUsers(r.data)
     }).catch(() => {})
   }, [])
+
+  const filteredUsers = search.trim()
+    ? users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
+    : users
 
   async function handleOpen() {
     if (!selectedUserId) { setError('Seleccioná un cajero para abrir el turno'); return }
@@ -124,8 +129,20 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
           {users.length === 0 ? (
             <p className="text-xs text-zinc-400 py-2">Sin usuarios sincronizados. Sincronizá el catálogo primero.</p>
           ) : (
-            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
-              {users.map(u => (
+            <>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar cajero…"
+                className="border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                autoFocus
+              />
+            <div className="flex flex-col gap-1.5 max-h-44 overflow-y-auto">
+              {filteredUsers.length === 0 && (
+                <p className="text-xs text-zinc-400 py-2 text-center">Sin resultados</p>
+              )}
+              {filteredUsers.map(u => (
                 <button
                   key={u.id}
                   type="button"
@@ -151,6 +168,7 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
                 </button>
               ))}
             </div>
+            </>
           )}
         </div>
 
@@ -403,6 +421,8 @@ export function CashSessionScreen() {
   const [session, setSession] = useState<CashSession | null | undefined>(undefined)
   const [history, setHistory] = useState<CashSession[]>([])
   const [showHistory, setShowHistory] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   const loadSession = useCallback(async () => {
     const [current, all] = await Promise.all([
@@ -415,6 +435,16 @@ export function CashSessionScreen() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch on mount
   useEffect(() => { loadSession() }, [loadSession])
+
+  async function handleSync() {
+    setSyncing(true)
+    setSyncMsg(null)
+    const result = await window.pos.sync.sales()
+    setSyncing(false)
+    setSyncMsg(result.ok ? { ok: true, text: 'Sincronizado' } : { ok: false, text: result.error ?? 'Error al sincronizar' })
+    if (result.ok) loadSession()
+    setTimeout(() => setSyncMsg(null), 3000)
+  }
 
   if (session === undefined) {
     return <div className="flex items-center justify-center h-full text-zinc-400 text-sm">Cargando…</div>
@@ -430,14 +460,32 @@ export function CashSessionScreen() {
             <span className="text-[11px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">Abierto</span>
           )}
         </div>
-        {history.length > 0 && (
+        <div className="flex items-center gap-3">
+          {syncMsg && (
+            <span className={`text-[11px] font-medium ${syncMsg.ok ? 'text-green-700' : 'text-red-600'}`}>
+              {syncMsg.text}
+            </span>
+          )}
           <button
-            onClick={() => setShowHistory(v => !v)}
-            className="text-xs text-zinc-500 hover:text-zinc-900 transition-colors"
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:border-zinc-300 transition-colors disabled:opacity-40"
           >
-            {showHistory ? 'Ocultar historial' : 'Ver historial'}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncing ? 'animate-spin' : ''}>
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            {syncing ? 'Sincronizando…' : 'Sync cloud'}
           </button>
-        )}
+          {history.length > 0 && (
+            <button
+              onClick={() => setShowHistory(v => !v)}
+              className="text-xs text-zinc-500 hover:text-zinc-900 transition-colors"
+            >
+              {showHistory ? 'Ocultar historial' : 'Ver historial'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto py-6 flex flex-col gap-5">
