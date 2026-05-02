@@ -5,10 +5,9 @@ import { SaleScreen } from './screens/SaleScreen'
 import { SalesHistoryScreen } from './screens/SalesHistoryScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { LicenseBlockScreen } from './screens/LicenseBlockScreen'
-import { ClosingReportScreen } from './screens/ClosingReportScreen'
 import { CashSessionScreen } from './screens/CashSessionScreen'
 
-type Screen = 'sale' | 'sales' | 'closing' | 'cash-session' | 'settings'
+type Screen = 'sale' | 'sales' | 'cash-session' | 'settings'
 type LicenseState =
   | { status: 'checking' }
   | { status: 'ok' }
@@ -86,11 +85,6 @@ export function App() {
             <path d="M9 12h6"/><path d="M9 16h6"/><path d="M10 2h4"/><path d="M12 14v7"/><path d="M6 7h12"/><path d="M8 22h8"/><path d="M7 22V7a2 2 0 012-2h6a2 2 0 012 2v15"/>
           </svg>
         </NavBtn>
-        <NavBtn active={screen === 'closing'} onClick={() => setScreen('closing')} title="Cierre de caja">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 10h2"/><path d="M15 10h2"/><path d="M11 10h2"/>
-          </svg>
-        </NavBtn>
         <NavBtn active={screen === 'cash-session'} onClick={() => setScreen('cash-session')} title="Turno de caja">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -156,7 +150,6 @@ export function App() {
             }}
           />
         )}
-        {screen === 'closing'       && <ClosingReportScreen />}
         {screen === 'cash-session'  && <CashSessionScreen />}
         {screen === 'settings'      && <SettingsScreen onLicenseResult={checkLicense} />}
       </main>
