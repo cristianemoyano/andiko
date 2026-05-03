@@ -838,12 +838,28 @@ export function SaleScreen({
             <button
               key={p.id}
               onClick={() => addToCart(p)}
-              className="text-left bg-white border border-zinc-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+              className="text-left bg-white border border-zinc-200 rounded-lg overflow-hidden hover:border-blue-400 hover:bg-blue-50 transition-colors"
             >
-              <div className="text-[13px] font-medium text-zinc-900 truncate">{p.name}</div>
-              {p.sku && <div className="text-[11px] text-zinc-400 font-mono">{p.sku}</div>}
-              <div className="mt-1 text-sm font-semibold text-zinc-800">
-                ${parseFloat(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              {p.image_url ? (
+                <img
+                  src={p.image_url}
+                  alt={p.name}
+                  className="w-full h-28 object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-28 bg-zinc-100 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </div>
+              )}
+              <div className="p-2.5">
+                <div className="text-[13px] font-medium text-zinc-900 truncate">{p.name}</div>
+                {p.sku && <div className="text-[11px] text-zinc-400 font-mono">{p.sku}</div>}
+                <div className="mt-0.5 text-sm font-semibold text-zinc-800">
+                  ${parseFloat(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </div>
               </div>
             </button>
           ))}

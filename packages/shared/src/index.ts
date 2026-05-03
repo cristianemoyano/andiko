@@ -26,6 +26,7 @@ export type PosProduct = {
   price: string     // NUMERIC as string to preserve precision
   iva_rate: IvaRate
   is_active: boolean
+  image_url: string | null
   updated_at: string // ISO timestamp
 }
 

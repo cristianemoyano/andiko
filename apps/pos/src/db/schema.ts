@@ -8,6 +8,7 @@ export const products = sqliteTable('products', {
   price:      text('price').notNull(),      // stored as string, NUMERIC precision
   iva_rate:   text('iva_rate').notNull(),
   is_active:  integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  image_url:  text('image_url'),
   synced_at:  text('synced_at').notNull(),  // ISO timestamp from cloud
 })
 

@@ -34,7 +34,7 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
 
   const products = await Product.findAll({
     where: productWhere,
-    attributes: ['id', 'name', 'iva_rate', 'status', 'updated_at'],
+    attributes: ['id', 'name', 'iva_rate', 'status', 'images', 'updated_at'],
     include: [
       {
         model: ProductVariant,
@@ -67,6 +67,8 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
 
   const rows = products.flatMap((p) => {
     const variants = (p as unknown as { variants: (ProductVariant & { price_list_items: PriceListItem[] })[] }).variants ?? []
+    const images = (p as unknown as { images: Array<{ url: string }> }).images ?? []
+    const imageUrl = images[0]?.url ?? null
     return variants.map((v) => ({
       id: v.id,
       product_id: p.id,
@@ -76,6 +78,7 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
       price: v.price_list_items?.[0]?.price ?? v.base_price,
       iva_rate: p.iva_rate,
       is_active: p.status === 'active',
+      image_url: imageUrl,
       updated_at: (p.updated_at as unknown as Date).toISOString(),
     }))
   })

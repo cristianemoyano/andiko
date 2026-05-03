@@ -157,6 +157,7 @@ function runMigrations(sqlite: Database.Database) {
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN cashier_user_id TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE pos_users ADD COLUMN pos_pin_hash TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE products ADD COLUMN barcode TEXT;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE products ADD COLUMN image_url TEXT;`) } catch { /* ignore */ }
 
   // cash_sessions added in Sprint 3 — CREATE TABLE IF NOT EXISTS handles new installs
   // For existing DBs that don't have the table yet, catch and ignore the error
