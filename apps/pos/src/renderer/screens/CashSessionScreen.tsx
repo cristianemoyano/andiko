@@ -442,8 +442,8 @@ export function CashSessionScreen() {
     const result = await window.pos.sync.sales()
     setSyncing(false)
     setSyncMsg(result.ok ? { ok: true, text: 'Sincronizado' } : { ok: false, text: result.error ?? 'Error al sincronizar' })
-    if (result.ok) loadSession()
-    setTimeout(() => setSyncMsg(null), 3000)
+    loadSession()
+    setTimeout(() => setSyncMsg(null), 5000)
   }
 
   if (session === undefined) {

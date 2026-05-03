@@ -247,11 +247,17 @@ export async function syncPendingCashSessions() {
   )
 
   const now = new Date().toISOString()
+  const failed: string[] = []
   for (const r of result.results) {
     if (r.cloud_id) {
       db().update(cashSessions).set({ synced_at: now, cloud_id: r.cloud_id })
         .where(eq(cashSessions.id, r.local_id)).run()
+    } else {
+      failed.push(r.error ?? 'unknown')
     }
+  }
+  if (failed.length > 0) {
+    throw new Error(`${failed.length} turno(s) no sincronizados: ${failed[0]}`)
   }
 }
 

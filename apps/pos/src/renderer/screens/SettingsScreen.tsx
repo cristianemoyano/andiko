@@ -85,7 +85,7 @@ export function SettingsScreen({ onLicenseResult }: Props) {
   }
 
   return (
-    <div className="p-6 max-w-lg">
+    <div className="p-6 w-full overflow-y-auto h-full">
       <h1 className="text-base font-semibold text-zinc-900 mb-5">Configuración</h1>
 
       <form onSubmit={handleSave} className="space-y-4">
