@@ -9,15 +9,6 @@ interface Props {
 export function SettingsScreen({ onLicenseResult }: Props) {
   const [cloudUrl, setCloudUrl]   = useState('')
   const [apiToken, setApiToken]   = useState('')
-  const [cashierUserId, setCashierUserId] = useState('')
-  const [cashierName, setCashierName] = useState('')
-  const [cashierOpen, setCashierOpen] = useState(false)
-  const [cashierQuery, setCashierQuery] = useState('')
-  const [cashierRows, setCashierRows] = useState<Array<{ id: string; name: string; email: string; role: string; branch_id: string | null }>>([])
-  const [cashierError, setCashierError] = useState<string | null>(null)
-  const [cashierPinOpen, setCashierPinOpen] = useState(false)
-  const [cashierPinValue, setCashierPinValue] = useState('')
-  const [cashierPinUser, setCashierPinUser] = useState<null | { id: string; name: string }>(null)
   const [info, setInfo]           = useState<Settings>({})
   const [saving, setSaving]       = useState(false)
   const [saved, setSaved]         = useState(false)
@@ -29,8 +20,6 @@ export function SettingsScreen({ onLicenseResult }: Props) {
     window.pos.settings.get().then((s: Settings) => {
       setCloudUrl(s['cloud_url'] ?? '')
       setApiToken(s['api_token'] ?? '')
-      setCashierUserId(s['cashier_user_id'] ?? '')
-      setCashierName(s['cashier_name'] ?? '')
       try {
         const raw = s['pos_payment_methods']
         if (raw) {
@@ -54,20 +43,11 @@ export function SettingsScreen({ onLicenseResult }: Props) {
     await window.pos.settings.save({
       cloud_url: cloudUrl,
       api_token: apiToken,
-      cashier_user_id: cashierUserId,
-      cashier_name: cashierName,
       pos_payment_methods: JSON.stringify(posPaymentMethods),
     })
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
-  }
-
-  async function persistCashier(next: { id: string; name: string }) {
-    setCashierUserId(next.id)
-    setCashierName(next.name)
-    // Persist immediately so SaleScreen sees it without hitting "Guardar"
-    await window.pos.settings.save({ cashier_user_id: next.id, cashier_name: next.name })
   }
 
   async function handleValidateLicense() {
@@ -140,26 +120,6 @@ export function SettingsScreen({ onLicenseResult }: Props) {
         </div>
 
         <div>
-          <label className="block text-[12px] font-medium text-zinc-700 mb-1">Cajero/a</label>
-          <button
-            type="button"
-            onClick={async () => {
-              setCashierOpen(true)
-              setCashierError(null)
-              const res = await window.pos.users.search('')
-              if (!res.ok) setCashierError(res.error ?? 'Error buscando usuarios')
-              setCashierRows(res.data)
-            }}
-            className="w-full h-9 px-3 text-left text-[13px] border border-zinc-300 rounded-md bg-white hover:bg-zinc-50 transition-colors"
-          >
-            {cashierName ? cashierName : 'Seleccionar usuario…'}
-          </button>
-          <p className="mt-1 text-[11px] text-zinc-500">
-            Se elige desde los usuarios de la organización (cloud). Queda guardado localmente para modo offline.
-          </p>
-        </div>
-
-        <div>
           <label className="block text-[12px] font-medium text-zinc-700 mb-1">URL del servidor cloud</label>
           <input
             value={cloudUrl}
@@ -188,136 +148,6 @@ export function SettingsScreen({ onLicenseResult }: Props) {
           {saving ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar'}
         </button>
       </form>
-
-      {cashierOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white rounded-xl shadow-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
-              <div className="text-sm font-semibold text-zinc-800">Seleccionar cajero/a</div>
-              <button
-                onClick={() => setCashierOpen(false)}
-                className="text-[12px] font-medium text-zinc-600 hover:text-zinc-900"
-              >
-                Cerrar
-              </button>
-            </div>
-            <div className="p-4 space-y-3">
-              <input
-                value={cashierQuery}
-                onChange={async (e) => {
-                  const q = e.target.value
-                  setCashierQuery(q)
-                  setCashierError(null)
-                  const res = await window.pos.users.search(q)
-                  if (!res.ok) setCashierError(res.error ?? 'Error buscando usuarios')
-                  setCashierRows(res.data)
-                }}
-                placeholder="Buscar por nombre o email…"
-                className="w-full h-10 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
-              />
-
-              {cashierError && (
-                <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                  {cashierError}
-                </div>
-              )}
-
-              <div className="max-h-[360px] overflow-y-auto border border-zinc-200 rounded-lg divide-y divide-zinc-100">
-                {cashierRows.map(u => (
-                  <button
-                    key={u.id}
-                    onClick={async () => {
-                      setCashierError(null)
-                      setCashierPinUser({ id: u.id, name: u.name })
-                      setCashierPinValue('')
-                      setCashierPinOpen(true)
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-zinc-50 transition-colors"
-                  >
-                    <div className="text-[13px] font-medium text-zinc-900 truncate">{u.name}</div>
-                    <div className="text-[11px] text-zinc-500 truncate">{u.email} · {u.role}</div>
-                  </button>
-                ))}
-                {cashierRows.length === 0 && (
-                  <div className="px-3 py-6 text-center text-[12px] text-zinc-500">
-                    Sin resultados.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {cashierPinOpen && cashierPinUser && (
-            <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
-              <div className="w-full max-w-sm bg-white rounded-xl shadow-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
-                  <div className="text-sm font-semibold text-zinc-800">PIN de cajero/a</div>
-                  <button
-                    onClick={() => { setCashierPinOpen(false); setCashierPinUser(null); setCashierPinValue('') }}
-                    className="text-[12px] font-medium text-zinc-600 hover:text-zinc-900"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-                <div className="p-4 space-y-3">
-                  <div className="text-[12px] text-zinc-600">
-                    Ingresá el PIN para <span className="font-medium text-zinc-900">{cashierPinUser.name}</span>.
-                  </div>
-                  <input
-                    type="password"
-                    value={cashierPinValue}
-                    onChange={(e) => { setCashierPinValue(e.target.value); setCashierError(null) }}
-                    onKeyDown={(e) => {
-                      if (e.key !== 'Enter') return
-                      e.preventDefault()
-                      void (async () => {
-                        const pin = cashierPinValue.trim()
-                        if (!pin) { setCashierError('PIN requerido para asignar cajero/a.'); return }
-                        const res = await window.pos.users.verifyPin({ user_id: cashierPinUser.id, pin })
-                        if (!res.ok) { setCashierError(res.error ?? 'PIN incorrecto'); return }
-                        await persistCashier({ id: cashierPinUser.id, name: cashierPinUser.name })
-                        setCashierPinOpen(false)
-                        setCashierPinUser(null)
-                        setCashierPinValue('')
-                        setCashierOpen(false)
-                        setSaved(true)
-                        setTimeout(() => setSaved(false), 1500)
-                      })()
-                    }}
-                    placeholder="PIN…"
-                    className="w-full h-10 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
-                  />
-                  {cashierError && (
-                    <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                      {cashierError}
-                    </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      void (async () => {
-                        const pin = cashierPinValue.trim()
-                        if (!pin) { setCashierError('PIN requerido para asignar cajero/a.'); return }
-                        const res = await window.pos.users.verifyPin({ user_id: cashierPinUser.id, pin })
-                        if (!res.ok) { setCashierError(res.error ?? 'PIN incorrecto'); return }
-                        await persistCashier({ id: cashierPinUser.id, name: cashierPinUser.name })
-                        setCashierPinOpen(false)
-                        setCashierPinUser(null)
-                        setCashierPinValue('')
-                        setCashierOpen(false)
-                        setSaved(true)
-                        setTimeout(() => setSaved(false), 1500)
-                      })()
-                    }}
-                    className="w-full h-10 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Confirmar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Auto-populated info from license */}
       {(info['branch_name'] || info['device_id'] || info['org_name']) && (

@@ -37,15 +37,7 @@ export function SaleScreen({
   const customerInputRef = useRef<HTMLInputElement>(null)
   const [cashierName, setCashierName] = useState('')
   const [cashierUserId, setCashierUserId] = useState('')
-  const [cashierOpen, setCashierOpen] = useState(false)
-  const [cashierQuery, setCashierQuery] = useState('')
-  const [cashierRows, setCashierRows] = useState<Array<{ id: string; name: string; email: string; role: string; branch_id: string | null }>>([])
-  const [cashierError, setCashierError] = useState<string | null>(null)
-  const cashierInputRef = useRef<HTMLInputElement>(null)
-  const [cashierPinOpen, setCashierPinOpen] = useState(false)
-  const [cashierPinValue, setCashierPinValue] = useState('')
-  const [cashierPinUser, setCashierPinUser] = useState<null | { id: string; name: string }>(null)
-  const cashierPinInputRef = useRef<HTMLInputElement>(null)
+  const [noCashierError, setNoCashierError] = useState(false)
   const [enabledPayments, setEnabledPayments] = useState<Array<'cash' | 'card' | 'transfer'>>(['cash', 'card', 'transfer'])
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [checkoutPayment, setCheckoutPayment] = useState<'cash' | 'card' | 'transfer'>('cash')
@@ -138,12 +130,6 @@ export function SaleScreen({
      
   }, [])
 
-  async function refreshCashierFromSettings() {
-    const s = await window.pos.settings.get()
-    setCashierName(s['cashier_name'] ?? '')
-    setCashierUserId(s['cashier_user_id'] ?? '')
-  }
-
   useEffect(() => {
     function onAfterPrint() {
       document.body.removeAttribute('data-printing')
@@ -217,18 +203,6 @@ export function SaleScreen({
         return
       }
 
-      if (hasMod && e.key.toLowerCase() === 'j') {
-        e.preventDefault()
-        setCashierOpen(true)
-        setCashierError(null)
-        window.pos.users.search('').then((res) => {
-          if (!res.ok) setCashierError(res.error ?? 'Error buscando usuarios')
-          setCashierRows(res.data)
-          setTimeout(() => cashierInputRef.current?.focus(), 0)
-        })
-        return
-      }
-
       if (hasMod && e.key === 'Enter') {
         e.preventDefault()
         if (!checkoutOpen) {
@@ -271,15 +245,6 @@ export function SaleScreen({
         searchRef.current?.focus()
       }
 
-      if (cashierOpen && e.key === 'Escape') {
-        e.preventDefault()
-        setCashierOpen(false)
-        setCashierPinOpen(false)
-        setCashierPinUser(null)
-        setCashierPinValue('')
-        searchRef.current?.focus()
-      }
-
       if (checkoutOpen && e.key === 'Escape') {
         e.preventDefault()
         setCheckoutOpen(false)
@@ -305,7 +270,7 @@ export function SaleScreen({
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [receiptSale, customerOpen, cashierOpen, checkoutOpen, priceCheckOpen, cart.length, payment, customer])
+  }, [receiptSale, customerOpen, checkoutOpen, priceCheckOpen, cart.length, payment, customer])
 
   const filtered = products
 
@@ -430,15 +395,9 @@ export function SaleScreen({
   }, [cashIsValid])
 
   function openCheckout() {
-    // Must have cashier assigned
     if (!cashierUserId) {
-      setCashierOpen(true)
-      setCashierError(null)
-      window.pos.users.search('').then((res) => {
-        if (!res.ok) setCashierError(res.error ?? 'Error buscando usuarios')
-        setCashierRows(res.data)
-        setTimeout(() => cashierInputRef.current?.focus(), 0)
-      })
+      setNoCashierError(true)
+      setTimeout(() => setNoCashierError(false), 4000)
       return
     }
     setCheckoutPayment(payment)
@@ -604,143 +563,6 @@ export function SaleScreen({
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Cashier selector (required) */}
-      {cashierOpen && (
-        <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white rounded-xl shadow-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
-              <div className="text-sm font-semibold text-zinc-800">Seleccionar cajero/a</div>
-              <button
-                onClick={() => setCashierOpen(false)}
-                className="text-[12px] font-medium text-zinc-600 hover:text-zinc-900"
-              >
-                Cerrar
-              </button>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                Para cobrar, primero tenés que asignar un cajero/a.
-              </div>
-
-              <input
-                ref={cashierInputRef}
-                value={cashierQuery}
-                onChange={async (e) => {
-                  const q = e.target.value
-                  setCashierQuery(q)
-                  setCashierError(null)
-                  const res = await window.pos.users.search(q)
-                  if (!res.ok) setCashierError(res.error ?? 'Error buscando usuarios')
-                  setCashierRows(res.data)
-                }}
-                placeholder="Buscar por nombre o email…"
-                className="w-full h-10 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
-              />
-
-              {cashierError && (
-                <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                  {cashierError}
-                </div>
-              )}
-
-              <div className="max-h-[360px] overflow-y-auto border border-zinc-200 rounded-lg divide-y divide-zinc-100">
-                {cashierRows.map(u => (
-                  <button
-                    key={u.id}
-                    onClick={async () => {
-                      setCashierError(null)
-                      setCashierPinUser({ id: u.id, name: u.name })
-                      setCashierPinValue('')
-                      setCashierPinOpen(true)
-                      setTimeout(() => cashierPinInputRef.current?.focus(), 0)
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-zinc-50 transition-colors"
-                  >
-                    <div className="text-[13px] font-medium text-zinc-900 truncate">{u.name}</div>
-                    <div className="text-[11px] text-zinc-500 truncate">{u.email} · {u.role}</div>
-                  </button>
-                ))}
-                {cashierRows.length === 0 && (
-                  <div className="px-3 py-6 text-center text-[12px] text-zinc-500">
-                    Sin resultados.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {cashierPinOpen && cashierPinUser && (
-            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-              <div className="w-full max-w-sm bg-white rounded-xl shadow-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
-                  <div className="text-sm font-semibold text-zinc-800">PIN de cajero/a</div>
-                  <button
-                    onClick={() => { setCashierPinOpen(false); setCashierPinUser(null); setCashierPinValue(''); setTimeout(() => cashierInputRef.current?.focus(), 0) }}
-                    className="text-[12px] font-medium text-zinc-600 hover:text-zinc-900"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-                <div className="p-4 space-y-3">
-                  <div className="text-[12px] text-zinc-600">
-                    Ingresá el PIN para <span className="font-medium text-zinc-900">{cashierPinUser.name}</span>.
-                  </div>
-                  <input
-                    ref={cashierPinInputRef}
-                    type="password"
-                    value={cashierPinValue}
-                    onChange={(e) => { setCashierPinValue(e.target.value); setCashierError(null) }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        void (async () => {
-                          const pin = cashierPinValue.trim()
-                          if (!pin) { setCashierError('PIN requerido para asignar cajero/a.'); return }
-                          const res = await window.pos.users.verifyPin({ user_id: cashierPinUser.id, pin })
-                          if (!res.ok) { setCashierError(res.error ?? 'PIN incorrecto'); return }
-                          await window.pos.settings.save({ cashier_user_id: cashierPinUser.id, cashier_name: cashierPinUser.name })
-                          await refreshCashierFromSettings()
-                          setCashierPinOpen(false)
-                          setCashierPinUser(null)
-                          setCashierPinValue('')
-                          setCashierOpen(false)
-                        })()
-                      }
-                    }}
-                    placeholder="PIN…"
-                    className="w-full h-10 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
-                  />
-                  {cashierError && (
-                    <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                      {cashierError}
-                    </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      void (async () => {
-                        const pin = cashierPinValue.trim()
-                        if (!pin) { setCashierError('PIN requerido para asignar cajero/a.'); return }
-                        const res = await window.pos.users.verifyPin({ user_id: cashierPinUser.id, pin })
-                        if (!res.ok) { setCashierError(res.error ?? 'PIN incorrecto'); return }
-                        await window.pos.settings.save({ cashier_user_id: cashierPinUser.id, cashier_name: cashierPinUser.name })
-                        await refreshCashierFromSettings()
-                        setCashierPinOpen(false)
-                        setCashierPinUser(null)
-                        setCashierPinValue('')
-                        setCashierOpen(false)
-                      })()
-                    }}
-                    className="w-full h-10 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Confirmar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -1028,28 +850,17 @@ export function SaleScreen({
       <div className="flex flex-col w-80 border-l border-zinc-200 bg-white">
         <div className="px-4 py-3 border-b border-zinc-100 text-sm font-semibold text-zinc-700">Carrito</div>
 
-        {/* Cashier */}
+        {/* Cashier — read-only, set from Turno de caja */}
         <div className="px-4 py-2.5 border-b border-zinc-100">
-          <div className="text-[11px] text-zinc-500">Cajero/a</div>
-          <button
-            onClick={async () => {
-              setCashierOpen(true)
-              setCashierError(null)
-              const res = await window.pos.users.search('')
-              if (!res.ok) setCashierError(res.error ?? 'Error buscando usuarios')
-              setCashierRows(res.data)
-              setTimeout(() => cashierInputRef.current?.focus(), 0)
-            }}
-            className="w-full text-left"
-          >
-            <div className="text-[13px] font-medium text-zinc-900 truncate">
-              {cashierName ? cashierName : 'Seleccionar cajero/a…'}
-                <span className="text-[11px] font-medium text-zinc-400">{` (${modKey} + J)`}</span>
+          <div className="text-[11px] text-zinc-500">Cajero/a en turno</div>
+          <div className="text-[13px] font-medium text-zinc-900 truncate">
+            {cashierName || <span className="text-zinc-400 italic">Sin turno abierto</span>}
+          </div>
+          {noCashierError && (
+            <div className="mt-1 text-[11px] text-amber-700">
+              Abrí un turno de caja antes de cobrar
             </div>
-            {!cashierUserId && (
-              <div className="text-[11px] text-amber-700">Requerido para cobrar</div>
-            )}
-          </button>
+          )}
         </div>
 
         {/* Customer */}
