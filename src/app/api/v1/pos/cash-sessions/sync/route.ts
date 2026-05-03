@@ -36,7 +36,7 @@ export const POST = withPosDevice(async (req: NextRequest, ctx) => {
         defaults: {
           org_id:                  ctx.orgId,
           branch_id:               ctx.branchId ?? null,
-          pos_device_id:           ctx.deviceId ?? null,
+          pos_device_id:           ctx.deviceRowId ?? null,
           local_id:                s.local_id,
           cashier_user_id:         s.cashier_user_id ?? null,
           cashier_name:            s.cashier_name ?? null,
