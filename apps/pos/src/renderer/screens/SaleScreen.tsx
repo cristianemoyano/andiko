@@ -62,10 +62,19 @@ export function SaleScreen({
   }, [search])
 
   useEffect(() => {
-    // Load cashier from local settings (offline)
-    window.pos.settings.get().then((s) => {
-      setCashierName(s['cashier_name'] ?? '')
-      setCashierUserId(s['cashier_user_id'] ?? '')
+    // Cashier comes from the active cash session — if no session is open, block checkout
+    void (async () => {
+      const [session, s] = await Promise.all([
+        window.pos.cashSessions.getCurrent(),
+        window.pos.settings.get(),
+      ])
+      if (session) {
+        setCashierName(session.cashier_name ?? '')
+        setCashierUserId(session.cashier_user_id ?? '')
+      } else {
+        setCashierName('')
+        setCashierUserId('')
+      }
       try {
         const raw = s['pos_payment_methods']
         if (raw) {
@@ -79,7 +88,7 @@ export function SaleScreen({
       } catch {
         // ignore malformed local setting
       }
-    })
+    })()
   }, [])
 
   async function hydrateDraft(draftId: string) {
@@ -87,8 +96,6 @@ export function SaleScreen({
     if (!res.ok || !res.data) return
     const now = new Date().toISOString()
     setDraftSaleId(draftId)
-    setCashierName(res.data.sale.cashier_name ?? '')
-    setCashierUserId(res.data.sale.cashier_user_id ?? '')
     // Customer hydration: we keep only the customer_id in the draft; the UI can re-select customer if needed.
     // (Customer search is local anyway; keep current behavior and avoid extra DB/API work here.)
     setCart(
