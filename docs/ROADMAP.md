@@ -403,6 +403,16 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] `POST /api/v1/pos/cash-sessions/sync` — batch sync de turnos POS → `pos_cash_sessions`
 - [x] `GET /api/v1/pos/cash-sessions` — historial de turnos con filtros (estado, rango de fechas, sucursal)
 - [x] `/pos/cajas` — vista ERP de turnos de caja con tabla, filtros y paginación
+- [x] Medios de pago dinámicos — `pos_payment_methods` + `pos_branch_payment_methods`; configurables desde ERP por org/sucursal, sincronizados al POS; reemplaza `payment_method` fijo por `payments[]` con soporte mixto a futuro
+- [x] `GET /api/v1/pos/payment-methods` — endpoint POS-device: métodos activos para la sucursal del dispositivo
+- [x] `GET/POST /api/v1/pos/org-payment-methods` + `PATCH/DELETE /api/v1/pos/org-payment-methods/:id` — CRUD ERP para administrar métodos de pago
+- [x] `/pos/medios-de-pago` — pantalla ERP: gestión de métodos con asignación por sucursal
+- [x] Código de operación opcional en checkout para medios no-efectivo (guardado en `payments[].reference`)
+- [x] Apertura y cierre de turno de caja requieren PIN del cajero
+- [x] Cancelación de venta en borrador con modal de confirmación (atajo Cmd/Ctrl+⌫)
+- [x] Zona de peligro en Settings: limpiar datos locales de dev
+- [x] Botón manual "Enviar ventas pendientes al cloud" en Settings
+- [x] Sync de ventas/turnos: errores visibles por registro; `salesperson_id`/`cashier_user_id` verificados contra cloud antes de usar como FK
 - [ ] `GET /api/v1/pos/sales/sync` — pull de ventas sincronizadas (para reconciliación offline)
 - [ ] Renovación de licencia desde el ERP admin (extender `license_valid_until`)
 - [ ] App Electron: sincronización automática en background cuando hay conexión
