@@ -7,7 +7,7 @@ export const authConfig: NextAuthConfig = {
   pages: { signIn: '/login' },
   callbacks: {
     authorized({ auth, request }) {
-      const isPublic = ['/login', '/api/auth', '/api/v1/pos'].some((p) =>
+      const isPublic = ['/login', '/api/auth', '/api/v1/pos', '/api/admin'].some((p) =>
         request.nextUrl.pathname.startsWith(p),
       )
       return isPublic || !!auth?.user
