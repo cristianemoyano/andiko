@@ -1,6 +1,6 @@
 {
   "buildCommand": "pnpm build",
-  "installCommand": "pnpm install --frozen-lockfile",
+  "installCommand": "pnpm install --frozen-lockfile --filter . --filter './packages/*'",
   "framework": "nextjs",
   "ignoreCommand": "! git diff HEAD^ HEAD --quiet -- src/ public/ next.config.ts package.json vercel.json",
   "git": {
