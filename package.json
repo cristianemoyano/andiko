@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "migrate": "tsx --env-file=.env.local src/db/migrate.ts",
+    "migrate:prod": "tsx src/db/migrate.ts",
     "db:clear-data": "tsx --env-file=.env.local src/db/dev/clear-data.ts",
     "db:seed-dev": "tsx --env-file=.env.local src/db/dev/seed-dev.ts",
     "db:check-perms": "tsx --env-file=.env.local src/db/dev/check-permissions.ts",
