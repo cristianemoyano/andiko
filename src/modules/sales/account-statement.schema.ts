@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { paginationSchema } from '@/lib/pagination'
 
-export const ACCOUNT_STATEMENT_MOVEMENT_TYPES = ['invoice', 'payment'] as const
+export const ACCOUNT_STATEMENT_MOVEMENT_TYPES = ['invoice', 'payment', 'credit_note'] as const
 export type AccountStatementMovementType = (typeof ACCOUNT_STATEMENT_MOVEMENT_TYPES)[number]
 
 export const accountStatementQuerySchema = paginationSchema.extend({

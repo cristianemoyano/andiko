@@ -225,7 +225,7 @@ export interface Invoice {
 // --- Account statement (cuenta corriente) ---
 
 export type AccountDebtStatus = 'up_to_date' | 'with_balance' | 'overdue'
-export type AccountMovementType = 'invoice' | 'payment'
+export type AccountMovementType = 'invoice' | 'payment' | 'credit_note'
 
 export const ACCOUNT_DEBT_STATUS_LABEL: Record<AccountDebtStatus, string> = {
   up_to_date: 'Al día',
@@ -234,8 +234,9 @@ export const ACCOUNT_DEBT_STATUS_LABEL: Record<AccountDebtStatus, string> = {
 }
 
 export const ACCOUNT_MOVEMENT_TYPE_LABEL: Record<AccountMovementType, string> = {
-  invoice: 'Factura',
-  payment: 'Cobro',
+  invoice:     'Factura',
+  payment:     'Cobro',
+  credit_note: 'Nota de crédito',
 }
 
 export interface AccountStatementSummary {

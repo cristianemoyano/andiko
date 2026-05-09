@@ -4,14 +4,13 @@ import Decimal from 'decimal.js'
 import { paginate, toPaginated } from '@/lib/pagination'
 import { whereAllowedBranches, whereOrg, type TenantContext } from '@/lib/tenancy'
 import Contact from '@/modules/contacts/contact.model'
-import Invoice from './invoice.model'
-import Payment from './payment.model'
-import CreditNote from './credit-note.model'
-import type { AccountStatementQuery, AccountStatementMovementType } from './account-statement.schema'
+import SupplierInvoice from './supplier-invoice.model'
+import SupplierPayment from './supplier-payment.model'
+import type { AccountStatementQuery } from '@/modules/sales/account-statement.schema'
 
-export type AccountStatementLine = {
+export type SupplierAccountStatementLine = {
   id: string
-  movement_type: AccountStatementMovementType
+  movement_type: 'invoice' | 'payment'
   movement_id: string
   date: string
   document_number: string
@@ -22,7 +21,7 @@ export type AccountStatementLine = {
   running_balance: string
 }
 
-export type AccountStatementSummary = {
+export type SupplierAccountStatementSummary = {
   currency: string
   total_invoiced: string
   total_paid: string
@@ -34,7 +33,7 @@ export type AccountStatementSummary = {
 
 type MovementDraft = {
   id: string
-  movement_type: AccountStatementMovementType
+  movement_type: 'invoice' | 'payment'
   movement_id: string
   date: Date
   document_number: string
@@ -44,20 +43,20 @@ type MovementDraft = {
   credit: Decimal
 }
 
-export async function getAccountStatement(contactId: string, query: AccountStatementQuery, ctx: TenantContext) {
+export async function getSupplierAccountStatement(contactId: string, query: AccountStatementQuery, ctx: TenantContext) {
   const contact = await Contact.findOne({
     where: whereOrg(ctx, { id: contactId }),
     attributes: ['id', 'legal_name', 'trade_name'],
   })
   if (!contact) throw new Error('CONTACT_NOT_FOUND')
 
-  const invoices = await Invoice.findAll({
+  const invoices = await SupplierInvoice.findAll({
     where: whereAllowedBranches(ctx, {
       contact_id: contactId,
       status: { [Op.notIn]: ['cancelled'] },
     }),
-    attributes: ['id', 'invoice_number', 'status', 'issue_date', 'due_date', 'created_at', 'total', 'paid_amount', 'balance', 'currency', 'notes'],
-    order: [['issue_date', 'ASC'], ['created_at', 'ASC']],
+    attributes: ['id', 'invoice_number', 'status', 'invoice_date', 'due_date', 'created_at', 'total', 'paid_amount', 'balance', 'currency', 'notes'],
+    order: [['invoice_date', 'ASC'], ['created_at', 'ASC']],
   })
 
   const summary = buildSummary(invoices)
@@ -69,34 +68,25 @@ export async function getAccountStatement(contactId: string, query: AccountState
         trade_name: contact.trade_name ? String(contact.trade_name) : null,
       },
       summary,
-      ...toPaginated<AccountStatementLine>([], 0, query.page, query.limit),
+      ...toPaginated<SupplierAccountStatementLine>([], 0, query.page, query.limit),
     }
   }
 
-  const invoiceIds = invoices.map((invoice) => String(invoice.id))
-  const payments = await Payment.findAll({
+  const invoiceIds = invoices.map((i) => String(i.id))
+  const payments = await SupplierPayment.findAll({
     where: whereAllowedBranches(ctx, {
       invoice_id: { [Op.in]: invoiceIds.length > 0 ? invoiceIds : ['00000000-0000-0000-0000-000000000000'] },
     }),
-    attributes: ['id', 'invoice_id', 'payment_number', 'payment_date', 'amount', 'reference', 'notes'],
-    include: [{ model: Invoice, as: 'invoice', attributes: ['id', 'status'], required: false }],
+    attributes: ['id', 'invoice_id', 'payment_number', 'payment_date', 'amount', 'notes'],
+    include: [{ model: SupplierInvoice, as: 'invoice', attributes: ['id', 'status'], required: false }],
     order: [['payment_date', 'ASC'], ['created_at', 'ASC']],
-  })
-
-  const creditNotes = await CreditNote.findAll({
-    where: whereAllowedBranches(ctx, {
-      contact_id: contactId,
-      status: 'issued',
-    }),
-    attributes: ['id', 'credit_note_number', 'issue_date', 'total', 'reason', 'created_at'],
-    order: [['issue_date', 'ASC'], ['created_at', 'ASC']],
   })
 
   const from = query.from ? atStartOfDay(query.from) : null
   const to = query.to ? atEndOfDay(query.to) : null
   const search = query.search?.trim().toLowerCase() ?? ''
 
-  const allMovements = buildMovements(invoices, payments, creditNotes)
+  const allMovements = buildMovements(invoices, payments)
   const openingBalance = allMovements
     .filter(m => (from ? m.date < from : false))
     .reduce((acc, m) => acc.plus(m.debit).minus(m.credit), new Decimal(0))
@@ -112,7 +102,7 @@ export async function getAccountStatement(contactId: string, query: AccountState
   })
 
   let runningBalance = openingBalance
-  const linesWithBalance: AccountStatementLine[] = filteredMovements.map(m => {
+  const linesWithBalance: SupplierAccountStatementLine[] = filteredMovements.map(m => {
     runningBalance = runningBalance.plus(m.debit).minus(m.credit)
     return {
       id: m.id,
@@ -142,7 +132,7 @@ export async function getAccountStatement(contactId: string, query: AccountState
   }
 }
 
-function buildSummary(invoices: Invoice[]) {
+function buildSummary(invoices: SupplierInvoice[]): SupplierAccountStatementSummary {
   const today = new Date()
   let totalInvoiced = new Decimal(0)
   let totalPaid = new Decimal(0)
@@ -168,7 +158,7 @@ function buildSummary(invoices: Invoice[]) {
     }
   }
 
-  let debtStatus: AccountStatementSummary['debt_status'] = 'up_to_date'
+  let debtStatus: SupplierAccountStatementSummary['debt_status'] = 'up_to_date'
   if (overdueBalance.gt(0)) debtStatus = 'overdue'
   else if (balance.gt(0)) debtStatus = 'with_balance'
 
@@ -180,17 +170,17 @@ function buildSummary(invoices: Invoice[]) {
     overdue_balance: overdueBalance.toFixed(2),
     current_balance: currentBalance.toFixed(2),
     debt_status: debtStatus,
-  } satisfies AccountStatementSummary
+  }
 }
 
-function buildMovements(invoices: Invoice[], payments: Payment[], creditNotes: CreditNote[]): MovementDraft[] {
+function buildMovements(invoices: SupplierInvoice[], payments: SupplierPayment[]): MovementDraft[] {
   const invoiceMovements: MovementDraft[] = invoices
     .filter(i => i.status !== 'cancelled')
     .map(invoice => ({
       id: `invoice:${invoice.id}`,
       movement_type: 'invoice',
       movement_id: String(invoice.id),
-      date: invoice.issue_date ? new Date(invoice.issue_date) : new Date(invoice.created_at),
+      date: invoice.invoice_date ? new Date(invoice.invoice_date) : new Date(invoice.created_at),
       document_number: String(invoice.invoice_number),
       description: invoice.notes ? String(invoice.notes) : null,
       due_date: invoice.due_date ? new Date(invoice.due_date) : null,
@@ -200,7 +190,7 @@ function buildMovements(invoices: Invoice[], payments: Payment[], creditNotes: C
 
   const paymentMovements: MovementDraft[] = payments
     .filter((payment) => {
-      const invoiceStatus = (payment as Payment & { invoice?: { status?: string } | null }).invoice?.status
+      const invoiceStatus = (payment as SupplierPayment & { invoice?: { status?: string } | null }).invoice?.status
       return invoiceStatus !== 'cancelled'
     })
     .map(payment => ({
@@ -209,25 +199,13 @@ function buildMovements(invoices: Invoice[], payments: Payment[], creditNotes: C
       movement_id: String(payment.id),
       date: new Date(payment.payment_date),
       document_number: String(payment.payment_number),
-      description: payment.reference ? String(payment.reference) : (payment.notes ? String(payment.notes) : null),
+      description: payment.notes ? String(payment.notes) : null,
       due_date: null,
       debit: new Decimal(0),
       credit: parseDecimal(payment.amount),
     }))
 
-  const creditNoteMovements: MovementDraft[] = creditNotes.map(cn => ({
-    id: `credit_note:${cn.id}`,
-    movement_type: 'credit_note' as AccountStatementMovementType,
-    movement_id: String(cn.id),
-    date: cn.issue_date ? new Date(cn.issue_date) : new Date(cn.created_at),
-    document_number: String(cn.credit_note_number),
-    description: cn.reason ? String(cn.reason) : null,
-    due_date: null,
-    debit: new Decimal(0),
-    credit: parseDecimal(cn.total),
-  }))
-
-  return [...invoiceMovements, ...paymentMovements, ...creditNoteMovements].sort((a, b) => {
+  return [...invoiceMovements, ...paymentMovements].sort((a, b) => {
     const dayCompare = toUtcDayKey(a.date).localeCompare(toUtcDayKey(b.date))
     if (dayCompare !== 0) return dayCompare
 
