@@ -1,4 +1,4 @@
-import type { PosSale, PosProduct, PosCustomer } from '@andiko/shared'
+import type { PosSale, PosProduct, PosCustomer, PosSalePayment, PosPaymentMethod } from '@andiko/shared'
 
 interface CashSession {
   id: string
@@ -33,7 +33,7 @@ interface PosAPI {
       cashier_user_id: string | null
       cashier_name: string | null
       customer_id: string | null
-      payment_method: string | null
+      payments: string | null
       subtotal: string
       tax_amount: string
       total: string
@@ -47,7 +47,7 @@ interface PosAPI {
       cashier_user_id: string | null
       cashier_name: string | null
       customer_id: string | null
-      payment_method: string | null
+      payments: string | null
       subtotal: string
       tax_amount: string
       total: string
@@ -61,7 +61,7 @@ interface PosAPI {
       cashier_user_id: string | null
       cashier_name: string | null
       customer_id: string | null
-      payment_method: string | null
+      payments: string | null
       subtotal: string
       tax_amount: string
       total: string
@@ -81,7 +81,8 @@ interface PosAPI {
     }> } }>
     createOrResume: (args?: { draft_sale_id?: string; cashier_user_id?: string | null; cashier_name?: string | null; customer_id?: string | null }) => Promise<{ ok: boolean; id: string }>
     update: (args: { draft_sale_id: string; cashier_user_id?: string | null; cashier_name?: string | null; customer_id?: string | null; subtotal?: string; tax_amount?: string; total?: string }) => Promise<{ ok: boolean }>
-    checkout: (args: { draft_sale_id: string; payment_method: PosSale['payment_method']; sold_at?: string; subtotal: string; tax_amount: string; total: string }) => Promise<{ ok: boolean; sale_id?: string; error?: string }>
+    checkout: (args: { draft_sale_id: string; payments: PosSalePayment[]; sold_at?: string; subtotal: string; tax_amount: string; total: string }) => Promise<{ ok: boolean; sale_id?: string; error?: string }>
+    cancel: (draftSaleId: string) => Promise<{ ok: boolean }>
   }
   draftSaleItems: {
     upsert: (args: { draft_sale_id: string; product_id: string; product_name: string; qty: number; unit_price: string; total: string; iva_rate?: string; sort_order?: number }) => Promise<{ ok: boolean }>
@@ -100,7 +101,7 @@ interface PosAPI {
     list: (args?: { limit?: number }) => Promise<Array<{
       id: string
       customer_id: string | null
-      payment_method: string
+      payments: string
       subtotal: string
       tax_amount: string
       total: string
@@ -113,7 +114,7 @@ interface PosAPI {
       sale: {
         id: string
         customer_id: string | null
-        payment_method: string
+        payments: string
         subtotal: string
         tax_amount: string
         total: string
@@ -132,6 +133,9 @@ interface PosAPI {
       }>
     }>
   }
+  paymentMethods: {
+    list: () => Promise<PosPaymentMethod[]>
+  }
   sync: {
     checkLicense: () => Promise<unknown>
     catalog: () => Promise<{ ok: boolean; error?: string }>
@@ -140,6 +144,9 @@ interface PosAPI {
   settings: {
     save: (kv: Record<string, string>) => Promise<{ ok: boolean }>
     get: () => Promise<Record<string, string>>
+  }
+  dev: {
+    resetLocalData: () => Promise<{ ok: boolean; error?: string }>
   }
 }
 

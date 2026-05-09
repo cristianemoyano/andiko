@@ -57,7 +57,7 @@ function runMigrations(sqlite: Database.Database) {
       customer_id TEXT,
       cashier_user_id TEXT,
       cashier_name TEXT,
-      payment_method TEXT NOT NULL,
+      payments TEXT NOT NULL DEFAULT '[]',
       subtotal TEXT NOT NULL,
       tax_amount TEXT NOT NULL,
       total TEXT NOT NULL,
@@ -83,13 +83,22 @@ function runMigrations(sqlite: Database.Database) {
       cashier_user_id TEXT,
       cashier_name TEXT,
       customer_id TEXT,
-      payment_method TEXT,
+      payments TEXT DEFAULT '[]',
       subtotal TEXT NOT NULL DEFAULT '0',
       tax_amount TEXT NOT NULL DEFAULT '0',
       total TEXT NOT NULL DEFAULT '0',
       last_opened_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS pos_payment_methods (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      requires_reference INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      synced_at TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS pos_draft_sale_items (
@@ -158,6 +167,39 @@ function runMigrations(sqlite: Database.Database) {
   try { sqlite.exec(`ALTER TABLE pos_users ADD COLUMN pos_pin_hash TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE products ADD COLUMN barcode TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE products ADD COLUMN image_url TEXT;`) } catch { /* ignore */ }
+  // payments column replaces payment_method — existing DBs get the column added
+  try { sqlite.exec(`ALTER TABLE sales ADD COLUMN payments TEXT NOT NULL DEFAULT '[]';`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE pos_draft_sales ADD COLUMN payments TEXT DEFAULT '[]';`) } catch { /* ignore */ }
+
+  // Drop legacy payment_method NOT NULL column via table rebuild (SQLite doesn't support ALTER COLUMN)
+  const hasPmCol = (sqlite.prepare(`PRAGMA table_info(sales)`).all() as Array<{name: string}>)
+    .some(c => c.name === 'payment_method')
+  if (hasPmCol) {
+    sqlite.exec(`
+      PRAGMA foreign_keys = OFF;
+      BEGIN;
+      CREATE TABLE sales_new (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT,
+        cashier_user_id TEXT,
+        cashier_name TEXT,
+        payments TEXT NOT NULL DEFAULT '[]',
+        subtotal TEXT NOT NULL,
+        tax_amount TEXT NOT NULL,
+        total TEXT NOT NULL,
+        sold_at TEXT NOT NULL,
+        cloud_id TEXT,
+        synced_at TEXT
+      );
+      INSERT INTO sales_new SELECT id, customer_id, cashier_user_id, cashier_name,
+        COALESCE(payments, '[]'), subtotal, tax_amount, total, sold_at, cloud_id, synced_at
+        FROM sales;
+      DROP TABLE sales;
+      ALTER TABLE sales_new RENAME TO sales;
+      COMMIT;
+      PRAGMA foreign_keys = ON;
+    `)
+  }
 
   // cash_sessions added in Sprint 3 — CREATE TABLE IF NOT EXISTS handles new installs
   // For existing DBs that don't have the table yet, catch and ignore the error

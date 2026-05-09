@@ -37,7 +37,7 @@ export const sales = sqliteTable('sales', {
   customer_id:    text('customer_id'),
   cashier_user_id: text('cashier_user_id'),
   cashier_name:   text('cashier_name'),
-  payment_method: text('payment_method').notNull(),  // 'cash' | 'card' | 'transfer'
+  payments:       text('payments').notNull().default('[]'), // JSON: PosSalePayment[]
   subtotal:       text('subtotal').notNull(),
   tax_amount:     text('tax_amount').notNull(),
   total:          text('total').notNull(),
@@ -63,7 +63,7 @@ export const posDraftSales = sqliteTable('pos_draft_sales', {
   cashier_user_id: text('cashier_user_id'),
   cashier_name:   text('cashier_name'),
   customer_id:    text('customer_id'),
-  payment_method: text('payment_method'),
+  payments:       text('payments').default('[]'), // JSON: PosSalePayment[] (null while draft)
   subtotal:       text('subtotal').notNull().default('0'),
   tax_amount:     text('tax_amount').notNull().default('0'),
   total:          text('total').notNull().default('0'),
@@ -104,6 +104,15 @@ export const licenseCache = sqliteTable('license_cache', {
 export const settings = sqliteTable('settings', {
   key:   text('key').primaryKey(),
   value: text('value').notNull(),
+})
+
+export const posPaymentMethods = sqliteTable('pos_payment_methods', {
+  id:                 text('id').primaryKey(),  // cloud UUID
+  name:               text('name').notNull(),
+  type:               text('type').notNull(),
+  requires_reference: integer('requires_reference', { mode: 'boolean' }).notNull().default(false),
+  sort_order:         integer('sort_order', { mode: 'number' }).notNull().default(0),
+  synced_at:          text('synced_at').notNull(),
 })
 
 export const cashSessions = sqliteTable('cash_sessions', {

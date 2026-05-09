@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { and, desc, eq } from 'drizzle-orm'
 import { db } from './db'
 import { posDraftSaleItems, posDraftSales, products, saleItems, sales, settings, syncQueue } from '../db/schema'
-import type { PosSale } from '@andiko/shared'
+import type { PosSalePayment } from '@andiko/shared'
 
 type DraftSaleRow = typeof posDraftSales.$inferSelect
 type DraftSaleItemRow = typeof posDraftSaleItems.$inferSelect
@@ -79,7 +79,7 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
           cashier_user_id: args?.cashier_user_id ?? null,
           cashier_name: args?.cashier_name ?? null,
           customer_id: args?.customer_id ?? null,
-          payment_method: null,
+          payments: '[]',
           subtotal: '0',
           tax_amount: '0',
           total: '0',
@@ -193,7 +193,7 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
       _e,
       args: {
         draft_sale_id: string
-        payment_method: PosSale['payment_method']
+        payments: PosSalePayment[]
         sold_at?: string
         subtotal: string
         tax_amount: string
@@ -211,6 +211,7 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
       const s = d.select().from(settings).all()
       const settingsMap = Object.fromEntries(s.map((r) => [r.key, r.value]))
 
+      const paymentsJson = JSON.stringify(args.payments)
       const saleId = randomUUID()
       d.insert(sales)
         .values({
@@ -218,7 +219,7 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
           customer_id: draft.customer_id ?? null,
           cashier_user_id: draft.cashier_user_id ?? settingsMap['cashier_user_id'] ?? null,
           cashier_name: draft.cashier_name ?? settingsMap['cashier_name'] ?? null,
-          payment_method: args.payment_method,
+          payments: paymentsJson,
           subtotal: args.subtotal,
           tax_amount: args.tax_amount,
           total: args.total,
@@ -245,7 +246,7 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
       d.update(posDraftSales)
         .set({
           status: 'paid',
-          payment_method: args.payment_method,
+          payments: paymentsJson,
           subtotal: args.subtotal,
           tax_amount: args.tax_amount,
           total: args.total,
@@ -257,5 +258,14 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
       return { ok: true, sale_id: saleId }
     },
   )
+
+  ipc.handle('draftSales:cancel', async (_e, draft_sale_id: string) => {
+    const now = new Date().toISOString()
+    db().update(posDraftSales)
+      .set({ status: 'cancelled', updated_at: now })
+      .where(eq(posDraftSales.id, draft_sale_id))
+      .run()
+    return { ok: true }
+  })
 }
 

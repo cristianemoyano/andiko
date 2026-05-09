@@ -2,7 +2,7 @@ import type { IpcMain } from 'electron'
 import { db } from './db'
 import { sales, saleItems, syncQueue, products, settings } from '../db/schema'
 import { randomUUID } from 'crypto'
-import type { PosSale } from '@andiko/shared'
+import type { PosSale, PosSalePayment } from '@andiko/shared'
 import { desc, eq, sql } from 'drizzle-orm'
 
 export function registerSalesHandlers(ipc: IpcMain) {
@@ -19,7 +19,7 @@ export function registerSalesHandlers(ipc: IpcMain) {
       customer_id:    payload.customer_id ?? null,
       cashier_user_id: payload.cashier_user_id ?? settingsMap['cashier_user_id'] ?? null,
       cashier_name:   payload.cashier_name ?? settingsMap['cashier_name'] ?? null,
-      payment_method: payload.payment_method,
+      payments:       JSON.stringify(payload.payments),
       subtotal:       payload.subtotal,
       tax_amount:     payload.tax_amount,
       total:          payload.total,
@@ -68,26 +68,25 @@ export function registerSalesHandlers(ipc: IpcMain) {
   ipc.handle('sales:closingReport', async (_e, date?: string) => {
     const day = date ?? new Date().toISOString().slice(0, 10)
     const rows = db()
-      .select({
-        payment_method: sales.payment_method,
-        count: sql<number>`count(*)`,
-        total: sql<string>`coalesce(sum(cast(${sales.total} as real)), 0)`,
-      })
+      .select({ payments: sales.payments, total: sales.total })
       .from(sales)
       .where(sql`strftime('%Y-%m-%d', ${sales.sold_at}) = ${day}`)
-      .groupBy(sales.payment_method)
       .all()
 
-    const report = { cash: 0, card: 0, transfer: 0, total: 0, count: 0 }
+    // Aggregate by payment method type across mixed-payment sales
+    const byType: Record<string, number> = {}
+    let grandTotal = 0
+    let count = 0
+
     for (const row of rows) {
-      const amount = Number(row.total)
-      const count = Number(row.count)
-      if (row.payment_method === 'cash')     report.cash     += amount
-      if (row.payment_method === 'card')     report.card     += amount
-      if (row.payment_method === 'transfer') report.transfer += amount
-      report.total += amount
-      report.count += count
+      const payments: PosSalePayment[] = JSON.parse(row.payments ?? '[]')
+      for (const p of payments) {
+        byType[p.payment_method_name] = (byType[p.payment_method_name] ?? 0) + Number(p.amount)
+      }
+      grandTotal += Number(row.total)
+      count++
     }
-    return { ...report, date: day }
+
+    return { byType, total: grandTotal, count, date: day }
   })
 }

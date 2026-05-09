@@ -1,8 +1,8 @@
 import type { IpcMain } from 'electron'
 import { db } from './db'
-import { products, customers, posUsers, sales, saleItems, syncQueue, settings, cashSessions } from '../db/schema'
+import { products, customers, posUsers, posPaymentMethods, sales, saleItems, syncQueue, settings, cashSessions } from '../db/schema'
 import { eq, inArray, like, or, sql } from 'drizzle-orm'
-import type { PosProduct, PosCustomer } from '@andiko/shared'
+import type { PosProduct, PosCustomer, PosPaymentMethod, PosSalePayment } from '@andiko/shared'
 import bcrypt from 'bcryptjs'
 
 const SYNC_INTERVAL_MS = 30 * 60 * 1000  // 30 min for catalog
@@ -168,13 +168,31 @@ export async function syncCatalog() {
   db().insert(settings).values({ key: 'users_synced_at', value: nextUsersSince })
     .onConflictDoUpdate({ target: settings.key, set: { value: nextUsersSince } }).run()
 
+  // Payment methods — branch-scoped, no delta sync needed (small set)
+  if (!branchId) throw new Error('Validá la licencia primero para obtener la sucursal asignada')
+  const { data: paymentMethodList } = await fetchCloud<{ data: PosPaymentMethod[] }>(
+    `/api/v1/pos/payment-methods?branch_id=${branchId}`
+  )
+  // Full replace — source of truth is cloud, set is small
+  db().delete(posPaymentMethods).run()
+  for (const pm of paymentMethodList) {
+    db().insert(posPaymentMethods).values({
+      id: pm.id,
+      name: pm.name,
+      type: pm.type,
+      requires_reference: pm.requires_reference,
+      sort_order: pm.sort_order,
+      synced_at: pm.updated_at,
+    }).run()
+  }
+
   db().insert(settings).values({ key: 'catalog_synced_at', value: new Date().toISOString() })
     .onConflictDoUpdate({ target: settings.key, set: { value: new Date().toISOString() } }).run()
 }
 
-export async function syncPendingSales() {
+export async function syncPendingSales(): Promise<{ synced: number; failed: Array<{ id: string; error: string }> }> {
   const pending = db().select().from(syncQueue).all()
-  if (pending.length === 0) return
+  if (pending.length === 0) return { synced: 0, failed: [] }
 
   const saleIds = pending.map(q => q.sale_id)
   const saleRows = db().select().from(sales).where(inArray(sales.id, saleIds)).all()
@@ -190,7 +208,7 @@ export async function syncPendingSales() {
     customer_id:    s.customer_id ?? undefined,
     cashier_user_id: s.cashier_user_id ?? undefined,
     cashier_name:   s.cashier_name ?? undefined,
-    payment_method: s.payment_method as 'cash' | 'card' | 'transfer',
+    payments:       JSON.parse(s.payments ?? '[]') as PosSalePayment[],
     sold_at:        s.sold_at,
     items: (itemsBySaleId[s.id] ?? []).map(i => ({
       variant_id:  i.product_id,
@@ -207,19 +225,27 @@ export async function syncPendingSales() {
   )
 
   const now = new Date().toISOString()
+  let synced = 0
+  const failed: Array<{ id: string; error: string }> = []
+
   for (const r of result.results) {
     if (r.cloud_id) {
       db().update(sales).set({ synced_at: now, cloud_id: r.cloud_id }).where(eq(sales.id, r.pos_sale_id)).run()
       const q = pending.find(p => p.sale_id === r.pos_sale_id)
       if (q) db().delete(syncQueue).where(eq(syncQueue.id, q.id)).run()
+      synced++
     } else {
+      const errMsg = r.error ?? 'Unknown error'
       const q = pending.find(p => p.sale_id === r.pos_sale_id)
       if (q) {
-        db().update(syncQueue).set({ attempts: q.attempts + 1, last_error: r.error ?? 'Unknown error' })
+        db().update(syncQueue).set({ attempts: q.attempts + 1, last_error: errMsg })
           .where(eq(syncQueue.id, q.id)).run()
       }
+      failed.push({ id: r.pos_sale_id, error: errMsg })
     }
   }
+
+  return { synced, failed }
 }
 
 export async function syncPendingCashSessions() {
@@ -318,12 +344,17 @@ export function registerSyncHandlers(ipc: IpcMain) {
 
   ipc.handle('sync:sales', async () => {
     const errors: string[] = []
-    try { await syncPendingSales() }
+    let salesResult = { synced: 0, failed: [] as Array<{ id: string; error: string }> }
+    try { salesResult = await syncPendingSales() }
     catch (e) { errors.push(`ventas: ${String(e)}`) }
     try { await syncPendingCashSessions() }
     catch (e) { errors.push(`turnos: ${String(e)}`) }
     if (errors.length > 0) return { ok: false, error: errors.join(' | ') }
-    return { ok: true }
+    if (salesResult.failed.length > 0) {
+      const detail = salesResult.failed.map(f => f.error).join(' | ')
+      return { ok: false, error: `${salesResult.failed.length} venta(s) fallaron: ${detail}` }
+    }
+    return { ok: true, synced: salesResult.synced }
   })
 
   ipc.handle('settings:save', async (_e, kv: Record<string, string>) => {
@@ -335,6 +366,10 @@ export function registerSyncHandlers(ipc: IpcMain) {
   })
 
   ipc.handle('settings:get', async () => getSettings())
+
+  ipc.handle('paymentMethods:list', async () => {
+    return db().select().from(posPaymentMethods).orderBy(posPaymentMethods.sort_order).all()
+  })
 
   ipc.handle('users:search', async (_e, query: string) => {
     const q = (query ?? '').trim()
@@ -371,6 +406,22 @@ export function registerSyncHandlers(ipc: IpcMain) {
       const ok = await bcrypt.compare(args.pin, hash)
       if (!ok) return { ok: false, error: 'PIN incorrecto' }
       return { ok: true, user: { id: row!.id, name: row!.name } }
+    }
+  })
+
+  ipc.handle('dev:resetLocalData', async () => {
+    try {
+      db().delete(syncQueue).run()
+      db().delete(saleItems).run()
+      db().delete(sales).run()
+      db().delete(posPaymentMethods).run()
+      db().delete(posUsers).run()
+      db().delete(customers).run()
+      db().delete(products).run()
+      db().delete(settings).run()
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: String(e) }
     }
   })
 

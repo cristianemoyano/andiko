@@ -14,25 +14,13 @@ export function SettingsScreen({ onLicenseResult }: Props) {
   const [saved, setSaved]         = useState(false)
   const [licenseStatus, setLicenseStatus] = useState<string | null>(null)
   const [syncStatus, setSyncStatus]       = useState<string | null>(null)
-  const [posPaymentMethods, setPosPaymentMethods] = useState<Array<'cash' | 'card' | 'transfer'>>(['cash', 'card', 'transfer'])
+  const [resetConfirm, setResetConfirm]   = useState(false)
+  const [resetStatus, setResetStatus]     = useState<string | null>(null)
 
   useEffect(() => {
     window.pos.settings.get().then((s: Settings) => {
       setCloudUrl(s['cloud_url'] ?? '')
       setApiToken(s['api_token'] ?? '')
-      try {
-        const raw = s['pos_payment_methods']
-        if (raw) {
-          const parsed = JSON.parse(raw) as unknown
-          if (Array.isArray(parsed)) {
-            const allowed = new Set(['cash', 'card', 'transfer'])
-            const cleaned = parsed.filter((x): x is 'cash' | 'card' | 'transfer' => typeof x === 'string' && allowed.has(x))
-            if (cleaned.length > 0) setPosPaymentMethods(cleaned)
-          }
-        }
-      } catch {
-        // ignore malformed local setting
-      }
       setInfo(s)
     })
   }, [])
@@ -43,7 +31,6 @@ export function SettingsScreen({ onLicenseResult }: Props) {
     await window.pos.settings.save({
       cloud_url: cloudUrl,
       api_token: apiToken,
-      pos_payment_methods: JSON.stringify(posPaymentMethods),
     })
     setSaving(false)
     setSaved(true)
@@ -69,8 +56,19 @@ export function SettingsScreen({ onLicenseResult }: Props) {
   async function handleSyncCatalog() {
     setSyncStatus('Sincronizando…')
     const result = await window.pos.sync.catalog()
-    setSyncStatus(result.ok ? '✓ Catálogo, clientes y usuarios actualizado' : `Error: ${result.error}`)
+    setSyncStatus(result.ok ? '✓ Datos sincronizados correctamente' : `Error: ${result.error}`)
     setTimeout(() => setSyncStatus(null), 3000)
+  }
+
+  async function handleSyncSales() {
+    setSyncStatus('Enviando ventas pendientes…')
+    const result = await window.pos.sync.sales()
+    if (result.ok) {
+      setSyncStatus(result.synced > 0 ? `✓ ${result.synced} venta(s) sincronizadas` : '✓ No hay ventas pendientes')
+    } else {
+      setSyncStatus(`Error: ${result.error}`)
+    }
+    setTimeout(() => setSyncStatus(null), 5000)
   }
 
   async function handleForceResyncUsers() {
@@ -90,32 +88,8 @@ export function SettingsScreen({ onLicenseResult }: Props) {
 
       <form onSubmit={handleSave} className="space-y-4">
         <div>
-          <label className="block text-[12px] font-medium text-zinc-700 mb-2">Métodos de pago habilitados (POS)</label>
-          <div className="flex flex-col gap-2">
-            {(['cash', 'card', 'transfer'] as const).map((m) => {
-              const checked = posPaymentMethods.includes(m)
-              const label = m === 'cash' ? 'Efectivo' : m === 'card' ? 'Tarjeta' : 'Transferencia'
-              return (
-                <label key={m} className="flex items-center gap-2 text-[13px] text-zinc-800">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? Array.from(new Set([...posPaymentMethods, m]))
-                        : posPaymentMethods.filter(x => x !== m)
-                      // Don't allow empty selection
-                      if (next.length === 0) return
-                      setPosPaymentMethods(next)
-                    }}
-                  />
-                  <span>{label}</span>
-                </label>
-              )
-            })}
-          </div>
-          <p className="mt-1 text-[11px] text-zinc-500">
-            Se usan en la pantalla de cobro. (Se guardan localmente en este POS.)
+          <p className="text-[12px] text-zinc-500">
+            Los medios de pago se configuran desde el ERP cloud y se sincronizan automáticamente a este POS.
           </p>
         </div>
 
@@ -187,7 +161,13 @@ export function SettingsScreen({ onLicenseResult }: Props) {
           onClick={handleSyncCatalog}
           className="h-9 px-5 bg-white border border-zinc-300 text-[13px] font-medium rounded-md hover:bg-zinc-50 transition-colors"
         >
-          Sincronizar catálogo, clientes y usuarios
+          Sincronizar datos del cloud
+        </button>
+        <button
+          onClick={handleSyncSales}
+          className="h-9 px-5 bg-white border border-zinc-300 text-[13px] font-medium rounded-md hover:bg-zinc-50 transition-colors"
+        >
+          Enviar ventas pendientes al cloud
         </button>
         <button
           onClick={handleForceResyncUsers}
@@ -196,6 +176,30 @@ export function SettingsScreen({ onLicenseResult }: Props) {
           Forzar re-sincronización de usuarios (PIN)
         </button>
         {syncStatus && <p className="text-[12px] text-zinc-600">{syncStatus}</p>}
+      </div>
+
+      <div className="mt-5 pt-5 border-t-2 border-red-200 space-y-3">
+        <h2 className="text-[13px] font-semibold text-red-700">Zona de peligro</h2>
+        <p className="text-[12px] text-zinc-500">
+          Elimina todos los datos locales: productos, clientes, usuarios, ventas, turnos y configuración.
+          No afecta el cloud. Útil para resetear datos de desarrollo.
+        </p>
+        <button
+          onClick={async () => {
+            if (!resetConfirm) { setResetConfirm(true); setTimeout(() => setResetConfirm(false), 5000); return }
+            setResetConfirm(false)
+            const result = await window.pos.dev.resetLocalData()
+            setResetStatus(result.ok ? '✓ Datos locales eliminados. Reiniciá el POS.' : `Error: ${result.error}`)
+          }}
+          className={`h-9 px-5 text-[13px] font-medium rounded-md transition-colors ${
+            resetConfirm
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-white border border-red-300 text-red-600 hover:bg-red-50'
+          }`}
+        >
+          {resetConfirm ? '¿Seguro? Hacé click de nuevo para confirmar' : 'Limpiar todos los datos locales'}
+        </button>
+        {resetStatus && <p className="text-[12px] text-red-700">{resetStatus}</p>}
       </div>
     </div>
   )

@@ -9,11 +9,13 @@ const nodeCrypto = require("crypto");
 const products = sqliteCore.sqliteTable("products", {
   id: sqliteCore.text("id").primaryKey(),
   sku: sqliteCore.text("sku"),
+  barcode: sqliteCore.text("barcode"),
   name: sqliteCore.text("name").notNull(),
   price: sqliteCore.text("price").notNull(),
   // stored as string, NUMERIC precision
   iva_rate: sqliteCore.text("iva_rate").notNull(),
   is_active: sqliteCore.integer("is_active", { mode: "boolean" }).notNull().default(true),
+  image_url: sqliteCore.text("image_url"),
   synced_at: sqliteCore.text("synced_at").notNull()
   // ISO timestamp from cloud
 });
@@ -42,8 +44,8 @@ const sales = sqliteCore.sqliteTable("sales", {
   customer_id: sqliteCore.text("customer_id"),
   cashier_user_id: sqliteCore.text("cashier_user_id"),
   cashier_name: sqliteCore.text("cashier_name"),
-  payment_method: sqliteCore.text("payment_method").notNull(),
-  // 'cash' | 'card' | 'transfer'
+  payments: sqliteCore.text("payments").notNull().default("[]"),
+  // JSON: PosSalePayment[]
   subtotal: sqliteCore.text("subtotal").notNull(),
   tax_amount: sqliteCore.text("tax_amount").notNull(),
   total: sqliteCore.text("total").notNull(),
@@ -69,7 +71,8 @@ const posDraftSales = sqliteCore.sqliteTable("pos_draft_sales", {
   cashier_user_id: sqliteCore.text("cashier_user_id"),
   cashier_name: sqliteCore.text("cashier_name"),
   customer_id: sqliteCore.text("customer_id"),
-  payment_method: sqliteCore.text("payment_method"),
+  payments: sqliteCore.text("payments").default("[]"),
+  // JSON: PosSalePayment[] (null while draft)
   subtotal: sqliteCore.text("subtotal").notNull().default("0"),
   tax_amount: sqliteCore.text("tax_amount").notNull().default("0"),
   total: sqliteCore.text("total").notNull().default("0"),
@@ -108,12 +111,38 @@ const settings = sqliteCore.sqliteTable("settings", {
   key: sqliteCore.text("key").primaryKey(),
   value: sqliteCore.text("value").notNull()
 });
+const posPaymentMethods = sqliteCore.sqliteTable("pos_payment_methods", {
+  id: sqliteCore.text("id").primaryKey(),
+  // cloud UUID
+  name: sqliteCore.text("name").notNull(),
+  type: sqliteCore.text("type").notNull(),
+  requires_reference: sqliteCore.integer("requires_reference", { mode: "boolean" }).notNull().default(false),
+  sort_order: sqliteCore.integer("sort_order", { mode: "number" }).notNull().default(0),
+  synced_at: sqliteCore.text("synced_at").notNull()
+});
+const cashSessions = sqliteCore.sqliteTable("cash_sessions", {
+  id: sqliteCore.text("id").primaryKey(),
+  cashier_user_id: sqliteCore.text("cashier_user_id"),
+  cashier_name: sqliteCore.text("cashier_name"),
+  opened_at: sqliteCore.text("opened_at").notNull(),
+  closed_at: sqliteCore.text("closed_at"),
+  opening_amount: sqliteCore.text("opening_amount").notNull().default("0"),
+  closing_amount_declared: sqliteCore.text("closing_amount_declared"),
+  closing_amount_expected: sqliteCore.text("closing_amount_expected"),
+  difference: sqliteCore.text("difference"),
+  status: sqliteCore.text("status").notNull().default("open"),
+  // 'open' | 'closed'
+  cloud_id: sqliteCore.text("cloud_id"),
+  synced_at: sqliteCore.text("synced_at")
+});
 const schema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
+  cashSessions,
   customers,
   licenseCache,
   posDraftSaleItems,
   posDraftSales,
+  posPaymentMethods,
   posUsers,
   products,
   saleItems,
@@ -171,7 +200,7 @@ function runMigrations(sqlite) {
       customer_id TEXT,
       cashier_user_id TEXT,
       cashier_name TEXT,
-      payment_method TEXT NOT NULL,
+      payments TEXT NOT NULL DEFAULT '[]',
       subtotal TEXT NOT NULL,
       tax_amount TEXT NOT NULL,
       total TEXT NOT NULL,
@@ -197,13 +226,22 @@ function runMigrations(sqlite) {
       cashier_user_id TEXT,
       cashier_name TEXT,
       customer_id TEXT,
-      payment_method TEXT,
+      payments TEXT DEFAULT '[]',
       subtotal TEXT NOT NULL DEFAULT '0',
       tax_amount TEXT NOT NULL DEFAULT '0',
       total TEXT NOT NULL DEFAULT '0',
       last_opened_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS pos_payment_methods (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      requires_reference INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      synced_at TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS pos_draft_sale_items (
@@ -241,6 +279,21 @@ function runMigrations(sqlite) {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS cash_sessions (
+      id TEXT PRIMARY KEY,
+      cashier_user_id TEXT,
+      cashier_name TEXT,
+      opened_at TEXT NOT NULL,
+      closed_at TEXT,
+      opening_amount TEXT NOT NULL DEFAULT '0',
+      closing_amount_declared TEXT,
+      closing_amount_expected TEXT,
+      difference TEXT,
+      status TEXT NOT NULL DEFAULT 'open',
+      cloud_id TEXT,
+      synced_at TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
     CREATE INDEX IF NOT EXISTS idx_sync_queue_sale_id ON sync_queue(sale_id);
     CREATE INDEX IF NOT EXISTS idx_products_is_active ON products(is_active);
@@ -262,6 +315,53 @@ function runMigrations(sqlite) {
   }
   try {
     sqlite.exec(`ALTER TABLE pos_users ADD COLUMN pos_pin_hash TEXT;`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE products ADD COLUMN barcode TEXT;`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE products ADD COLUMN image_url TEXT;`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE sales ADD COLUMN payments TEXT NOT NULL DEFAULT '[]';`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE pos_draft_sales ADD COLUMN payments TEXT DEFAULT '[]';`);
+  } catch {
+  }
+  const hasPmCol = sqlite.prepare(`PRAGMA table_info(sales)`).all().some((c) => c.name === "payment_method");
+  if (hasPmCol) {
+    sqlite.exec(`
+      PRAGMA foreign_keys = OFF;
+      BEGIN;
+      CREATE TABLE sales_new (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT,
+        cashier_user_id TEXT,
+        cashier_name TEXT,
+        payments TEXT NOT NULL DEFAULT '[]',
+        subtotal TEXT NOT NULL,
+        tax_amount TEXT NOT NULL,
+        total TEXT NOT NULL,
+        sold_at TEXT NOT NULL,
+        cloud_id TEXT,
+        synced_at TEXT
+      );
+      INSERT INTO sales_new SELECT id, customer_id, cashier_user_id, cashier_name,
+        COALESCE(payments, '[]'), subtotal, tax_amount, total, sold_at, cloud_id, synced_at
+        FROM sales;
+      DROP TABLE sales;
+      ALTER TABLE sales_new RENAME TO sales;
+      COMMIT;
+      PRAGMA foreign_keys = ON;
+    `);
+  }
+  try {
+    sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_cash_sessions_status ON cash_sessions(status);`);
   } catch {
   }
 }
@@ -2052,17 +2152,21 @@ async function syncCatalog() {
     db().insert(products).values({
       id: p.id,
       sku: p.sku ?? null,
+      barcode: p.barcode ?? null,
       name: p.name,
       price: p.price,
       iva_rate: p.iva_rate,
       is_active: p.is_active,
+      image_url: p.image_url ?? null,
       synced_at: p.updated_at
     }).onConflictDoUpdate({ target: products.id, set: {
       sku: p.sku ?? null,
+      barcode: p.barcode ?? null,
       name: p.name,
       price: p.price,
       iva_rate: p.iva_rate,
       is_active: p.is_active,
+      image_url: p.image_url ?? null,
       synced_at: p.updated_at
     } }).run();
   }
@@ -2112,11 +2216,26 @@ async function syncCatalog() {
   }
   const nextUsersSince = userList.length > 0 ? userList.map((u) => u.updated_at).reduce((max, cur) => cur > max ? cur : max, usersSince) : usersSince;
   db().insert(settings).values({ key: "users_synced_at", value: nextUsersSince }).onConflictDoUpdate({ target: settings.key, set: { value: nextUsersSince } }).run();
+  if (!branchId) throw new Error("Validá la licencia primero para obtener la sucursal asignada");
+  const { data: paymentMethodList } = await fetchCloud(
+    `/api/v1/pos/payment-methods?branch_id=${branchId}`
+  );
+  db().delete(posPaymentMethods).run();
+  for (const pm of paymentMethodList) {
+    db().insert(posPaymentMethods).values({
+      id: pm.id,
+      name: pm.name,
+      type: pm.type,
+      requires_reference: pm.requires_reference,
+      sort_order: pm.sort_order,
+      synced_at: pm.updated_at
+    }).run();
+  }
   db().insert(settings).values({ key: "catalog_synced_at", value: (/* @__PURE__ */ new Date()).toISOString() }).onConflictDoUpdate({ target: settings.key, set: { value: (/* @__PURE__ */ new Date()).toISOString() } }).run();
 }
 async function syncPendingSales() {
   const pending = db().select().from(syncQueue).all();
-  if (pending.length === 0) return;
+  if (pending.length === 0) return { synced: 0, failed: [] };
   const saleIds = pending.map((q) => q.sale_id);
   const saleRows = db().select().from(sales).where(drizzleOrm.inArray(sales.id, saleIds)).all();
   const itemRows = db().select().from(saleItems).where(drizzleOrm.inArray(saleItems.sale_id, saleIds)).all();
@@ -2129,7 +2248,7 @@ async function syncPendingSales() {
     customer_id: s.customer_id ?? void 0,
     cashier_user_id: s.cashier_user_id ?? void 0,
     cashier_name: s.cashier_name ?? void 0,
-    payment_method: s.payment_method,
+    payments: JSON.parse(s.payments ?? "[]"),
     sold_at: s.sold_at,
     items: (itemsBySaleId[s.id] ?? []).map((i) => ({
       variant_id: i.product_id,
@@ -2144,17 +2263,55 @@ async function syncPendingSales() {
     { method: "POST", body: JSON.stringify({ sales: payload }) }
   );
   const now = (/* @__PURE__ */ new Date()).toISOString();
+  let synced = 0;
+  const failed = [];
   for (const r of result.results) {
     if (r.cloud_id) {
       db().update(sales).set({ synced_at: now, cloud_id: r.cloud_id }).where(drizzleOrm.eq(sales.id, r.pos_sale_id)).run();
       const q = pending.find((p) => p.sale_id === r.pos_sale_id);
       if (q) db().delete(syncQueue).where(drizzleOrm.eq(syncQueue.id, q.id)).run();
+      synced++;
     } else {
+      const errMsg = r.error ?? "Unknown error";
       const q = pending.find((p) => p.sale_id === r.pos_sale_id);
       if (q) {
-        db().update(syncQueue).set({ attempts: q.attempts + 1, last_error: r.error ?? "Unknown error" }).where(drizzleOrm.eq(syncQueue.id, q.id)).run();
+        db().update(syncQueue).set({ attempts: q.attempts + 1, last_error: errMsg }).where(drizzleOrm.eq(syncQueue.id, q.id)).run();
       }
+      failed.push({ id: r.pos_sale_id, error: errMsg });
     }
+  }
+  return { synced, failed };
+}
+async function syncPendingCashSessions() {
+  const toSync = db().select().from(cashSessions).where(drizzleOrm.sql`${cashSessions.synced_at} IS NULL OR ${cashSessions.cloud_id} IS NULL`).all();
+  if (toSync.length === 0) return;
+  const payload = toSync.map((s) => ({
+    local_id: s.id,
+    cashier_user_id: s.cashier_user_id ?? void 0,
+    cashier_name: s.cashier_name ?? void 0,
+    opened_at: s.opened_at,
+    closed_at: s.closed_at ?? void 0,
+    opening_amount: s.opening_amount,
+    closing_amount_declared: s.closing_amount_declared ?? void 0,
+    closing_amount_expected: s.closing_amount_expected ?? void 0,
+    difference: s.difference ?? void 0,
+    status: s.status
+  }));
+  const result = await fetchCloud(
+    "/api/v1/pos/cash-sessions/sync",
+    { method: "POST", body: JSON.stringify({ sessions: payload }) }
+  );
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const failed = [];
+  for (const r of result.results) {
+    if (r.cloud_id) {
+      db().update(cashSessions).set({ synced_at: now, cloud_id: r.cloud_id }).where(drizzleOrm.eq(cashSessions.id, r.local_id)).run();
+    } else {
+      failed.push(r.error ?? "unknown");
+    }
+  }
+  if (failed.length > 0) {
+    throw new Error(`${failed.length} turno(s) no sincronizados: ${failed[0]}`);
   }
 }
 const GRACE_PERIOD_DAYS = 7;
@@ -2182,7 +2339,7 @@ function registerSyncHandlers(ipc) {
   ipc.handle("license:check", async () => {
     try {
       return await checkLicenseOnStartup();
-    } catch (e) {
+    } catch {
       return { status: "blocked", reason: "unknown" };
     }
   });
@@ -2202,12 +2359,24 @@ function registerSyncHandlers(ipc) {
     }
   });
   ipc.handle("sync:sales", async () => {
+    const errors = [];
+    let salesResult = { synced: 0, failed: [] };
     try {
-      await syncPendingSales();
-      return { ok: true };
+      salesResult = await syncPendingSales();
     } catch (e) {
-      return { ok: false, error: String(e) };
+      errors.push(`ventas: ${String(e)}`);
     }
+    try {
+      await syncPendingCashSessions();
+    } catch (e) {
+      errors.push(`turnos: ${String(e)}`);
+    }
+    if (errors.length > 0) return { ok: false, error: errors.join(" | ") };
+    if (salesResult.failed.length > 0) {
+      const detail = salesResult.failed.map((f) => f.error).join(" | ");
+      return { ok: false, error: `${salesResult.failed.length} venta(s) fallaron: ${detail}` };
+    }
+    return { ok: true, synced: salesResult.synced };
   });
   ipc.handle("settings:save", async (_e, kv) => {
     for (const [key, value] of Object.entries(kv)) {
@@ -2216,6 +2385,9 @@ function registerSyncHandlers(ipc) {
     return { ok: true };
   });
   ipc.handle("settings:get", async () => getSettings());
+  ipc.handle("paymentMethods:list", async () => {
+    return db().select().from(posPaymentMethods).orderBy(posPaymentMethods.sort_order).all();
+  });
   ipc.handle("users:search", async (_e, query) => {
     const q = (query ?? "").trim();
     const term = `%${q}%`;
@@ -2233,13 +2405,28 @@ function registerSyncHandlers(ipc) {
     try {
       const res = await verifyUserPin(args);
       return res;
-    } catch (e) {
+    } catch {
       const row = db().select().from(posUsers).where(drizzleOrm.eq(posUsers.id, args.user_id)).get();
       const hash2 = row?.pos_pin_hash;
       if (!hash2) return { ok: false, error: "Sin conexión y sin PIN sincronizado para este usuario" };
       const ok = await bcrypt.compare(args.pin, hash2);
       if (!ok) return { ok: false, error: "PIN incorrecto" };
       return { ok: true, user: { id: row.id, name: row.name } };
+    }
+  });
+  ipc.handle("dev:resetLocalData", async () => {
+    try {
+      db().delete(syncQueue).run();
+      db().delete(saleItems).run();
+      db().delete(sales).run();
+      db().delete(posPaymentMethods).run();
+      db().delete(posUsers).run();
+      db().delete(customers).run();
+      db().delete(products).run();
+      db().delete(settings).run();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e) };
     }
   });
   setInterval(async () => {
@@ -2251,6 +2438,10 @@ function registerSyncHandlers(ipc) {
   setInterval(async () => {
     try {
       await syncPendingSales();
+    } catch {
+    }
+    try {
+      await syncPendingCashSessions();
     } catch {
     }
   }, SALES_SYNC_INTERVAL_MS);
@@ -2267,7 +2458,7 @@ function registerSalesHandlers(ipc) {
       customer_id: payload.customer_id ?? null,
       cashier_user_id: payload.cashier_user_id ?? settingsMap["cashier_user_id"] ?? null,
       cashier_name: payload.cashier_name ?? settingsMap["cashier_name"] ?? null,
-      payment_method: payload.payment_method,
+      payments: JSON.stringify(payload.payments),
       subtotal: payload.subtotal,
       tax_amount: payload.tax_amount,
       total: payload.total,
@@ -2306,15 +2497,34 @@ function registerSalesHandlers(ipc) {
     const items = db().select().from(saleItems).where(drizzleOrm.eq(saleItems.sale_id, saleId)).all();
     return { sale: s, items };
   });
+  ipc.handle("sales:closingReport", async (_e, date) => {
+    const day = date ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const rows = db().select({ payments: sales.payments, total: sales.total }).from(sales).where(drizzleOrm.sql`strftime('%Y-%m-%d', ${sales.sold_at}) = ${day}`).all();
+    const byType = {};
+    let grandTotal = 0;
+    let count = 0;
+    for (const row of rows) {
+      const payments = JSON.parse(row.payments ?? "[]");
+      for (const p of payments) {
+        byType[p.payment_method_name] = (byType[p.payment_method_name] ?? 0) + Number(p.amount);
+      }
+      grandTotal += Number(row.total);
+      count++;
+    }
+    return { byType, total: grandTotal, count, date: day };
+  });
 }
 function registerProductsHandlers(ipc) {
   ipc.handle("products:search", async (_e, query) => {
     const d = db();
-    const term = `%${query.trim()}%`;
-    const rows = query.trim() ? d.select().from(products).where(
+    const trimmed = query.trim();
+    const term = `%${trimmed}%`;
+    const rows = trimmed ? d.select().from(products).where(
       drizzleOrm.and(
         drizzleOrm.eq(products.is_active, true),
         drizzleOrm.or(
+          drizzleOrm.eq(products.barcode, trimmed),
+          // exact barcode match first
           drizzleOrm.like(products.name, term),
           drizzleOrm.like(products.sku, term)
         )
@@ -2375,7 +2585,7 @@ function registerDraftSalesHandlers(ipc) {
         cashier_user_id: args?.cashier_user_id ?? null,
         cashier_name: args?.cashier_name ?? null,
         customer_id: args?.customer_id ?? null,
-        payment_method: null,
+        payments: "[]",
         subtotal: "0",
         tax_amount: "0",
         total: "0",
@@ -2449,13 +2659,14 @@ function registerDraftSalesHandlers(ipc) {
       if (items.length === 0) return { ok: false, error: "EMPTY_DRAFT" };
       const s = d.select().from(settings).all();
       const settingsMap = Object.fromEntries(s.map((r) => [r.key, r.value]));
+      const paymentsJson = JSON.stringify(args.payments);
       const saleId = nodeCrypto.randomUUID();
       d.insert(sales).values({
         id: saleId,
         customer_id: draft.customer_id ?? null,
         cashier_user_id: draft.cashier_user_id ?? settingsMap["cashier_user_id"] ?? null,
         cashier_name: draft.cashier_name ?? settingsMap["cashier_name"] ?? null,
-        payment_method: args.payment_method,
+        payments: paymentsJson,
         subtotal: args.subtotal,
         tax_amount: args.tax_amount,
         total: args.total,
@@ -2475,7 +2686,7 @@ function registerDraftSalesHandlers(ipc) {
       d.insert(syncQueue).values({ sale_id: saleId, attempts: 0, created_at: now }).run();
       d.update(posDraftSales).set({
         status: "paid",
-        payment_method: args.payment_method,
+        payments: paymentsJson,
         subtotal: args.subtotal,
         tax_amount: args.tax_amount,
         total: args.total,
@@ -2484,6 +2695,64 @@ function registerDraftSalesHandlers(ipc) {
       return { ok: true, sale_id: saleId };
     }
   );
+  ipc.handle("draftSales:cancel", async (_e, draft_sale_id) => {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    db().update(posDraftSales).set({ status: "cancelled", updated_at: now }).where(drizzleOrm.eq(posDraftSales.id, draft_sale_id)).run();
+    return { ok: true };
+  });
+}
+function registerCashSessionHandlers(ipc) {
+  ipc.handle("cashSessions:getCurrent", async () => {
+    return db().select().from(cashSessions).where(drizzleOrm.eq(cashSessions.status, "open")).get() ?? null;
+  });
+  ipc.handle("cashSessions:open", async (_e, args) => {
+    const existing = db().select().from(cashSessions).where(drizzleOrm.eq(cashSessions.status, "open")).get();
+    if (existing) return { ok: false, error: "Ya hay un turno abierto", session: existing };
+    const id = nodeCrypto.randomUUID();
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    db().insert(cashSessions).values({
+      id,
+      cashier_user_id: args.cashier_user_id ?? null,
+      cashier_name: args.cashier_name ?? null,
+      opened_at: now,
+      opening_amount: args.opening_amount,
+      status: "open"
+    }).run();
+    const session = db().select().from(cashSessions).where(drizzleOrm.eq(cashSessions.id, id)).get();
+    return { ok: true, session };
+  });
+  ipc.handle("cashSessions:close", async (_e, args) => {
+    const session = db().select().from(cashSessions).where(drizzleOrm.eq(cashSessions.id, args.session_id)).get();
+    if (!session) return { ok: false, error: "Turno no encontrado" };
+    if (session.status === "closed") return { ok: false, error: "El turno ya está cerrado" };
+    const openedAt = session.opened_at;
+    const sessionSales = db().select({ payments: sales.payments }).from(sales).where(drizzleOrm.gte(sales.sold_at, openedAt)).all();
+    const cashFromSales = sessionSales.reduce((sum, s) => {
+      const payments = JSON.parse(s.payments ?? "[]");
+      const cash = payments.filter((p) => p.payment_method_type === "cash");
+      return sum + cash.reduce((a, p) => a + Number(p.amount), 0);
+    }, 0);
+    const expected = (Number(session.opening_amount) + cashFromSales).toFixed(2);
+    const declared = Number(args.closing_amount_declared).toFixed(2);
+    const difference = (Number(declared) - Number(expected)).toFixed(2);
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    db().update(cashSessions).set({
+      status: "closed",
+      closed_at: now,
+      closing_amount_declared: declared,
+      closing_amount_expected: expected,
+      difference
+    }).where(drizzleOrm.eq(cashSessions.id, args.session_id)).run();
+    const updated = db().select().from(cashSessions).where(drizzleOrm.eq(cashSessions.id, args.session_id)).get();
+    return { ok: true, session: updated };
+  });
+  ipc.handle("cashSessions:list", async (_e, args) => {
+    const limit = Math.min(args?.limit ?? 50, 200);
+    return db().select().from(cashSessions).orderBy(drizzleOrm.desc(cashSessions.opened_at)).limit(limit).all();
+  });
+  ipc.handle("cashSessions:get", async (_e, sessionId) => {
+    return db().select().from(cashSessions).where(drizzleOrm.eq(cashSessions.id, sessionId)).get() ?? null;
+  });
 }
 let mainWindow = null;
 function createWindow() {
@@ -2492,6 +2761,7 @@ function createWindow() {
     height: 800,
     minWidth: 1024,
     minHeight: 600,
+    fullscreen: process.env.NODE_ENV !== "development",
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -2504,6 +2774,12 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
+  electron.globalShortcut.register("F11", () => {
+    mainWindow?.setFullScreen(!mainWindow.isFullScreen());
+  });
+  electron.globalShortcut.register("CommandOrControl+Alt+I", () => {
+    mainWindow?.webContents.toggleDevTools();
+  });
 }
 electron.app.whenReady().then(async () => {
   try {
@@ -2515,6 +2791,7 @@ electron.app.whenReady().then(async () => {
   registerProductsHandlers(electron.ipcMain);
   registerCustomersHandlers(electron.ipcMain);
   registerDraftSalesHandlers(electron.ipcMain);
+  registerCashSessionHandlers(electron.ipcMain);
   registerSyncHandlers(electron.ipcMain);
   createWindow();
 });

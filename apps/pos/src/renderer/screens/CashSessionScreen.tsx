@@ -16,9 +16,7 @@ interface CashSession {
 }
 
 interface SalesTotals {
-  cash: number
-  card: number
-  transfer: number
+  byType: Record<string, number>
   total: number
   count: number
 }
@@ -47,21 +45,22 @@ function Row({ label, value, highlight }: { label: string; value: string; highli
 // ── Sales summary fetched from SQLite for a given session ───────────────────
 
 async function fetchSessionTotals(openedAt: string): Promise<SalesTotals> {
-  // closingReport queries by date — for session we need all sales since opened_at.
-  // We use the full sales list and filter client-side (max 500 sales, fine for POS MVP).
   const all = await window.pos.sales.list({ limit: 500 })
   const openedTs = new Date(openedAt).getTime()
   const sessionSales = all.filter(s => new Date(s.sold_at).getTime() >= openedTs)
 
-  const totals: SalesTotals = { cash: 0, card: 0, transfer: 0, total: 0, count: sessionSales.length }
+  const byType: Record<string, number> = {}
+  let total = 0
   for (const s of sessionSales) {
-    const amt = Number(s.total)
-    if (s.payment_method === 'cash')     totals.cash     += amt
-    if (s.payment_method === 'card')     totals.card     += amt
-    if (s.payment_method === 'transfer') totals.transfer += amt
-    totals.total += amt
+    try {
+      const payments: Array<{ payment_method_name: string; amount: string }> = JSON.parse(s.payments ?? '[]')
+      for (const p of payments) {
+        byType[p.payment_method_name] = (byType[p.payment_method_name] ?? 0) + Number(p.amount)
+      }
+    } catch { /* ignore malformed rows */ }
+    total += Number(s.total)
   }
-  return totals
+  return { byType, total, count: sessionSales.length }
 }
 
 // ── Open Turn ───────────────────────────────────────────────────────────────
@@ -73,10 +72,10 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
   const [search, setSearch] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
   const [amount, setAmount] = useState('0')
+  const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-   
   useEffect(() => {
     window.pos.users.search('').then(r => {
       if (r.ok) setUsers(r.data)
@@ -91,10 +90,20 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
     if (!selectedUserId) { setError('Seleccioná un cajero para abrir el turno'); return }
     const val = parseFloat(amount.replace(',', '.'))
     if (isNaN(val) || val < 0) { setError('Ingresá un monto inicial válido'); return }
+    if (!pin.trim()) { setError('Ingresá el PIN del cajero'); return }
 
-    const cashier = users.find(u => u.id === selectedUserId)
     setLoading(true)
     setError(null)
+
+    const pinResult = await window.pos.users.verifyPin({ user_id: selectedUserId, pin: pin.trim() })
+    if (!pinResult.ok) {
+      setLoading(false)
+      setPin('')
+      setError(pinResult.error ?? 'PIN incorrecto')
+      return
+    }
+
+    const cashier = users.find(u => u.id === selectedUserId)
     const result = await window.pos.cashSessions.open({
       cashier_user_id: selectedUserId,
       cashier_name: cashier?.name ?? null,
@@ -185,6 +194,22 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
           />
         </div>
 
+        {/* PIN */}
+        {selectedUserId && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-zinc-600">PIN del cajero</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              value={pin}
+              onChange={e => setPin(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleOpen()}
+              placeholder="••••"
+              className="border border-zinc-300 rounded-lg px-3 py-2.5 text-lg font-mono text-zinc-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-center tracking-widest"
+            />
+          </div>
+        )}
+
         {error && <p className="text-xs text-red-600">{error}</p>}
 
         <button
@@ -204,6 +229,7 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
 function ActiveSessionView({ session, onClosed }: { session: CashSession; onClosed: (s: CashSession) => void }) {
   const [totals, setTotals] = useState<SalesTotals | null>(null)
   const [declaredAmount, setDeclaredAmount] = useState('')
+  const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [closingResult, setClosingResult] = useState<CashSession | null>(null)
@@ -216,8 +242,21 @@ function ActiveSessionView({ session, onClosed }: { session: CashSession; onClos
   async function handleClose() {
     const val = parseFloat(declaredAmount.replace(',', '.'))
     if (isNaN(val) || val < 0) { setError('Ingresá un monto válido'); return }
+    if (!pin.trim()) { setError('Ingresá el PIN del cajero para cerrar el turno'); return }
+
     setLoading(true)
     setError(null)
+
+    if (session.cashier_user_id) {
+      const pinResult = await window.pos.users.verifyPin({ user_id: session.cashier_user_id, pin: pin.trim() })
+      if (!pinResult.ok) {
+        setLoading(false)
+        setPin('')
+        setError(pinResult.error ?? 'PIN incorrecto')
+        return
+      }
+    }
+
     const result = await window.pos.cashSessions.close({
       session_id: session.id,
       closing_amount_declared: val.toFixed(2),
@@ -307,9 +346,9 @@ function ActiveSessionView({ session, onClosed }: { session: CashSession; onClos
           <p className="text-sm text-zinc-400">Cargando…</p>
         ) : (
           <>
-            <Row label="Efectivo" value={ars(totals.cash)} />
-            <Row label="Tarjeta / débito" value={ars(totals.card)} />
-            <Row label="Transferencia" value={ars(totals.transfer)} />
+            {Object.entries(totals.byType).map(([name, amount]) => (
+              <Row key={name} label={name} value={ars(amount)} />
+            ))}
             <div className="border-t border-zinc-100 pt-3 flex justify-between items-center">
               <span className="text-sm font-semibold text-zinc-700">Total vendido</span>
               <span className="font-mono text-base font-bold text-zinc-900">{ars(totals.total)}</span>
@@ -341,12 +380,12 @@ function ActiveSessionView({ session, onClosed }: { session: CashSession; onClos
           <div className="bg-zinc-50 rounded-lg px-4 py-2.5 flex justify-between items-center">
             <span className="text-xs text-zinc-500">
               Esperado: <span className="font-mono font-medium text-zinc-700">
-                {ars(Number(session.opening_amount) + totals.cash)}
+                {ars(Number(session.opening_amount) + (totals.byType['Efectivo'] ?? totals.byType['cash'] ?? 0))}
               </span>
             </span>
             {(() => {
               const declared = parseFloat(declaredAmount.replace(',', '.'))
-              const expected = Number(session.opening_amount) + totals.cash
+              const expected = Number(session.opening_amount) + (totals.byType['Efectivo'] ?? totals.byType['cash'] ?? 0)
               const diff = declared - expected
               return (
                 <span className={`text-xs font-mono font-semibold ${diff === 0 ? 'text-zinc-600' : diff > 0 ? 'text-green-700' : 'text-red-600'}`}>
@@ -356,6 +395,19 @@ function ActiveSessionView({ session, onClosed }: { session: CashSession; onClos
             })()}
           </div>
         )}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-zinc-600">PIN del cajero</label>
+          <input
+            type="password"
+            inputMode="numeric"
+            value={pin}
+            onChange={e => setPin(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleClose()}
+            placeholder="••••"
+            className="border border-zinc-300 rounded-lg px-3 py-2.5 text-lg font-mono text-zinc-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-center tracking-widest"
+          />
+        </div>
+
         {error && <p className="text-xs text-red-600">{error}</p>}
         <button
           onClick={handleClose}

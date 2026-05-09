@@ -3,10 +3,14 @@ import { useEffect, useMemo, useState } from 'react'
 type SaleRow = Awaited<ReturnType<typeof window.pos.sales.list>>[number]
 type DraftRow = Awaited<ReturnType<typeof window.pos.draftSales.list>>['data'][number]
 
-const PAYMENT_LABELS: Record<string, string> = {
-  cash: 'Efectivo',
-  card: 'Tarjeta',
-  transfer: 'Transferencia',
+function paymentsLabel(paymentsJson: string | null): string {
+  try {
+    const payments: Array<{ payment_method_name: string }> = JSON.parse(paymentsJson ?? '[]')
+    if (payments.length === 0) return '—'
+    return payments.map(p => p.payment_method_name).join(' + ')
+  } catch {
+    return '—'
+  }
 }
 
 export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId: string) => void }) {
@@ -80,7 +84,7 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
     return rows.filter(r =>
       r.id.toLowerCase().includes(q) ||
       r.sold_at.toLowerCase().includes(q) ||
-      (PAYMENT_LABELS[r.payment_method] ?? r.payment_method).toLowerCase().includes(q) ||
+      paymentsLabel(r.payments).toLowerCase().includes(q) ||
       r.total.toLowerCase().includes(q)
     )
   }, [rows, query])
@@ -155,7 +159,7 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
                 <div className="min-w-0">
                   <div className="text-[13px] font-medium text-zinc-900 truncate">{s.id}</div>
                   <div className="text-[11px] text-zinc-500">
-                    {new Date(s.sold_at).toLocaleString('es-AR')} · {PAYMENT_LABELS[s.payment_method] ?? s.payment_method}
+                    {new Date(s.sold_at).toLocaleString('es-AR')} · {paymentsLabel(s.payments)}
                   </div>
                 </div>
                 <div className="text-right">
@@ -241,7 +245,7 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
                 <div className="text-[11px] text-zinc-500 mt-1">
                   {new Date(openSale.sale.sold_at).toLocaleString('es-AR')}
                   {' · '}
-                  {PAYMENT_LABELS[openSale.sale.payment_method] ?? openSale.sale.payment_method}
+                  {paymentsLabel(openSale.sale.payments)}
                 </div>
 
                 <div className="mt-4 space-y-2">

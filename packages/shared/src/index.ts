@@ -40,6 +40,15 @@ export type PosCustomer = {
   updated_at: string
 }
 
+export type PosPaymentMethod = {
+  id: UUID
+  name: string
+  type: string
+  requires_reference: boolean
+  sort_order: number
+  updated_at: string
+}
+
 export type PosSaleItem = {
   product_id: UUID
   product_name: string
@@ -48,13 +57,21 @@ export type PosSaleItem = {
   total: string
 }
 
+export type PosSalePayment = {
+  payment_method_id: UUID
+  payment_method_name: string
+  payment_method_type: string
+  amount: string
+  reference: string | null
+}
+
 export type PosSale = {
   local_id: string  // UUID generated on device
   device_id: string
   cashier_user_id?: UUID | null
   cashier_name?: string | null
   customer_id: UUID | null
-  payment_method: 'cash' | 'card' | 'transfer'
+  payments: PosSalePayment[]
   subtotal: string
   tax_amount: string
   total: string

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withPosDevice } from '@/lib/pos-auth'
 import sequelize from '@/lib/db'
+import User from '@/modules/auth/user.model'
 import SalesOrder from '@/modules/sales/sales-order.model'
 import SalesOrderItem from '@/modules/sales/sales-order-item.model'
 import { nextDocumentNumber } from '@/modules/sales/sales.utils'
@@ -16,12 +17,20 @@ const saleItemSchema = z.object({
   iva_rate: z.enum(['0', '10.5', '21', '27']).default('21'),
 })
 
+const salePaymentSchema = z.object({
+  payment_method_id: z.string().uuid(),
+  payment_method_name: z.string().min(1).max(128),
+  payment_method_type: z.string().min(1).max(64),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  reference: z.string().max(255).nullable().optional(),
+})
+
 const saleSchema = z.object({
   pos_sale_id: z.string(),
   customer_id: z.string().uuid().optional(),
   cashier_user_id: z.string().uuid().optional(),
   cashier_name: z.string().min(1).max(120).optional(),
-  payment_method: z.enum(['cash', 'card', 'transfer']),
+  payments: z.array(salePaymentSchema).min(1),
   sold_at: z.string().datetime({ offset: true }),
   items: z.array(saleItemSchema).min(1),
 })
@@ -67,6 +76,13 @@ export const POST = withPosDevice(async (req: NextRequest, ctx) => {
       }
       const branchId = ctx.branchId
 
+      // Verify cashier exists in this org before using as FK
+      let verifiedCashierId: string | null = null
+      if (sale.cashier_user_id) {
+        const cashier = await User.findOne({ where: { id: sale.cashier_user_id, org_id: ctx.orgId }, attributes: ['id'] })
+        verifiedCashierId = cashier?.id ?? null
+      }
+
       const cloudOrder = await sequelize.transaction(async (t) => {
         const orderNumber = await nextDocumentNumber(ctx.orgId, branchId, 'order', t)
 
@@ -104,12 +120,12 @@ export const POST = withPosDevice(async (req: NextRequest, ctx) => {
             source: 'pos',
             pos_device_id: ctx.deviceId,
             pos_sale_id: sale.pos_sale_id,
-            salesperson_id: sale.cashier_user_id ?? null,
+            salesperson_id: verifiedCashierId,
             order_number: orderNumber,
             status: 'confirmed',
             payment_condition: 'cash',
             currency: 'ARS',
-            notes: `POS ${ctx.deviceId}${sale.cashier_name ? ` / ${sale.cashier_name}` : ''}${sale.cashier_user_id ? ` (#${sale.cashier_user_id})` : ''} · ${sale.payment_method} · ${sale.pos_sale_id}`,
+            notes: `POS ${ctx.deviceId}${sale.cashier_name ? ` / ${sale.cashier_name}` : ''}${sale.cashier_user_id ? ` (#${sale.cashier_user_id})` : ''} · ${sale.payments.map(p => p.payment_method_name).join('+')} · ${sale.pos_sale_id}`,
             subtotal: docSubtotal.toFixed(2),
             discount_amount: '0.00',
             tax_amount: docTaxAmount.toFixed(2),

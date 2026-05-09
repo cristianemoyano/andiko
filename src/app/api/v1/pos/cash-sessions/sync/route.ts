@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withPosDevice } from '@/lib/pos-auth'
+import User from '@/modules/auth/user.model'
 import PosCashSession from '@/modules/pos/pos-cash-session.model'
 
 const sessionSchema = z.object({
@@ -31,6 +32,12 @@ export const POST = withPosDevice(async (req: NextRequest, ctx) => {
 
   for (const s of parsed.data.sessions) {
     try {
+      let verifiedCashierId: string | null = null
+      if (s.cashier_user_id) {
+        const cashier = await User.findOne({ where: { id: s.cashier_user_id, org_id: ctx.orgId }, attributes: ['id'] })
+        verifiedCashierId = cashier?.id ?? null
+      }
+
       const [record, created] = await PosCashSession.findOrCreate({
         where: { org_id: ctx.orgId, local_id: s.local_id },
         defaults: {
@@ -38,7 +45,7 @@ export const POST = withPosDevice(async (req: NextRequest, ctx) => {
           branch_id:               ctx.branchId ?? null,
           pos_device_id:           ctx.deviceRowId ?? null,
           local_id:                s.local_id,
-          cashier_user_id:         s.cashier_user_id ?? null,
+          cashier_user_id:         verifiedCashierId,
           cashier_name:            s.cashier_name ?? null,
           opened_at:               new Date(s.opened_at),
           closed_at:               s.closed_at ? new Date(s.closed_at) : null,

@@ -17,17 +17,29 @@ electron.contextBridge.exposeInMainWorld("pos", {
     get: (draftSaleId) => electron.ipcRenderer.invoke("draftSales:get", draftSaleId),
     createOrResume: (args) => electron.ipcRenderer.invoke("draftSales:createOrResume", args),
     update: (args) => electron.ipcRenderer.invoke("draftSales:update", args),
-    checkout: (args) => electron.ipcRenderer.invoke("draftSales:checkout", args)
+    checkout: (args) => electron.ipcRenderer.invoke("draftSales:checkout", args),
+    cancel: (draftSaleId) => electron.ipcRenderer.invoke("draftSales:cancel", draftSaleId)
   },
   draftSaleItems: {
     upsert: (args) => electron.ipcRenderer.invoke("draftSaleItems:upsert", args),
     remove: (args) => electron.ipcRenderer.invoke("draftSaleItems:remove", args)
   },
+  cashSessions: {
+    getCurrent: () => electron.ipcRenderer.invoke("cashSessions:getCurrent"),
+    open: (args) => electron.ipcRenderer.invoke("cashSessions:open", args),
+    close: (args) => electron.ipcRenderer.invoke("cashSessions:close", args),
+    list: (args) => electron.ipcRenderer.invoke("cashSessions:list", args),
+    get: (sessionId) => electron.ipcRenderer.invoke("cashSessions:get", sessionId)
+  },
   sales: {
     create: (sale) => electron.ipcRenderer.invoke("sales:create", sale),
     listToday: () => electron.ipcRenderer.invoke("sales:list-today"),
     list: (args) => electron.ipcRenderer.invoke("sales:list", args),
-    get: (saleId) => electron.ipcRenderer.invoke("sales:get", saleId)
+    get: (saleId) => electron.ipcRenderer.invoke("sales:get", saleId),
+    closingReport: (date) => electron.ipcRenderer.invoke("sales:closingReport", date)
+  },
+  paymentMethods: {
+    list: () => electron.ipcRenderer.invoke("paymentMethods:list")
   },
   sync: {
     checkLicense: () => electron.ipcRenderer.invoke("license:check"),
@@ -38,5 +50,8 @@ electron.contextBridge.exposeInMainWorld("pos", {
   settings: {
     save: (kv) => electron.ipcRenderer.invoke("settings:save", kv),
     get: () => electron.ipcRenderer.invoke("settings:get")
+  },
+  dev: {
+    resetLocalData: () => electron.ipcRenderer.invoke("dev:resetLocalData")
   }
 });

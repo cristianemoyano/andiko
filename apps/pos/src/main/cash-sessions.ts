@@ -2,7 +2,8 @@ import type { IpcMain } from 'electron'
 import { db } from './db'
 import { cashSessions, sales } from '../db/schema'
 import { randomUUID } from 'crypto'
-import { eq, desc, sql } from 'drizzle-orm'
+import { eq, desc, gte } from 'drizzle-orm'
+import type { PosSalePayment } from '@andiko/shared'
 
 export function registerCashSessionHandlers(ipc: IpcMain) {
   ipc.handle('cashSessions:getCurrent', async () => {
@@ -40,15 +41,21 @@ export function registerCashSessionHandlers(ipc: IpcMain) {
     if (!session) return { ok: false, error: 'Turno no encontrado' }
     if (session.status === 'closed') return { ok: false, error: 'El turno ya está cerrado' }
 
-    // Calculate expected: opening + all cash sales during the session
+    // Calculate expected: opening + cash portion of all sales during the session
     const openedAt = session.opened_at
-    const cashTotal = db()
-      .select({ total: sql<string>`coalesce(sum(cast(total as real)), 0)` })
+    const sessionSales = db()
+      .select({ payments: sales.payments })
       .from(sales)
-      .where(sql`payment_method = 'cash' AND sold_at >= ${openedAt}`)
-      .get()
+      .where(gte(sales.sold_at, openedAt))
+      .all()
 
-    const expected = (Number(session.opening_amount) + Number(cashTotal?.total ?? 0)).toFixed(2)
+    const cashFromSales = sessionSales.reduce((sum, s) => {
+      const payments: PosSalePayment[] = JSON.parse(s.payments ?? '[]')
+      const cash = payments.filter(p => p.payment_method_type === 'cash')
+      return sum + cash.reduce((a, p) => a + Number(p.amount), 0)
+    }, 0)
+
+    const expected = (Number(session.opening_amount) + cashFromSales).toFixed(2)
     const declared = Number(args.closing_amount_declared).toFixed(2)
     const difference = (Number(declared) - Number(expected)).toFixed(2)
     const now = new Date().toISOString()

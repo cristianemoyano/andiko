@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import type { PosSale, PosSaleItem, PosProduct, PosCustomer } from '@andiko/shared'
+import type { PosSale, PosSaleItem, PosProduct, PosCustomer, PosPaymentMethod } from '@andiko/shared'
 import { randomUUID } from '../lib/uuid'
 
 type CartItem = {
@@ -7,11 +7,6 @@ type CartItem = {
   qty: number
 }
 
-const PAYMENT_LABELS: Record<string, string> = {
-  cash: 'Efectivo',
-  card: 'Tarjeta',
-  transfer: 'Transferencia',
-}
 
 export function SaleScreen({
   resumeDraftId,
@@ -24,7 +19,6 @@ export function SaleScreen({
   const [products, setProducts] = useState<PosProduct[]>([])
   const [search, setSearch]     = useState('')
   const [cart, setCart]         = useState<CartItem[]>([])
-  const [payment, setPayment]   = useState<'cash' | 'card' | 'transfer'>('cash')
   const [saving, setSaving]     = useState(false)
   const [lastSale, setLastSale] = useState<{ total: string } | null>(null)
   const [receiptSale, setReceiptSale] = useState<PosSale | null>(null)
@@ -38,11 +32,13 @@ export function SaleScreen({
   const [cashierName, setCashierName] = useState('')
   const [cashierUserId, setCashierUserId] = useState('')
   const [noCashierError, setNoCashierError] = useState(false)
-  const [enabledPayments, setEnabledPayments] = useState<Array<'cash' | 'card' | 'transfer'>>(['cash', 'card', 'transfer'])
+  const [enabledPayments, setEnabledPayments] = useState<PosPaymentMethod[]>([])
   const [checkoutOpen, setCheckoutOpen] = useState(false)
-  const [checkoutPayment, setCheckoutPayment] = useState<'cash' | 'card' | 'transfer'>('cash')
+  const [checkoutPayment, setCheckoutPayment] = useState<PosPaymentMethod | null>(null)
   const [cashReceived, setCashReceived] = useState('') // string for input
   const cashReceivedRef = useRef<HTMLInputElement>(null)
+  const [referenceCode, setReferenceCode] = useState('')
+  const referenceCodeRef = useRef<HTMLInputElement>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const cashReceivedValueRef = useRef(cashReceived)
   const checkoutPaymentValueRef = useRef(checkoutPayment)
@@ -64,10 +60,7 @@ export function SaleScreen({
   useEffect(() => {
     // Cashier comes from the active cash session — if no session is open, block checkout
     void (async () => {
-      const [session, s] = await Promise.all([
-        window.pos.cashSessions.getCurrent(),
-        window.pos.settings.get(),
-      ])
+      const session = await window.pos.cashSessions.getCurrent()
       if (session) {
         setCashierName(session.cashier_name ?? '')
         setCashierUserId(session.cashier_user_id ?? '')
@@ -76,17 +69,10 @@ export function SaleScreen({
         setCashierUserId('')
       }
       try {
-        const raw = s['pos_payment_methods']
-        if (raw) {
-          const parsed = JSON.parse(raw) as unknown
-          if (Array.isArray(parsed)) {
-            const allowed = new Set(['cash', 'card', 'transfer'])
-            const cleaned = parsed.filter((x): x is 'cash' | 'card' | 'transfer' => typeof x === 'string' && allowed.has(x))
-            if (cleaned.length > 0) setEnabledPayments(cleaned)
-          }
-        }
+        const pms = await window.pos.paymentMethods.list()
+        setEnabledPayments(pms)
       } catch {
-        // ignore malformed local setting
+        // ignore
       }
     })()
   }, [])
@@ -222,7 +208,7 @@ export function SaleScreen({
           const currentCashIsValid = cashIsValidValueRef.current
 
           // In cash payments, Cmd/Ctrl+Enter can be pressed before entering cash.
-          if (currentPayment === 'cash') {
+          if (currentPayment?.type === 'cash') {
             const trimmed = currentCashReceived.trim()
             if (!trimmed) {
               setCheckoutError('Ingresá el efectivo recibido para calcular el vuelto.')
@@ -241,10 +227,10 @@ export function SaleScreen({
         return
       }
 
-      // Payment method shortcuts
-      if (e.key === 'F1') { e.preventDefault(); setCheckoutPayment('cash'); setPayment('cash'); return }
-      if (e.key === 'F2') { e.preventDefault(); setCheckoutPayment('card'); setPayment('card'); return }
-      if (e.key === 'F3') { e.preventDefault(); setCheckoutPayment('transfer'); setPayment('transfer'); return }
+      // Payment method shortcuts — Fn selects nth enabled method
+      if (e.key === 'F1' && enabledPayments[0]) { e.preventDefault(); setCheckoutPayment(enabledPayments[0]); return }
+      if (e.key === 'F2' && enabledPayments[1]) { e.preventDefault(); setCheckoutPayment(enabledPayments[1]); return }
+      if (e.key === 'F3' && enabledPayments[2]) { e.preventDefault(); setCheckoutPayment(enabledPayments[2]); return }
 
       if (customerOpen && e.key === 'Escape') {
         e.preventDefault()
@@ -256,6 +242,15 @@ export function SaleScreen({
         e.preventDefault()
         setCheckoutOpen(false)
         setCashReceived('')
+      }
+
+      if (cancelConfirm && e.key === 'Escape') { e.preventDefault(); setCancelConfirm(false); return }
+      if (cancelConfirm && e.key === 'Enter') { e.preventDefault(); void executeCancelDraft(); return }
+
+      if (hasMod && (e.key === 'Delete' || e.key === 'Backspace') && cart.length > 0 && !checkoutOpen) {
+        e.preventDefault()
+        void handleCancelDraft()
+        return
       }
 
       // Barcode scanner behavior on normal product search:
@@ -277,7 +272,7 @@ export function SaleScreen({
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [receiptSale, customerOpen, checkoutOpen, priceCheckOpen, cart.length, payment, customer])
+  }, [receiptSale, customerOpen, checkoutOpen, priceCheckOpen, cart.length, checkoutPayment, customer, enabledPayments])
 
   const filtered = products
 
@@ -340,8 +335,9 @@ export function SaleScreen({
   const subtotal = total - taxAmount
 
   const cashReceivedNum = parseFloat((cashReceived || '').replace(',', '.'))
-  const cashIsValid = checkoutPayment !== 'cash' || (!Number.isNaN(cashReceivedNum) && cashReceivedNum >= total)
-  const change = checkoutPayment === 'cash' && !Number.isNaN(cashReceivedNum) ? (cashReceivedNum - total) : 0
+  const isCash = checkoutPayment?.type === 'cash'
+  const cashIsValid = !isCash || (!Number.isNaN(cashReceivedNum) && cashReceivedNum >= total)
+  const change = isCash && !Number.isNaN(cashReceivedNum) ? (cashReceivedNum - total) : 0
 
   // Persist draft automatically while building the cart
   useEffect(() => {
@@ -407,11 +403,17 @@ export function SaleScreen({
       setTimeout(() => setNoCashierError(false), 4000)
       return
     }
-    setCheckoutPayment(payment)
+    void window.pos.paymentMethods.list().then(pms => {
+      setEnabledPayments(pms)
+      const first = pms[0] ?? null
+      setCheckoutPayment(first)
+      if (first?.type === 'cash') setTimeout(() => cashReceivedRef.current?.focus(), 0)
+      else if (first) setTimeout(() => referenceCodeRef.current?.focus(), 0)
+    })
     setCheckoutOpen(true)
     setCashReceived('')
+    setReferenceCode('')
     setCheckoutError(null)
-    if (payment === 'cash') setTimeout(() => cashReceivedRef.current?.focus(), 0)
   }
 
   async function handleConfirm() {
@@ -427,12 +429,20 @@ export function SaleScreen({
       total:        (parseFloat(i.product.price) * i.qty).toFixed(2),
     }))
     const soldAt = new Date().toISOString()
+    const payments = checkoutPayment ? [{
+      payment_method_id: checkoutPayment.id,
+      payment_method_name: checkoutPayment.name,
+      payment_method_type: checkoutPayment.type,
+      amount: total.toFixed(2),
+      reference: !isCash && referenceCode.trim() ? referenceCode.trim() : null,
+    }] : []
+
     try {
       let localId = randomUUID()
       if (draftSaleId) {
         const res = await window.pos.draftSales.checkout({
           draft_sale_id: draftSaleId,
-          payment_method: payment,
+          payments,
           sold_at: soldAt,
           subtotal: subtotal.toFixed(2),
           tax_amount: taxAmount.toFixed(2),
@@ -447,7 +457,7 @@ export function SaleScreen({
           cashier_user_id: cashierUserId || null,
           cashier_name:   cashierName || null,
           customer_id:    customer?.id ?? null,
-          payment_method: payment,
+          payments,
           subtotal:       subtotal.toFixed(2),
           tax_amount:     taxAmount.toFixed(2),
           total:          total.toFixed(2),
@@ -463,7 +473,7 @@ export function SaleScreen({
         cashier_user_id: cashierUserId || null,
         cashier_name: cashierName || null,
         customer_id: customer?.id ?? null,
-        payment_method: payment,
+        payments,
         subtotal: subtotal.toFixed(2),
         tax_amount: taxAmount.toFixed(2),
         total: total.toFixed(2),
@@ -481,10 +491,26 @@ export function SaleScreen({
       lastDraftProductIdsRef.current = []
       searchRef.current?.focus()
     } catch (e) {
-      console.error(e)
+      setCheckoutError(e instanceof Error ? e.message : String(e))
     } finally {
       setSaving(false)
     }
+  }
+
+  const [cancelConfirm, setCancelConfirm] = useState(false)
+
+  async function executeCancelDraft() {
+    if (draftSaleId) await window.pos.draftSales.cancel(draftSaleId)
+    setCart([])
+    setSearch('')
+    setDraftSaleId(null)
+    lastDraftProductIdsRef.current = []
+    setCancelConfirm(false)
+    searchRef.current?.focus()
+  }
+
+  async function handleCancelDraft() {
+    setCancelConfirm(true)
   }
 
   return (
@@ -573,6 +599,33 @@ export function SaleScreen({
         </div>
       )}
 
+      {/* Cancel draft confirmation modal */}
+      {cancelConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm flex flex-col gap-4">
+            <div>
+              <h3 className="text-[15px] font-semibold text-zinc-900">¿Cancelar la venta?</h3>
+              <p className="text-[13px] text-zinc-500 mt-1">Se eliminarán los {cart.length} producto{cart.length !== 1 ? 's' : ''} del carrito.</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCancelConfirm(false)}
+                className="flex-1 h-10 bg-white border border-zinc-300 text-[13px] font-medium rounded-lg hover:bg-zinc-50 transition-colors"
+                autoFocus
+              >
+                Volver
+              </button>
+              <button
+                onClick={executeCancelDraft}
+                className="flex-1 h-10 bg-red-600 text-white text-[13px] font-medium rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Cancelar venta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Checkout / Cobrar */}
       {checkoutOpen && (
         <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
@@ -594,26 +647,46 @@ export function SaleScreen({
                 </span>
               </div>
 
+              {enabledPayments.length === 0 && (
+                <div className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  No hay medios de pago configurados. Sincronizá el POS desde Configuración.
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-2">
-                {enabledPayments.map((m) => (
+                {enabledPayments.map((m, idx) => (
                   <button
-                    key={m}
-                    onClick={() => { setCheckoutPayment(m); setPayment(m); if (m === 'cash') setTimeout(() => cashReceivedRef.current?.focus(), 0) }}
+                    key={m.id}
+                    onClick={() => { setCheckoutPayment(m); setReferenceCode(''); if (m.type === 'cash') setTimeout(() => cashReceivedRef.current?.focus(), 0); else setTimeout(() => referenceCodeRef.current?.focus(), 0) }}
                     className={`h-9 rounded-md text-[12px] font-medium border transition-colors ${
-                      checkoutPayment === m
+                      checkoutPayment?.id === m.id
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white text-zinc-700 border-zinc-300 hover:border-blue-400'
                     }`}
                   >
-                    {PAYMENT_LABELS[m]}{' '}
-                    <span className={`${checkoutPayment === m ? 'text-blue-100' : 'text-zinc-400'}`}>
-                      {m === 'cash' ? '(F1)' : m === 'card' ? '(F2)' : '(F3)'}
+                    {m.name}{' '}
+                    <span className={`${checkoutPayment?.id === m.id ? 'text-blue-100' : 'text-zinc-400'}`}>
+                      {`(F${idx + 1})`}
                     </span>
                   </button>
                 ))}
               </div>
 
-              {checkoutPayment === 'cash' && (
+              {!isCash && checkoutPayment && (
+                <div>
+                  <label className="block text-[12px] font-medium text-zinc-700 mb-1">
+                    Código de operación <span className="text-zinc-400 font-normal">(opcional)</span>
+                  </label>
+                  <input
+                    ref={referenceCodeRef}
+                    value={referenceCode}
+                    onChange={(e) => setReferenceCode(e.target.value)}
+                    placeholder="Ej: 123456789"
+                    className="w-full h-10 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              )}
+
+              {isCash && (
                 <div className="space-y-2">
                   <div>
                     <label className="block text-[12px] font-medium text-zinc-700 mb-1">Efectivo recibido</label>
@@ -751,7 +824,7 @@ export function SaleScreen({
               <div className="text-[12px] text-zinc-500">
                 {new Date(receiptSale.sold_at).toLocaleString('es-AR')}
                 {' · '}
-                {PAYMENT_LABELS[receiptSale.payment_method]}
+                {receiptSale.payments.map(p => p.payment_method_name).join(' + ')}
               </div>
 
               <div id="pos-receipt" className="border border-zinc-200 rounded-lg p-3">
@@ -960,7 +1033,7 @@ export function SaleScreen({
           </div>
         )}
 
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 space-y-2">
           <button
             onClick={openCheckout}
             disabled={cart.length === 0 || saving || !cashierUserId}
@@ -968,6 +1041,14 @@ export function SaleScreen({
           >
             {saving ? 'Registrando…' : `Cobrar (${modKey} + Enter)`}
           </button>
+          {cart.length > 0 && (
+            <button
+              onClick={handleCancelDraft}
+              className="w-full h-8 text-[12px] font-medium rounded-md transition-colors bg-white border border-zinc-300 text-zinc-500 hover:border-red-300 hover:text-red-600"
+            >
+              {`Cancelar venta (${modKey} + ⌫)`}
+            </button>
+          )}
         </div>
       </div>
     </div>

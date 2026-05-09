@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { PosSale } from '@andiko/shared'
+import type { PosSale, PosSalePayment } from '@andiko/shared'
 
 contextBridge.exposeInMainWorld('pos', {
   products: {
@@ -20,8 +20,9 @@ contextBridge.exposeInMainWorld('pos', {
       ipcRenderer.invoke('draftSales:createOrResume', args),
     update: (args: { draft_sale_id: string; cashier_user_id?: string | null; cashier_name?: string | null; customer_id?: string | null; subtotal?: string; tax_amount?: string; total?: string }) =>
       ipcRenderer.invoke('draftSales:update', args),
-    checkout: (args: { draft_sale_id: string; payment_method: PosSale['payment_method']; sold_at?: string; subtotal: string; tax_amount: string; total: string }) =>
+    checkout: (args: { draft_sale_id: string; payments: PosSalePayment[]; sold_at?: string; subtotal: string; tax_amount: string; total: string }) =>
       ipcRenderer.invoke('draftSales:checkout', args),
+    cancel: (draftSaleId: string) => ipcRenderer.invoke('draftSales:cancel', draftSaleId),
   },
   draftSaleItems: {
     upsert: (args: { draft_sale_id: string; product_id: string; product_name: string; qty: number; unit_price: string; total: string; iva_rate?: string; sort_order?: number }) =>
@@ -45,6 +46,9 @@ contextBridge.exposeInMainWorld('pos', {
     get: (saleId: string) => ipcRenderer.invoke('sales:get', saleId),
     closingReport: (date?: string) => ipcRenderer.invoke('sales:closingReport', date),
   },
+  paymentMethods: {
+    list: () => ipcRenderer.invoke('paymentMethods:list'),
+  },
   sync: {
     checkLicense: () => ipcRenderer.invoke('license:check'),
     license: () => ipcRenderer.invoke('sync:license'),
@@ -54,5 +58,8 @@ contextBridge.exposeInMainWorld('pos', {
   settings: {
     save: (kv: Record<string, string>) => ipcRenderer.invoke('settings:save', kv),
     get: () => ipcRenderer.invoke('settings:get'),
+  },
+  dev: {
+    resetLocalData: () => ipcRenderer.invoke('dev:resetLocalData'),
   },
 })
