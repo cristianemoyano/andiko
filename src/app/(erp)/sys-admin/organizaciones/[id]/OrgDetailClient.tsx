@@ -13,22 +13,49 @@ import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { Dialog } from '@/components/primitives/Dialog'
 import { BranchModal, type BranchRow } from './BranchModal'
 import { OrgUserModal, type OrgUserRow } from './OrgUserModal'
+import { SearchableSelect, type SearchableSelectOption } from '@/components/erp/SearchableSelect'
+import { formatCuit } from '@/modules/contacts/contact.utils'
 import { slugifyText } from '@/lib/slug'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
+import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 import { notifyApiError } from '@/lib/notify'
+import { ORG_MODULE_DEFS, type OrgModuleKey } from '@/modules/auth/organization-modules'
 
 interface OrgPayload {
   id: string
   name: string
   slug: string
   is_active: boolean
+  legal_name: string | null
+  cuit: string | null
+  iva_condition: string | null
+  fiscal_address: string | null
   created_at: string
   updated_at: string
 }
 
+const IVA_CONDITION_OPTIONS: SearchableSelectOption[] = [
+  { value: 'responsable_inscripto', label: 'Responsable Inscripto' },
+  { value: 'monotributista', label: 'Monotributista' },
+  { value: 'consumidor_final', label: 'Consumidor Final' },
+  { value: 'exento', label: 'Exento' },
+  { value: 'no_responsable', label: 'No Responsable' },
+]
+
+const IVA_CONDITION_LABEL: Record<string, string> = Object.fromEntries(
+  IVA_CONDITION_OPTIONS.map(o => [o.value, o.label]),
+)
+
 interface DetailResponse {
   organization: OrgPayload
   branches: BranchRow[]
+}
+
+interface OrgSettingsPayload {
+  org_id: string
+  enabled_modules: OrgModuleKey[]
+  enabled_features: Record<string, boolean>
+  is_default: boolean
 }
 
 interface OrgDetailClientProps {
@@ -47,8 +74,13 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
   const [orgSlug, setOrgSlug] = useState('')
   const [orgActive, setOrgActive] = useState(true)
   const [slugTouched, setSlugTouched] = useState(false)
+  const [orgLegalName, setOrgLegalName] = useState('')
+  const [orgCuit, setOrgCuit] = useState('')
+  const [orgIvaCondition, setOrgIvaCondition] = useState<string | null>(null)
+  const [orgFiscalAddress, setOrgFiscalAddress] = useState('')
   const [orgSaving, setOrgSaving] = useState(false)
   const [orgError, setOrgError] = useState<string | null>(null)
+  const [orgFieldErrors, setOrgFieldErrors] = useState<Record<string, string[]>>({})
 
   const [branchModalOpen, setBranchModalOpen] = useState(false)
   const [editingBranch, setEditingBranch] = useState<BranchRow | null>(null)
@@ -59,6 +91,11 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
   const [userModalOpen, setUserModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<OrgUserRow | null>(null)
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<OrgUserRow | null>(null)
+
+  const [enabledModules, setEnabledModules] = useState<OrgModuleKey[]>([])
+  const [settingsDefault, setSettingsDefault] = useState(true)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsError, setSettingsError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -73,6 +110,10 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
         setOrgName(data.organization.name)
         setOrgSlug(data.organization.slug)
         setOrgActive(data.organization.is_active)
+        setOrgLegalName(data.organization.legal_name ?? '')
+        setOrgCuit(data.organization.cuit ?? '')
+        setOrgIvaCondition(data.organization.iva_condition)
+        setOrgFiscalAddress(data.organization.fiscal_address ?? '')
         setSlugTouched(false)
         setNotFound(false)
       } catch (e) {
@@ -109,10 +150,27 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     }
   }, [id, refresh])
 
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const settings = await fetchJson<OrgSettingsPayload>(`/api/v1/sys-admin/organizations/${id}/settings`)
+        if (cancelled) return
+        setEnabledModules(settings.enabled_modules ?? [])
+        setSettingsDefault(settings.is_default)
+        setSettingsError(null)
+      } catch {
+        if (!cancelled) setEnabledModules([])
+      }
+    })()
+    return () => { cancelled = true }
+  }, [id, refresh])
+
   async function handleSaveOrg(e: React.FormEvent) {
     e.preventDefault()
     setOrgSaving(true)
     setOrgError(null)
+    setOrgFieldErrors({})
     try {
       await fetchJson(`/api/v1/sys-admin/organizations/${id}`, {
         method: 'PATCH',
@@ -120,15 +178,44 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
           name: orgName.trim(),
           slug: orgSlug.trim().toLowerCase(),
           is_active: orgActive,
+          legal_name: orgLegalName.trim() || null,
+          cuit: orgCuit.trim() || null,
+          iva_condition: orgIvaCondition || null,
+          fiscal_address: orgFiscalAddress.trim() || null,
         }),
       })
       setEditOrgOpen(false)
       setRefresh(r => r + 1)
     } catch (e) {
-      setOrgError(getApiErrorMessage(e))
+      const fe = fieldErrorsFromApiError(e)
+      if (fe) setOrgFieldErrors(fe)
+      else setOrgError(getApiErrorMessage(e))
     } finally {
       setOrgSaving(false)
     }
+  }
+
+  async function handleSaveSettings() {
+    setSettingsSaving(true)
+    setSettingsError(null)
+    try {
+      const settings = await fetchJson<OrgSettingsPayload>(`/api/v1/sys-admin/organizations/${id}/settings`, {
+        method: 'PATCH',
+        body: JSON.stringify({ enabled_modules: enabledModules }),
+      })
+      setEnabledModules(settings.enabled_modules ?? [])
+      setSettingsDefault(settings.is_default)
+    } catch (e) {
+      setSettingsError(getApiErrorMessage(e))
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
+  function toggleModule(key: OrgModuleKey) {
+    setEnabledModules(prev =>
+      prev.includes(key) ? prev.filter(m => m !== key) : [...prev, key],
+    )
   }
 
   async function handleDeleteOrg() {
@@ -327,6 +414,66 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
             <div className="mt-3">
               <StatusBadge value={org.is_active ? 'Activa' : 'Inactiva'} />
             </div>
+            <div className="mt-4 pt-4 border-t border-zinc-100 grid grid-cols-2 gap-x-6 gap-y-2">
+              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide col-span-2">Datos fiscales</p>
+              <div>
+                <p className="text-[12px] text-zinc-500">Razón social legal</p>
+                <p className="text-[13px] text-zinc-800">{org.legal_name ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-[12px] text-zinc-500">CUIT</p>
+                <p className="text-[13px] text-zinc-800 font-mono">{org.cuit ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-[12px] text-zinc-500">Condición IVA</p>
+                <p className="text-[13px] text-zinc-800">
+                  {org.iva_condition ? IVA_CONDITION_LABEL[org.iva_condition] ?? org.iva_condition : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-[12px] text-zinc-500">Domicilio fiscal</p>
+                <p className="text-[13px] text-zinc-800">{org.fiscal_address ?? '—'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide">Módulos habilitados</p>
+                {settingsDefault ? (
+                  <p className="mt-1 text-[12px] text-zinc-500">Usando configuración por defecto (todos los módulos).</p>
+                ) : null}
+              </div>
+              <Button size="sm" onClick={() => void handleSaveSettings()} disabled={settingsSaving}>
+                {settingsSaving ? 'Guardando…' : 'Guardar módulos'}
+              </Button>
+            </div>
+            {settingsError ? (
+              <p role="alert" className="mb-3 text-[12px] text-red-600">{settingsError}</p>
+            ) : null}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(['base', 'premium'] as const).map(tier => (
+                <div key={tier}>
+                  <p className="mb-2 text-[12px] font-medium text-zinc-700 capitalize">{tier === 'base' ? 'Base' : 'Premium'}</p>
+                  <ul className="space-y-2">
+                    {ORG_MODULE_DEFS.filter(m => m.tier === tier).map(mod => (
+                      <li key={mod.key}>
+                        <label className="flex cursor-pointer items-center gap-2 text-[13px] text-zinc-800">
+                          <input
+                            type="checkbox"
+                            checked={enabledModules.includes(mod.key)}
+                            onChange={() => toggleModule(mod.key)}
+                            className="h-3.5 w-3.5 accent-brand-600"
+                          />
+                          {mod.label}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -395,6 +542,46 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               required
             />
           </FormField>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Razón social legal" htmlFor="edit_org_legal_name" error={orgFieldErrors.legal_name?.[0]}>
+              <Input
+                id="edit_org_legal_name"
+                value={orgLegalName}
+                onChange={e => setOrgLegalName(e.target.value)}
+                placeholder="Razón social registrada en AFIP"
+                error={!!orgFieldErrors.legal_name}
+              />
+            </FormField>
+            <FormField label="CUIT" htmlFor="edit_org_cuit" error={orgFieldErrors.cuit?.[0]}>
+              <Input
+                id="edit_org_cuit"
+                value={orgCuit}
+                onChange={e => setOrgCuit(e.target.value)}
+                onBlur={() => { if (orgCuit.trim()) setOrgCuit(formatCuit(orgCuit.trim())) }}
+                placeholder="XX-XXXXXXXX-X"
+                error={!!orgFieldErrors.cuit}
+              />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Condición IVA" htmlFor="edit_org_iva" error={orgFieldErrors.iva_condition?.[0]}>
+              <SearchableSelect
+                value={orgIvaCondition}
+                onChange={setOrgIvaCondition}
+                options={IVA_CONDITION_OPTIONS}
+                placeholder="Seleccionar…"
+              />
+            </FormField>
+            <FormField label="Domicilio fiscal" htmlFor="edit_org_fiscal_address" error={orgFieldErrors.fiscal_address?.[0]}>
+              <Input
+                id="edit_org_fiscal_address"
+                value={orgFiscalAddress}
+                onChange={e => setOrgFiscalAddress(e.target.value)}
+                placeholder="Calle, número, ciudad, provincia"
+                error={!!orgFieldErrors.fiscal_address}
+              />
+            </FormField>
+          </div>
           <label className="flex items-center gap-2 text-[13px] text-zinc-700 cursor-pointer">
             <input
               type="checkbox"

@@ -7,7 +7,7 @@ import sequelize from './db'
 // The CWD in Vercel is /var/task, and outputFileTracingIncludes copies migration files there.
 const migrationsGlob = process.env.NODE_ENV === 'production'
   ? path.join(process.cwd(), 'src/db/migrations/*.{ts,js}')
-  : path.join(__dirname, '../../db/migrations/*.ts')
+  : path.join(__dirname, '../db/migrations/*.ts')
 
 export const umzug = new Umzug({
   migrations: {

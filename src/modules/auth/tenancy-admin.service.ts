@@ -1,7 +1,7 @@
 import 'server-only'
 import { Op } from 'sequelize'
 import sequelize from '@/lib/db'
-import Organization from '@/modules/auth/organization.model'
+import Organization, { type OrgIvaCondition } from '@/modules/auth/organization.model'
 import Branch from '@/modules/auth/branch.model'
 import { slugifyText } from '@/lib/slug'
 import type {
@@ -63,6 +63,10 @@ export async function createOrganization(input: OrganizationCreateInput) {
     name: input.name.trim(),
     slug,
     is_active: true,
+    legal_name: input.legal_name?.trim() ?? null,
+    cuit: input.cuit ?? null,
+    iva_condition: input.iva_condition ?? null,
+    fiscal_address: input.fiscal_address?.trim() ?? null,
   })
   return org
 }
@@ -82,9 +86,21 @@ export async function updateOrganization(id: string, input: OrganizationUpdateIn
   const org = await Organization.findByPk(id)
   if (!org) throw new Error('ORG_NOT_FOUND')
 
-  const next: Partial<{ name: string; slug: string; is_active: boolean }> = {}
+  const next: Partial<{
+    name: string
+    slug: string
+    is_active: boolean
+    legal_name: string | null
+    cuit: string | null
+    iva_condition: OrgIvaCondition | null
+    fiscal_address: string | null
+  }> = {}
   if (input.name !== undefined) next.name = input.name.trim()
   if (input.is_active !== undefined) next.is_active = input.is_active
+  if (input.legal_name !== undefined) next.legal_name = input.legal_name?.trim() || null
+  if (input.cuit !== undefined) next.cuit = input.cuit
+  if (input.iva_condition !== undefined) next.iva_condition = input.iva_condition
+  if (input.fiscal_address !== undefined) next.fiscal_address = input.fiscal_address?.trim() || null
   if (input.slug !== undefined) {
     const s = input.slug.trim().toLowerCase()
     if (s !== org.slug) {
