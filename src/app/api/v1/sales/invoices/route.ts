@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
+import { makeTenantContext } from '@/lib/tenancy'
 import { invoiceSchema, invoiceQuerySchema } from '@/modules/sales/invoice.schema'
 import { listInvoices, createInvoice } from '@/modules/sales/invoices.service'
 
@@ -20,7 +21,8 @@ export const GET = withPermission('sales:read', async (req, _ctx, session) => {
       { status: 422 },
     )
   }
-  const result = await listInvoices(parsed.data, orgId)
+  const tenantCtx = await makeTenantContext(session.user)
+  const result = await listInvoices(parsed.data, tenantCtx)
   return NextResponse.json(result)
 })
 

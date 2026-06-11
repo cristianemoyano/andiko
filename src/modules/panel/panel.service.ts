@@ -252,20 +252,68 @@ export async function getPanelRecentInvoices(orgId: string, filters: PanelFilter
 }
 
 export async function getPanelActivity(orgId: string, filters: PanelFilters) {
-  const bc = branchClause('i', filters.branch_id)
+  const { from, to } = resolveDateRange(filters)
+  const invoiceBranch = branchClause('i', filters.branch_id)
+  const paymentBranch = branchClause('p', filters.branch_id)
+  const poBranch = branchClause('po', filters.branch_id)
+  const stockBranch = filters.branch_id && filters.branch_id !== 'all'
+    ? `AND w.branch_id = '${filters.branch_id}'`
+    : ''
 
-  const invoiceActivity = await sequelize.query<ActivityRow>(`
-    SELECT 'invoice' AS type,
-      CONCAT(i.invoice_number, ' — ', COALESCE(c.trade_name, c.legal_name, 'Sin cliente')) AS text,
-      i.updated_at AS occurred_at
-    FROM invoices i
-    LEFT JOIN contacts c ON c.id = i.contact_id
-    WHERE i.org_id = :orgId AND i.deleted_at IS NULL AND i.status != 'draft' ${bc}
-    ORDER BY i.updated_at DESC
-    LIMIT 10
-  `, { replacements: { orgId }, type: QueryTypes.SELECT })
+  const rows = await sequelize.query<ActivityRow>(`
+    SELECT type, text, occurred_at FROM (
+      SELECT 'invoice' AS type,
+        CONCAT(i.invoice_number, ' — ', COALESCE(c.trade_name, c.legal_name, 'Sin cliente')) AS text,
+        i.updated_at AS occurred_at
+      FROM invoices i
+      LEFT JOIN contacts c ON c.id = i.contact_id
+      WHERE i.org_id = :orgId AND i.deleted_at IS NULL AND i.status != 'draft'
+        AND i.updated_at >= :from AND i.updated_at <= :to ${invoiceBranch}
 
-  return invoiceActivity.map(r => {
+      UNION ALL
+
+      SELECT 'payment' AS type,
+        CONCAT('Cobro ', p.payment_number, ' — ', COALESCE(c.trade_name, c.legal_name, 'Sin cliente')) AS text,
+        p.updated_at AS occurred_at
+      FROM payments p
+      LEFT JOIN contacts c ON c.id = p.contact_id
+      WHERE p.org_id = :orgId AND p.deleted_at IS NULL
+        AND p.updated_at >= :from AND p.updated_at <= :to ${paymentBranch}
+
+      UNION ALL
+
+      SELECT 'stock' AS type,
+        CONCAT(
+          CASE sm.movement_type
+            WHEN 'in' THEN 'Entrada'
+            WHEN 'out' THEN 'Salida'
+            WHEN 'adjustment' THEN 'Ajuste'
+            ELSE 'Movimiento'
+          END,
+          ' stock — ', COALESCE(pv.sku, 'SKU'), ' (', w.name, ')'
+        ) AS text,
+        sm.created_at AS occurred_at
+      FROM stock_movements sm
+      JOIN warehouses w ON w.id = sm.warehouse_id
+      LEFT JOIN product_variants pv ON pv.id = sm.variant_id
+      WHERE sm.org_id = :orgId AND sm.deleted_at IS NULL
+        AND sm.created_at >= :from AND sm.created_at <= :to ${stockBranch}
+
+      UNION ALL
+
+      SELECT 'purchase' AS type,
+        CONCAT('OC ', po.order_number, ' — ', COALESCE(c.trade_name, c.legal_name, 'Sin proveedor')) AS text,
+        po.updated_at AS occurred_at
+      FROM purchase_orders po
+      LEFT JOIN contacts c ON c.id = po.contact_id
+      WHERE po.org_id = :orgId AND po.deleted_at IS NULL AND po.status != 'draft'
+        AND po.updated_at >= :from AND po.updated_at <= :to ${poBranch}
+    ) activity
+    ORDER BY occurred_at DESC
+    LIMIT 15
+  `, { replacements: { orgId, from, to }, type: QueryTypes.SELECT })
+
+  return rows.map(r => {
     const diff = Date.now() - new Date(r.occurred_at).getTime()
     const mins = Math.round(diff / 60000)
     const hrs = Math.round(diff / 3600000)

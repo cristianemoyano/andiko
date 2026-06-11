@@ -124,6 +124,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                     manage_stock: v.manage_stock,
                     stock_quantity: v.stock_quantity,
                     is_default: v.is_default,
+                    weight_kg: v.weight_kg ?? null,
+                    length_cm: v.length_cm ?? null,
+                    width_cm: v.width_cm ?? null,
+                    height_cm: v.height_cm ?? null,
+                    units_per_package: v.units_per_package ?? null,
                   }))}
                 />
               )}

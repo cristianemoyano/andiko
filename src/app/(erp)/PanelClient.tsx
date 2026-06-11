@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { Button } from '@/components/primitives/Button'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Sparkline, PanelBarChart, PanelDonutChart } from '@/components/erp'
 import { SearchableSelect } from '@/components/erp'
@@ -130,6 +131,36 @@ const IconFile = () => (
   </svg>
 )
 
+function ActivityIcon({ type }: { type: string }) {
+  const stroke = '#0C647A'
+  if (type === 'payment') {
+    return (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+    )
+  }
+  if (type === 'stock') {
+    return (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      </svg>
+    )
+  }
+  if (type === 'purchase') {
+    return (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+      </svg>
+    )
+  }
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+    </svg>
+  )
+}
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function PanelClient() {
@@ -214,11 +245,11 @@ export function PanelClient() {
   const gastos = kpisData?.gastos ?? []
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" id="panel-dashboard">
       <TopBar breadcrumbs={[{ label: 'Panel' }]} />
 
       {/* Filter bar */}
-      <div className="border-b border-zinc-200 bg-white px-6 py-2.5 flex items-center gap-3 shrink-0">
+      <div className="border-b border-zinc-200 bg-white px-6 py-2.5 flex items-center gap-3 shrink-0 print:hidden">
         <div className="flex gap-1">
           {PERIOD_OPTIONS.map(opt => (
             <button
@@ -263,7 +294,16 @@ export function PanelClient() {
           </div>
         )}
 
-        <div className="ml-auto w-52">
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="print:hidden"
+            onClick={() => window.print()}
+          >
+            Exportar PDF
+          </Button>
+          <div className="w-52">
           {branches.length > 0 && (
             <SearchableSelect
               options={branches}
@@ -272,10 +312,11 @@ export function PanelClient() {
               placeholder="Sucursal"
             />
           )}
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 bg-zinc-50">
+      <div className="flex-1 overflow-auto p-6 bg-zinc-50 print:bg-white print:p-4">
         {/* KPI cards */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <KPICard
@@ -456,9 +497,7 @@ export function PanelClient() {
                 {activity.map((item, i) => (
                   <div key={i} className="flex items-start gap-3 px-4 py-2.5 border-b border-zinc-50 last:border-0">
                     <div className="w-7 h-7 rounded-full bg-[#D0EEF3] flex items-center justify-center shrink-0 mt-0.5">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0C647A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                      </svg>
+                      <ActivityIcon type={item.type} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-[12px] text-zinc-800 leading-snug">{item.text}</div>

@@ -109,9 +109,9 @@ Vista ejecutiva del negocio. Primer pantalla post-login.
 - [x] Filtro por sucursal: todas o sucursal específica
 - [x] Filtros persistidos en URL params (links compartibles, survive refresh)
 - [x] Widgets de alertas de stock en dashboard: productos vencidos, próximos a vencer (7 días), bajo stock mínimo — con links al listado filtrado
-- [ ] Actividad reciente: ampliar con eventos de stock, pagos y compras (hoy solo facturas)
+- [x] Actividad reciente: ampliar con eventos de stock, pagos y compras (hoy solo facturas)
 - [ ] Saldo en cuenta: conectar cuando Contabilidad esté disponible
-- [ ] Exportar dashboard como PDF
+- [x] Exportar dashboard como PDF
 
 ---
 
@@ -163,8 +163,8 @@ Productos y servicios. Requisito mínimo para facturar.
 - [x] Listas de precios (múltiples listas por cliente/canal)
 - [x] Historial de precios
 - [x] Etiquetas de góndola — pantalla de selección masiva por categoría, impresión browser-native (CSS @media print)
-- [ ] Ajustes masivos de precios (por categoría / % / canal) y reglas
-- [ ] Datos de logística / shipping por SKU (peso, dimensiones, bultos/presentaciones)
+- [x] Ajustes masivos de precios (por categoría / % / canal) y reglas
+- [x] Datos de logística / shipping por SKU (peso, dimensiones, bultos/presentaciones)
 
 ---
 
@@ -183,9 +183,9 @@ Trabajo transversal para garantizar aislamiento fuerte por `org_id` y `branch_id
 ### Pendientes
 - [x] Campos fiscales de org en UI sys-admin (CUIT, razón social legal, condición IVA, domicilio fiscal)
 - [x] `organization_settings` (enabled_modules/features) + guards por módulo/feature
-- [ ] Policy de lecturas: enforzar `user_branches` también en lecturas (no solo en writes)
-- [ ] Enforcements DB: índices/uniques scoped (`UNIQUE(org_id, ...)`) en entidades relevantes
-- [ ] Definir mapa base vs premium e integrarlo con `organization_settings`
+- [x] Policy de lecturas: enforzar `user_branches` también en lecturas (no solo en writes)
+- [x] Enforcements DB: índices/uniques scoped (`UNIQUE(org_id, ...)`) en entidades relevantes
+- [x] Definir mapa base vs premium e integrarlo con `organization_settings`
 
 ---
 
@@ -412,9 +412,9 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] Zona de peligro en Settings: limpiar datos locales de dev
 - [x] Botón manual "Enviar ventas pendientes al cloud" en Settings
 - [x] Sync de ventas/turnos: errores visibles por registro; `salesperson_id`/`cashier_user_id` verificados contra cloud antes de usar como FK
-- [ ] `GET /api/v1/pos/sales/sync` — pull de ventas sincronizadas (para reconciliación offline)
-- [ ] Renovación de licencia desde el ERP admin (extender `license_valid_until`)
-- [ ] App Electron: sincronización automática en background cuando hay conexión
+- [x] `GET /api/v1/pos/sales/sync` — pull de ventas sincronizadas (para reconciliación offline)
+- [x] Renovación de licencia desde el ERP admin (extender `license_valid_until`)
+- [x] App Electron: sincronización automática en background cuando hay conexión
 
 ---
 

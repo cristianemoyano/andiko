@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
+import { makeTenantContext } from '@/lib/tenancy'
 import { invoiceUpdateSchema } from '@/modules/sales/invoice.schema'
 import { getInvoice, updateInvoice, deleteInvoice } from '@/modules/sales/invoices.service'
 
 type P = { id: string }
 
-export const GET = withPermission<P>('sales:read', async (_req, ctx) => {
+export const GET = withPermission<P>('sales:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const invoice = await getInvoice(id)
+    const tenantCtx = await makeTenantContext(session.user)
+    const invoice = await getInvoice(id, tenantCtx)
     return NextResponse.json(invoice)
   } catch {
     return NextResponse.json({ error: 'Factura no encontrada', code: 'NOT_FOUND' }, { status: 404 })

@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
+import { makeTenantContext } from '@/lib/tenancy'
 import { paymentSchema, paymentQuerySchema } from '@/modules/sales/payment.schema'
 import { listPayments, createPayment } from '@/modules/sales/payments.service'
 
-export const GET = withPermission('sales:read', async (req) => {
+export const GET = withPermission('sales:read', async (req, _ctx, session) => {
   const parsed = paymentQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
   }
-  const result = await listPayments(parsed.data)
+  const tenantCtx = await makeTenantContext(session.user)
+  const result = await listPayments(parsed.data, tenantCtx)
   return NextResponse.json(result)
 })
 

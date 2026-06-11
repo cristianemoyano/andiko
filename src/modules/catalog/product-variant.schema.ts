@@ -10,6 +10,11 @@ export const productVariantSchema = z.object({
   manage_stock:   z.boolean().optional(),
   stock_quantity: z.coerce.number().int().min(0).optional(),
   is_default:     z.boolean().optional(),
+  weight_kg:      z.string().regex(/^\d+(\.\d{1,3})?$/).nullable().optional(),
+  length_cm:      z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().optional(),
+  width_cm:       z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().optional(),
+  height_cm:      z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().optional(),
+  units_per_package: z.coerce.number().int().min(1).nullable().optional(),
 })
 
 export const productVariantUpdateSchema = productVariantSchema

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
+import { makeTenantContext } from '@/lib/tenancy'
 import { purchaseOrderSchema, purchaseOrderQuerySchema } from '@/modules/purchases/purchase-order.schema'
 import { listPurchaseOrders, createPurchaseOrder } from '@/modules/purchases/purchase-orders.service'
 
@@ -17,7 +18,8 @@ export const GET = withPermission('purchases:read', async (req, _ctx, session) =
   const orgId = await resolveOrgIdForMutation(session.user)
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
-  const result = await listPurchaseOrders(parsed.data, orgId)
+  const tenantCtx = await makeTenantContext(session.user)
+  const result = await listPurchaseOrders(parsed.data, tenantCtx)
   return NextResponse.json(result)
 })
 

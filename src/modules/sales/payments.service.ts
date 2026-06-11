@@ -8,12 +8,13 @@ import User from '@/modules/auth/user.model'
 import { recalcInvoiceBalance } from './invoices.service'
 import type { PaymentInput, PaymentUpdateInput, PaymentQuery } from './payment.schema'
 import { nextDocumentNumber } from './sales.utils'
+import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
 
-export async function listPayments(query: PaymentQuery) {
+export async function listPayments(query: PaymentQuery, ctx: TenantContext) {
   const { page, limit, invoice_id, contact_id, payment_method } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = {}
+  const where: Record<string, unknown> = whereAllowedBranches(ctx)
   if (invoice_id)     where.invoice_id     = invoice_id
   if (contact_id)     where.contact_id     = contact_id
   if (payment_method) where.payment_method = payment_method
@@ -33,8 +34,9 @@ export async function listPayments(query: PaymentQuery) {
   return toPaginated(rows, count, page, limit)
 }
 
-export async function getPayment(id: string) {
-  const payment = await Payment.findByPk(id, {
+export async function getPayment(id: string, ctx: TenantContext) {
+  const payment = await Payment.findOne({
+    where: whereAllowedBranches(ctx, { id }),
     include: [{ model: User, as: 'salesperson', attributes: ['id', 'name'] }],
   })
   if (!payment) throw new Error('PAYMENT_NOT_FOUND')
