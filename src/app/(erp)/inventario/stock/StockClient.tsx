@@ -7,6 +7,7 @@ import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Input } from '@/components/primitives/Input'
 import { Button } from '@/components/primitives/Button'
 import { Badge } from '@/components/primitives/Badge'
+import { Dialog } from '@/components/primitives/Dialog'
 import { InventarioSubNav } from '../InventarioSubNav'
 import { STOCK_EXPIRY_WARNING_DAYS } from '@/modules/inventory/inventory.constants'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
@@ -61,7 +62,15 @@ function belowMinimum(row: StockRow): boolean {
   return Number(row.quantity) <= min
 }
 
-const COLUMNS: Column<StockRow>[] = [
+type StockBatch = {
+  id: string
+  batch_code: string | null
+  expiry_date: string | null
+  quantity: string
+}
+
+function makeColumns(onShowBatches: (row: StockRow) => void): Column<StockRow>[] {
+  return [
   {
     key: 'variant_id',
     header: 'Producto',
@@ -130,7 +139,24 @@ const COLUMNS: Column<StockRow>[] = [
       )
     },
   },
-]
+  {
+    key: 'batches' as keyof StockRow,
+    header: 'Lotes',
+    align: 'right',
+    render: row => (
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        data-stop-row-click
+        onClick={() => onShowBatches(row)}
+      >
+        Ver lotes
+      </Button>
+    ),
+  },
+  ]
+}
 
 export function StockClient() {
   const searchParams = useSearchParams()
@@ -144,6 +170,28 @@ export function StockClient() {
   const [belowMin, setBelowMin]         = useState(() => searchParams.get('below_minimum') === 'true')
   const [expired, setExpired]           = useState(() => searchParams.get('expired') === 'true')
   const [expiring30, setExpiring30]     = useState(() => searchParams.get('expiring_within_days') != null)
+
+  const [batchRow, setBatchRow]         = useState<StockRow | null>(null)
+  const [batches, setBatches]           = useState<StockBatch[] | null>(null)
+  const [batchError, setBatchError]     = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!batchRow) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state before async fetch
+    setBatches(null)
+    setBatchError(null)
+    ;(async () => {
+      try {
+        const data = await fetchJson<{ data: StockBatch[] }>(`/api/v1/inventory/stock/${batchRow.id}/batches`)
+        setBatches(data.data ?? [])
+      } catch (e) {
+        setBatchError(getApiErrorMessage(e))
+        setBatches([])
+      }
+    })()
+  }, [batchRow])
+
+  const columns = makeColumns(setBatchRow)
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search), 300)
@@ -178,7 +226,7 @@ export function StockClient() {
       <div className="flex-1 overflow-auto p-5">
         {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
         <DataTable
-          columns={COLUMNS}
+          columns={columns}
           data={rows}
           keyExtractor={row => row.id}
           emptyMessage="Sin stock registrado. Creá un depósito y registrá stock inicial."
@@ -223,6 +271,50 @@ export function StockClient() {
           }
         />
       </div>
+
+      <Dialog
+        open={batchRow != null}
+        onOpenChange={open => { if (!open) setBatchRow(null) }}
+        title="Lotes"
+        description={
+          batchRow
+            ? `${batchRow.variant?.product?.name ?? ''} · ${batchRow.warehouse?.name ?? ''}`.trim()
+            : undefined
+        }
+        size="md"
+      >
+        <div className="px-5 py-4">
+          {batchError && <p className="text-red-600 text-sm mb-3">{batchError}</p>}
+          {batches == null ? (
+            <p className="text-zinc-400 text-[13px]">Cargando…</p>
+          ) : batches.length === 0 ? (
+            <p className="text-zinc-400 text-[13px]">Sin lotes registrados.</p>
+          ) : (
+            <table className="w-full border-collapse text-[13px]">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-500">
+                  <th className="py-1.5 pr-3 font-semibold">Lote</th>
+                  <th className="py-1.5 pr-3 font-semibold">Vence</th>
+                  <th className="py-1.5 text-right font-semibold">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {batches.map(b => (
+                  <tr key={b.id} className="border-t border-zinc-100">
+                    <td className="py-1.5 pr-3 font-mono text-zinc-700">
+                      {b.batch_code ?? <span className="text-zinc-400">Sin lote</span>}
+                    </td>
+                    <td className="py-1.5 pr-3 text-zinc-600">
+                      {b.expiry_date ? String(b.expiry_date).slice(0, 10).split('-').reverse().join('/') : '—'}
+                    </td>
+                    <td className="py-1.5 text-right tabular-nums">{b.quantity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </Dialog>
     </div>
   )
 }

@@ -265,7 +265,7 @@ Gestión de stock integrada con ventas y compras.
 
 ### Pendientes
 - [x] Remitos de entrega
-- [ ] Trazabilidad por lotes (lote + vencimiento por cantidad) con salidas FEFO y vínculo explícito en `stock_movements`
+- [x] Trazabilidad por lotes (lote + vencimiento por cantidad) con salidas FEFO y vínculo explícito en `stock_movements`
 
 ---
 

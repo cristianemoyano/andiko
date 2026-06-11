@@ -27,6 +27,11 @@ type MovementRow = {
     is_default: boolean
     product?: { id: string; name: string }
   }
+  batch?: {
+    id: string
+    batch_code: string | null
+    expiry_date: string | null
+  } | null
 }
 
 const MOVEMENT_TYPE_LABEL: Record<StockMovementType, string> = {
@@ -99,6 +104,27 @@ const COLUMNS: Column<MovementRow>[] = [
     render: row => (
       <span className="text-zinc-600 text-[12px]">{referenceLabel(row)}</span>
     ),
+  },
+  {
+    key: 'batch' as keyof MovementRow,
+    header: 'Lote',
+    render: row => {
+      if (!row.batch || (!row.batch.batch_code && !row.batch.expiry_date)) {
+        return <span className="text-zinc-400 text-[12px]">—</span>
+      }
+      return (
+        <div className="text-[12px]">
+          {row.batch.batch_code && (
+            <span className="font-mono text-zinc-700">{row.batch.batch_code}</span>
+          )}
+          {row.batch.expiry_date && (
+            <span className="block text-zinc-400 text-[11px]">
+              Vto. {String(row.batch.expiry_date).slice(0, 10).split('-').reverse().join('/')}
+            </span>
+          )}
+        </div>
+      )
+    },
   },
   {
     key: 'quantity_delta',

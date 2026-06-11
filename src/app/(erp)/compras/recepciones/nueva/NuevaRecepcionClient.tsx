@@ -7,6 +7,8 @@ import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Textarea } from '@/components/primitives/Textarea'
+import { Input } from '@/components/primitives/Input'
+import { DateInput } from '@/components/primitives/DateInput'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
@@ -20,6 +22,13 @@ interface ReceiptItem {
   variant_id: string | null
   description: string
   quantity: string
+  batch_code: string
+  expiry_date: Date | null
+}
+
+function toIsoDateUtc(d: Date | null): string | null {
+  if (!d) return null
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
 }
 
 export function NuevaRecepcionClient() {
@@ -83,6 +92,8 @@ export function NuevaRecepcionClient() {
             variant_id:    i.variant_id,
             description:   i.description,
             quantity:      String(parseFloat(i.quantity) - parseFloat(i.received_qty ?? '0')),
+            batch_code:    '',
+            expiry_date:   null,
           })),
         )
       } catch {
@@ -92,8 +103,8 @@ export function NuevaRecepcionClient() {
     return () => { cancelled = true }
   }, [orderId])
 
-  function updateItem(idx: number, qty: string) {
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: qty } : it))
+  function updateItem(idx: number, patch: Partial<ReceiptItem>) {
+    setItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it))
   }
 
   async function handleSave() {
@@ -118,6 +129,8 @@ export function NuevaRecepcionClient() {
           description:   i.description,
           quantity:      parseFloat(i.quantity),
           unit_cost:     0,
+          batch_code:    i.batch_code.trim() || null,
+          expiry_date:   toIsoDateUtc(i.expiry_date),
         })),
     }
 
@@ -216,6 +229,8 @@ export function NuevaRecepcionClient() {
                 <thead className="bg-zinc-50 border-b border-zinc-200">
                   <tr>
                     <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Descripción</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Lote (opcional)</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Vencimiento</th>
                     <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Cantidad a recibir</th>
                   </tr>
                 </thead>
@@ -224,12 +239,28 @@ export function NuevaRecepcionClient() {
                     <tr key={idx}>
                       <td className="px-4 py-2.5 text-zinc-900">{item.description}</td>
                       <td className="px-4 py-2.5">
+                        <Input
+                          value={item.batch_code}
+                          onChange={e => updateItem(idx, { batch_code: e.target.value })}
+                          placeholder="Sin lote"
+                          className="w-32"
+                        />
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="w-32">
+                          <DateInput
+                            value={item.expiry_date}
+                            onChange={d => updateItem(idx, { expiry_date: d })}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5">
                         <input
                           type="number"
                           min="0"
                           step="0.001"
                           value={item.quantity}
-                          onChange={e => updateItem(idx, e.target.value)}
+                          onChange={e => updateItem(idx, { quantity: e.target.value })}
                           className="w-28 h-8 px-2 text-sm text-right border border-zinc-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 tabular-nums ml-auto block"
                         />
                       </td>

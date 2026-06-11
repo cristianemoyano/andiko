@@ -32,6 +32,8 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
   const [quantity, setQuantity]       = useState('')
   const [minimumQty, setMinimumQty]   = useState('0')
   const [expiresOn, setExpiresOn]     = useState<Date | null>(null)
+  const [batchCode, setBatchCode]     = useState('')
+  const [batchExpiry, setBatchExpiry] = useState<Date | null>(null)
   const [notes, setNotes]             = useState('')
   const [errors, setErrors]           = useState<Record<string, string>>({})
   const [serverError, setServerError] = useState<string | null>(null)
@@ -108,7 +110,10 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
     setServerError(null)
     try {
       const loaded = loadedQuantityRef.current ?? '0'
-      const qtyUnchanged = new Decimal(quantity.trim() || '0').equals(loaded)
+      const target = new Decimal(quantity.trim() || '0')
+      const qtyUnchanged = target.equals(loaded)
+      // Lot only applies when stock is going up (an inbound adjustment).
+      const isIncrease = target.greaterThan(loaded)
 
       if (!qtyUnchanged) {
         try {
@@ -119,6 +124,8 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
               warehouse_id: warehouseId,
               quantity:     Number(quantity),
               notes:        notes.trim() || null,
+              batch_code:   isIncrease && batchCode.trim() ? batchCode.trim() : null,
+              expiry_date:  isIncrease ? toIsoDateUtc(batchExpiry) : null,
             }),
           })
         } catch (e) {
@@ -165,6 +172,8 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
                 setQuantity('')
                 setMinimumQty('0')
                 setExpiresOn(null)
+                setBatchCode('')
+                setBatchExpiry(null)
               }
             }}
             onSearch={searchVariants}
@@ -190,6 +199,22 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
           <p className="text-[11px] text-zinc-500 -mt-1">
             Si no la modificás, solo se actualizan mínimo y vencimiento (sin movimiento en el historial).
           </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 rounded-md border border-zinc-100 bg-zinc-50/60 p-3">
+          <div className="col-span-2 text-[11px] font-medium text-zinc-500">
+            Lote del ingreso (opcional — solo si aumentás la cantidad)
+          </div>
+          <FormField label="Código de lote">
+            <Input
+              value={batchCode}
+              onChange={e => setBatchCode(e.target.value)}
+              placeholder="Sin lote"
+            />
+          </FormField>
+          <FormField label="Vencimiento del lote">
+            <DatePicker value={batchExpiry} onChange={setBatchExpiry} placeholder="Sin vencimiento" />
+          </FormField>
         </div>
 
         <FormField label="Stock mínimo (alerta)" error={errors.minimum}>
