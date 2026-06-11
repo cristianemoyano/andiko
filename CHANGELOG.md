@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1](https://github.com/cristianemoyano/andiko/compare/v0.2.0...v0.2.1) (2026-06-11)
+
+### Bug Fixes
+
+* **core:** correct inverted vercel ignoreCommand that canceled real deploys ([8bf7c59](https://github.com/cristianemoyano/andiko/commit/8bf7c59c6033c02f44378061282d29d71c8dcec5))
+
 ## 0.2.0 (2026-06-11)
 
 ### Features
