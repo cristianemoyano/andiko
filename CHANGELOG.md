@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.8](https://github.com/cristianemoyano/andiko/compare/v0.2.7...v0.2.8) (2026-06-11)
+
+### Bug Fixes
+
+* **core:** resolve onboarding redirect loop on login ([be890fa](https://github.com/cristianemoyano/andiko/commit/be890fab69594ab80eddb27309bd1bb665287ec4))
+
 ## [0.2.7](https://github.com/cristianemoyano/andiko/compare/v0.2.6...v0.2.7) (2026-06-11)
 
 ### Features
