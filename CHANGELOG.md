@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.3](https://github.com/cristianemoyano/andiko/compare/v0.2.2...v0.2.3) (2026-06-11)
+
+### Bug Fixes
+
+* **core:** use hoisted pnpm linker for Vercel serverless deploys ([8e0db00](https://github.com/cristianemoyano/andiko/commit/8e0db0089a52c7ce7f4eb8027c2b73545b6d4f76))
+
 ## [0.2.2](https://github.com/cristianemoyano/andiko/compare/v0.2.1...v0.2.2) (2026-06-11)
 
 ## [0.2.1](https://github.com/cristianemoyano/andiko/compare/v0.2.0...v0.2.1) (2026-06-11)
