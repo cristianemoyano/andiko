@@ -43,6 +43,10 @@ next-env.d.ts
 
 # Claude Code — local worktrees (nested git repos; never commit)
 .claude/worktrees/
+.claude/settings.json
+
+# Storybook static build output
+/storybook-static/
 
 # CSV
 *.csv
