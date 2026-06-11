@@ -2,6 +2,8 @@ import sequelize from '@/lib/db'
 import Contact from '@/modules/contacts/contact.model'
 import ContactAddress from '@/modules/contacts/contact-address.model'
 import Organization from '@/modules/auth/organization.model'
+import OrganizationSetting from '@/modules/auth/organization-setting.model'
+import { BASE_PLAN_ENABLED_MODULES } from '@/modules/auth/organization-modules'
 import Branch from '@/modules/auth/branch.model'
 import User from '@/modules/auth/user.model'
 import UserBranch from '@/modules/auth/user-branch.model'
@@ -759,6 +761,19 @@ async function run() {
         defaults: { name: tenant.name, slug: tenant.slug, is_active: true },
         transaction: t,
       })
+
+      // Premium SA: plan base sin módulos premium (inventario, compras, contabilidad, pos)
+      if (tenant.slug === 'premium') {
+        await OrganizationSetting.findOrCreate({
+          where: { org_id: org.id },
+          defaults: {
+            org_id: org.id,
+            enabled_modules: [...BASE_PLAN_ENABLED_MODULES],
+            enabled_features: {},
+          },
+          transaction: t,
+        })
+      }
 
       const branches: Branch[] = []
       let defaultCustomerId: string | null = null

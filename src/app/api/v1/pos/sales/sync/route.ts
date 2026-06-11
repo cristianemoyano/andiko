@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Op } from 'sequelize'
 import { withPosDevice } from '@/lib/pos-auth'
 import sequelize from '@/lib/db'
 import User from '@/modules/auth/user.model'
@@ -58,6 +59,42 @@ function calcItem(qty: number, unitPrice: string, ivaRate: IvaRate) {
     total: total.toFixed(2),
   }
 }
+
+const pullQuerySchema = z.object({
+  since: z.string().datetime({ offset: true }).optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional().default(100),
+})
+
+export const GET = withPosDevice(async (req: NextRequest, ctx) => {
+  const parsed = pullQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
+  }
+
+  const since = parsed.data.since ? new Date(parsed.data.since) : new Date(0)
+  const orders = await SalesOrder.findAll({
+    where: {
+      org_id: ctx.orgId,
+      pos_device_id: ctx.deviceId,
+      source: 'pos',
+      updated_at: { [Op.gte]: since },
+    },
+    attributes: ['id', 'pos_sale_id', 'order_number', 'total', 'created_at', 'updated_at'],
+    order: [['updated_at', 'ASC']],
+    limit: parsed.data.limit,
+  })
+
+  return NextResponse.json({
+    data: orders.map(o => ({
+      pos_sale_id: o.pos_sale_id,
+      cloud_id: o.id,
+      order_number: o.order_number,
+      total: o.total,
+      sold_at: o.created_at.toISOString(),
+      updated_at: o.updated_at.toISOString(),
+    })),
+  })
+})
 
 export const POST = withPosDevice(async (req: NextRequest, ctx) => {
   const body = await req.json()
@@ -148,6 +185,21 @@ export const POST = withPosDevice(async (req: NextRequest, ctx) => {
 
       results.push({ pos_sale_id: sale.pos_sale_id, cloud_id: cloudOrder.id, error: null })
     } catch (err: unknown) {
+      // Idempotencia: venta ya sincronizada → devolver cloud_id existente
+      if (err instanceof Error && err.name === 'SequelizeUniqueConstraintError') {
+        const existing = await SalesOrder.findOne({
+          where: {
+            org_id: ctx.orgId,
+            pos_device_id: ctx.deviceId,
+            pos_sale_id: sale.pos_sale_id,
+          },
+          attributes: ['id'],
+        })
+        if (existing) {
+          results.push({ pos_sale_id: sale.pos_sale_id, cloud_id: existing.id, error: null })
+          continue
+        }
+      }
       const msg = err instanceof Error ? err.message : 'Unknown error'
       results.push({ pos_sale_id: sale.pos_sale_id, cloud_id: null, error: msg })
     }

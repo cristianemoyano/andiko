@@ -31,9 +31,51 @@ export const ORG_MODULE_DEFS: OrgModuleDef[] = [
   { key: 'pos', label: 'POS (punto de venta)', tier: 'premium' },
 ]
 
-// Las orgs existentes operan con todo habilitado: cuando una org no tiene fila
-// en organization_settings (o enabled_modules es null), aplican estos defaults.
+/** Módulos incluidos en plan base (sin premium). */
+export const BASE_TIER_MODULES: OrgModuleKey[] = ORG_MODULE_DEFS
+  .filter(d => d.tier === 'base')
+  .map(d => d.key)
+
+/** Defaults para orgs nuevas o sin fila en organization_settings. */
 export const DEFAULT_ENABLED_MODULES: OrgModuleKey[] = [...ORG_MODULE_KEYS]
+
+/** Defaults para orgs con plan base (Premium SA en seed). */
+export const BASE_PLAN_ENABLED_MODULES: OrgModuleKey[] = [...BASE_TIER_MODULES]
+
+/** Prefijos de ruta ERP → módulo (orden: más específico primero). */
+export const ROUTE_PREFIX_TO_MODULE: ReadonlyArray<{ prefix: string; module: OrgModuleKey }> = [
+  { prefix: '/ventas', module: 'sales' },
+  { prefix: '/inventario', module: 'inventory' },
+  { prefix: '/compras', module: 'purchases' },
+  { prefix: '/contabilidad', module: 'accounting' },
+  { prefix: '/contactos', module: 'contacts' },
+  { prefix: '/catalogo', module: 'catalog' },
+  { prefix: '/pos', module: 'pos' },
+]
+
+/** Sidebar nav id → module key */
+export const NAV_ID_TO_MODULE: Record<string, OrgModuleKey> = {
+  ventas: 'sales',
+  inventario: 'inventory',
+  compras: 'purchases',
+  contabilidad: 'accounting',
+  contactos: 'contacts',
+  catalogo: 'catalog',
+  'pos-dispositivos': 'pos',
+  'pos-cajas': 'pos',
+  'pos-medios-de-pago': 'pos',
+}
+
+export function resolveModuleForPath(pathname: string): OrgModuleKey | null {
+  for (const { prefix, module } of ROUTE_PREFIX_TO_MODULE) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return module
+  }
+  return null
+}
+
+export function getDefaultModulesForPlan(plan: 'full' | 'base'): OrgModuleKey[] {
+  return plan === 'base' ? [...BASE_PLAN_ENABLED_MODULES] : [...DEFAULT_ENABLED_MODULES]
+}
 
 // Recurso de permiso (`sales:read` → `sales`) → módulo que lo gobierna.
 export const PERMISSION_RESOURCE_TO_MODULE: Record<string, OrgModuleKey> = {
@@ -43,6 +85,7 @@ export const PERMISSION_RESOURCE_TO_MODULE: Record<string, OrgModuleKey> = {
   inventory: 'inventory',
   purchases: 'purchases',
   accounting: 'accounting',
+  pos: 'pos',
 }
 
 export function isOrgModuleKey(value: string): value is OrgModuleKey {

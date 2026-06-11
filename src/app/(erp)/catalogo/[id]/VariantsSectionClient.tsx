@@ -19,6 +19,11 @@ type Variant = {
   manage_stock: boolean
   stock_quantity: number
   is_default: boolean
+  weight_kg: string | null
+  length_cm: string | null
+  width_cm: string | null
+  height_cm: string | null
+  units_per_package: number | null
 }
 
 type FieldErrors = Record<string, string[]>
@@ -88,6 +93,7 @@ export function VariantsSectionClient({
                 <th className="py-2 pr-3">SKU</th>
                 <th className="py-2 pr-3 text-right">Precio</th>
                 <th className="py-2 pr-3 text-right">Stock</th>
+                <th className="py-2 pr-3">Logística</th>
                 <th className="py-2 pr-0 text-right">Acciones</th>
               </tr>
             </thead>
@@ -107,6 +113,13 @@ export function VariantsSectionClient({
                   <td className="py-2 pr-3 font-mono text-xs text-zinc-600">{v.sku}</td>
                   <td className="py-2 pr-3 text-right tabular-nums text-zinc-700">{formatMoney(v.base_price)}</td>
                   <td className="py-2 pr-3 text-right tabular-nums text-zinc-700">{v.manage_stock ? v.stock_quantity : '—'}</td>
+                  <td className="py-2 pr-3 text-xs text-zinc-500">
+                    {v.weight_kg ? `${v.weight_kg} kg` : '—'}
+                    {v.length_cm && v.width_cm && v.height_cm
+                      ? ` · ${v.length_cm}×${v.width_cm}×${v.height_cm} cm`
+                      : ''}
+                    {v.units_per_package ? ` · ${v.units_per_package} u/bulto` : ''}
+                  </td>
                   <td className="py-2 pr-0 text-right">
                     <div className="inline-flex items-center gap-2">
                       <button
@@ -131,7 +144,7 @@ export function VariantsSectionClient({
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-zinc-400">
+                  <td colSpan={6} className="py-6 text-center text-zinc-400">
                     Sin variantes.
                   </td>
                 </tr>
@@ -197,6 +210,11 @@ function VariantModal({
     cost_price: initial?.cost_price ?? '',
     manage_stock: initial?.manage_stock ?? true,
     stock_quantity: initial?.stock_quantity ?? 0,
+    weight_kg: initial?.weight_kg ?? '',
+    length_cm: initial?.length_cm ?? '',
+    width_cm: initial?.width_cm ?? '',
+    height_cm: initial?.height_cm ?? '',
+    units_per_package: initial?.units_per_package != null ? String(initial.units_per_package) : '',
   })
 
   async function submit(e: React.FormEvent) {
@@ -214,6 +232,11 @@ function VariantModal({
       cost_price: form.cost_price ? form.cost_price : null,
       manage_stock: form.manage_stock,
       stock_quantity: form.stock_quantity,
+      weight_kg: form.weight_kg ? form.weight_kg : null,
+      length_cm: form.length_cm ? form.length_cm : null,
+      width_cm: form.width_cm ? form.width_cm : null,
+      height_cm: form.height_cm ? form.height_cm : null,
+      units_per_package: form.units_per_package ? Number.parseInt(form.units_per_package, 10) : null,
     }
 
     try {
@@ -277,6 +300,27 @@ function VariantModal({
           <FormField label="Código de barras" htmlFor="variant_barcode" error={errors.barcode?.[0]}>
             <Input id="variant_barcode" value={form.barcode} onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))} />
           </FormField>
+
+          <div className="border-t border-zinc-100 pt-3">
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Logística</p>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Peso (kg)" htmlFor="variant_weight" error={errors.weight_kg?.[0]}>
+                <Input id="variant_weight" value={form.weight_kg} onChange={(e) => setForm((f) => ({ ...f, weight_kg: e.target.value }))} />
+              </FormField>
+              <FormField label="Unidades por bulto" htmlFor="variant_units_pkg" error={errors.units_per_package?.[0]}>
+                <Input id="variant_units_pkg" type="number" min={1} value={form.units_per_package} onChange={(e) => setForm((f) => ({ ...f, units_per_package: e.target.value }))} />
+              </FormField>
+              <FormField label="Largo (cm)" htmlFor="variant_length" error={errors.length_cm?.[0]}>
+                <Input id="variant_length" value={form.length_cm} onChange={(e) => setForm((f) => ({ ...f, length_cm: e.target.value }))} />
+              </FormField>
+              <FormField label="Ancho (cm)" htmlFor="variant_width" error={errors.width_cm?.[0]}>
+                <Input id="variant_width" value={form.width_cm} onChange={(e) => setForm((f) => ({ ...f, width_cm: e.target.value }))} />
+              </FormField>
+              <FormField label="Alto (cm)" htmlFor="variant_height" error={errors.height_cm?.[0]}>
+                <Input id="variant_height" value={form.height_cm} onChange={(e) => setForm((f) => ({ ...f, height_cm: e.target.value }))} />
+              </FormField>
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Gestiona stock" htmlFor="variant_manage_stock" error={errors.manage_stock?.[0]}>

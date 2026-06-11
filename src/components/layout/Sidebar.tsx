@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { SysAdminImpersonation } from './SysAdminImpersonation'
+import { NAV_ID_TO_MODULE, type OrgModuleKey } from '@/modules/auth/organization-modules'
 
 interface NavItem {
   id: string
@@ -112,6 +113,15 @@ interface SidebarProps {
   /** Show link to Organizaciones: real sys-admin and not impersonating */
   /** Initial value from server layout (used until client session hydrates) */
   showSysAdminNavigation?: boolean
+  /** Módulos habilitados para la org; undefined = todos visibles (sys-admin sin org) */
+  enabledModules?: OrgModuleKey[]
+}
+
+function isModuleNavVisible(navId: string, enabledModules?: OrgModuleKey[]): boolean {
+  if (!enabledModules) return true
+  const moduleKey = NAV_ID_TO_MODULE[navId]
+  if (!moduleKey) return true
+  return enabledModules.includes(moduleKey)
 }
 
 export function Sidebar({
@@ -119,6 +129,7 @@ export function Sidebar({
   userRole,
   isRealSysAdmin = false,
   showSysAdminNavigation: showSysAdminNavigationInitial = false,
+  enabledModules,
 }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
@@ -130,6 +141,9 @@ export function Sidebar({
 
   const displayName = session?.user?.name ?? session?.user?.email ?? userName
   const displayRole = session?.user?.role ?? userRole
+
+  const visibleModules = NAV_MODULES.filter(item => isModuleNavVisible(item.id, enabledModules))
+  const showPosSection = isModuleNavVisible('pos-dispositivos', enabledModules)
 
   const initials = displayName
     ? displayName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -180,10 +194,12 @@ export function Sidebar({
         ))}
 
         <SectionLabel>Módulos</SectionLabel>
-        {NAV_MODULES.map(item => (
+        {visibleModules.map(item => (
           <NavLink key={item.id} item={item} active={pathname.startsWith(item.href)} />
         ))}
 
+        {showPosSection && (
+          <>
         <SectionLabel>POS</SectionLabel>
         <NavLink
           item={{
@@ -224,6 +240,8 @@ export function Sidebar({
           }}
           active={pathname.startsWith('/pos/medios-de-pago')}
         />
+          </>
+        )}
 
         <SectionLabel>Sistema</SectionLabel>
         {NAV_SYSTEM.map(item => (

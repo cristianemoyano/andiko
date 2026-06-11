@@ -13,15 +13,16 @@ import Contact from '@/modules/contacts/contact.model'
 import User from '@/modules/auth/user.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
+import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
 import type { IvaRate } from '@/types'
 
-export async function listInvoices(query: InvoiceQuery, orgId: string) {
+export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
 
   const { page, limit, search, status, contact_id, order_id, overdue } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = { org_id: orgId }
+  const where: Record<string, unknown> = whereAllowedBranches(ctx)
   if (status)     where.status     = status
   if (contact_id) where.contact_id = contact_id
   if (order_id)   where.order_id   = order_id
@@ -56,10 +57,11 @@ export async function listInvoices(query: InvoiceQuery, orgId: string) {
   return toPaginated(rows, count, page, limit)
 }
 
-export async function getInvoice(id: string) {
+export async function getInvoice(id: string, ctx: TenantContext) {
   ensureSalesBranchAssociations()
 
-  const invoice = await Invoice.findByPk(id, {
+  const invoice = await Invoice.findOne({
+    where: whereAllowedBranches(ctx, { id }),
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },

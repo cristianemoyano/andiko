@@ -191,6 +191,8 @@ export async function syncCatalog() {
 }
 
 export async function syncPendingSales(): Promise<{ synced: number; failed: Array<{ id: string; error: string }> }> {
+  await reconcileSyncedSales()
+
   const pending = db().select().from(syncQueue).all()
   if (pending.length === 0) return { synced: 0, failed: [] }
 
@@ -246,6 +248,44 @@ export async function syncPendingSales(): Promise<{ synced: number; failed: Arra
   }
 
   return { synced, failed }
+}
+
+/** Pull reconciliación: backfill cloud_id para ventas ya sincronizadas en cloud pero pendientes localmente. */
+export async function reconcileSyncedSales(): Promise<{ reconciled: number }> {
+  const unsynced = db().select().from(sales).where(sql`${sales.cloud_id} IS NULL`).all()
+  if (unsynced.length === 0) return { reconciled: 0 }
+
+  const since = unsynced
+    .map(s => s.sold_at)
+    .reduce((min, cur) => (cur < min ? cur : min), unsynced[0]!.sold_at)
+
+  try {
+    const result = await fetchCloud<{ data: Array<{ pos_sale_id: string; cloud_id: string }> }>(
+      `/api/v1/pos/sales/sync?since=${encodeURIComponent(since)}&limit=500`,
+      { method: 'GET' },
+    )
+
+    const now = new Date().toISOString()
+    let reconciled = 0
+    for (const row of result.data) {
+      const local = db().select().from(sales).where(eq(sales.id, row.pos_sale_id)).get()
+      if (local && !local.cloud_id) {
+        db().update(sales).set({ cloud_id: row.cloud_id, synced_at: now }).where(eq(sales.id, row.pos_sale_id)).run()
+        const q = db().select().from(syncQueue).where(eq(syncQueue.sale_id, row.pos_sale_id)).get()
+        if (q) db().delete(syncQueue).where(eq(syncQueue.id, q.id)).run()
+        reconciled++
+      }
+    }
+    return { reconciled }
+  } catch {
+    return { reconciled: 0 }
+  }
+}
+
+export async function runBackgroundSync(): Promise<void> {
+  try { await reconcileSyncedSales() } catch { /* offline */ }
+  try { await syncPendingSales() } catch { /* offline */ }
+  try { await syncPendingCashSessions() } catch { /* offline */ }
 }
 
 export async function syncPendingCashSessions() {
@@ -345,6 +385,8 @@ export function registerSyncHandlers(ipc: IpcMain) {
   ipc.handle('sync:sales', async () => {
     const errors: string[] = []
     let salesResult = { synced: 0, failed: [] as Array<{ id: string; error: string }> }
+    try { await reconcileSyncedSales() }
+    catch (e) { errors.push(`reconciliación: ${String(e)}`) }
     try { salesResult = await syncPendingSales() }
     catch (e) { errors.push(`ventas: ${String(e)}`) }
     try { await syncPendingCashSessions() }
@@ -425,13 +467,12 @@ export function registerSyncHandlers(ipc: IpcMain) {
     }
   })
 
-  // Start background timers
+  // Start background timers — pull reconciliación antes de push
   catalogTimer = setInterval(async () => {
     try { await syncCatalog() } catch { /* silent */ }
   }, SYNC_INTERVAL_MS)
 
   salesTimer = setInterval(async () => {
-    try { await syncPendingSales() } catch { /* silent */ }
-    try { await syncPendingCashSessions() } catch { /* silent */ }
+    try { await runBackgroundSync() } catch { /* silent */ }
   }, SALES_SYNC_INTERVAL_MS)
 }

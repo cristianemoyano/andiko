@@ -190,7 +190,7 @@ export async function buildSalesOrderPrintable(id: string, ctx: TenantContext): 
 }
 
 export async function buildSalesInvoicePrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
-  const invoice = (await getInvoice(id)) as unknown as SalesInvoiceLoaded
+  const invoice = (await getInvoice(id, ctx)) as unknown as SalesInvoiceLoaded
   assertPrintAccess({ org_id: invoice.org_id, branch_id: invoice.branch_id }, ctx)
   const issuerName = await getIssuerName(ctx.orgId)
   const pc = invoice.payment_condition as PaymentCondition

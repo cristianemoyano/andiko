@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
+import { makeTenantContext } from '@/lib/tenancy'
 import { paymentUpdateSchema } from '@/modules/sales/payment.schema'
 import { getPayment, updatePayment, deletePayment } from '@/modules/sales/payments.service'
 
 type P = { id: string }
 
-export const GET = withPermission<P>('sales:read', async (_req, ctx) => {
+export const GET = withPermission<P>('sales:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const payment = await getPayment(id)
+    const tenantCtx = await makeTenantContext(session.user)
+    const payment = await getPayment(id, tenantCtx)
     return NextResponse.json(payment)
   } catch {
     return NextResponse.json({ error: 'Cobro no encontrado', code: 'NOT_FOUND' }, { status: 404 })

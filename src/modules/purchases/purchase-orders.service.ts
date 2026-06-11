@@ -8,15 +8,16 @@ import PurchaseOrderItem from './purchase-order-item.model'
 import type { PurchaseOrderInput, PurchaseOrderUpdateInput, PurchaseOrderQuery } from './purchase-order.schema'
 import { nextPurchaseDocNumber, calcLineItem, calcDocumentTotals } from './purchases.utils'
 import { ensurePurchasesBranchAssociations } from './purchases-branch-associations'
+import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
 import type { IvaRate } from '@/types'
 
-export async function listPurchaseOrders(query: PurchaseOrderQuery, orgId: string) {
+export async function listPurchaseOrders(query: PurchaseOrderQuery, ctx: TenantContext) {
   ensurePurchasesBranchAssociations()
 
   const { page, limit, search, status, contact_id } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = { org_id: orgId }
+  const where: Record<string, unknown> = whereAllowedBranches(ctx)
   if (status)     where.status     = status
   if (contact_id) where.contact_id = contact_id
   if (search) {
