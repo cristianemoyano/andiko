@@ -1,3 +1,4 @@
+import pg from 'pg'
 import { Sequelize } from 'sequelize'
 import { env } from '@/config/env'
 
@@ -7,6 +8,9 @@ const isServerless = env.NODE_ENV === 'production'
 
 const sequelize = new Sequelize(env.DATABASE_URL, {
   dialect: 'postgres',
+  // Static import + dialectModule avoids Sequelize's dynamic require('pg'), which
+  // Next.js file tracing cannot follow — required for Vercel serverless functions.
+  dialectModule: pg,
   logging: env.NODE_ENV === 'development' ? console.log : false,
   pool: {
     max: isServerless ? 1 : 10,
