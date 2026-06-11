@@ -1,9 +1,13 @@
 {
   "name": "andiko",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
+  "packageManager": "pnpm@10.28.0",
   "engines": {
     "node": ">=24"
+  },
+  "pnpm": {
+    "nodeLinker": "hoisted"
   },
   "scripts": {
     "dev": "next dev",
