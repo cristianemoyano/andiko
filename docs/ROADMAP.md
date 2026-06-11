@@ -264,7 +264,7 @@ Gestión de stock integrada con ventas y compras.
 - [x] Lista de reposición por depósito: productos con stock ≤ mínimo, cantidad sugerida, exportación CSV (`/inventario/reposicion`)
 
 ### Pendientes
-- [ ] Remitos de entrega
+- [x] Remitos de entrega
 - [ ] Trazabilidad por lotes (lote + vencimiento por cantidad) con salidas FEFO y vínculo explícito en `stock_movements`
 
 ---

@@ -43,6 +43,7 @@ const REFERENCE_TYPE_LABEL: Record<StockReferenceType, string> = {
   manual:           'Manual',
   initial:          'Stock inicial',
   purchase_receipt: 'Recepción compra',
+  delivery_note:    'Remito de entrega',
 }
 
 const PAGE_SIZE = 20
