@@ -32,6 +32,13 @@ export const INVOICE_STATUS_LABEL: Record<string, string> = {
   cancelled:      'Anulada',
 }
 
+export const DELIVERY_NOTE_STATUS_LABEL: Record<string, string> = {
+  draft:     'Borrador',
+  issued:    'Emitido',
+  delivered: 'Entregado',
+  annulled:  'Anulado',
+}
+
 export const PURCHASE_ORDER_STATUS_LABEL: Record<string, string> = {
   draft:              'Borrador',
   sent:               'Enviada',

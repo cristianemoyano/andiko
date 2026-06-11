@@ -5,10 +5,12 @@ import type { TenantContext } from '@/lib/tenancy'
 import { getQuote } from '@/modules/sales/sales-quotes.service'
 import { getOrder } from '@/modules/sales/sales-orders.service'
 import { getInvoice } from '@/modules/sales/invoices.service'
+import { getDeliveryNote } from '@/modules/inventory/delivery-notes.service'
 import { decString, formatDateArg } from './format-utils'
 import { getIssuerName } from './issuer'
 import { assertPrintAccess } from './tenant-guards'
 import {
+  DELIVERY_NOTE_STATUS_LABEL,
   INVOICE_STATUS_LABEL,
   ORDER_STATUS_LABEL,
   PAYMENT_CONDITION_LABEL,
@@ -80,6 +82,21 @@ type SalesInvoiceLoaded = {
     payment_method: string
     reference: string | null
   }>
+}
+
+type DeliveryNoteLoaded = {
+  org_id: string | null
+  branch_id: string | null
+  status: string
+  delivery_number: string
+  carrier: string | null
+  tracking_code: string | null
+  notes: string | null
+  created_at: Date
+  delivery_date: Date | null
+  branch?: BranchInc | null
+  contact?: ContactInc | null
+  items?: Array<{ description: string; quantity: unknown }>
 }
 
 function branchFromModel(b: { id: string; name: string; branch_code: number } | null | undefined): PrintableBranch | null {
@@ -185,6 +202,50 @@ export async function buildSalesOrderPrintable(id: string, ctx: TenantContext): 
     lines: linesFromSalesLikeItems(order.items),
     totals: totalsFrom(order.subtotal, order.discount_amount, order.tax_amount, order.total),
     notes: order.notes ?? null,
+    payments: null,
+  }
+}
+
+export async function buildDeliveryNotePrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
+  const note = (await getDeliveryNote(id, ctx.orgId)) as unknown as DeliveryNoteLoaded
+  assertPrintAccess({ org_id: note.org_id, branch_id: note.branch_id }, ctx)
+  const issuerName = await getIssuerName(ctx.orgId)
+  const isDraft = note.status === 'draft'
+  const lines: PrintableLineItem[] = (note.items ?? []).map(i => ({
+    description: i.description,
+    quantity: decString(i.quantity),
+    unit_price: '0',
+    discount_pct: null,
+    iva_rate: null,
+    subtotal: null,
+    discount_amount: null,
+    tax_amount: null,
+    total: null,
+  }))
+  return {
+    domain: 'sales',
+    kind: 'delivery_note',
+    isDraft,
+    issuer: { name: issuerName },
+    title: 'Remito de entrega',
+    document_number: note.delivery_number,
+    status_code: note.status,
+    status_label: DELIVERY_NOTE_STATUS_LABEL[note.status] ?? note.status,
+    currency: 'ARS',
+    payment_condition: null,
+    payment_condition_label: null,
+    counterparty_role: 'customer',
+    counterparty: counterpartyFromContact(note.contact),
+    branch: branchFromModel(note.branch),
+    meta_dates: [
+      { label: 'Emisión', value: formatDateArg(note.created_at) },
+      { label: 'Entrega', value: formatDateArg(note.delivery_date) },
+      { label: 'Transportista', value: note.carrier ?? null },
+      { label: 'Seguimiento', value: note.tracking_code ?? null },
+    ],
+    lines,
+    totals: { subtotal: '0.00', discount_amount: null, tax_amount: '0.00', total: '0.00' },
+    notes: note.notes ?? null,
     payments: null,
   }
 }
