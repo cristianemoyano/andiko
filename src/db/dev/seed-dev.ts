@@ -879,6 +879,19 @@ async function run() {
         transaction: t,
       })
 
+      if (!org.onboarding_completed_at) {
+        await org.update(
+          {
+            onboarding_completed_at: new Date(),
+            onboarding_data: {
+              company: { razonSocial: tenant.name, nombreComercial: tenant.name },
+              productsMode: 'manual',
+            },
+          },
+          { transaction: t },
+        )
+      }
+
       // Premium SA: plan base sin módulos premium (inventario, compras, contabilidad, pos)
       if (tenant.slug === 'premium') {
         await OrganizationSetting.findOrCreate({
