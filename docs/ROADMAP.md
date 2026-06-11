@@ -343,10 +343,18 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 
 Envío de documentos e notificaciones por email desde el ERP.
 
-- [ ] Templates de email por tipo de documento (presupuesto, pedido, factura)
-- [ ] Envío de documentos al cliente desde el detalle (botón "Enviar por email")
-- [ ] Configuración SMTP por organización (o servicio transaccional tipo Resend/SendGrid)
-- [ ] Historial de envíos por documento
+**Retomar WIP:** `git stash pop` (stash `wip: communications email module`). Código parcial en `src/modules/communications/`, migraciones `20260611150000` / `20260611160000`, `src/lib/crypto.ts`, deps `nodemailer`.
+
+### Backend (parcial — en stash, sin mergear)
+- [ ] Migraciones: `email_logs` + columnas `email_settings` / `email_templates` en `organization_settings`
+- [ ] Servicios: config SMTP por org (`email-settings.service`), templates por documento (`email-templates.service`), transporte SMTP/log (`transport.ts`), resolución de documento (`document-resolver.ts`), cifrado de secretos (`crypto.ts`)
+- [ ] Modelo `EmailLog` + historial por documento
+
+### Pendiente para cerrar el ítem del roadmap
+- [ ] Templates de email por tipo de documento (presupuesto, pedido, factura, remito) — editor UI + defaults con variables `{{contact_name}}`, `{{document_number}}`, etc.
+- [ ] Envío de documentos al cliente desde el detalle (botón "Enviar por email") + servicio de envío que persista `email_logs`
+- [ ] Configuración SMTP por organización — UI en `/configuracion` (o sys-admin) + API REST
+- [ ] Historial de envíos por documento — listado en detalle del comprobante
 - [ ] Notificaciones internas: alertas de stock mínimo, vencimiento de presupuestos
 
 ---
