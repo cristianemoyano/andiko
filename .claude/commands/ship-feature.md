@@ -51,6 +51,12 @@ If already on `develop`, continue. Never commit to `main`.
 - `"test"` → `"vitest run --passWithNoTests"`
 
 ```bash
+pnpm check   # typecheck + lint + test in parallel (preferred)
+```
+
+Or individually:
+
+```bash
 pnpm typecheck   # run from repo root
 pnpm lint        # run from repo root
 pnpm test        # run from repo root

@@ -18,6 +18,7 @@ Andiko is a modular ERP for SMBs in Argentina. Stack: Next.js (App Router), Type
 | Instead of | Prefer |
 |------------|--------|
 | `pnpm test` | `rtk pnpm test` or `rtk test -- pnpm test` |
+| `pnpm check` | `rtk pnpm check` (typecheck + lint + test in parallel) |
 | `pnpm exec tsc --noEmit` | `rtk tsc --noEmit` |
 | `git status`, `git diff`, `git log` | `rtk git status`, etc. |
 | `gh pr …`, `gh api …` | `rtk gh …` |

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.7](https://github.com/cristianemoyano/andiko/compare/v0.2.6...v0.2.7) (2026-06-11)
+
+### Features
+
+* **core:** prod db CLI, Vercel analytics, and dashboard fixes ([6eda0dc](https://github.com/cristianemoyano/andiko/commit/6eda0dc49f8705b3255a4135b1ba86759f81fccb))
+
 ## [0.2.6](https://github.com/cristianemoyano/andiko/compare/v0.2.5...v0.2.6) (2026-06-11)
 
 ### Bug Fixes
