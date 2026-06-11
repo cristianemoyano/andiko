@@ -12,7 +12,7 @@ export const up: Migration = async ({ context: queryInterface }) => {
       branch_id      UUID          REFERENCES branches(id) ON DELETE SET NULL,
       order_id       UUID          REFERENCES purchase_orders(id) ON DELETE SET NULL,
       contact_id     UUID          REFERENCES contacts(id) ON DELETE SET NULL,
-      warehouse_id   UUID          REFERENCES warehouses(id) ON DELETE SET NULL,
+      warehouse_id   UUID,
       receipt_number VARCHAR(20)   NOT NULL,
       status         purchase_receipt_status NOT NULL DEFAULT 'draft',
       receipt_date   TIMESTAMPTZ,

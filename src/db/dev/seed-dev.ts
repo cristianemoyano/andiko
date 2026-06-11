@@ -1,4 +1,5 @@
 import sequelize from '@/lib/db'
+import { QueryTypes } from 'sequelize'
 import Contact from '@/modules/contacts/contact.model'
 import ContactAddress from '@/modules/contacts/contact-address.model'
 import Organization from '@/modules/auth/organization.model'
@@ -35,6 +36,8 @@ import SupplierInvoiceItem from '@/modules/purchases/supplier-invoice-item.model
 import SupplierPayment from '@/modules/purchases/supplier-payment.model'
 import { nextPurchaseDocNumber, calcLineItem as calcPurchaseLine, calcDocumentTotals as calcPurchaseTotals } from '@/modules/purchases/purchases.utils'
 
+const MIN_PROD_PASSWORD_LENGTH = 16
+
 const DEV_SEED = {
   sysAdmin: {
     email: 'admin@andiko.local',
@@ -65,6 +68,76 @@ const DEV_SEED = {
   ],
 } as const
 
+type SeedConfig = {
+  sysAdmin: { email: string; password: string; name: string }
+  tenants: Array<{
+    name: string
+    slug: string
+    branches: Array<{ name: string; address: string }>
+    users: Array<{
+      email: string
+      password: string
+      name: string
+      role: 'admin' | 'operator'
+      branchIndex: number
+      allowedBranchIndexes: number[]
+    }>
+  }>
+}
+
+function requireProdPassword(envKey: string): string {
+  const value = process.env[envKey]?.trim()
+  if (!value || value.length < MIN_PROD_PASSWORD_LENGTH) {
+    throw new Error(
+      `Set ${envKey} in .env.production.local (min ${MIN_PROD_PASSWORD_LENGTH} chars) before pnpm db:seed-prod.`,
+    )
+  }
+  return value
+}
+
+function buildSeedConfig(allowProd: boolean): SeedConfig {
+  if (!allowProd) return DEV_SEED as unknown as SeedConfig
+
+  const [demo, premium] = DEV_SEED.tenants
+  return {
+    sysAdmin: {
+      ...DEV_SEED.sysAdmin,
+      password: requireProdPassword('SEED_SYSADMIN_PASSWORD'),
+    },
+    tenants: [
+      {
+        name: demo.name,
+        slug: demo.slug,
+        branches: demo.branches.map((b) => ({ ...b })),
+        users: [
+          {
+            ...demo.users[0],
+            password: requireProdPassword('SEED_DEMO_ADMIN_PASSWORD'),
+            allowedBranchIndexes: [...demo.users[0].allowedBranchIndexes],
+          },
+          {
+            ...demo.users[1],
+            password: requireProdPassword('SEED_DEMO_OPERATOR_PASSWORD'),
+            allowedBranchIndexes: [...demo.users[1].allowedBranchIndexes],
+          },
+        ],
+      },
+      {
+        name: premium.name,
+        slug: premium.slug,
+        branches: premium.branches.map((b) => ({ ...b })),
+        users: [
+          {
+            ...premium.users[0],
+            password: requireProdPassword('SEED_PREMIUM_ADMIN_PASSWORD'),
+            allowedBranchIndexes: [...premium.users[0].allowedBranchIndexes],
+          },
+        ],
+      },
+    ],
+  }
+}
+
 async function hashPassword(plaintext: string) {
   return bcrypt.hash(plaintext, 12)
 }
@@ -76,18 +149,44 @@ async function ensurePermissionsSeeded(t: import('sequelize').Transaction) {
   const permissions = resources.flatMap((r) =>
     actions.map((a) => ({
       name: `${r}:${a}`,
+      resource: r,
+      action: a,
       description: `${a.charAt(0).toUpperCase() + a.slice(1)} ${r}`,
     })),
   )
 
+  const columnRows = await sequelize.query<{ column_name: string }>(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'permissions'
+     ORDER BY ordinal_position`,
+    { transaction: t, type: QueryTypes.SELECT },
+  )
+  const columns = new Set(columnRows.map((row) => row.column_name))
+  const usesLegacyPermissions = columns.has('resource') && columns.has('action')
+
   // 1) Ensure permissions catalog exists
   for (const p of permissions) {
-    await sequelize.query(
-      `insert into permissions (name, description)
-       values (:name, :description)
-       on conflict (name) do nothing`,
-      { transaction: t, replacements: p },
-    )
+    if (usesLegacyPermissions) {
+      await sequelize.query(
+        `INSERT INTO permissions (id, name, resource, action, description, "updatedAt")
+         VALUES (gen_random_uuid(), :name, :resource, :action, :description, NOW())
+         ON CONFLICT (name) DO NOTHING`,
+        { transaction: t, replacements: p },
+      )
+    } else {
+      await sequelize.query(
+        `INSERT INTO permissions (id, name, description)
+         VALUES (gen_random_uuid(), :name, :description)
+         ON CONFLICT (name) DO NOTHING`,
+        { transaction: t, replacements: p },
+      )
+    }
+  }
+
+  // Legacy role_permissions (roleId/permissionId) — skip; not compatible with Andiko ERP seed.
+  if (columns.has('createdAt') && !columns.has('created_at')) {
+    return
   }
 
   // 2) Ensure global role defaults exist (org_id = NULL)
@@ -104,11 +203,11 @@ async function ensurePermissionsSeeded(t: import('sequelize').Transaction) {
   for (const role of ['admin', 'operator', 'readonly'] as const) {
     for (const permName of defaultsFor(role)) {
       await sequelize.query(
-        `insert into role_permissions (role, permission_id, org_id)
-         select :role, p.id, null
-         from permissions p
-         where p.name = :name
-         on conflict on constraint uq_role_permission_org do nothing`,
+        `INSERT INTO role_permissions (id, role, permission_id, org_id)
+         SELECT gen_random_uuid(), :role, p.id, NULL
+         FROM permissions p
+         WHERE p.name = :name
+         ON CONFLICT ON CONSTRAINT uq_role_permission_org DO NOTHING`,
         { transaction: t, replacements: { role, name: permName } },
       )
     }
@@ -732,20 +831,35 @@ async function seedPurchases(
 }
 
 async function run() {
-  if (process.env.NODE_ENV !== 'development') {
-    throw new Error('seed-dev is only allowed in development')
+  const allowProd = process.env.ALLOW_PROD_SEED === 'yes'
+  if (process.env.NODE_ENV !== 'development' && !allowProd) {
+    throw new Error(
+      'seed-dev is only allowed in development (use pnpm db:seed-prod for production)',
+    )
   }
+  if (allowProd) {
+    const dbUrl = process.env.DATABASE_URL?.trim()
+    if (!dbUrl) {
+      throw new Error(
+        'DATABASE_URL is empty in .env.production.local. Copy the connection string from Vercel → Project → Settings → Environment Variables (or Neon dashboard) into that file, then re-run pnpm db:seed-prod.',
+      )
+    }
+    const masked = dbUrl.replace(/:([^:@/]+)@/, ':***@')
+    console.warn(`⚠️  Seeding production database: ${masked}`)
+  }
+
+  const seed = buildSeedConfig(allowProd)
 
   await sequelize.transaction(async (t) => {
     await ensurePermissionsSeeded(t)
 
     // sys-admin (no org)
-    const sysHash = await hashPassword(DEV_SEED.sysAdmin.password)
-    await User.findOrCreate({
-      where: { email: DEV_SEED.sysAdmin.email },
+    const sysHash = await hashPassword(seed.sysAdmin.password)
+    const [sysAdmin, sysAdminCreated] = await User.findOrCreate({
+      where: { email: seed.sysAdmin.email },
       defaults: {
-        email: DEV_SEED.sysAdmin.email,
-        name: DEV_SEED.sysAdmin.name,
+        email: seed.sysAdmin.email,
+        name: seed.sysAdmin.name,
         password_hash: sysHash,
         role: 'sys-admin',
         is_active: true,
@@ -754,8 +868,11 @@ async function run() {
       },
       transaction: t,
     })
+    if (allowProd && !sysAdminCreated) {
+      await sysAdmin.update({ password_hash: sysHash }, { transaction: t })
+    }
 
-    for (const tenant of DEV_SEED.tenants) {
+    for (const tenant of seed.tenants) {
       const [org] = await Organization.findOrCreate({
         where: { slug: tenant.slug },
         defaults: { name: tenant.name, slug: tenant.slug, is_active: true },
@@ -798,7 +915,7 @@ async function run() {
       for (const u of tenant.users) {
         const password_hash = await hashPassword(u.password)
         const defaultBranch = branches[u.branchIndex]!
-        const [user] = await User.findOrCreate({
+        const [user, userCreated] = await User.findOrCreate({
           where: { email: u.email },
           defaults: {
             email: u.email,
@@ -811,6 +928,9 @@ async function run() {
           },
           transaction: t,
         })
+        if (allowProd && !userCreated) {
+          await user.update({ password_hash }, { transaction: t })
+        }
 
         const allowed = u.allowedBranchIndexes.map((idx) => branches[idx]!.id)
         for (const branch_id of allowed) {
@@ -1045,9 +1165,17 @@ async function run() {
     }
   })
 
-  console.log('Dev seed completed.')
-  console.log(`Sys-admin: ${DEV_SEED.sysAdmin.email} / ${DEV_SEED.sysAdmin.password}`)
-  console.log('Tenant demo: admin@demo.local / demo12345, op@demo.local / demo12345')
+  if (allowProd) {
+    console.log('Prod seed completed.')
+    console.log('Users created/updated. Passwords loaded from SEED_* env vars (not printed).')
+    console.log(`  sys-admin: ${seed.sysAdmin.email}`)
+    console.log('  demo: admin@demo.local, op@demo.local')
+    console.log('  premium: admin@premium.local')
+  } else {
+    console.log('Dev seed completed.')
+    console.log(`Sys-admin: ${seed.sysAdmin.email} / ${seed.sysAdmin.password}`)
+    console.log('Tenant demo: admin@demo.local / demo12345, op@demo.local / demo12345')
+  }
 }
 
 run()

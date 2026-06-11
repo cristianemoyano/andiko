@@ -296,7 +296,7 @@ export async function getPanelActivity(orgId: string, filters: PanelFilters) {
       FROM stock_movements sm
       JOIN warehouses w ON w.id = sm.warehouse_id
       LEFT JOIN product_variants pv ON pv.id = sm.variant_id
-      WHERE sm.org_id = :orgId AND sm.deleted_at IS NULL
+      WHERE sm.org_id = :orgId
         AND sm.created_at >= :from AND sm.created_at <= :to ${stockBranch}
 
       UNION ALL

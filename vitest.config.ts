@@ -8,6 +8,8 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['src/**/*.{test,spec}.ts'],
+    pool: 'threads',
+    fileParallelism: true,
   },
   resolve: {
     alias: {

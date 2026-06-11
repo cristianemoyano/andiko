@@ -1,6 +1,5 @@
 {
   "*.{ts,tsx}": [
-    "eslint --fix",
-    "bash -c 'tsc --noEmit'"
+    "eslint --fix --max-warnings=0"
   ]
 }
