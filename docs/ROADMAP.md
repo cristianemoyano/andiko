@@ -230,8 +230,8 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] Listado de cuentas corrientes por cliente
 - [x] Reportes: ventas por período, por cliente, por producto
 - [x] **Impresión y exportación de documentos (MVP)** — Módulo `printing` (registro por dominio/recurso), API `GET /api/v1/printing/[domain]/[resource]/[id]`, vistas print bajo `/ventas/...` y `/compras/...` (layout A4, PDF vía `window.print()` + `@media print`). Borradores imprimibles con marca **BORRADOR** (uso interno).
-- [x] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página.
-- [x] Editor visual de template (tipografía, paleta, secciones visibles).
+- [ ] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página. *(Implementado en rama; pendiente de pulir como producto: descubribilidad en menú, UX del editor y validación en prod.)*
+- [ ] Editor visual de template (tipografía, paleta, secciones visibles). *(Misma situación: código listo para merge, falta cerrar la experiencia de usuario.)*
 
 ---
 
