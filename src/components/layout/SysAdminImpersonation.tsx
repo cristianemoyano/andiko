@@ -17,6 +17,68 @@ type UserHit = {
   branch_id: string | null
 }
 
+type RecentImpersonation = Pick<UserHit, 'id' | 'email' | 'name' | 'role'>
+
+const RECENT_IMPERSONATIONS_KEY = 'andiko:impersonation-recent'
+const RECENT_IMPERSONATIONS_LIMIT = 5
+
+function readRecentImpersonations(): RecentImpersonation[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(RECENT_IMPERSONATIONS_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((row): row is RecentImpersonation =>
+        typeof row === 'object'
+        && row !== null
+        && typeof (row as RecentImpersonation).id === 'string'
+        && typeof (row as RecentImpersonation).email === 'string'
+        && typeof (row as RecentImpersonation).name === 'string'
+        && typeof (row as RecentImpersonation).role === 'string',
+      )
+      .slice(0, RECENT_IMPERSONATIONS_LIMIT)
+  } catch {
+    return []
+  }
+}
+
+function pushRecentImpersonation(user: RecentImpersonation): RecentImpersonation[] {
+  const next = [user, ...readRecentImpersonations().filter(u => u.id !== user.id)].slice(0, RECENT_IMPERSONATIONS_LIMIT)
+  try {
+    window.localStorage.setItem(RECENT_IMPERSONATIONS_KEY, JSON.stringify(next))
+  } catch {
+    // localStorage full or unavailable — ignore
+  }
+  return next
+}
+
+function UserPickRow({
+  user,
+  disabled,
+  onPick,
+}: {
+  user: RecentImpersonation
+  disabled: boolean
+  onPick: () => void
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onPick}
+        className="w-full text-left px-3 py-2 text-[13px] hover:bg-zinc-50 disabled:opacity-50"
+      >
+        <div className="font-medium text-zinc-900">{user.name}</div>
+        <div className="text-[11px] text-zinc-500">{user.email}</div>
+        <div className="text-[10px] text-zinc-400 mt-0.5">{user.role}</div>
+      </button>
+    </li>
+  )
+}
+
 /** “Entrar como otro usuario”: figura actual → flecha → usuario destino. */
 function ImpersonateActionIcon({ className }: { className?: string }) {
   return (
@@ -49,8 +111,15 @@ export function SysAdminImpersonation() {
   const [loading, setLoading] = useState(false)
   const [submittingId, setSubmittingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [recentUsers, setRecentUsers] = useState<RecentImpersonation[]>([])
 
   const isSysAdminAccount = session?.user?.realRole === 'sys-admin'
+
+  function openImpersonationModal() {
+    setError(null)
+    setRecentUsers(readRecentImpersonations())
+    setModalOpen(true)
+  }
 
   useEffect(() => {
     if (!modalOpen || !isSysAdminAccount) return
@@ -80,15 +149,16 @@ export function SysAdminImpersonation() {
   const trimmedQuery = query.trim()
   const displayHits = trimmedQuery.length < 2 ? [] : hits
 
-  async function handleImpersonate(userId: string) {
-    setSubmittingId(userId)
+  async function handleImpersonate(user: RecentImpersonation) {
+    setSubmittingId(user.id)
     setError(null)
     try {
       await fetchJson('/api/v1/session/impersonate', {
         method: 'POST',
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId: user.id }),
       })
-      await update({ impersonation: { userId } })
+      await update({ impersonation: { userId: user.id } })
+      setRecentUsers(pushRecentImpersonation(user))
       setModalOpen(false)
       setQuery('')
       setHits([])
@@ -132,10 +202,7 @@ export function SysAdminImpersonation() {
       <button
         type="button"
         title={imp ? 'Cambiar de usuario impersonado' : 'Impersonar otro usuario'}
-        onClick={() => {
-          setError(null)
-          setModalOpen(true)
-        }}
+        onClick={openImpersonationModal}
         className={cn(
           'flex w-full items-center gap-2.5 h-[34px] px-2 rounded-sm text-[13px] mb-px transition-colors text-left cursor-pointer',
           'text-zinc-700 hover:bg-zinc-100',
@@ -151,6 +218,9 @@ export function SysAdminImpersonation() {
       <Dialog
         open={modalOpen}
         onOpenChange={(open) => {
+          if (open) {
+            setRecentUsers(readRecentImpersonations())
+          }
           setModalOpen(open)
           if (!open) {
             setQuery('')
@@ -169,28 +239,39 @@ export function SysAdminImpersonation() {
             onChange={e => setQuery(e.target.value)}
             autoComplete="off"
           />
+          {trimmedQuery.length < 2 && recentUsers.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-zinc-500">Recientes</p>
+              <ul className="max-h-[180px] overflow-y-auto divide-y divide-zinc-100 rounded-sm border border-zinc-200">
+                {recentUsers.map(u => (
+                  <UserPickRow
+                    key={u.id}
+                    user={u}
+                    disabled={!!submittingId}
+                    onPick={() => void handleImpersonate(u)}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
           {loading && trimmedQuery.length >= 2 && (
             <p className="text-[11px] text-zinc-500">Buscando…</p>
           )}
           {!loading && trimmedQuery.length >= 2 && displayHits.length === 0 && (
             <p className="text-[11px] text-zinc-500">Sin resultados.</p>
           )}
-          <ul className="max-h-[240px] overflow-y-auto divide-y divide-zinc-100 rounded-sm border border-zinc-200">
-            {displayHits.map(h => (
-              <li key={h.id}>
-                <button
-                  type="button"
+          {trimmedQuery.length >= 2 && displayHits.length > 0 && (
+            <ul className="max-h-[240px] overflow-y-auto divide-y divide-zinc-100 rounded-sm border border-zinc-200">
+              {displayHits.map(h => (
+                <UserPickRow
+                  key={h.id}
+                  user={h}
                   disabled={!!submittingId}
-                  onClick={() => void handleImpersonate(h.id)}
-                  className="w-full text-left px-3 py-2 text-[13px] hover:bg-zinc-50 disabled:opacity-50"
-                >
-                  <div className="font-medium text-zinc-900">{h.name}</div>
-                  <div className="text-[11px] text-zinc-500">{h.email}</div>
-                  <div className="text-[10px] text-zinc-400 mt-0.5">{h.role}</div>
-                </button>
-              </li>
-            ))}
-          </ul>
+                  onPick={() => void handleImpersonate(h)}
+                />
+              ))}
+            </ul>
+          )}
           {error && (
             <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
               {error}
