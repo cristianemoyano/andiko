@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next'
 
-// pg + transitive deps must be traced into serverless bundles when listed in
-// serverExternalPackages — pnpm's isolated node_modules layout often omits them.
+// serverExternalPackages excludes pg from the bundle — trace real hoisted files
+// into each lambda (node-linker=hoisted in .npmrc avoids pnpm symlink rejection).
 const pgTraceIncludes = [
   './node_modules/pg/**',
   './node_modules/pg-hstore/**',
