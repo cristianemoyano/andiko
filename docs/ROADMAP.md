@@ -146,7 +146,7 @@ Base de datos de clientes y proveedores. Dependencia de todos los módulos sigui
 - [x] Breadcrumb `Contactos › Razón social` con navegación de vuelta al listado
 - [x] Datos de pago: CBU, alias, banco (CRUD desde vista detalle, validación de 22 dígitos, dato principal)
 - [x] Múltiples direcciones por contacto (entrega, fiscal, comercial) con CRUD desde vista detalle
-- [ ] Importación desde CSV
+- [x] Importación desde CSV
 
 ---
 
