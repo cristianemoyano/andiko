@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.4](https://github.com/cristianemoyano/andiko/compare/v0.2.3...v0.2.4) (2026-06-11)
+
+### Bug Fixes
+
+* **core:** regenerate lockfile for hoisted pnpm linker ([0d9ac34](https://github.com/cristianemoyano/andiko/commit/0d9ac34599dfe9ae1f572100d53ef88745df3322))
+
 ## [0.2.3](https://github.com/cristianemoyano/andiko/compare/v0.2.2...v0.2.3) (2026-06-11)
 
 ### Bug Fixes
