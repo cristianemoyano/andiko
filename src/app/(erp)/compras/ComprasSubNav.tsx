@@ -8,7 +8,10 @@ const LINKS = [
   { href: '/compras/ordenes',    label: 'Órdenes de compra' },
   { href: '/compras/recepciones', label: 'Recepciones' },
   { href: '/compras/facturas',   label: 'Facturas proveedor' },
-  { href: '/compras/pagos',      label: 'Pagos' },
+  { href: '/compras/pagos',            label: 'Pagos' },
+  { href: '/compras/cuenta-corriente', label: 'Cuenta corriente' },
+  { href: '/compras/conciliacion',     label: 'Conciliación' },
+  { href: '/compras/reportes',         label: 'Reportes' },
 ] as const
 
 export function ComprasSubNav() {

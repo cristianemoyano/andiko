@@ -5,13 +5,14 @@ import sequelize from '@/lib/db'
 export { calcLineItem, calcDocumentTotals } from './sales.math'
 export type { LineItemTotals, DocumentTotals } from './sales.math'
 
-type DocumentType = 'quote' | 'order' | 'invoice' | 'payment'
+type DocumentType = 'quote' | 'order' | 'invoice' | 'payment' | 'credit_note'
 
 const DOC_PREFIXES: Record<DocumentType, string> = {
-  quote:   'PRES',
-  order:   'PED',
-  invoice: 'FAC',
-  payment: 'COB',
+  quote:       'PRES',
+  order:       'PED',
+  invoice:     'FAC',
+  payment:     'COB',
+  credit_note: 'NC',
 }
 
 /**

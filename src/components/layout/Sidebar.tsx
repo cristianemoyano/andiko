@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { SysAdminImpersonation } from './SysAdminImpersonation'
 
@@ -110,6 +110,7 @@ interface SidebarProps {
   /** Signed-in account is sys-admin (including while impersonating another user) */
   isRealSysAdmin?: boolean
   /** Show link to Organizaciones: real sys-admin and not impersonating */
+  /** Initial value from server layout (used until client session hydrates) */
   showSysAdminNavigation?: boolean
 }
 
@@ -117,12 +118,21 @@ export function Sidebar({
   userName,
   userRole,
   isRealSysAdmin = false,
-  showSysAdminNavigation = false,
+  showSysAdminNavigation: showSysAdminNavigationInitial = false,
 }: SidebarProps) {
   const pathname = usePathname()
+  const { data: session } = useSession()
 
-  const initials = userName
-    ? userName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+  // Re-read from client session so nav updates when impersonation starts/stops without refresh.
+  const showSysAdminNavigation = session?.user
+    ? session.user.realRole === 'sys-admin' && !session.user.impersonation
+    : showSysAdminNavigationInitial
+
+  const displayName = session?.user?.name ?? session?.user?.email ?? userName
+  const displayRole = session?.user?.role ?? userRole
+
+  const initials = displayName
+    ? displayName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
     : '?'
 
   return (
@@ -228,8 +238,8 @@ export function Sidebar({
             {initials}
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-medium text-zinc-900 truncate">{userName ?? '—'}</div>
-            <div className="text-[11px] text-zinc-400 truncate">{userRole ?? ''}</div>
+            <div className="text-xs font-medium text-zinc-900 truncate">{displayName ?? '—'}</div>
+            <div className="text-[11px] text-zinc-400 truncate">{displayRole ?? ''}</div>
           </div>
         </Link>
         <button

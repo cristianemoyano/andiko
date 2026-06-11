@@ -18,3 +18,20 @@ export { Dialog } from './Dialog'
 export type { DialogProps } from './Dialog'
 export { Image } from './Image'
 export type { ImageProps } from './Image'
+export { Checkbox } from './Checkbox'
+export type { CheckboxProps, CheckboxCheckedState } from './Checkbox'
+export { Switch } from './Switch'
+export type { SwitchProps } from './Switch'
+export { Tooltip, TooltipProvider } from './Tooltip'
+export type { TooltipProps } from './Tooltip'
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from './DropdownMenu'
+export type { DropdownMenuItemProps } from './DropdownMenu'
+export { Select } from './Select'
+export type { SelectProps, SelectOption } from './Select'

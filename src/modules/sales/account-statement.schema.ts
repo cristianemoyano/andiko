@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { paginationSchema } from '@/lib/pagination'
 
-export const ACCOUNT_STATEMENT_MOVEMENT_TYPES = ['invoice', 'payment'] as const
+export const ACCOUNT_STATEMENT_MOVEMENT_TYPES = ['invoice', 'payment', 'credit_note'] as const
 export type AccountStatementMovementType = (typeof ACCOUNT_STATEMENT_MOVEMENT_TYPES)[number]
 
 export const accountStatementQuerySchema = paginationSchema.extend({
@@ -21,3 +21,20 @@ export const accountStatementQuerySchema = paginationSchema.extend({
 })
 
 export type AccountStatementQuery = z.infer<typeof accountStatementQuerySchema>
+
+function queryBoolean(defaultValue: boolean) {
+  return z.preprocess((val: unknown) => {
+    if (val === undefined || val === null || val === '') return undefined
+    return val === 'true' || val === true
+  }, z.boolean().optional().default(defaultValue))
+}
+
+/** Listado global de cuentas corrientes (resumen por cliente). */
+export const accountStatementSummaryListQuerySchema = paginationSchema.extend({
+  /** Busca por razón social, nombre de fantasía o CUIT. */
+  search: z.string().optional(),
+  /** Por defecto solo clientes con saldo pendiente. */
+  only_with_balance: queryBoolean(true),
+})
+
+export type AccountStatementSummaryListQuery = z.infer<typeof accountStatementSummaryListQuerySchema>

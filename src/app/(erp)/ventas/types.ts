@@ -225,7 +225,7 @@ export interface Invoice {
 // --- Account statement (cuenta corriente) ---
 
 export type AccountDebtStatus = 'up_to_date' | 'with_balance' | 'overdue'
-export type AccountMovementType = 'invoice' | 'payment'
+export type AccountMovementType = 'invoice' | 'payment' | 'credit_note'
 
 export const ACCOUNT_DEBT_STATUS_LABEL: Record<AccountDebtStatus, string> = {
   up_to_date: 'Al día',
@@ -234,8 +234,9 @@ export const ACCOUNT_DEBT_STATUS_LABEL: Record<AccountDebtStatus, string> = {
 }
 
 export const ACCOUNT_MOVEMENT_TYPE_LABEL: Record<AccountMovementType, string> = {
-  invoice: 'Factura',
-  payment: 'Cobro',
+  invoice:     'Factura',
+  payment:     'Cobro',
+  credit_note: 'Nota de crédito',
 }
 
 export interface AccountStatementSummary {
@@ -273,4 +274,62 @@ export interface AccountStatementResponse {
   page: number
   limit: number
   pages: number
+}
+
+/** Fila del listado global de cuentas corrientes (`GET /api/v1/sales/account-statements`). */
+export interface AccountStatementSummaryRow {
+  contact_id: string
+  legal_name: string
+  trade_name: string | null
+  cuit: string | null
+  invoices_count: number
+  total_invoiced: string
+  total_paid: string
+  balance: string
+  overdue_balance: string
+  debt_status: AccountDebtStatus
+}
+
+// --- Reportes de ventas ---
+
+export type SalesReportGroupBy = 'period' | 'customer' | 'product'
+export type SalesReportGranularity = 'day' | 'week' | 'month'
+
+export const SALES_REPORT_GROUP_BY_LABEL: Record<SalesReportGroupBy, string> = {
+  period:   'Por período',
+  customer: 'Por cliente',
+  product:  'Por producto',
+}
+
+export const SALES_REPORT_GRANULARITY_LABEL: Record<SalesReportGranularity, string> = {
+  day:   'Día',
+  week:  'Semana',
+  month: 'Mes',
+}
+
+export interface SalesReportRow {
+  group_key: string
+  label: string
+  secondary_label: string | null
+  documents: number
+  quantity: string | null
+  subtotal: string
+  tax: string
+  total: string
+}
+
+export interface SalesReportTotals {
+  documents: number
+  quantity: string | null
+  subtotal: string
+  tax: string
+  total: string
+}
+
+export interface SalesReportResponse {
+  group_by: SalesReportGroupBy
+  granularity: SalesReportGranularity
+  data: SalesReportRow[]
+  totals: SalesReportTotals
+  truncated: boolean
 }

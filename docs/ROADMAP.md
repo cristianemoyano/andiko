@@ -59,19 +59,19 @@ Ningún componente se usa en producción sin su story.
 - [x] Button (variantes: primary, secondary, ghost, danger; tamaños: sm, md, lg)
 - [x] Input (estados: error, disabled, readonly)
 - [x] FormField (label + control + mensaje de error, Radix Label)
-- [ ] Select / Combobox (búsqueda, multi-select)
+- [x] Select / Combobox (búsqueda, multi-select)
 - [x] Textarea
-- [ ] Checkbox y Switch
+- [x] Checkbox y Switch
 - [x] Badge / StatusBadge (para estados de documentos ERP)
-- [ ] Tooltip
+- [x] Tooltip
 - [x] Modal / Dialog (con focus trap, Radix Dialog)
-- [ ] Dropdown Menu
+- [x] Dropdown Menu
 
 ### Componentes de layout
 - [x] TopBar / PageHeader (breadcrumb + slot de acciones)
-- [ ] Card / Panel
+- [x] Card / Panel
 - [x] Sidebar (navegación principal, logout, estado activo)
-- [ ] Tabs
+- [x] Tabs
 
 ### Componentes ERP-específicos
 - [x] DataTable (columnas configurables, sorting client-side, row actions)
@@ -172,21 +172,20 @@ Productos y servicios. Requisito mínimo para facturar.
 
 Trabajo transversal para garantizar aislamiento fuerte por `org_id` y `branch_id`, y un panel sys-admin para administrar organizaciones/sucursales/usuarios.
 
-- [ ] Extender `organizations` con campos fiscales mínimos + Zod + UI sys-admin
-- [ ] Extender `branches` con campos operativos (dirección estructurada, horarios, pos_number) + UI sys-admin
-- [ ] Crear `organization_settings` (enabled_modules/features/customizations) + API sys-admin + lectura en layout/sidebar + guards por módulo/feature
-- [ ] Reutilizar `BranchSelectField` en módulos branch-scoped y asegurar default + restricción por usuario en todos los formularios relevantes
-- [ ] Suite de tests multitenant (no-cross-tenant) + permisos de sucursal (`user_branches`) para endpoints clave
+### Panel sys-admin (completado)
+- [x] `/sys-admin/organizaciones` — listado de orgs, crear/editar/eliminar
+- [x] `/sys-admin/organizaciones/[id]` — detalle con sucursales y usuarios de la org
+- [x] CRUD de sucursales por org (nombre, dirección, `branch_code`)
+- [x] CRUD de usuarios por org: email, rol, contraseña, PIN POS, asignación de sucursales (`user_branches`), sucursal default
+- [x] `requireSysAdmin` guard en todas las rutas sys-admin
+- [x] `user_branches` ya operativo en `TenantContext` para filtrado por sucursal
 
-### Pendientes derivados del plan multitenant org+branch
-
-- [ ] Enforcements DB: completar checklist de tablas branch-scoped y asegurar índices/uniques *scoped* (`UNIQUE(org_id, ...)` / `UNIQUE(org_id, branch_id, ...)`) en todas las entidades relevantes
-- [ ] Consistencia `org_id`↔`branch_id`: estandarizar estrategia (FK compuesta `(branch_id, org_id)` → `branches(id, org_id)` vs trigger) y aplicarla a todas las tablas branch-scoped
-- [ ] Policy de lecturas: enforzar `user_branches` también en lecturas (no solo en writes) para todos los módulos branch-scoped
-- [ ] Panel sys-admin: gestión de branches y usuarios con asignación de branches (`user_branches`) y branch default (`users.branch_id`)
-- [ ] Wrapper tenancy: adopción gradual por módulo (ventas, catálogo, contactos, y futuros inventory/purchases/accounting) sin hacks y sin depender de `resolveOrgIdForMutation`
-- [ ] Plan de validación/rollout: migraciones por pasos (nullable + backfill → NOT NULL → constraints) con tests “no cross tenant”
-- [ ] Definir mapa base vs premium (ej. `accounting` premium; `inventory` premium por features) e integrarlo con `organization_settings`
+### Pendientes
+- [x] Campos fiscales de org en UI sys-admin (CUIT, razón social legal, condición IVA, domicilio fiscal)
+- [x] `organization_settings` (enabled_modules/features) + guards por módulo/feature
+- [ ] Policy de lecturas: enforzar `user_branches` también en lecturas (no solo en writes)
+- [ ] Enforcements DB: índices/uniques scoped (`UNIQUE(org_id, ...)`) en entidades relevantes
+- [ ] Definir mapa base vs premium e integrarlo con `organization_settings`
 
 ---
 
@@ -226,9 +225,9 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] Rediseño UX Ventas — fase 3: `order_id` requerido en facturas (NOT NULL + Zod); conversión solo desde `delivered`; `price_list_id` en presupuestos, pedidos y facturas
 - [x] Rediseño UX Ventas — fase 4: `SalesLineItemsEditor` (búsqueda de producto con autocomplete de precio/IVA) + `StatusPipeline` (stepper horizontal por tipo de documento)
 - [x] Rediseño UX Ventas — fase 5: formularios de página completa para nuevo presupuesto y nuevo pedido; vistas de detalle rediseñadas con `StatusPipeline` + edición in-place + transiciones de estado; listas navegan a `/[id]` al hacer click; eliminación de InvoiceModal/OrderModal/QuoteModal
-- [ ] Notas de crédito internas
-- [ ] Listado de cuentas corrientes por cliente
-- [ ] Reportes: ventas por período, por cliente, por producto
+- [x] Notas de crédito internas — NC-XX-NNNN, borrador → emitida → anulada; aplica automáticamente al saldo de factura vinculada; aparece en cuenta corriente del cliente
+- [x] Listado de cuentas corrientes por cliente
+- [x] Reportes: ventas por período, por cliente, por producto
 - [x] **Impresión y exportación de documentos (MVP)** — Módulo `printing` (registro por dominio/recurso), API `GET /api/v1/printing/[domain]/[resource]/[id]`, vistas print bajo `/ventas/...` y `/compras/...` (layout A4, PDF vía `window.print()` + `@media print`). Borradores imprimibles con marca **BORRADOR** (uso interno).
 - [ ] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página.
 - [ ] Editor visual de template (tipografía, paleta, secciones visibles).
@@ -298,9 +297,9 @@ Ciclo de compras: orden → recepción → factura proveedor → pago.
 - [x] Listado de pagos a proveedores
 
 ### Pendientes
-- [ ] Cuentas corrientes por proveedor — vista `/compras/proveedores/[id]/cuenta-corriente` con historial unificado de órdenes, recepciones, facturas y pagos del proveedor; saldo corriente en tiempo real; similar a la cuenta corriente de cliente en Ventas
-- [ ] Conciliación orden → recepción → factura (alertas de diferencias de precio/cantidad)
-- [ ] Reportes: compras por período, por proveedor, por categoría de producto
+- [x] Cuenta corriente proveedor — `/compras/cuenta-corriente` con historial de facturas + pagos, saldo, vencido y filtros por período (mismo patrón que ventas CC)
+- [x] Conciliación orden → recepción → factura (alertas de diferencias de precio/cantidad)
+- [x] Reportes: compras por período, por proveedor, por categoría de producto
 
 ---
 

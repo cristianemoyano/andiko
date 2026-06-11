@@ -6,6 +6,7 @@ import { whereAllowedBranches, whereOrg, type TenantContext } from '@/lib/tenanc
 import Contact from '@/modules/contacts/contact.model'
 import Invoice from './invoice.model'
 import Payment from './payment.model'
+import CreditNote from './credit-note.model'
 import type { AccountStatementQuery, AccountStatementMovementType } from './account-statement.schema'
 
 export type AccountStatementLine = {
@@ -82,11 +83,20 @@ export async function getAccountStatement(contactId: string, query: AccountState
     order: [['payment_date', 'ASC'], ['created_at', 'ASC']],
   })
 
+  const creditNotes = await CreditNote.findAll({
+    where: whereAllowedBranches(ctx, {
+      contact_id: contactId,
+      status: 'issued',
+    }),
+    attributes: ['id', 'credit_note_number', 'issue_date', 'total', 'reason', 'created_at'],
+    order: [['issue_date', 'ASC'], ['created_at', 'ASC']],
+  })
+
   const from = query.from ? atStartOfDay(query.from) : null
   const to = query.to ? atEndOfDay(query.to) : null
   const search = query.search?.trim().toLowerCase() ?? ''
 
-  const allMovements = buildMovements(invoices, payments)
+  const allMovements = buildMovements(invoices, payments, creditNotes)
   const openingBalance = allMovements
     .filter(m => (from ? m.date < from : false))
     .reduce((acc, m) => acc.plus(m.debit).minus(m.credit), new Decimal(0))
@@ -173,7 +183,7 @@ function buildSummary(invoices: Invoice[]) {
   } satisfies AccountStatementSummary
 }
 
-function buildMovements(invoices: Invoice[], payments: Payment[]): MovementDraft[] {
+function buildMovements(invoices: Invoice[], payments: Payment[], creditNotes: CreditNote[]): MovementDraft[] {
   const invoiceMovements: MovementDraft[] = invoices
     .filter(i => i.status !== 'cancelled')
     .map(invoice => ({
@@ -205,7 +215,19 @@ function buildMovements(invoices: Invoice[], payments: Payment[]): MovementDraft
       credit: parseDecimal(payment.amount),
     }))
 
-  return [...invoiceMovements, ...paymentMovements].sort((a, b) => {
+  const creditNoteMovements: MovementDraft[] = creditNotes.map(cn => ({
+    id: `credit_note:${cn.id}`,
+    movement_type: 'credit_note' as AccountStatementMovementType,
+    movement_id: String(cn.id),
+    date: cn.issue_date ? new Date(cn.issue_date) : new Date(cn.created_at),
+    document_number: String(cn.credit_note_number),
+    description: cn.reason ? String(cn.reason) : null,
+    due_date: null,
+    debit: new Decimal(0),
+    credit: parseDecimal(cn.total),
+  }))
+
+  return [...invoiceMovements, ...paymentMovements, ...creditNoteMovements].sort((a, b) => {
     const dayCompare = toUtcDayKey(a.date).localeCompare(toUtcDayKey(b.date))
     if (dayCompare !== 0) return dayCompare
 

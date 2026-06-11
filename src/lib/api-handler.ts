@@ -2,6 +2,7 @@ import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { can, type Permission } from '@/lib/permissions'
+import { isModuleEnabled, moduleForPermission } from '@/modules/auth/organization-settings.service'
 import type { UserRole } from '@/types/roles'
 import type { Session } from 'next-auth'
 
@@ -67,6 +68,17 @@ export function withPermission<P extends Record<string, string> = Record<string,
         { error: 'Forbidden', code: 'FORBIDDEN' },
         { status: 403 },
       )
+    }
+
+    const moduleKey = moduleForPermission(permission)
+    if (moduleKey && orgId && role !== 'sys-admin') {
+      const enabled = await isModuleEnabled(orgId, moduleKey)
+      if (!enabled) {
+        return NextResponse.json(
+          { error: 'Módulo no habilitado para esta organización.', code: 'MODULE_DISABLED' },
+          { status: 403 },
+        )
+      }
     }
 
     return handler(req, ctx, session as AuthedSession)

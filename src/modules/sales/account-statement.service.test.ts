@@ -20,9 +20,16 @@ vi.mock('./payment.model', () => ({
   },
 }))
 
+vi.mock('./credit-note.model', () => ({
+  default: {
+    findAll: vi.fn(),
+  },
+}))
+
 import Contact from '@/modules/contacts/contact.model'
 import Invoice from './invoice.model'
 import Payment from './payment.model'
+import CreditNote from './credit-note.model'
 import { getAccountStatement } from './account-statement.service'
 
 const tenantCtx: TenantContext = {
@@ -44,6 +51,7 @@ describe('getAccountStatement', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockContact()
+    ;(CreditNote.findAll as Mock).mockResolvedValue([])
   })
 
   it('builds summary and running balance with partial payments', async () => {

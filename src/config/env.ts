@@ -5,6 +5,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   AUTH_SECRET: z.string().min(1),
   AUTH_URL: z.string().url().default('http://localhost:3000'),
+  MIGRATION_SECRET: z.string().min(32).optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)
