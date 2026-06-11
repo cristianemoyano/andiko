@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/cristianemoyano/andiko/compare/v0.2.5...v0.2.6) (2026-06-11)
+
+### Bug Fixes
+
+* **core:** allow empty-value Select options and fix categories limit on price adjustments ([3bbe0ba](https://github.com/cristianemoyano/andiko/commit/3bbe0bac46da32120c3d122d9acbf6f7e18eb72a))
+* **core:** pass pg dialectModule for Vercel serverless Sequelize ([1862fe6](https://github.com/cristianemoyano/andiko/commit/1862fe6b0eff1d3e5979264d4eb5fa12873cd29d))
+
 ## [0.2.5](https://github.com/cristianemoyano/andiko/compare/v0.2.4...v0.2.5) (2026-06-11)
 
 ### Bug Fixes
