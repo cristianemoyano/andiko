@@ -13,6 +13,19 @@ Andiko is a modular ERP for SMBs in Argentina. Stack: Next.js (App Router), Type
 **Test framework:** Vitest. Never Jest.  
 **Commit format:** Conventional Commits enforced by `commitlint`. Scope is required and must be a module name.
 
+**Shell / CLI:** Prefer **RTK** (`rtk`) as a token-efficient proxy when running shell commands — it compresses output before it hits agent context. Use it whenever an RTK subcommand exists:
+
+| Instead of | Prefer |
+|------------|--------|
+| `pnpm test` | `rtk pnpm test` or `rtk test -- pnpm test` |
+| `pnpm exec tsc --noEmit` | `rtk tsc --noEmit` |
+| `git status`, `git diff`, `git log` | `rtk git status`, etc. |
+| `gh pr …`, `gh api …` | `rtk gh …` |
+| `cat` / long file reads in shell | `rtk read <path>` |
+| `grep`, `find`, `ls`, `diff` | `rtk grep`, `rtk find`, `rtk ls`, `rtk diff` |
+
+Run `rtk --help` for the full command list. Fall back to raw commands only when RTK has no equivalent or when full verbatim output is required.
+
 ---
 
 ## Branching Model
