@@ -13,6 +13,19 @@ Andiko is a modular ERP for SMBs in Argentina. Stack: Next.js (App Router), Type
 **Test framework:** Vitest. Never Jest.  
 **Commit format:** Conventional Commits enforced by `commitlint`. Scope is required and must be a module name.
 
+**Shell / CLI:** Prefer **RTK** (`rtk`) as a token-efficient proxy when running shell commands — it compresses output before it hits agent context. Use it whenever an RTK subcommand exists:
+
+| Instead of | Prefer |
+|------------|--------|
+| `pnpm test` | `rtk pnpm test` or `rtk test -- pnpm test` |
+| `pnpm exec tsc --noEmit` | `rtk tsc --noEmit` |
+| `git status`, `git diff`, `git log` | `rtk git status`, etc. |
+| `gh pr …`, `gh api …` | `rtk gh …` |
+| `cat` / long file reads in shell | `rtk read <path>` |
+| `grep`, `find`, `ls`, `diff` | `rtk grep`, `rtk find`, `rtk ls`, `rtk diff` |
+
+Run `rtk --help` for the full command list. Fall back to raw commands only when RTK has no equivalent or when full verbatim output is required.
+
 ---
 
 ## Branching Model
@@ -48,6 +61,29 @@ release/*   ← cut from develop, merged into main, back-merged into develop.
 - Shared types go in `/types`. Never duplicate type definitions.
 - Module structure: `sales/`, `inventory/`, `purchases/`, `contacts/`, `accounting/` — each with its own routes, services, and models.
 - No circular dependencies between modules. Use event bus or shared services for cross-module logic.
+
+**App Router structure:**
+```
+src/app/
+  (auth)/
+    login/page.tsx        ← public, outside ERP layout
+  (erp)/
+    layout.tsx            ← shared sidebar + header
+    contacts/page.tsx
+    sales/page.tsx
+    inventory/page.tsx
+    purchases/page.tsx
+    accounting/page.tsx
+  api/v1/
+    contacts/route.ts
+    sales/route.ts
+src/modules/              ← business logic only (services, models)
+src/components/           ← design system (primitives, layout, erp)
+src/lib/                  ← db, auth, logger
+src/config/               ← env validation
+src/types/                ← shared TypeScript types
+src/db/migrations/        ← Umzug migrations
+```
 
 ---
 
@@ -153,6 +189,67 @@ const result = await sequelize.transaction(async (t) => {
 
 ---
 
+## Design System Rules
+
+- All UI components live in `src/components/`. Never inside `src/modules/`.
+- Components are categorized: `src/components/primitives/`, `src/components/layout/`, `src/components/erp/`.
+- No component ships to production without a Storybook story.
+- Use **Radix UI** for accessible primitives (Dialog, Select, Tooltip, etc.). Never build modal or focus-trap logic from scratch.
+- Use **`class-variance-authority`** (`cva`) for component variants. Never conditional class strings inline.
+- Tailwind only for styling. No CSS modules, no styled-components, no inline `style` props.
+- Story structure per component: default state, all variants, disabled/error states, edge cases (long text, empty, loading).
+- ERP-specific rules:
+  - `CurrencyInput` must always format ARS (`.` as thousands separator, `,` as decimal).
+  - `DatePicker` must default to `DD/MM/YYYY` format.
+  - `DataTable` must support keyboard navigation between rows.
+  - `ConfirmDialog` is required for any destructive action (delete, cancel, reverse).
+- Never use a raw `<input>` or `<button>` directly in module pages — always use the design system component.
+- Component file structure: `ComponentName.tsx`, `ComponentName.stories.tsx`, `index.ts` (re-export).
+
+---
+
+## Frontend Patterns (App Router)
+
+### Server / Client split
+- Every page is a Server Component that exports `metadata` and renders a `*Client.tsx` sibling.
+- All state, fetch logic, and event handlers live in the Client Component — never in the Server Component.
+- Pass only serialized props (no Date objects, no class instances) from Server to Client.
+
+### Data refresh after mutation — MANDATORY
+After any mutation (create, update, delete), always re-fetch the affected list or resource. Use a `refresh` counter in `useEffect` dependencies:
+
+```tsx
+const [refresh, setRefresh] = useState(0)
+useEffect(() => { fetchData() }, [refresh])
+
+// After every successful mutation:
+setRefresh(r => r + 1)
+```
+
+Never rely on optimistic updates or stale local state. Every successful write must trigger a re-fetch. This is the canonical pattern — any screen that skips it is broken.
+
+### Modal / Dialog pattern
+- Use `Dialog` from `src/components/primitives/Dialog.tsx` (Radix-based). Never native `<dialog>` with `useRef`.
+- For destructive confirmations (delete, cancel, reverse) use `ConfirmDialog` from `src/components/erp/ConfirmDialog.tsx`.
+
+### Form pattern
+- Use `FormData` API. Add `key={formKey}` to `<form>` and increment `formKey` to reset after submit.
+- Keep field-level `errors` (Record<string, string>) and a separate `serverError` string for generic failures.
+- Always show errors inline — never only in a toast.
+
+### Page structure
+```
+src/app/(erp)/{module}/
+  page.tsx          ← Server Component: metadata only
+  {Module}Client.tsx ← Client Component: state + fetch + render
+  {Entity}Modal.tsx  ← Dialog wrapper for create/edit forms
+  [id]/
+    page.tsx         ← Server Component: metadata only
+    {Entity}Detail.tsx ← Client Component: detail state + mutations
+```
+
+---
+
 ## API Design Principles
 
 - REST only. No GraphQL.
@@ -195,6 +292,7 @@ const result = await sequelize.transaction(async (t) => {
 - **No schema changes in application startup.** Migrations only.
 - **No unbounded queries.** Every list query must have a `LIMIT`.
 - **No magic strings.** Use constants or enums for status values, document types, tax codes.
+- **No stale list state after mutation.** Always call `setRefresh(r => r + 1)` (or equivalent) after every successful create/update/delete to trigger a re-fetch. Never update local state manually as a substitute for a re-fetch.
 
 ---
 

@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@media print {
+  body[data-printing='1'] * {
+    visibility: hidden;
+  }
+  body[data-printing='1'] #pos-receipt,
+  body[data-printing='1'] #pos-receipt * {
+    visibility: visible;
+  }
+  body[data-printing='1'] #pos-receipt {
+    position: fixed;
+    inset: 0;
+    padding: 0;
+    margin: 0;
+  }
+}

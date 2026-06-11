@@ -1,0 +1,6 @@
+export { default as Warehouse } from './warehouse.model'
+export { default as StockItem } from './stock-item.model'
+export { default as StockMovement } from './stock-movement.model'
+export * from './warehouses.service'
+export * from './stock-movements.service'
+export * from './stock-items.service'

@@ -1,0 +1,83 @@
+import type { IpcMain } from 'electron'
+import { db } from './db'
+import { cashSessions, sales } from '../db/schema'
+import { randomUUID } from 'crypto'
+import { eq, desc, gte } from 'drizzle-orm'
+import type { PosSalePayment } from '@andiko/shared'
+
+export function registerCashSessionHandlers(ipc: IpcMain) {
+  ipc.handle('cashSessions:getCurrent', async () => {
+    return db().select().from(cashSessions).where(eq(cashSessions.status, 'open')).get() ?? null
+  })
+
+  ipc.handle('cashSessions:open', async (_e, args: {
+    cashier_user_id?: string | null
+    cashier_name?: string | null
+    opening_amount: string
+  }) => {
+    const existing = db().select().from(cashSessions).where(eq(cashSessions.status, 'open')).get()
+    if (existing) return { ok: false, error: 'Ya hay un turno abierto', session: existing }
+
+    const id = randomUUID()
+    const now = new Date().toISOString()
+    db().insert(cashSessions).values({
+      id,
+      cashier_user_id: args.cashier_user_id ?? null,
+      cashier_name:    args.cashier_name ?? null,
+      opened_at:       now,
+      opening_amount:  args.opening_amount,
+      status:          'open',
+    }).run()
+
+    const session = db().select().from(cashSessions).where(eq(cashSessions.id, id)).get()
+    return { ok: true, session }
+  })
+
+  ipc.handle('cashSessions:close', async (_e, args: {
+    session_id: string
+    closing_amount_declared: string
+  }) => {
+    const session = db().select().from(cashSessions).where(eq(cashSessions.id, args.session_id)).get()
+    if (!session) return { ok: false, error: 'Turno no encontrado' }
+    if (session.status === 'closed') return { ok: false, error: 'El turno ya está cerrado' }
+
+    // Calculate expected: opening + cash portion of all sales during the session
+    const openedAt = session.opened_at
+    const sessionSales = db()
+      .select({ payments: sales.payments })
+      .from(sales)
+      .where(gte(sales.sold_at, openedAt))
+      .all()
+
+    const cashFromSales = sessionSales.reduce((sum, s) => {
+      const payments: PosSalePayment[] = JSON.parse(s.payments ?? '[]')
+      const cash = payments.filter(p => p.payment_method_type === 'cash')
+      return sum + cash.reduce((a, p) => a + Number(p.amount), 0)
+    }, 0)
+
+    const expected = (Number(session.opening_amount) + cashFromSales).toFixed(2)
+    const declared = Number(args.closing_amount_declared).toFixed(2)
+    const difference = (Number(declared) - Number(expected)).toFixed(2)
+    const now = new Date().toISOString()
+
+    db().update(cashSessions).set({
+      status:                   'closed',
+      closed_at:                now,
+      closing_amount_declared:  declared,
+      closing_amount_expected:  expected,
+      difference,
+    }).where(eq(cashSessions.id, args.session_id)).run()
+
+    const updated = db().select().from(cashSessions).where(eq(cashSessions.id, args.session_id)).get()
+    return { ok: true, session: updated }
+  })
+
+  ipc.handle('cashSessions:list', async (_e, args?: { limit?: number }) => {
+    const limit = Math.min(args?.limit ?? 50, 200)
+    return db().select().from(cashSessions).orderBy(desc(cashSessions.opened_at)).limit(limit).all()
+  })
+
+  ipc.handle('cashSessions:get', async (_e, sessionId: string) => {
+    return db().select().from(cashSessions).where(eq(cashSessions.id, sessionId)).get() ?? null
+  })
+}
