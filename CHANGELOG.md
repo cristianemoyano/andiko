@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.5](https://github.com/cristianemoyano/andiko/compare/v0.2.4...v0.2.5) (2026-06-11)
+
+### Bug Fixes
+
+* **core:** harden Vercel pnpm install against cache and filter issues ([89afe74](https://github.com/cristianemoyano/andiko/commit/89afe74bc7d476e9a74d31843fddd21982257a63))
+
 ## [0.2.4](https://github.com/cristianemoyano/andiko/compare/v0.2.3...v0.2.4) (2026-06-11)
 
 ### Bug Fixes
