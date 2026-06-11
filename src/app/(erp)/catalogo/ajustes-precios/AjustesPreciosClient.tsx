@@ -52,7 +52,7 @@ export function AjustesPreciosClient() {
     ;(async () => {
       try {
         const [cats, lists] = await Promise.all([
-          fetchJson<{ data: Category[] }>('/api/v1/catalog/categories?limit=200'),
+          fetchJson<{ data: Category[] }>('/api/v1/catalog/categories?limit=100'),
           fetchJson<{ data: PriceList[] }>('/api/v1/catalog/price-lists?limit=100&is_active=true'),
         ])
         if (!mounted) return

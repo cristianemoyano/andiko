@@ -25,15 +25,20 @@ export interface SelectProps {
 /**
  * Select liviano para listas estáticas y cortas (estados, condición IVA, etc.).
  * Para búsqueda asíncrona o listas largas usar `erp/SearchableSelect`.
+ *
+ * Radix reserva '' para limpiar la selección — opciones con value '' se mapean
+ * internamente a un sentinel y se devuelven como '' en onChange.
  */
+const EMPTY_OPTION_VALUE = '__select_empty__'
+
 const Select = forwardRef<HTMLButtonElement, SelectProps>(
   (
     { value, onChange, options, placeholder = 'Seleccionar…', error, disabled, required, id, name, className },
     ref,
   ) => (
     <RadixSelect.Root
-      value={value ?? undefined}
-      onValueChange={onChange}
+      value={value === '' ? EMPTY_OPTION_VALUE : (value ?? undefined)}
+      onValueChange={(v) => onChange(v === EMPTY_OPTION_VALUE ? '' : v)}
       disabled={disabled}
       required={required}
       name={name}
@@ -91,10 +96,12 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
             {options.length === 0 && (
               <div className="px-3 py-4 text-center text-[12px] text-zinc-400">Sin opciones</div>
             )}
-            {options.map(option => (
+            {options.map(option => {
+              const itemValue = option.value === '' ? EMPTY_OPTION_VALUE : option.value
+              return (
               <RadixSelect.Item
-                key={option.value}
-                value={option.value}
+                key={itemValue}
+                value={itemValue}
                 disabled={option.disabled}
                 className={cn(
                   'relative flex w-full cursor-pointer select-none items-center rounded-[3px] py-1.5 pl-2.5 pr-8 text-[13px] text-zinc-700 outline-none transition-colors',
@@ -120,7 +127,8 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
                   </svg>
                 </RadixSelect.ItemIndicator>
               </RadixSelect.Item>
-            ))}
+              )
+            })}
           </RadixSelect.Viewport>
         </RadixSelect.Content>
       </RadixSelect.Portal>
