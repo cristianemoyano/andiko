@@ -109,10 +109,24 @@ export async function updateStockItemAlerts(ctx: TenantContext, input: StockItem
       lock: true,
     })
 
+    // Single-expiry alerts UX maps onto the legacy/default batch: set its expiry,
+    // then derive `expires_on` from the earliest live batch (kept in sync so the
+    // existing expiry-alert queries on stock_items.expires_on keep working).
+    const StockItemBatch = (await import('./stock-item-batch.model')).default
+    const { earliestExpiry } = await import('./stock-batches.service')
+
+    const [defaultBatch] = await StockItemBatch.findOrCreate({
+      where:    { stock_item_id: item.id, batch_code: { [Op.is]: null } },
+      defaults: { org_id: ctx.orgId, stock_item_id: item.id, batch_code: null, expiry_date: null, quantity: '0' },
+      transaction: t,
+      lock: true,
+    })
+    await defaultBatch.update({ expiry_date: input.expires_on }, { transaction: t })
+
     await item.update(
       {
         minimum_quantity: minQty,
-        expires_on:       input.expires_on,
+        expires_on:       await earliestExpiry(item.id, t),
       },
       { transaction: t },
     )
@@ -178,4 +192,36 @@ export async function getReplenishmentList(orgId: string): Promise<Replenishment
 export async function getVariantStock(variantId: string, warehouseId: string): Promise<string> {
   const item = await StockItem.findOne({ where: { variant_id: variantId, warehouse_id: warehouseId } })
   return item?.quantity ?? '0'
+}
+
+export interface StockBatchRow {
+  id: string
+  batch_code: string | null
+  expiry_date: string | null
+  quantity: string
+}
+
+/**
+ * Returns the live batch breakdown for a stock_item in FEFO order
+ * (earliest expiry first, NULL expiry last). Used by the batch breakdown
+ * endpoint and stock detail UI.
+ */
+export async function getStockItemBatches(stockItemId: string, orgId: string): Promise<StockBatchRow[]> {
+  const StockItemBatch = (await import('./stock-item-batch.model')).default
+
+  const item = await StockItem.findOne({ where: { id: stockItemId, org_id: orgId }, attributes: ['id'] })
+  if (!item) throw new Error('STOCK_ITEM_NOT_FOUND')
+
+  const batches = await StockItemBatch.findAll({
+    where: { stock_item_id: stockItemId },
+    order: [literal('expiry_date ASC NULLS LAST'), ['created_at', 'ASC']],
+    attributes: ['id', 'batch_code', 'expiry_date', 'quantity'],
+  })
+
+  return batches.map(b => ({
+    id:          b.id,
+    batch_code:  b.batch_code,
+    expiry_date: b.expiry_date,
+    quantity:    new Decimal(b.quantity).toFixed(4),
+  }))
 }

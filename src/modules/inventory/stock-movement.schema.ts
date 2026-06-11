@@ -6,6 +6,9 @@ export const manualAdjustmentSchema = z.object({
   warehouse_id: z.string().uuid(),
   quantity:     z.number().min(0),
   notes:        z.string().nullable().optional(),
+  /** Optional lot for the increased quantity (ignored when adjusting down). */
+  batch_code:   z.string().trim().min(1).max(100).nullable().optional(),
+  expiry_date:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD').nullable().optional(),
 })
 
 export const stockMovementQuerySchema = paginationSchema.extend({

@@ -16,6 +16,12 @@ vi.mock('./stock-movement.model', () => ({
   },
 }))
 
+vi.mock('./stock-batches.service', () => ({
+  allocateInbound: vi.fn(),
+  consumeFefo:     vi.fn(),
+  earliestExpiry:  vi.fn(),
+}))
+
 vi.mock('@/lib/db', () => ({
   default: {
     transaction: vi.fn((cb: (t: object) => Promise<unknown>) => cb({})),
@@ -54,17 +60,29 @@ import StockItem    from './stock-item.model'
 import StockMovement from './stock-movement.model'
 import { applyMovement, restoreStockForOrder, manualAdjustment } from './stock-movements.service'
 import { resolveDefaultWarehouse } from './warehouses.service'
+import { allocateInbound, consumeFefo, earliestExpiry } from './stock-batches.service'
 
 const T = {} as never // mock transaction
 
 function mockStockItem(quantity: string) {
   return {
+    id: 'item-1',
     quantity,
     update: vi.fn().mockResolvedValue(undefined),
   }
 }
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  // Default batch behaviour: inbound lands on one batch, outbound takes from one.
+  ;(allocateInbound as Mock).mockImplementation(
+    async ({ quantity }: { quantity: Decimal }) => ({ batchId: 'batch-1', quantity }),
+  )
+  ;(consumeFefo as Mock).mockImplementation(
+    async ({ quantity }: { quantity: Decimal }) => [{ batchId: 'batch-1', quantity }],
+  )
+  ;(earliestExpiry as Mock).mockResolvedValue(null)
+})
 
 // ─────────────────────────────────────────────
 // applyMovement
@@ -96,7 +114,7 @@ describe('applyMovement', () => {
     )
 
     expect(item.update).toHaveBeenCalledWith(
-      { quantity: '15.0000' },
+      expect.objectContaining({ quantity: '15.0000' }),
       expect.anything(),
     )
     expect(StockMovement.create).toHaveBeenCalledWith(
@@ -104,6 +122,7 @@ describe('applyMovement', () => {
         quantity_before: '10.0000',
         quantity_after:  '15.0000',
         movement_type:   'in',
+        batch_id:        'batch-1',
       }),
       expect.anything(),
     )
@@ -134,7 +153,7 @@ describe('applyMovement', () => {
     )
 
     expect(item.update).toHaveBeenCalledWith(
-      { quantity: '15.0000' },
+      expect.objectContaining({ quantity: '15.0000' }),
       expect.anything(),
     )
   })
@@ -189,7 +208,89 @@ describe('applyMovement', () => {
     )
 
     expect(item.update).toHaveBeenCalledWith(
-      { quantity: '5.0000' },
+      expect.objectContaining({ quantity: '5.0000' }),
+      expect.anything(),
+    )
+  })
+
+  it('passes batchCode/expiryDate to allocateInbound on an inbound movement', async () => {
+    const item = mockStockItem('0')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+    ;(StockItem.sum as Mock).mockResolvedValue(8)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+    ;(allocateInbound as Mock).mockResolvedValue({ batchId: 'b-lot', quantity: new Decimal('8') })
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await applyMovement(
+      {
+        variantId:     'var-1',
+        warehouseId:   'wh-1',
+        orgId:         'org-1',
+        movementType:  'in',
+        referenceType: 'purchase_receipt',
+        referenceId:   'rcpt-1',
+        quantityDelta: new Decimal('8'),
+        notes:         null,
+        actorId:       'actor-1',
+        batchCode:     'L-42',
+        expiryDate:    '2026-09-01',
+      },
+      T,
+    )
+
+    expect(allocateInbound).toHaveBeenCalledWith(
+      expect.objectContaining({ batchCode: 'L-42', expiryDate: '2026-09-01', quantity: new Decimal('8') }),
+      expect.anything(),
+    )
+    expect(StockMovement.create).toHaveBeenCalledWith(
+      expect.objectContaining({ movement_type: 'in', batch_id: 'b-lot' }),
+      expect.anything(),
+    )
+  })
+
+  it('splits an outbound across FEFO batches into one movement row per batch', async () => {
+    const item = mockStockItem('15.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+    ;(StockItem.sum as Mock).mockResolvedValue(10)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+    ;(consumeFefo as Mock).mockResolvedValue([
+      { batchId: 'early', quantity: new Decimal('3') },
+      { batchId: 'late',  quantity: new Decimal('2') },
+    ])
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await applyMovement(
+      {
+        variantId:     'var-1',
+        warehouseId:   'wh-1',
+        orgId:         'org-1',
+        movementType:  'out',
+        referenceType: 'delivery_note',
+        referenceId:   'dn-1',
+        quantityDelta: new Decimal('-5'),
+        notes:         null,
+        actorId:       'actor-1',
+      },
+      T,
+    )
+
+    // One ledger row per batch, additive running balance, linked to its batch.
+    expect(StockMovement.create).toHaveBeenCalledTimes(2)
+    expect(StockMovement.create).toHaveBeenNthCalledWith(1,
+      expect.objectContaining({ batch_id: 'early', quantity_delta: '-3.0000', quantity_before: '15.0000', quantity_after: '12.0000' }),
+      expect.anything(),
+    )
+    expect(StockMovement.create).toHaveBeenNthCalledWith(2,
+      expect.objectContaining({ batch_id: 'late', quantity_delta: '-2.0000', quantity_before: '12.0000', quantity_after: '10.0000' }),
+      expect.anything(),
+    )
+    // Aggregate is updated once to the authoritative total.
+    expect(item.update).toHaveBeenCalledWith(
+      expect.objectContaining({ quantity: '10.0000' }),
       expect.anything(),
     )
   })
