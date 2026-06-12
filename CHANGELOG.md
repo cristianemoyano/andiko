@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/cristianemoyano/andiko/compare/v0.2.8...v0.3.0) (2026-06-12)
+
+### Features
+
+* **core:** add coming soon landing with SEO and contact form ([7016f04](https://github.com/cristianemoyano/andiko/commit/7016f04e40337019af1d68950252177ea162b1ed))
+* **core:** configurable print templates per organization ([2e8f0e0](https://github.com/cristianemoyano/andiko/commit/2e8f0e0964920c0d1650a7d3410653c3c9535958))
+* **inventory:** add delivery notes backend (remitos de entrega) ([9c762bd](https://github.com/cristianemoyano/andiko/commit/9c762bd90f50199ea3d2fbe5761fdd922e90c637))
+* **inventory:** add delivery notes REST API (remitos de entrega) ([fb1e58a](https://github.com/cristianemoyano/andiko/commit/fb1e58ab00c4f0a80c368cfd6f3009b7e3b05b0d))
+* **inventory:** add delivery notes UI (remitos de entrega) ([f54fb10](https://github.com/cristianemoyano/andiko/commit/f54fb10d53c1a3ab89a240f87eb422e00d1af380))
+* **inventory:** add stock_item_batches table and batch link on movements ([68816b3](https://github.com/cristianemoyano/andiko/commit/68816b3c14d87f2228e922e58a02e8f6d1ca996b))
+* **inventory:** batch UI for stock, movements, receipts and adjustments ([8972258](https://github.com/cristianemoyano/andiko/commit/8972258c21e8e65a021039d507ca696ce93acbc0))
+* **inventory:** consume batches in FEFO order on outbound movements ([374293f](https://github.com/cristianemoyano/andiko/commit/374293f01b2990c565ab6850c97753535221f35d))
+* **inventory:** expose batches endpoint and carry lots through receipts ([dadb909](https://github.com/cristianemoyano/andiko/commit/dadb909c9e11e6f69f5242a809eb18d8ddb77d68))
+* **inventory:** register delivery note (remito) in printing module ([079aa38](https://github.com/cristianemoyano/andiko/commit/079aa382f4ca4810c0159cc7166c6fb31435d0e5))
+
 ## [0.2.8](https://github.com/cristianemoyano/andiko/compare/v0.2.7...v0.2.8) (2026-06-11)
 
 ### Bug Fixes
