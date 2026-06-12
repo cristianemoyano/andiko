@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
+import { SendDocumentEmail } from '@/components/erp/SendDocumentEmail'
 import { FormField } from '@/components/primitives/FormField'
 import { Textarea } from '@/components/primitives/Textarea'
 import { DatePicker } from '@/components/primitives/DatePicker'
@@ -338,6 +339,11 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                 Imprimir
               </Link>
             </Button>
+            <SendDocumentEmail
+              documentType="quote"
+              documentId={id}
+              documentLabel={`Presupuesto ${quote.quote_number}`}
+            />
             {!editMode && (
               <>
                 {transitions.map(t => (

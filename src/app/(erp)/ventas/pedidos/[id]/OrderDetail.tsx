@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
+import { SendDocumentEmail } from '@/components/erp/SendDocumentEmail'
 import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
 import { Textarea } from '@/components/primitives/Textarea'
@@ -463,6 +464,11 @@ export function OrderDetail({ id }: OrderDetailProps) {
                 Imprimir
               </Link>
             </Button>
+            <SendDocumentEmail
+              documentType="order"
+              documentId={id}
+              documentLabel={`Pedido ${order.order_number}`}
+            />
             {!editMode && (
               <>
                 {transitions.map(t => (

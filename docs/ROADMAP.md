@@ -233,8 +233,8 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] Listado de cuentas corrientes por cliente
 - [x] Reportes: ventas por período, por cliente, por producto
 - [x] **Impresión y exportación de documentos (MVP)** — Módulo `printing` (registro por dominio/recurso), API `GET /api/v1/printing/[domain]/[resource]/[id]`, vistas print bajo `/ventas/...` y `/compras/...` (layout A4, PDF vía `window.print()` + `@media print`). Borradores imprimibles con marca **BORRADOR** (uso interno).
-- [ ] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página. *(Implementado en rama; pendiente de pulir como producto: descubribilidad en menú, UX del editor y validación en prod.)*
-- [ ] Editor visual de template (tipografía, paleta, secciones visibles). *(Misma situación: código listo para merge, falta cerrar la experiencia de usuario.)*
+- [x] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página. *(Editor en `/configuracion`, link en sidebar, validación Zod + merge sobre defaults.)*
+- [x] Editor visual de template (tipografía, paleta, secciones visibles). *(Vista previa en vivo del documento mientras se edita.)*
 
 ---
 
@@ -346,19 +346,20 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 
 Envío de documentos e notificaciones por email desde el ERP.
 
-**Retomar WIP:** `git stash pop` (stash `wip: communications email module`). Código parcial en `src/modules/communications/`, migraciones `20260611150000` / `20260611160000`, `src/lib/crypto.ts`, deps `nodemailer`.
+### Backend (completado)
+- [x] Migraciones: `email_logs` + columnas `email_settings` / `email_templates` en `organization_settings`
+- [x] Servicios: config SMTP por org (`email-settings.service`), templates por documento (`email-templates.service`), transporte SMTP/log (`transport.ts`), resolución de documento (`document-resolver.ts`), cifrado de secretos (`crypto.ts`, AES-256-GCM derivado de `AUTH_SECRET`)
+- [x] Modelo `EmailLog` + historial por documento
+- [x] API REST: `GET/PUT /api/v1/communications/settings`, `GET/PUT /api/v1/communications/templates`, `POST /api/v1/communications/send`, `GET /api/v1/communications/logs`
 
-### Backend (parcial — en stash, sin mergear)
-- [ ] Migraciones: `email_logs` + columnas `email_settings` / `email_templates` en `organization_settings`
-- [ ] Servicios: config SMTP por org (`email-settings.service`), templates por documento (`email-templates.service`), transporte SMTP/log (`transport.ts`), resolución de documento (`document-resolver.ts`), cifrado de secretos (`crypto.ts`)
-- [ ] Modelo `EmailLog` + historial por documento
+### Frontend (completado)
+- [x] Templates de email por tipo de documento (presupuesto, pedido, factura, remito) — editor UI en `/configuracion` (tab "Plantillas de email") + defaults con variables `{{contact_name}}`, `{{document_number}}`, `{{total}}`, etc.
+- [x] Envío de documentos al cliente desde el detalle (componente `SendDocumentEmail`: botón "Enviar por email" en facturas/pedidos/presupuestos) + servicio de envío que persiste `email_logs`
+- [x] Configuración SMTP por organización — UI en `/configuracion` (tab "Email (SMTP)") + API REST; contraseña cifrada, nunca devuelta al cliente
+- [x] Historial de envíos por documento — listado en el diálogo de envío
 
-### Pendiente para cerrar el ítem del roadmap
-- [ ] Templates de email por tipo de documento (presupuesto, pedido, factura, remito) — editor UI + defaults con variables `{{contact_name}}`, `{{document_number}}`, etc.
-- [ ] Envío de documentos al cliente desde el detalle (botón "Enviar por email") + servicio de envío que persista `email_logs`
-- [ ] Configuración SMTP por organización — UI en `/configuracion` (o sys-admin) + API REST
-- [ ] Historial de envíos por documento — listado en detalle del comprobante
-- [ ] Notificaciones internas: alertas de stock mínimo, vencimiento de presupuestos
+### Pendiente
+- [ ] Notificaciones internas: alertas de stock mínimo, vencimiento de presupuestos *(requiere scheduler/cron — fase posterior)*
 
 ---
 
