@@ -38,6 +38,9 @@ Infraestructura base sin lógica de negocio.
 - [x] UX: componente global de error de API (banner/toast) + helper `fetchJson` para evitar duplicar manejo de errores en cada pantalla
 - [x] Dev tooling: comandos de seed/clear idempotentes creciendo con el sistema (incluye permisos, catálogo, ventas, tenancy)
 - [x] Prod DB CLI: `db:reset-prod`, `migrate:prod`, `migrate:baseline-prod`, `db:seed-prod` (local, con `.env.production.local`)
+- [x] Landing pública "Próximamente" en `/` con SEO (metadata, sitemap, robots, OG image, JSON-LD)
+- [x] Panel ERP movido a `/panel`; redirects post-login y onboarding actualizados
+- [x] Formulario de contacto en landing vía Web3Forms (`ContactForm`, sin BD)
 
 ---
 

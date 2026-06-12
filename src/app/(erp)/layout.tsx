@@ -30,7 +30,7 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
 
     const moduleForPath = resolveModuleForPath(pathname)
     if (moduleForPath && !(await isModuleEnabled(orgId, moduleForPath))) {
-      redirect('/?module_disabled=1')
+      redirect('/panel?module_disabled=1')
     }
   }
 

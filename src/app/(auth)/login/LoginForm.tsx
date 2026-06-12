@@ -37,7 +37,7 @@ export function LoginForm() {
       return
     }
 
-    router.push('/')
+    router.push('/panel')
     router.refresh()
   }
 
