@@ -1,10 +1,29 @@
-import type { PrintableDocument } from '@/types/printing'
+import type { PrintableDocument, PrintableTemplate } from '@/types/printing'
+
+/** Default presentation template — keeps printed output identical to pre-template behavior. */
+export const defaultPrintableTemplate: PrintableTemplate = {
+  logo_url: null,
+  accent_color: '#18181b',
+  font_css: 'ui-sans-serif, system-ui, sans-serif',
+  footer_text: null,
+  sections: { logo: true, fiscal_block: true, branch: true, counterparty: true, notes: true, footer: true },
+  show_cuit: true,
+  show_iva_condition: true,
+  show_fiscal_address: true,
+}
 
 export const samplePrintableQuote: PrintableDocument = {
   domain: 'sales',
   kind: 'sales_quote',
   isDraft: true,
-  issuer: { name: 'Andiko Demo S.A.' },
+  issuer: {
+    name: 'Andiko Demo S.A.',
+    legal_name: 'Andiko Demo Sociedad Anónima',
+    cuit: '30-71234567-9',
+    iva_condition_label: 'Responsable Inscripto',
+    fiscal_address: 'Av. San Martín 1234, Mendoza',
+  },
+  template: defaultPrintableTemplate,
   title: 'Presupuesto',
   document_number: 'PRES-01-0042',
   status_code: 'draft',

@@ -444,6 +444,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
   const canCancel   = CAN_CANCEL.includes(order.status)
   const canConvert  = order.status === 'delivered'
   const canEdit     = order.status !== 'delivered' && order.status !== 'cancelled'
+  const canDeliver  = order.status === 'confirmed' || order.status === 'in_progress' || order.status === 'delivered'
 
   const editTotals = editMode ? calcTotals(items) : null
 
@@ -469,6 +470,11 @@ export function OrderDetail({ id }: OrderDetailProps) {
                     {t.label}
                   </Button>
                 ))}
+                {canDeliver && (
+                  <Button size="sm" variant="secondary" onClick={() => router.push(`/inventario/remitos/nuevo?order_id=${order.id}`)}>
+                    Crear remito
+                  </Button>
+                )}
                 {canConvert && (
                   <Button size="sm" onClick={() => setConfirmConvert(true)} disabled={transitioning}>
                     Crear factura

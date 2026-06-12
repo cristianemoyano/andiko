@@ -7,6 +7,7 @@ export type PrintableDocumentKind =
   | 'sales_quote'
   | 'sales_order'
   | 'sales_invoice'
+  | 'delivery_note'
   | 'purchase_order'
   | 'purchase_receipt'
   | 'supplier_invoice'
@@ -16,6 +17,33 @@ export type CounterpartyRole = 'customer' | 'supplier'
 
 export interface PrintableIssuer {
   name: string
+  /** Org legal name (razón social), when configured. */
+  legal_name: string | null
+  cuit: string | null
+  iva_condition_label: string | null
+  fiscal_address: string | null
+}
+
+/** Resolved print-template presentation config, merged with defaults. */
+export interface PrintableTemplate {
+  logo_url: string | null
+  accent_color: string
+  /** CSS font stack resolved from the whitelisted family. */
+  font_css: string
+  footer_text: string | null
+  /** Section visibility toggles. */
+  sections: {
+    logo: boolean
+    fiscal_block: boolean
+    branch: boolean
+    counterparty: boolean
+    notes: boolean
+    footer: boolean
+  }
+  /** Per-field fiscal display toggles. */
+  show_cuit: boolean
+  show_iva_condition: boolean
+  show_fiscal_address: boolean
 }
 
 export interface PrintableBranch {
@@ -62,6 +90,8 @@ export interface PrintableDocument {
   kind: PrintableDocumentKind
   isDraft: boolean
   issuer: PrintableIssuer
+  /** Per-org presentation config (logo, colors, fiscal toggles, sections, footer). */
+  template: PrintableTemplate
   title: string
   document_number: string
   status_code: string

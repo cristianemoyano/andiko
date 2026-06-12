@@ -30,9 +30,19 @@ vi.mock('@/modules/catalog/product-variant.model', () => ({
   default: { findOne: vi.fn() },
 }))
 
+vi.mock('./stock-item-batch.model', () => ({
+  default: { findOrCreate: vi.fn(), findAll: vi.fn() },
+}))
+
+vi.mock('./stock-batches.service', () => ({
+  earliestExpiry: vi.fn(),
+}))
+
 import StockItem from './stock-item.model'
+import StockItemBatch from './stock-item-batch.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
 import { getWarehouse } from './warehouses.service'
+import { earliestExpiry } from './stock-batches.service'
 import { getStockLevels, updateStockItemAlerts } from './stock-items.service'
 
 beforeEach(() => vi.clearAllMocks())
@@ -59,9 +69,16 @@ describe('updateStockItemAlerts', () => {
     ;(ProductVariant.findOne as Mock).mockResolvedValue({ id: 'var-1' })
     const update = vi.fn().mockResolvedValue(undefined)
     ;(StockItem.findOrCreate as Mock).mockResolvedValue([
-      { update, quantity: '5.0000', minimum_quantity: '0', expires_on: null },
+      { id: 'item-1', update, quantity: '5.0000', minimum_quantity: '0', expires_on: null },
       false,
     ])
+    const batchUpdate = vi.fn().mockResolvedValue(undefined)
+    ;(StockItemBatch.findOrCreate as Mock).mockResolvedValue([
+      { id: 'batch-default', update: batchUpdate, expiry_date: null },
+      false,
+    ])
+    // expires_on is derived from the earliest live batch after the default batch is set.
+    ;(earliestExpiry as Mock).mockResolvedValue('2026-05-01')
 
     await updateStockItemAlerts(
       {
@@ -78,6 +95,12 @@ describe('updateStockItemAlerts', () => {
       },
     )
 
+    // The chosen expiry is written onto the legacy/default batch...
+    expect(batchUpdate).toHaveBeenCalledWith(
+      { expiry_date: '2026-05-01' },
+      expect.anything(),
+    )
+    // ...and the aggregate's expires_on is synced from the earliest batch.
     expect(update).toHaveBeenCalledWith(
       { minimum_quantity: '12.5000', expires_on: '2026-05-01' },
       expect.anything(),

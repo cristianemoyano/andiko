@@ -5,7 +5,7 @@ import Warehouse from './warehouse.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
 
 export type StockMovementType = 'in' | 'out' | 'adjustment' | 'transfer_in' | 'transfer_out'
-export type StockReferenceType = 'order' | 'invoice_cancel' | 'manual' | 'initial' | 'purchase_receipt'
+export type StockReferenceType = 'order' | 'invoice_cancel' | 'manual' | 'initial' | 'purchase_receipt' | 'delivery_note'
 
 export interface StockMovementAttributes {
   id: UUID
@@ -15,6 +15,7 @@ export interface StockMovementAttributes {
   movement_type: StockMovementType
   reference_type: StockReferenceType
   reference_id: UUID | null
+  batch_id: UUID | null
   quantity_delta: string
   quantity_before: string
   quantity_after: string
@@ -27,7 +28,7 @@ export interface StockMovementAttributes {
 
 type StockMovementCreationAttributes = Optional<
   StockMovementAttributes,
-  | 'id' | 'reference_id' | 'notes' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'
+  | 'id' | 'reference_id' | 'batch_id' | 'notes' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'
 >
 
 class StockMovement extends Model<StockMovementAttributes, StockMovementCreationAttributes> {
@@ -38,6 +39,7 @@ class StockMovement extends Model<StockMovementAttributes, StockMovementCreation
   declare movement_type: StockMovementType
   declare reference_type: StockReferenceType
   declare reference_id: UUID | null
+  declare batch_id: UUID | null
   declare quantity_delta: string
   declare quantity_before: string
   declare quantity_after: string
@@ -57,6 +59,7 @@ StockMovement.init(
     movement_type:   { type: DataTypes.ENUM('in', 'out', 'adjustment', 'transfer_in', 'transfer_out'), allowNull: false },
     reference_type:  { type: DataTypes.STRING(50), allowNull: false },
     reference_id:    { type: DataTypes.UUID },
+    batch_id:        { type: DataTypes.UUID },
     quantity_delta:  { type: DataTypes.DECIMAL(15, 4), allowNull: false },
     quantity_before: { type: DataTypes.DECIMAL(15, 4), allowNull: false },
     quantity_after:  { type: DataTypes.DECIMAL(15, 4), allowNull: false },

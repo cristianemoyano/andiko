@@ -5,10 +5,12 @@ import type { TenantContext } from '@/lib/tenancy'
 import { getQuote } from '@/modules/sales/sales-quotes.service'
 import { getOrder } from '@/modules/sales/sales-orders.service'
 import { getInvoice } from '@/modules/sales/invoices.service'
+import { getDeliveryNote } from '@/modules/inventory/delivery-notes.service'
 import { decString, formatDateArg } from './format-utils'
-import { getIssuerName } from './issuer'
+import { getPrintHeader } from './issuer'
 import { assertPrintAccess } from './tenant-guards'
 import {
+  DELIVERY_NOTE_STATUS_LABEL,
   INVOICE_STATUS_LABEL,
   ORDER_STATUS_LABEL,
   PAYMENT_CONDITION_LABEL,
@@ -82,6 +84,21 @@ type SalesInvoiceLoaded = {
   }>
 }
 
+type DeliveryNoteLoaded = {
+  org_id: string | null
+  branch_id: string | null
+  status: string
+  delivery_number: string
+  carrier: string | null
+  tracking_code: string | null
+  notes: string | null
+  created_at: Date
+  delivery_date: Date | null
+  branch?: BranchInc | null
+  contact?: ContactInc | null
+  items?: Array<{ description: string; quantity: unknown }>
+}
+
 function branchFromModel(b: { id: string; name: string; branch_code: number } | null | undefined): PrintableBranch | null {
   if (!b) return null
   return { id: b.id, name: b.name, branch_code: b.branch_code }
@@ -128,14 +145,15 @@ function totalsFrom(subtotal: unknown, discount: unknown | null, tax: unknown, t
 
 export async function buildSalesQuotePrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
   const quote = (await getQuote(id, ctx)) as unknown as SalesQuoteLoaded
-  const issuerName = await getIssuerName(ctx.orgId)
+  const { issuer, template } = await getPrintHeader(ctx.orgId)
   const pc = quote.payment_condition as PaymentCondition
   const isDraft = quote.status === 'draft'
   return {
     domain: 'sales',
     kind: 'sales_quote',
     isDraft,
-    issuer: { name: issuerName },
+    issuer,
+    template,
     title: 'Presupuesto',
     document_number: quote.quote_number,
     status_code: quote.status,
@@ -159,14 +177,15 @@ export async function buildSalesQuotePrintable(id: string, ctx: TenantContext): 
 
 export async function buildSalesOrderPrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
   const order = (await getOrder(id, ctx)) as unknown as SalesOrderLoaded
-  const issuerName = await getIssuerName(ctx.orgId)
+  const { issuer, template } = await getPrintHeader(ctx.orgId)
   const pc = order.payment_condition as PaymentCondition
   const isDraft = order.status === 'draft'
   return {
     domain: 'sales',
     kind: 'sales_order',
     isDraft,
-    issuer: { name: issuerName },
+    issuer,
+    template,
     title: 'Pedido',
     document_number: order.order_number,
     status_code: order.status,
@@ -189,10 +208,55 @@ export async function buildSalesOrderPrintable(id: string, ctx: TenantContext): 
   }
 }
 
+export async function buildDeliveryNotePrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
+  const note = (await getDeliveryNote(id, ctx.orgId)) as unknown as DeliveryNoteLoaded
+  assertPrintAccess({ org_id: note.org_id, branch_id: note.branch_id }, ctx)
+  const { issuer, template } = await getPrintHeader(ctx.orgId)
+  const isDraft = note.status === 'draft'
+  const lines: PrintableLineItem[] = (note.items ?? []).map(i => ({
+    description: i.description,
+    quantity: decString(i.quantity),
+    unit_price: '0',
+    discount_pct: null,
+    iva_rate: null,
+    subtotal: null,
+    discount_amount: null,
+    tax_amount: null,
+    total: null,
+  }))
+  return {
+    domain: 'sales',
+    kind: 'delivery_note',
+    isDraft,
+    issuer,
+    template,
+    title: 'Remito de entrega',
+    document_number: note.delivery_number,
+    status_code: note.status,
+    status_label: DELIVERY_NOTE_STATUS_LABEL[note.status] ?? note.status,
+    currency: 'ARS',
+    payment_condition: null,
+    payment_condition_label: null,
+    counterparty_role: 'customer',
+    counterparty: counterpartyFromContact(note.contact),
+    branch: branchFromModel(note.branch),
+    meta_dates: [
+      { label: 'Emisión', value: formatDateArg(note.created_at) },
+      { label: 'Entrega', value: formatDateArg(note.delivery_date) },
+      { label: 'Transportista', value: note.carrier ?? null },
+      { label: 'Seguimiento', value: note.tracking_code ?? null },
+    ],
+    lines,
+    totals: { subtotal: '0.00', discount_amount: null, tax_amount: '0.00', total: '0.00' },
+    notes: note.notes ?? null,
+    payments: null,
+  }
+}
+
 export async function buildSalesInvoicePrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
   const invoice = (await getInvoice(id, ctx)) as unknown as SalesInvoiceLoaded
   assertPrintAccess({ org_id: invoice.org_id, branch_id: invoice.branch_id }, ctx)
-  const issuerName = await getIssuerName(ctx.orgId)
+  const { issuer, template } = await getPrintHeader(ctx.orgId)
   const pc = invoice.payment_condition as PaymentCondition
   const isDraft = invoice.status === 'draft'
   const payments: PrintablePaymentRow[] | null = (() => {
@@ -210,7 +274,8 @@ export async function buildSalesInvoicePrintable(id: string, ctx: TenantContext)
     domain: 'sales',
     kind: 'sales_invoice',
     isDraft,
-    issuer: { name: issuerName },
+    issuer,
+    template,
     title: 'Factura',
     document_number: invoice.invoice_number,
     status_code: invoice.status,

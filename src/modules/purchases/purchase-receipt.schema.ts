@@ -10,6 +10,8 @@ export const receiptItemSchema = z.object({
   quantity:      z.coerce.number().positive(),
   unit_cost:     z.coerce.number().min(0).default(0),
   sort_order:    z.coerce.number().int().min(0).default(0),
+  batch_code:    z.string().trim().min(1).max(100).nullable().optional(),
+  expiry_date:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD').nullable().optional(),
 })
 
 export const purchaseReceiptSchema = z.object({

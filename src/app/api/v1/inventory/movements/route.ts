@@ -35,6 +35,7 @@ export const POST = withPermission('inventory:write', async (req, _ctx, session)
       parsed.data.quantity,
       parsed.data.notes ?? null,
       ctx,
+      { batchCode: parsed.data.batch_code ?? null, expiryDate: parsed.data.expiry_date ?? null },
     )
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {

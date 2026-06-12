@@ -24,10 +24,33 @@ interface ApplyMovementParams {
   quantityDelta: Decimal
   notes:         string | null
   actorId:       string | null
+  /** Inbound only: lot code for the batch the quantity lands on. */
+  batchCode?:    string | null
+  /** Inbound only: expiry (YYYY-MM-DD) for the batch the quantity lands on. */
+  expiryDate?:   string | null
 }
 
+/**
+ * Applies a stock movement to a (variant, warehouse) pair with batch (lote)
+ * traceability and FEFO consumption.
+ *
+ * `stock_items.quantity` is the authoritative aggregate and is always updated
+ * atomically here, under a row lock. Batches under the item are kept in sync:
+ *
+ * - Inbound (delta > 0): the quantity lands on a single batch — the one named
+ *   by `batchCode`/`expiryDate`, or the legacy/default batch otherwise. One
+ *   `stock_movements` row is written, linked to that batch.
+ * - Outbound (delta < 0): batches are consumed in FEFO order (earliest expiry
+ *   first, NULLs last), splitting across batches as needed. ONE
+ *   `stock_movements` row is written per batch consumed, each linked to its
+ *   batch via `batch_id`, so the ledger reflects exactly which lots left.
+ *
+ * `expires_on` on the aggregate is kept in sync with the earliest live batch
+ * expiry so the existing expiry-alert queries keep working unchanged.
+ */
 export async function applyMovement(params: ApplyMovementParams, t: Transaction): Promise<void> {
   const { variantId, warehouseId, orgId, movementType, referenceType, referenceId, quantityDelta, notes, actorId } = params
+  const { allocateInbound, consumeFefo, earliestExpiry } = await import('./stock-batches.service')
 
   const [item] = await StockItem.findOrCreate({
     where:    { variant_id: variantId, warehouse_id: warehouseId },
@@ -43,23 +66,52 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
     throw new Error('INSUFFICIENT_STOCK')
   }
 
-  await item.update({ quantity: after.toFixed(4) }, { transaction: t })
+  // Allocate against batches, producing one movement per affected batch.
+  // running tracks the aggregate before/after per ledger row so the ledger
+  // remains a faithful, additive trail even when an outbound splits.
+  let running = before
+  const writeMovement = async (delta: Decimal, batchId: string | null) => {
+    const rowBefore = running
+    const rowAfter  = running.plus(delta)
+    running = rowAfter
+    await StockMovement.create(
+      {
+        variant_id:      variantId,
+        warehouse_id:    warehouseId,
+        org_id:          orgId,
+        movement_type:   movementType,
+        reference_type:  referenceType,
+        reference_id:    referenceId,
+        batch_id:        batchId,
+        quantity_delta:  delta.toFixed(4),
+        quantity_before: rowBefore.toFixed(4),
+        quantity_after:  rowAfter.toFixed(4),
+        notes,
+        created_by:      actorId,
+        updated_by:      actorId,
+      },
+      { transaction: t },
+    )
+  }
 
-  await StockMovement.create(
-    {
-      variant_id:      variantId,
-      warehouse_id:    warehouseId,
-      org_id:          orgId,
-      movement_type:   movementType,
-      reference_type:  referenceType,
-      reference_id:    referenceId,
-      quantity_delta:  quantityDelta.toFixed(4),
-      quantity_before: before.toFixed(4),
-      quantity_after:  after.toFixed(4),
-      notes,
-      created_by:      actorId,
-      updated_by:      actorId,
-    },
+  if (quantityDelta.gt(0)) {
+    const alloc = await allocateInbound(
+      { orgId, stockItemId: item.id, quantity: quantityDelta, batchCode: params.batchCode ?? null, expiryDate: params.expiryDate ?? null },
+      t,
+    )
+    await writeMovement(quantityDelta, alloc.batchId)
+  } else if (quantityDelta.lt(0)) {
+    const allocations = await consumeFefo({ stockItemId: item.id, quantity: quantityDelta.abs() }, t)
+    for (const alloc of allocations) {
+      await writeMovement(alloc.quantity.negated(), alloc.batchId)
+    }
+  } else {
+    // Zero-delta movement (rare): record it for the audit trail, no batch.
+    await writeMovement(quantityDelta, null)
+  }
+
+  await item.update(
+    { quantity: after.toFixed(4), expires_on: await earliestExpiry(item.id, t) },
     { transaction: t },
   )
 
@@ -153,6 +205,7 @@ export async function manualAdjustment(
   newQuantity:  number,
   notes:        string | null,
   ctx:          TenantContext,
+  batch?:       { batchCode: string | null; expiryDate: string | null },
 ): Promise<void> {
   await sequelize.transaction(async (t) => {
     const [item] = await StockItem.findOrCreate({
@@ -178,6 +231,9 @@ export async function manualAdjustment(
       referenceType: 'manual',
       referenceId:   null,
       quantityDelta: delta,
+      // Batch hint only applies to inbound adjustments; ignored when adjusting down.
+      batchCode:     delta.gt(0) ? (batch?.batchCode ?? null) : null,
+      expiryDate:    delta.gt(0) ? (batch?.expiryDate ?? null) : null,
       notes,
       actorId: ctx.userId,
     }, t)
@@ -201,6 +257,8 @@ export async function listMovements(query: StockMovementQuery, orgId: string) {
     ]
   }
 
+  const StockItemBatch = (await import('./stock-item-batch.model')).default
+
   const { rows, count } = await StockMovement.findAndCountAll({
     where,
     limit,
@@ -214,6 +272,13 @@ export async function listMovements(query: StockMovementQuery, orgId: string) {
         attributes: ['id', 'sku', 'name', 'is_default'],
         required:   !!search,
         include: [{ model: Product, as: 'product', attributes: ['id', 'name'] }],
+      },
+      {
+        model:      StockItemBatch,
+        as:         'batch',
+        attributes: ['id', 'batch_code', 'expiry_date'],
+        required:   false,
+        paranoid:   false,
       },
     ],
   })

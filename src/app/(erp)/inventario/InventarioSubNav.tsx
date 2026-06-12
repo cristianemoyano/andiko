@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/inventario/depositos',   label: 'Depósitos' },
   { href: '/inventario/stock',       label: 'Stock' },
   { href: '/inventario/movimientos', label: 'Movimientos' },
+  { href: '/inventario/remitos',     label: 'Remitos' },
   { href: '/inventario/reposicion',  label: 'Reposición' },
 ] as const
 

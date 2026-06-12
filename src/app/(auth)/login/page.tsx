@@ -6,7 +6,7 @@ export const metadata = { title: 'Ingresar — Andiko' }
 
 export default async function LoginPage() {
   const session = await auth()
-  if (session) redirect('/')
+  if (session) redirect('/panel')
 
   return (
     <div className="w-full max-w-sm">

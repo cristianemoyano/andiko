@@ -38,6 +38,9 @@ Infraestructura base sin lógica de negocio.
 - [x] UX: componente global de error de API (banner/toast) + helper `fetchJson` para evitar duplicar manejo de errores en cada pantalla
 - [x] Dev tooling: comandos de seed/clear idempotentes creciendo con el sistema (incluye permisos, catálogo, ventas, tenancy)
 - [x] Prod DB CLI: `db:reset-prod`, `migrate:prod`, `migrate:baseline-prod`, `db:seed-prod` (local, con `.env.production.local`)
+- [x] Landing pública "Próximamente" en `/` con SEO (metadata, sitemap, robots, OG image, JSON-LD)
+- [x] Panel ERP movido a `/panel`; redirects post-login y onboarding actualizados
+- [x] Formulario de contacto en landing vía Web3Forms (`ContactForm`, sin BD)
 
 ---
 
@@ -146,7 +149,7 @@ Base de datos de clientes y proveedores. Dependencia de todos los módulos sigui
 - [x] Breadcrumb `Contactos › Razón social` con navegación de vuelta al listado
 - [x] Datos de pago: CBU, alias, banco (CRUD desde vista detalle, validación de 22 dígitos, dato principal)
 - [x] Múltiples direcciones por contacto (entrega, fiscal, comercial) con CRUD desde vista detalle
-- [ ] Importación desde CSV
+- [x] Importación desde CSV
 
 ---
 
@@ -230,8 +233,8 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] Listado de cuentas corrientes por cliente
 - [x] Reportes: ventas por período, por cliente, por producto
 - [x] **Impresión y exportación de documentos (MVP)** — Módulo `printing` (registro por dominio/recurso), API `GET /api/v1/printing/[domain]/[resource]/[id]`, vistas print bajo `/ventas/...` y `/compras/...` (layout A4, PDF vía `window.print()` + `@media print`). Borradores imprimibles con marca **BORRADOR** (uso interno).
-- [ ] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página.
-- [ ] Editor visual de template (tipografía, paleta, secciones visibles).
+- [ ] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página. *(Implementado en rama; pendiente de pulir como producto: descubribilidad en menú, UX del editor y validación en prod.)*
+- [ ] Editor visual de template (tipografía, paleta, secciones visibles). *(Misma situación: código listo para merge, falta cerrar la experiencia de usuario.)*
 
 ---
 
@@ -264,8 +267,8 @@ Gestión de stock integrada con ventas y compras.
 - [x] Lista de reposición por depósito: productos con stock ≤ mínimo, cantidad sugerida, exportación CSV (`/inventario/reposicion`)
 
 ### Pendientes
-- [ ] Remitos de entrega
-- [ ] Trazabilidad por lotes (lote + vencimiento por cantidad) con salidas FEFO y vínculo explícito en `stock_movements`
+- [x] Remitos de entrega
+- [x] Trazabilidad por lotes (lote + vencimiento por cantidad) con salidas FEFO y vínculo explícito en `stock_movements`
 
 ---
 
@@ -343,10 +346,18 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 
 Envío de documentos e notificaciones por email desde el ERP.
 
-- [ ] Templates de email por tipo de documento (presupuesto, pedido, factura)
-- [ ] Envío de documentos al cliente desde el detalle (botón "Enviar por email")
-- [ ] Configuración SMTP por organización (o servicio transaccional tipo Resend/SendGrid)
-- [ ] Historial de envíos por documento
+**Retomar WIP:** `git stash pop` (stash `wip: communications email module`). Código parcial en `src/modules/communications/`, migraciones `20260611150000` / `20260611160000`, `src/lib/crypto.ts`, deps `nodemailer`.
+
+### Backend (parcial — en stash, sin mergear)
+- [ ] Migraciones: `email_logs` + columnas `email_settings` / `email_templates` en `organization_settings`
+- [ ] Servicios: config SMTP por org (`email-settings.service`), templates por documento (`email-templates.service`), transporte SMTP/log (`transport.ts`), resolución de documento (`document-resolver.ts`), cifrado de secretos (`crypto.ts`)
+- [ ] Modelo `EmailLog` + historial por documento
+
+### Pendiente para cerrar el ítem del roadmap
+- [ ] Templates de email por tipo de documento (presupuesto, pedido, factura, remito) — editor UI + defaults con variables `{{contact_name}}`, `{{document_number}}`, etc.
+- [ ] Envío de documentos al cliente desde el detalle (botón "Enviar por email") + servicio de envío que persista `email_logs`
+- [ ] Configuración SMTP por organización — UI en `/configuracion` (o sys-admin) + API REST
+- [ ] Historial de envíos por documento — listado en detalle del comprobante
 - [ ] Notificaciones internas: alertas de stock mínimo, vencimiento de presupuestos
 
 ---

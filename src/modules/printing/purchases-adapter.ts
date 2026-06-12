@@ -8,7 +8,7 @@ import { getPurchaseReceipt } from '@/modules/purchases/purchase-receipts.servic
 import { getSupplierInvoice } from '@/modules/purchases/supplier-invoices.service'
 import { getSupplierPayment } from '@/modules/purchases/supplier-payments.service'
 import { decString, formatDateArg } from './format-utils'
-import { getIssuerName } from './issuer'
+import { getPrintHeader } from './issuer'
 import { assertPrintAccess } from './tenant-guards'
 import {
   PAYMENT_CONDITION_LABEL,
@@ -173,14 +173,15 @@ function totalsFrom(subtotal: unknown, discount: unknown | null, tax: unknown, t
 export async function buildPurchaseOrderPrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
   const order = (await getPurchaseOrder(id)) as unknown as PurchaseOrderLoaded
   assertPrintAccess({ org_id: order.org_id, branch_id: order.branch_id }, ctx)
-  const issuerName = await getIssuerName(ctx.orgId)
+  const { issuer, template } = await getPrintHeader(ctx.orgId)
   const pc = order.payment_condition as PaymentCondition
   const isDraft = order.status === 'draft'
   return {
     domain: 'purchases',
     kind: 'purchase_order',
     isDraft,
-    issuer: { name: issuerName },
+    issuer,
+    template,
     title: 'Orden de compra',
     document_number: order.order_number,
     status_code: order.status,
@@ -205,13 +206,14 @@ export async function buildPurchaseOrderPrintable(id: string, ctx: TenantContext
 export async function buildPurchaseReceiptPrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
   const receipt = (await getPurchaseReceipt(id)) as unknown as PurchaseReceiptLoaded
   assertPrintAccess({ org_id: receipt.org_id, branch_id: receipt.branch_id }, ctx)
-  const issuerName = await getIssuerName(ctx.orgId)
+  const { issuer, template } = await getPrintHeader(ctx.orgId)
   const isDraft = receipt.status === 'draft'
   return {
     domain: 'purchases',
     kind: 'purchase_receipt',
     isDraft,
-    issuer: { name: issuerName },
+    issuer,
+    template,
     title: 'Recepción',
     document_number: receipt.receipt_number,
     status_code: receipt.status,
@@ -244,7 +246,7 @@ export async function buildPurchaseReceiptPrintable(id: string, ctx: TenantConte
 export async function buildSupplierInvoicePrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
   const invoice = (await getSupplierInvoice(id)) as unknown as SupplierInvoiceLoaded
   assertPrintAccess({ org_id: invoice.org_id, branch_id: invoice.branch_id }, ctx)
-  const issuerName = await getIssuerName(ctx.orgId)
+  const { issuer, template } = await getPrintHeader(ctx.orgId)
   const pc = invoice.payment_condition as PaymentCondition
   const isDraft = invoice.status === 'draft'
   const payments: PrintablePaymentRow[] | null = (() => {
@@ -262,7 +264,8 @@ export async function buildSupplierInvoicePrintable(id: string, ctx: TenantConte
     domain: 'purchases',
     kind: 'supplier_invoice',
     isDraft,
-    issuer: { name: issuerName },
+    issuer,
+    template,
     title: 'Factura proveedor',
     document_number: invoice.invoice_number,
     status_code: invoice.status,
@@ -288,13 +291,14 @@ export async function buildSupplierInvoicePrintable(id: string, ctx: TenantConte
 export async function buildSupplierPaymentPrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
   const payment = (await getSupplierPayment(id, ctx.orgId)) as unknown as SupplierPaymentLoaded
   assertPrintAccess({ org_id: payment.org_id, branch_id: payment.branch_id }, ctx)
-  const issuerName = await getIssuerName(ctx.orgId)
+  const { issuer, template } = await getPrintHeader(ctx.orgId)
   const inv = payment.invoice
   return {
     domain: 'purchases',
     kind: 'supplier_payment',
     isDraft: false,
-    issuer: { name: issuerName },
+    issuer,
+    template,
     title: 'Pago a proveedor',
     document_number: payment.payment_number,
     status_code: 'posted',

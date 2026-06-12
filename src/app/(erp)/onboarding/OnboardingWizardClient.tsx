@@ -1665,10 +1665,10 @@ export function OnboardingWizardClient({
         body: JSON.stringify({ data, complete: true }),
       })
       localStorage.removeItem(storageKey)
-      router.push('/')
+      router.push('/panel')
     } catch {
       // Still redirect — data saved locally anyway
-      router.push('/')
+      router.push('/panel')
     } finally {
       setSaving(false)
     }
@@ -1676,7 +1676,7 @@ export function OnboardingWizardClient({
 
   const handleSaveAndExit = async () => {
     await saveProgress(data)
-    router.push('/')
+    router.push('/panel')
   }
 
   const currentId = STEPS[step]?.id

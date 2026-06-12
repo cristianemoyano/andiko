@@ -3,6 +3,7 @@ import type { Permission } from '@/lib/permissions'
 import type { PrintableDocument } from '@/types/printing'
 import type { TenantContext } from '@/lib/tenancy'
 import {
+  buildDeliveryNotePrintable,
   buildSalesInvoicePrintable,
   buildSalesOrderPrintable,
   buildSalesQuotePrintable,
@@ -23,6 +24,7 @@ const handlers: Record<string, RegisteredPrintHandler> = {
   'sales:quotes':   { permission: 'sales:read',     build: buildSalesQuotePrintable },
   'sales:orders':   { permission: 'sales:read',     build: buildSalesOrderPrintable },
   'sales:invoices': { permission: 'sales:read',     build: buildSalesInvoicePrintable },
+  'sales:remitos':  { permission: 'inventory:read', build: buildDeliveryNotePrintable },
   'purchases:orders':   { permission: 'purchases:read', build: buildPurchaseOrderPrintable },
   'purchases:receipts': { permission: 'purchases:read', build: buildPurchaseReceiptPrintable },
   'purchases:invoices': { permission: 'purchases:read', build: buildSupplierInvoicePrintable },

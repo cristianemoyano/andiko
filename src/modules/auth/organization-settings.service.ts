@@ -17,7 +17,10 @@ export interface EffectiveOrganizationSettings {
 }
 
 async function loadEffectiveSettings(orgId: string): Promise<EffectiveOrganizationSettings> {
-  const row = await OrganizationSetting.findOne({ where: { org_id: orgId } })
+  const row = await OrganizationSetting.findOne({
+    where: { org_id: orgId },
+    attributes: ['enabled_modules', 'enabled_features'],
+  })
   return {
     org_id: orgId,
     enabled_modules: row?.enabled_modules ?? [...DEFAULT_ENABLED_MODULES],
@@ -47,7 +50,10 @@ export async function updateOrganizationSettings(
   const org = await Organization.findByPk(orgId)
   if (!org) throw new Error('ORG_NOT_FOUND')
 
-  const existing = await OrganizationSetting.findOne({ where: { org_id: orgId } })
+  const existing = await OrganizationSetting.findOne({
+    where: { org_id: orgId },
+    attributes: ['id', 'enabled_modules', 'enabled_features'],
+  })
   if (existing) {
     const next: Partial<{ enabled_modules: OrgModuleKey[]; enabled_features: Record<string, boolean> }> = {}
     if (input.enabled_modules !== undefined) next.enabled_modules = input.enabled_modules

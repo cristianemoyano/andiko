@@ -15,7 +15,7 @@ export default async function OnboardingPage() {
   const status = await getOnboardingStatus(orgId)
 
   // Already completed — redirect to main ERP
-  if (status.completed) redirect('/')
+  if (status.completed) redirect('/panel')
 
   return (
     <OnboardingWizardClient
