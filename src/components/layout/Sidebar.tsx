@@ -170,19 +170,34 @@ export function Sidebar({
           <>
             <SectionLabel>Administración</SectionLabel>
             {showSysAdminNavigation && (
-              <NavLink
-                item={{
-                  id: 'sys-admin-orgs',
-                  label: 'Organizaciones',
-                  href: '/sys-admin/organizaciones',
-                  icon: (
-                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                      <path d="M3 14h10M3 10h10M5 6h6M5 2h6M2 14V6l6-4 6 4v8"/>
-                    </svg>
-                  ),
-                }}
-                active={pathname.startsWith('/sys-admin')}
-              />
+              <>
+                <NavLink
+                  item={{
+                    id: 'sys-admin-orgs',
+                    label: 'Organizaciones',
+                    href: '/sys-admin/organizaciones',
+                    icon: (
+                      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                        <path d="M3 14h10M3 10h10M5 6h6M5 2h6M2 14V6l6-4 6 4v8"/>
+                      </svg>
+                    ),
+                  }}
+                  active={pathname.startsWith('/sys-admin/organizaciones')}
+                />
+                <NavLink
+                  item={{
+                    id: 'sys-admin-email',
+                    label: 'Email (SMTP)',
+                    href: '/sys-admin/email',
+                    icon: (
+                      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                        <rect x="1.5" y="3" width="13" height="10" rx="1"/><path d="m2 4 6 5 6-5"/>
+                      </svg>
+                    ),
+                  }}
+                  active={pathname.startsWith('/sys-admin/email')}
+                />
+              </>
             )}
             <SysAdminImpersonation />
           </>

@@ -4,20 +4,14 @@ import { useState } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/layout/Tabs'
 import { PrintTemplateTab } from './PrintTemplateTab'
-import { EmailSettingsTab } from './EmailSettingsTab'
 import { EmailTemplatesTab } from './EmailTemplatesTab'
 
-type Section = 'impresion' | 'email' | 'plantillas-email'
+type Section = 'impresion' | 'plantillas-email'
 
 export function ConfiguracionClient() {
   const [section, setSection] = useState<Section>('impresion')
 
-  const breadcrumbLabel =
-    section === 'impresion'
-      ? 'Plantilla de impresión'
-      : section === 'email'
-        ? 'Email (SMTP)'
-        : 'Plantillas de email'
+  const breadcrumbLabel = section === 'impresion' ? 'Plantilla de impresión' : 'Plantillas de email'
 
   return (
     <div className="flex flex-col h-full">
@@ -27,15 +21,11 @@ export function ConfiguracionClient() {
         <Tabs value={section} onValueChange={v => setSection(v as Section)}>
           <TabsList>
             <TabsTrigger value="impresion">Impresión</TabsTrigger>
-            <TabsTrigger value="email">Email (SMTP)</TabsTrigger>
             <TabsTrigger value="plantillas-email">Plantillas de email</TabsTrigger>
           </TabsList>
 
           <TabsContent value="impresion">
             <PrintTemplateTab />
-          </TabsContent>
-          <TabsContent value="email">
-            <EmailSettingsTab />
           </TabsContent>
           <TabsContent value="plantillas-email">
             <EmailTemplatesTab />

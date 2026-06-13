@@ -1,8 +1,8 @@
 import { z } from 'zod'
 
 /**
- * Per-organization SMTP configuration, stored as a JSONB blob on
- * `organization_settings.email_settings`. The password is encrypted at rest
+ * Global (platform-wide) SMTP configuration, managed by sys-admin and stored in
+ * the singleton `platform_settings` row. The password is encrypted at rest
  * (see `email-settings.service.ts`) and NEVER returned to the client — GET
  * responses expose only `has_password: boolean`.
  */

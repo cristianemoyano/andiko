@@ -80,7 +80,7 @@ export async function sendDocumentEmail(
     body = rendered.body
   }
 
-  const settings = await getResolvedEmailSettings(ctx.orgId)
+  const settings = await getResolvedEmailSettings()
   const transport = buildTransport(settings)
 
   const base = {

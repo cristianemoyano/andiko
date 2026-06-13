@@ -347,15 +347,15 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 Envío de documentos e notificaciones por email desde el ERP.
 
 ### Backend (completado)
-- [x] Migraciones: `email_logs` + columnas `email_settings` / `email_templates` en `organization_settings`
-- [x] Servicios: config SMTP por org (`email-settings.service`), templates por documento (`email-templates.service`), transporte SMTP/log (`transport.ts`), resolución de documento (`document-resolver.ts`), cifrado de secretos (`crypto.ts`, AES-256-GCM derivado de `AUTH_SECRET`)
-- [x] Modelo `EmailLog` + historial por documento
-- [x] API REST: `GET/PUT /api/v1/communications/settings`, `GET/PUT /api/v1/communications/templates`, `POST /api/v1/communications/send`, `GET /api/v1/communications/logs`
+- [x] Migraciones: `email_logs`, tabla singleton `platform_settings` (SMTP global), columna `email_templates` en `organization_settings`
+- [x] Servicios: config SMTP **global/plataforma** (`email-settings.service` → `platform_settings`), templates por org (`email-templates.service`), transporte SMTP/log (`transport.ts`), resolución de documento (`document-resolver.ts`), cifrado de secretos (`crypto.ts`, AES-256-GCM derivado de `AUTH_SECRET`)
+- [x] Modelo `EmailLog` + historial por documento; modelo `PlatformSetting`
+- [x] API REST: `GET/PUT /api/v1/sys-admin/email-settings` (SMTP global, `requireSysAdmin`), `GET/PUT /api/v1/communications/templates`, `POST /api/v1/communications/send`, `GET /api/v1/communications/logs`
 
 ### Frontend (completado)
-- [x] Templates de email por tipo de documento (presupuesto, pedido, factura, remito) — editor UI en `/configuracion` (tab "Plantillas de email") + defaults con variables `{{contact_name}}`, `{{document_number}}`, `{{total}}`, etc.
+- [x] Configuración SMTP **a nivel sys-admin/plataforma** (no por org) — pantalla `/sys-admin/email` + link en sidebar; contraseña cifrada, nunca devuelta al cliente. La usan todas las organizaciones.
+- [x] Templates de email por tipo de documento (presupuesto, pedido, factura, remito) — editor UI por org en `/configuracion` (tab "Plantillas de email") + defaults con variables `{{contact_name}}`, `{{document_number}}`, `{{total}}`, etc.
 - [x] Envío de documentos al cliente desde el detalle (componente `SendDocumentEmail`: botón "Enviar por email" en facturas/pedidos/presupuestos) + servicio de envío que persiste `email_logs`
-- [x] Configuración SMTP por organización — UI en `/configuracion` (tab "Email (SMTP)") + API REST; contraseña cifrada, nunca devuelta al cliente
 - [x] Historial de envíos por documento — listado en el diálogo de envío
 
 ### Pendiente
