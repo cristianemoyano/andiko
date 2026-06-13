@@ -24,6 +24,11 @@ import ProductVariant from '@/modules/catalog/product-variant.model'
 import PriceList from '@/modules/catalog/price-list.model'
 import PriceListItem from '@/modules/catalog/price-list-item.model'
 import { slugifyText } from '@/lib/slug'
+import { seedDefaultChartOfAccounts } from '@/modules/accounting/chart-seed'
+import Account from '@/modules/accounting/account.model'
+import JournalEntry from '@/modules/accounting/journal-entry.model'
+import JournalEntryLine from '@/modules/accounting/journal-entry-line.model'
+import { nextEntryNumber } from '@/modules/accounting/accounting.utils'
 import Warehouse from '@/modules/inventory/warehouse.model'
 import StockItem from '@/modules/inventory/stock-item.model'
 import StockMovement from '@/modules/inventory/stock-movement.model'
@@ -830,6 +835,140 @@ async function seedPurchases(
   )
 }
 
+type SeedJournalLine = {
+  code: string
+  debit?: string
+  credit?: string
+  branchId?: string | null
+  description?: string
+}
+
+/**
+ * Asientos contables de prueba para el tenant demo.
+ * Crea movimientos representativos de una PyME (aporte de capital, venta con IVA,
+ * compra de mercadería, gasto con centro de costo y un borrador). Idempotente.
+ */
+async function seedAccountingEntries(
+  orgId: string,
+  branch: Branch,
+  actorId: string,
+  t: import('sequelize').Transaction,
+) {
+  const existing = await JournalEntry.findOne({ where: { org_id: orgId }, transaction: t })
+  if (existing) return
+
+  const accountRows = await Account.findAll({
+    where: { org_id: orgId },
+    attributes: ['id', 'code'],
+    transaction: t,
+  })
+  const idByCode = new Map(accountRows.map(a => [a.code, a.id]))
+  const acc = (code: string): string => {
+    const id = idByCode.get(code)
+    if (!id) throw new Error(`Seed contable: cuenta ${code} no encontrada`)
+    return id
+  }
+
+  async function createEntry(opts: {
+    date: string
+    description: string
+    status: 'draft' | 'posted'
+    lines: SeedJournalLine[]
+  }) {
+    const entry_number = await nextEntryNumber(orgId, t)
+    const totalDebit = opts.lines.reduce((s, l) => s + parseFloat(l.debit ?? '0'), 0)
+    const totalCredit = opts.lines.reduce((s, l) => s + parseFloat(l.credit ?? '0'), 0)
+
+    const entry = await JournalEntry.create(
+      {
+        org_id:       orgId,
+        entry_number,
+        entry_date:   opts.date as unknown as Date,
+        description:  opts.description,
+        status:       opts.status,
+        total_debit:  totalDebit.toFixed(2),
+        total_credit: totalCredit.toFixed(2),
+        created_by:   actorId,
+        updated_by:   actorId,
+      },
+      { transaction: t },
+    )
+
+    await JournalEntryLine.bulkCreate(
+      opts.lines.map((l, idx) => ({
+        org_id:      orgId,
+        entry_id:    entry.id,
+        account_id:  acc(l.code),
+        branch_id:   l.branchId ?? null,
+        description: l.description ?? null,
+        debit:       l.debit ?? '0.00',
+        credit:      l.credit ?? '0.00',
+        sort_order:  idx,
+        created_by:  actorId,
+        updated_by:  actorId,
+      })),
+      { transaction: t },
+    )
+  }
+
+  // 1. Aporte de capital inicial
+  await createEntry({
+    date: '2026-01-02',
+    description: 'Aporte de capital inicial',
+    status: 'posted',
+    lines: [
+      { code: '1.1.01.02', debit: '1000000.00', description: 'Acreditación en banco' },
+      { code: '3.1.01',    credit: '1000000.00' },
+    ],
+  })
+
+  // 2. Venta con IVA (21%)
+  await createEntry({
+    date: '2026-01-10',
+    description: 'Venta de mercadería con IVA',
+    status: 'posted',
+    lines: [
+      { code: '1.1.02.01', debit: '121000.00', description: 'Factura A 0001-00000001' },
+      { code: '4.1.01',    credit: '100000.00' },
+      { code: '2.1.02.01', credit: '21000.00' },
+    ],
+  })
+
+  // 3. Compra de mercadería con IVA crédito fiscal
+  await createEntry({
+    date: '2026-01-15',
+    description: 'Compra de mercadería a proveedor',
+    status: 'posted',
+    lines: [
+      { code: '1.1.03.01', debit: '50000.00' },
+      { code: '1.1.02.02', debit: '10500.00' },
+      { code: '2.1.01.01', credit: '60500.00', description: 'Proveedor S.A.' },
+    ],
+  })
+
+  // 4. Pago de alquiler imputado a una sucursal (centro de costo)
+  await createEntry({
+    date: '2026-01-31',
+    description: 'Pago de alquiler del local',
+    status: 'posted',
+    lines: [
+      { code: '5.2.05',    debit: '80000.00', branchId: branch.id, description: 'Alquiler enero' },
+      { code: '1.1.01.02', credit: '80000.00', branchId: branch.id },
+    ],
+  })
+
+  // 5. Gasto en borrador (sin contabilizar)
+  await createEntry({
+    date: '2026-02-03',
+    description: 'Gastos varios de administración (borrador)',
+    status: 'draft',
+    lines: [
+      { code: '5.2.02',    debit: '15000.00' },
+      { code: '1.1.01.01', credit: '15000.00' },
+    ],
+  })
+}
+
 async function run() {
   const allowProd = process.env.ALLOW_PROD_SEED === 'yes'
   if (process.env.NODE_ENV !== 'development' && !allowProd) {
@@ -961,11 +1100,13 @@ async function run() {
           const defaultCustomer = contacts.find(c => c.type === 'customer' || c.type === 'both') ?? null
           defaultCustomerId = defaultCustomer?.id ?? null
           await seedInventory(org.id, branches, user.id, t)
+          await seedDefaultChartOfAccounts(org.id, t, user.id)
 
           // Purchases seed (demo tenant only)
           if (tenant.slug === 'demo') {
             const defaultBranch = branches[0]!
             await seedPurchases(org.id, defaultBranch, user.id, variantsBySku, contacts, t)
+            await seedAccountingEntries(org.id, defaultBranch, user.id, t)
           }
         }
 

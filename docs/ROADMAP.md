@@ -330,13 +330,15 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 
 **Entidades:** `accounts`, `journal_entries`, `journal_entry_lines`
 
-- [ ] Plan de cuentas (adaptado a PyMEs argentinas)
+- [x] Plan de cuentas (adaptado a PyMEs argentinas) — sembrado por defecto, editable
 - [ ] Asientos automáticos desde ventas, compras y pagos
-- [ ] Asientos manuales
-- [ ] Balance de sumas y saldos
+- [x] Asientos manuales — partida doble, débito/haber balanceado, estados borrador/contabilizado
+- [x] Balance de sumas y saldos — con filtro por sucursal (centro de costo)
 - [ ] Estado de resultados
 - [ ] Cierre de período
 - [ ] Exportación para estudio contable
+
+> Dimensión de sucursal (centro de costo) opcional a nivel de línea de asiento: los libros se mantienen a nivel empresa (CUIT).
 
 ---
 

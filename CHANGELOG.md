@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.0](https://github.com/cristianemoyano/andiko/compare/v0.4.0...v0.5.0) (2026-06-13)
+
+### Features
+
+* **accounting:** add Contabilidad foundation module ([e6b2177](https://github.com/cristianemoyano/andiko/commit/e6b21770d84a2836ac72ae2de484c879b706034e))
+
 ## [0.4.0](https://github.com/cristianemoyano/andiko/compare/v0.3.0...v0.4.0) (2026-06-13)
 
 ### Features
