@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.0](https://github.com/cristianemoyano/andiko/compare/v0.3.0...v0.4.0) (2026-06-13)
+
+### Features
+
+* **core:** communications email module — SMTP config, document templates, send + history ([6f3ce0a](https://github.com/cristianemoyano/andiko/commit/6f3ce0a032c0114f34cd1518440b1e0cdf8f1ffa))
+
 ## [0.3.0](https://github.com/cristianemoyano/andiko/compare/v0.2.8...v0.3.0) (2026-06-12)
 
 ### Features
