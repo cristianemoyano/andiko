@@ -73,7 +73,7 @@ export function LoginForm() {
         </p>
       )}
 
-      <Button type="submit" disabled={loading} className="w-full mt-1">
+      <Button type="submit" disabled={loading} size="lg" className="w-full mt-1">
         {loading ? 'Ingresando…' : 'Ingresar'}
       </Button>
     </form>

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
+import { AppVersion } from './AppVersion'
 import { SysAdminImpersonation } from './SysAdminImpersonation'
 import { NAV_ID_TO_MODULE, type OrgModuleKey } from '@/modules/auth/organization-modules'
 
@@ -162,6 +163,7 @@ export function Sidebar({
           </svg>
         </div>
         <span className="text-[15px] font-semibold text-zinc-900 tracking-tight">andiko</span>
+        <AppVersion className="ml-auto" />
       </div>
 
       {/* Navigation */}

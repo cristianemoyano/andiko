@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.1](https://github.com/cristianemoyano/andiko/compare/v0.5.0...v0.5.1) (2026-06-13)
+
+### Features
+
+* **core:** revamp login and show deployed version in UI ([9918f47](https://github.com/cristianemoyano/andiko/commit/9918f47b39d88d53d5c9f24163ed4ab60c09111b))
+
 ## [0.5.0](https://github.com/cristianemoyano/andiko/compare/v0.4.0...v0.5.0) (2026-06-13)
 
 ### Features

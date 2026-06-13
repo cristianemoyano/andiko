@@ -1,6 +1,7 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
+import { AndikoLogo } from '@/components/layout/AndikoLogo'
+import { AppVersion } from '@/components/layout/AppVersion'
 import { createPageMetadata, siteConfig, siteUrl } from '@/lib/site'
 import { ContactForm } from './ContactForm'
 
@@ -9,22 +10,6 @@ export const metadata = createPageMetadata({
   description: siteConfig.description,
   path: '/',
 })
-
-function AndikoLogo() {
-  return (
-    <Link href="/" className="group flex items-center gap-3" aria-label="Andiko — inicio">
-      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-brand-600 shadow-md shadow-brand-600/25 transition-transform duration-300 group-hover:scale-105">
-        <svg viewBox="0 0 12 12" className="h-5 w-5 fill-white" aria-hidden>
-          <rect x="0" y="1" width="3" height="10" />
-          <rect x="0" y="1" width="12" height="3" />
-          <rect x="9" y="1" width="3" height="10" />
-          <rect x="2" y="5" width="8" height="2.5" />
-        </svg>
-      </div>
-      <span className="text-xl font-semibold tracking-tight text-zinc-900">andiko</span>
-    </Link>
-  )
-}
 
 const featureItems = [
   {
@@ -206,8 +191,9 @@ export default async function ComingSoonPage() {
           <ContactForm />
         </main>
 
-        <footer className="relative z-10 border-t border-zinc-200/60 bg-white/40 px-6 py-6 text-center text-xs text-zinc-500 backdrop-blur-sm sm:px-10">
-          © {new Date().getFullYear()} Andiko
+        <footer className="relative z-10 flex flex-col items-center gap-2 border-t border-zinc-200/60 bg-white/40 px-6 py-6 text-center text-xs text-zinc-500 backdrop-blur-sm sm:px-10">
+          <span>© {new Date().getFullYear()} Andiko</span>
+          <AppVersion />
         </footer>
       </div>
     </>

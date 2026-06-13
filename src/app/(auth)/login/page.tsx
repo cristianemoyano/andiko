@@ -9,15 +9,15 @@ export default async function LoginPage() {
   if (session) redirect('/panel')
 
   return (
-    <div className="w-full max-w-sm">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900">Andiko ERP</h1>
-          <p className="text-sm text-gray-500 mt-1">Ingresá con tu cuenta</p>
-        </div>
-
-        <LoginForm />
+    <div className="rounded-2xl border border-zinc-200/80 bg-white/90 p-8 shadow-xl shadow-brand-900/5 backdrop-blur-sm sm:p-10">
+      <div className="mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Ingresá a tu cuenta</h1>
+        <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+          Accedé al panel de gestión de tu empresa con tu email y contraseña.
+        </p>
       </div>
+
+      <LoginForm />
     </div>
   )
 }

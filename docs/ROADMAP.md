@@ -26,6 +26,8 @@ Infraestructura base sin lógica de negocio.
 - [x] Middleware de protección de rutas (`src/middleware.ts`)
 - [x] Tipos de sesión extendidos con `role` (`src/types/next-auth.d.ts`)
 - [x] Página de login (`/login`) con design system, error inline, redirect post-auth
+- [x] Rediseño login split-layout con branding Andiko (panel izquierdo + formulario)
+- [x] Versión deployada visible en ERP (sidebar, login, landing) vía `NEXT_PUBLIC_APP_VERSION`
 - [x] Route groups: `(auth)/` para páginas públicas, `(erp)/` para páginas protegidas
 - [x] ERP layout base con auth guard (`src/app/(erp)/layout.tsx`)
 - [x] Modelo base de auditoría (`AuditModel`) con `created_by`, `updated_by`, `deleted_by` (FK a `users`), heredado por todos los modelos de negocio
