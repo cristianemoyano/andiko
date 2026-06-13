@@ -4,6 +4,7 @@ import sequelize from '@/lib/db'
 import Organization, { type OrgIvaCondition } from '@/modules/auth/organization.model'
 import Branch from '@/modules/auth/branch.model'
 import { slugifyText } from '@/lib/slug'
+import { seedDefaultChartOfAccounts } from '@/modules/accounting/chart-seed'
 import type {
   OrganizationCreateInput,
   OrganizationUpdateInput,
@@ -59,16 +60,22 @@ export async function createOrganization(input: OrganizationCreateInput) {
     ? slugifyText(input.slug.trim())
     : slugifyText(input.name)
   const slug = await allocateSlug(baseSlug)
-  const org = await Organization.create({
-    name: input.name.trim(),
-    slug,
-    is_active: true,
-    legal_name: input.legal_name?.trim() ?? null,
-    cuit: input.cuit ?? null,
-    iva_condition: input.iva_condition ?? null,
-    fiscal_address: input.fiscal_address?.trim() ?? null,
+  return sequelize.transaction(async (t) => {
+    const org = await Organization.create(
+      {
+        name: input.name.trim(),
+        slug,
+        is_active: true,
+        legal_name: input.legal_name?.trim() ?? null,
+        cuit: input.cuit ?? null,
+        iva_condition: input.iva_condition ?? null,
+        fiscal_address: input.fiscal_address?.trim() ?? null,
+      },
+      { transaction: t },
+    )
+    await seedDefaultChartOfAccounts(org.id, t)
+    return org
   })
-  return org
 }
 
 export async function getOrganizationWithBranches(id: string) {
