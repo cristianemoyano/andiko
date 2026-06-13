@@ -1,5 +1,7 @@
 export { Sidebar } from './Sidebar'
 export { TopBar } from './TopBar'
+export { AppVersion } from './AppVersion'
+export { AndikoLogo } from './AndikoLogo'
 export type { BreadcrumbItem } from './TopBar'
 export { Card, CardHeader, CardContent, CardFooter } from './Card'
 export type { CardProps, CardHeaderProps } from './Card'
