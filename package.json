@@ -1,6 +1,6 @@
 {
   "name": "andiko",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "packageManager": "pnpm@10.28.0",
   "engines": {
@@ -26,7 +26,7 @@
     "db:seed-prod": "ALLOW_PROD_SEED=yes tsx --env-file=.env.production.local src/db/dev/seed-dev.ts",
     "db:reset-prod": "ALLOW_PROD_RESET=yes tsx --env-file=.env.production.local src/db/dev/reset-prod.ts",
     "db:check-perms": "tsx --env-file=.env.local src/db/dev/check-permissions.ts",
-    "release": "release-it",
+    "release": "GITHUB_TOKEN=$(gh auth token) release-it",
     "prepare": "husky",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"

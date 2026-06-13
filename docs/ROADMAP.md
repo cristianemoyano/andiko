@@ -43,6 +43,8 @@ Infraestructura base sin lógica de negocio.
 - [x] Landing pública "Próximamente" en `/` con SEO (metadata, sitemap, robots, OG image, JSON-LD)
 - [x] Panel ERP movido a `/panel`; redirects post-login y onboarding actualizados
 - [x] Formulario de contacto en landing vía Web3Forms (`ContactForm`, sin BD)
+- [x] Landing de producto completa en `/` (desde diseño Claude Design): header sticky + nav con smooth-scroll, hero con mockup denso del panel ERP (`DashboardMockup`), secciones Módulos / Por qué / Métricas + rubros / Beta privada, footer. Lenguaje visual de marketing (botones 4px, tarjetas 12px, badges pill, foco teal) distinto del UI de producto.
+- [ ] Mencionar el módulo POS en la landing (ausente en el diseño actual; pendiente decidir tarjeta/copy)
 
 ---
 

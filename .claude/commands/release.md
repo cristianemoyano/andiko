@@ -39,6 +39,9 @@ git checkout -b release/next origin/develop
 ```
 
 ### 4. Run release-it (does everything)
+
+Requires `gh` authenticated (`gh auth login`). The script injects `GITHUB_TOKEN` from `gh auth token` so GitHub Releases are created automatically.
+
 ```bash
 pnpm release
 ```
@@ -50,6 +53,7 @@ pnpm release
 - Create a git commit `chore(release): vX.Y.Z`
 - Create a git tag `vX.Y.Z`
 - Push commit + tag to origin
+- Create the GitHub Release (requires `gh auth login` — token is injected by the `release` script)
 
 Answer the prompts. Let the tool drive.
 
