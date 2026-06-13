@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
+import { SendDocumentEmail } from '@/components/erp/SendDocumentEmail'
 import { Input } from '@/components/primitives/Input'
 import { Textarea } from '@/components/primitives/Textarea'
 import { FormField } from '@/components/primitives/FormField'
@@ -246,6 +247,11 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                 Imprimir
               </Link>
             </Button>
+            <SendDocumentEmail
+              documentType="invoice"
+              documentId={id}
+              documentLabel={`Factura ${invoice.invoice_number}`}
+            />
             {canIssue && (
               <>
                 <Button size="sm" variant="secondary" onClick={() => setConfirmIssue(true)}>
