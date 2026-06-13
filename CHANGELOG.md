@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.2](https://github.com/cristianemoyano/andiko/compare/v0.5.1...v0.5.2) (2026-06-13)
+
+### Features
+
+* **core:** expand landing into full product page from Claude Design ([5b5bd3e](https://github.com/cristianemoyano/andiko/commit/5b5bd3ea737308266505e8e67e7d2623c1286eee))
+
 ## [0.5.1](https://github.com/cristianemoyano/andiko/compare/v0.5.0...v0.5.1) (2026-06-13)
 
 ### Features
