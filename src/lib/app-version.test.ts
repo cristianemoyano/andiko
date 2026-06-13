@@ -1,5 +1,11 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it, afterEach } from 'vitest'
 import { resolveAppVersion } from '../../resolve-app-version'
+
+const pkgVersion = (
+  JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf-8')) as { version: string }
+).version
 
 describe('resolveAppVersion', () => {
   const originalRef = process.env.VERCEL_GIT_COMMIT_REF
@@ -19,11 +25,11 @@ describe('resolveAppVersion', () => {
 
   it('falls back to package.json version for branch deploys', () => {
     process.env.VERCEL_GIT_COMMIT_REF = 'develop'
-    expect(resolveAppVersion()).toBe('v0.5.0')
+    expect(resolveAppVersion()).toBe(`v${pkgVersion}`)
   })
 
   it('falls back to package.json version when git ref is missing', () => {
     delete process.env.VERCEL_GIT_COMMIT_REF
-    expect(resolveAppVersion()).toBe('v0.5.0')
+    expect(resolveAppVersion()).toBe(`v${pkgVersion}`)
   })
 })
