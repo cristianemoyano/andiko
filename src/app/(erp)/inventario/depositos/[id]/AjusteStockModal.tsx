@@ -201,8 +201,8 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 rounded-md border border-zinc-100 bg-zinc-50/60 p-3">
-          <div className="col-span-2 text-[11px] font-medium text-zinc-500">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border border-zinc-100 bg-zinc-50/60 p-3">
+          <div className="sm:col-span-2 text-[11px] font-medium text-zinc-500">
             Lote del ingreso (opcional — solo si aumentás la cantidad)
           </div>
           <FormField label="Código de lote">

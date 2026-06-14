@@ -214,7 +214,7 @@ export function MovimientosClient() {
                 placeholder="Buscar por producto o SKU…"
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(1) }}
-                className="w-64"
+                className="w-full sm:w-64"
               />
               <select
                 className="h-8 rounded-md border border-zinc-200 bg-white px-2 text-[13px] text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400"
