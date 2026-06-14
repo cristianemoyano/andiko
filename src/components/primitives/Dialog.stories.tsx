@@ -70,3 +70,37 @@ export const LargeSize: Story = {
     )
   },
 }
+
+// On narrow viewports the panel keeps a 1rem gutter on each side and the body
+// scrolls within a dvh-capped height while the header stays pinned.
+export const MobileLongContent: Story = {
+  parameters: {
+    viewport: { defaultViewport: 'mobile1' },
+  },
+  render: () => {
+    const [open, setOpen] = useState(true)
+    return (
+      <>
+        <Button onClick={() => setOpen(true)}>Abrir formulario largo</Button>
+        <Dialog
+          open={open}
+          onOpenChange={setOpen}
+          title="Nuevo contacto"
+          description="El cuerpo se desplaza; el encabezado queda fijo."
+        >
+          <div className="flex flex-col gap-4 px-5 py-4">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <FormField key={i} label={`Campo ${i + 1}`} htmlFor={`f${i}`}>
+                <Input id={`f${i}`} placeholder={`Valor ${i + 1}`} />
+              </FormField>
+            ))}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button onClick={() => setOpen(false)}>Guardar</Button>
+            </div>
+          </div>
+        </Dialog>
+      </>
+    )
+  },
+}

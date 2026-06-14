@@ -414,8 +414,8 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
             <div className="mt-3">
               <StatusBadge value={org.is_active ? 'Activa' : 'Inactiva'} />
             </div>
-            <div className="mt-4 pt-4 border-t border-zinc-100 grid grid-cols-2 gap-x-6 gap-y-2">
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide col-span-2">Datos fiscales</p>
+            <div className="mt-4 pt-4 border-t border-zinc-100 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide sm:col-span-2">Datos fiscales</p>
               <div>
                 <p className="text-[12px] text-zinc-500">Razón social legal</p>
                 <p className="text-[13px] text-zinc-800">{org.legal_name ?? '—'}</p>
@@ -542,7 +542,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               required
             />
           </FormField>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Razón social legal" htmlFor="edit_org_legal_name" error={orgFieldErrors.legal_name?.[0]}>
               <Input
                 id="edit_org_legal_name"
@@ -563,7 +563,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               />
             </FormField>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Condición IVA" htmlFor="edit_org_iva" error={orgFieldErrors.iva_condition?.[0]}>
               <SearchableSelect
                 value={orgIvaCondition}

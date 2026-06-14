@@ -173,7 +173,7 @@ export function AjustesPreciosClient() {
                 />
               </FormField>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField label="Tipo de ajuste" htmlFor="adjustment_type">
                   <Select
                     id="adjustment_type"

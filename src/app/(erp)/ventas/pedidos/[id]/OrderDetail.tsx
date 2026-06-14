@@ -529,7 +529,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
           <div className="bg-white border border-zinc-200 rounded-sm p-5 flex flex-col gap-4">
             {editMode ? (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField label="Cliente" htmlFor="contact_id" error={errors.contact_id?.[0]}>
                     <SearchableSelect
                       id="contact_id"
@@ -558,7 +558,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                     <DatePicker id="promised_date" value={promisedDate} onChange={setPromisedDate} placeholder="Seleccionar fecha" />
                   </FormField>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <VentasBranchField value={branchId} onChange={setBranchId} error={errors.branch_id?.[0]} />
                   <FormField label="Lista de precios" htmlFor="price_list_id">
                     <SearchableSelect
@@ -590,7 +590,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                     ))}
                   </div>
                 </FormField>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField label="Dirección de entrega" htmlFor="shipping_address_id">
                     <select
                       id="shipping_address_id"
@@ -628,7 +628,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                     </select>
                   </FormField>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <AddressSnapshotFields prefix="shipping" title="Snapshot entrega" value={shippingAddress} onChange={setShippingAddress} />
                   <AddressSnapshotFields prefix="billing" title="Snapshot facturación" value={billingAddress} onChange={setBillingAddress} />
                 </div>
@@ -673,7 +673,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
             )}
 
             {!editMode && (
-              <div className="grid grid-cols-2 gap-4 border-t border-zinc-100 pt-4 text-[13px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-zinc-100 pt-4 text-[13px]">
                 <div>
                   <p className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">Dirección de entrega</p>
                   <p className="text-zinc-700">{displaySnapshot(orderSnapshot('shipping', order)) ?? <span className="text-zinc-400">—</span>}</p>
@@ -687,7 +687,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
 
             {/* Notes — always visible */}
             {editMode ? (
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-zinc-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-zinc-100">
                 <FormField label="Notas para el cliente" htmlFor="notes">
                   <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Condiciones, aclaraciones…" />
                 </FormField>
@@ -697,7 +697,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
               </div>
             ) : (
               (order.notes || order.internal_notes) && (
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
                   {order.notes && (
                     <div>
                       <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Notas</p>
@@ -877,7 +877,7 @@ function AddressSnapshotFields({
   return (
     <div className="rounded-sm border border-zinc-200 p-3">
       <p className="mb-3 text-[12px] font-medium text-zinc-600">{title}</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FormField label="Calle" htmlFor={`${prefix}_street`}>
           <Input id={`${prefix}_street`} value={value.street} onChange={(e) => patch({ street: e.target.value })} />
         </FormField>

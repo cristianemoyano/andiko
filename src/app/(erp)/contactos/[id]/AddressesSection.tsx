@@ -206,8 +206,8 @@ function AddressModal({ contactId, address, onClose, onSaved }: {
               </select>
             </FormField>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
                 <FormField label="Calle" htmlFor="street" required error={errors.street?.[0]}>
                   <Input id="street" name="street" defaultValue={address?.street ?? ''} placeholder="Av. San Martín" required error={!!errors.street} disabled={saving} />
                 </FormField>
@@ -217,7 +217,7 @@ function AddressModal({ contactId, address, onClose, onSaved }: {
               </FormField>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField label="Piso" htmlFor="floor" error={errors.floor?.[0]}>
                 <Input id="floor" name="floor" defaultValue={address?.floor ?? ''} placeholder="3" disabled={saving} />
               </FormField>
@@ -226,7 +226,7 @@ function AddressModal({ contactId, address, onClose, onSaved }: {
               </FormField>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField label="Ciudad" htmlFor="city" required error={errors.city?.[0]}>
                 <Input id="city" name="city" defaultValue={address?.city ?? ''} placeholder="Mendoza" required error={!!errors.city} disabled={saving} />
               </FormField>
@@ -235,7 +235,7 @@ function AddressModal({ contactId, address, onClose, onSaved }: {
               </FormField>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField label="Código postal" htmlFor="postal_code" error={errors.postal_code?.[0]}>
                 <Input id="postal_code" name="postal_code" defaultValue={address?.postal_code ?? ''} placeholder="5500" disabled={saving} />
               </FormField>

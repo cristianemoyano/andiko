@@ -242,13 +242,13 @@ function SummaryList({ onSelect }: { onSelect: (contactId: string) => void }) {
         }
         toolbar={
           <>
-            <div className="relative flex items-center">
+            <div className="relative flex items-center w-full sm:w-auto">
               <svg className="pointer-events-none absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                 <circle cx="7" cy="7" r="4.5" />
                 <path d="M10.5 10.5l3 3" />
               </svg>
               <input
-                className="h-[30px] w-56 rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none"
+                className="h-[30px] w-full sm:w-56 rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none"
                 placeholder="Buscar por cliente o CUIT…"
                 value={search}
                 onChange={(e) => {

@@ -327,7 +327,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-zinc-100 text-[13px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pt-4 border-t border-zinc-100 text-[13px]">
               <div>
                 <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Emisión</p>
                 <p className="text-zinc-800">
@@ -373,7 +373,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
             )}
 
             {(invoice.notes || invoice.internal_notes) && (
-              <div className="mt-4 grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
                 {invoice.notes && (
                   <div>
                     <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Notas</p>
@@ -438,7 +438,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
             <div className="bg-white border border-zinc-200 rounded-sm p-5">
               <h2 className="text-[13px] font-semibold text-zinc-900 mb-4">Registrar cobro</h2>
               <form onSubmit={handleRegisterPayment} className="flex flex-col gap-4 max-w-lg">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField label="Importe" htmlFor="pay_amount">
                     <CurrencyInput
                       id="pay_amount"
