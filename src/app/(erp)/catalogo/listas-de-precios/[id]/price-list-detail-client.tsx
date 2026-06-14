@@ -257,8 +257,8 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
           </div>
         </div>
 
-        <form onSubmit={handleSetPrice} className="grid grid-cols-3 gap-3 mt-4 items-end">
-          <div className="col-span-2">
+        <form onSubmit={handleSetPrice} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4 items-end">
+          <div className="sm:col-span-2">
             <FormField label="SKU" htmlFor="pl_sku">
               <Input
                 id="pl_sku"
@@ -303,7 +303,7 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
               />
             </FormField>
           </div>
-          <div className="col-span-3 flex justify-end">
+          <div className="sm:col-span-2 lg:col-span-3 flex justify-end">
             <Button size="sm" type="submit" disabled={saving || !selectedVariantId || !price}>
               {saving ? 'Guardando…' : 'Guardar precio'}
             </Button>

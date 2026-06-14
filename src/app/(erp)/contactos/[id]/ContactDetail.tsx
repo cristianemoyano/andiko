@@ -211,8 +211,8 @@ function Row({ label, value, empty = null, mono = false }: {
   mono?: boolean
 }) {
   return (
-    <div className="flex items-center px-4 py-2.5 gap-4">
-      <span className="text-[12px] text-zinc-500 w-36 flex-shrink-0">{label}</span>
+    <div className="flex flex-col sm:flex-row sm:items-center px-4 py-2.5 gap-0.5 sm:gap-4">
+      <span className="text-[12px] text-zinc-500 w-full sm:w-36 flex-shrink-0">{label}</span>
       <span className={`text-[13px] ${mono ? 'font-mono text-zinc-700' : 'text-zinc-900'}`}>
         {value ?? empty ?? <span className="text-zinc-400">—</span>}
       </span>

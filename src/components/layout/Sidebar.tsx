@@ -6,105 +6,9 @@ import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { AppVersion } from './AppVersion'
 import { SysAdminImpersonation } from './SysAdminImpersonation'
-import { NAV_ID_TO_MODULE, type OrgModuleKey } from '@/modules/auth/organization-modules'
-
-interface NavItem {
-  id: string
-  label: string
-  href: string
-  icon: React.ReactNode
-  badge?: number
-}
-
-const NAV_MAIN: NavItem[] = [
-  {
-    id: 'dashboard',
-    label: 'Panel',
-    href: '/panel',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
-        <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
-      </svg>
-    ),
-  },
-]
-
-const NAV_MODULES: NavItem[] = [
-  {
-    id: 'ventas',
-    label: 'Ventas',
-    href: '/ventas',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <path d="M9 1H3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6L9 1z"/><path d="M9 1v5h5M5 9h6M5 12h4"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'inventario',
-    label: 'Inventario',
-    href: '/inventario',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <path d="M2 4l6-2 6 2v8l-6 2-6-2V4z"/><path d="M8 2v12M2 4l6 2 6-2"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'compras',
-    label: 'Compras',
-    href: '/compras',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <path d="M1 1h2l2 8h7l2-5H5"/><circle cx="7" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="1" fill="currentColor" stroke="none"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'contabilidad',
-    label: 'Contabilidad',
-    href: '/contabilidad',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <path d="M2 14h12M4 14V9M8 14V5M12 14V9"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'contactos',
-    label: 'Contactos',
-    href: '/contactos',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <circle cx="6" cy="5" r="2.5"/><path d="M1 14c0-2.76 2.24-5 5-5h0c2.76 0 5 2.24 5 5"/><circle cx="12" cy="5" r="2"/><path d="M11 10c1.5 0 4 .9 4 2.5v1.5"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'catalogo',
-    label: 'Catálogo',
-    href: '/catalogo',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <rect x="1" y="2" width="14" height="3" rx="0.5"/><rect x="1" y="7" width="14" height="3" rx="0.5"/><rect x="1" y="12" width="14" height="2" rx="0.5"/>
-      </svg>
-    ),
-  },
-]
-
-const NAV_SYSTEM: NavItem[] = [
-  {
-    id: 'configuracion',
-    label: 'Configuración',
-    href: '/configuracion',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-        <circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1M8 13.5v1M1.5 8h1M13.5 8h1M3.2 3.2l.7.7M12.1 12.1l.7.7M3.2 12.8l.7-.7M12.1 3.9l.7-.7"/>
-      </svg>
-    ),
-  },
-]
+import { useSidebar } from './SidebarContext'
+import { NAV_MAIN, NAV_MODULES, NAV_SYSTEM, isModuleNavVisible, type NavItem } from './nav-items'
+import { type OrgModuleKey } from '@/modules/auth/organization-modules'
 
 interface SidebarProps {
   userName?: string
@@ -118,13 +22,6 @@ interface SidebarProps {
   enabledModules?: OrgModuleKey[]
 }
 
-function isModuleNavVisible(navId: string, enabledModules?: OrgModuleKey[]): boolean {
-  if (!enabledModules) return true
-  const moduleKey = NAV_ID_TO_MODULE[navId]
-  if (!moduleKey) return true
-  return enabledModules.includes(moduleKey)
-}
-
 export function Sidebar({
   userName,
   userRole,
@@ -134,6 +31,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const { open, setOpen } = useSidebar()
 
   // Re-read from client session so nav updates when impersonation starts/stops without refresh.
   const showSysAdminNavigation = session?.user
@@ -151,7 +49,27 @@ export function Sidebar({
     : '?'
 
   return (
-    <aside className="flex flex-col w-[220px] flex-shrink-0 bg-white border-r border-zinc-200 h-full">
+    <>
+      {/* Backdrop — mobile only, when the drawer is open */}
+      {open && (
+        <div
+          className="fixed inset-x-0 top-0 bottom-14 z-40 bg-black/40 md:hidden"
+          aria-hidden
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      <aside
+        className={cn(
+          'flex flex-col w-[220px] flex-shrink-0 bg-white border-r border-zinc-200 h-full',
+          // Mobile: off-canvas drawer that slides in from the left.
+          'fixed inset-y-0 left-0 z-[45] transition-transform duration-200',
+          'pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0',
+          open ? 'translate-x-0' : '-translate-x-full',
+          // Desktop (md+): static column in the flex row, always visible.
+          'md:static md:z-auto md:translate-x-0'
+        )}
+      >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-[13px] border-b border-zinc-200">
         <div className="w-[22px] h-[22px] bg-brand-600 rounded-sm flex items-center justify-center flex-shrink-0">
@@ -268,7 +186,7 @@ export function Sidebar({
 
       {/* User area */}
       <div className="flex items-center gap-2.5 px-3 py-3 border-t border-zinc-200">
-        <Link href="/perfil" className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity">
+        <Link href="/perfil" onClick={() => setOpen(false)} className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity">
           <div className="w-[26px] h-[26px] rounded-full bg-brand-100 text-brand-800 text-[11px] font-semibold flex items-center justify-center flex-shrink-0">
             {initials}
           </div>
@@ -287,7 +205,8 @@ export function Sidebar({
           </svg>
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 
@@ -300,9 +219,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+  const { setOpen } = useSidebar()
   return (
     <Link
       href={item.href}
+      onClick={() => setOpen(false)}
       className={cn(
         'flex items-center gap-2.5 h-[34px] px-2 rounded-sm text-[13px] mb-px transition-colors',
         active

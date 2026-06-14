@@ -545,7 +545,7 @@ function StepCompany({
           />
         </FormField>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="CUIT" required hint="Formato: 30-12345678-9" error={errors.cuit}>
             <input
               type="text"
@@ -570,7 +570,7 @@ function StepCompany({
           </FormField>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="Nombre comercial" hint="Opcional — si difiere de la razón social">
             <input
               type="text"
@@ -600,7 +600,7 @@ function StepCompany({
         <Divider />
         <div className="text-[13px] font-medium text-zinc-700 -mb-2">Domicilio fiscal</div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="Calle y número">
             <input
               type="text"
@@ -621,7 +621,7 @@ function StepCompany({
           </FormField>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <FormField label="Provincia">
             <select
               className={selectCls()}
@@ -653,7 +653,7 @@ function StepCompany({
           </FormField>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="Teléfono">
             <input
               type="tel"
@@ -704,7 +704,7 @@ function StepModules({
         Módulos del sistema
       </SectionTitle>
 
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {MODULES_LIST.map(mod => {
           const isOn = selected.includes(mod.id)
           return (
@@ -793,7 +793,7 @@ function StepProducts({
       </SectionTitle>
 
       {!mode && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {[
             { id: 'manual', label: 'Carga manual',  desc: 'Ingresá productos uno por uno' },
             { id: 'csv',    label: 'Importar CSV',   desc: 'Subí un archivo Excel o CSV'   },
@@ -966,7 +966,7 @@ function ContactPanel({
 
   if (!mode) {
     return (
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
         {[
           { id: 'manual', label: 'Alta manual',  desc: `Ingresá un ${label} ahora`  },
           { id: 'csv',    label: 'Importar CSV',  desc: 'Subí una lista existente'   },
@@ -994,7 +994,7 @@ function ContactPanel({
           Cambiar
         </Btn>
         <div className="mt-3.5 flex flex-col gap-3.5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Razón social / Nombre">
               <input type="text" className={inputCls()} placeholder="Ej: Supermercados Norte S.A." />
             </FormField>
@@ -1002,7 +1002,7 @@ function ContactPanel({
               <input type="text" className={`${inputCls()} font-mono`} placeholder="20-12345678-0" />
             </FormField>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Email">
               <input type="email" className={inputCls()} placeholder="contacto@empresa.com" />
             </FormField>
@@ -1010,7 +1010,7 @@ function ContactPanel({
               <input type="tel" className={inputCls()} placeholder="+54 11 1234-5678" />
             </FormField>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Condición IVA">
               <select className={selectCls()}>
                 <option value="">Seleccioná...</option>
@@ -1099,7 +1099,7 @@ function StepSales({
         </InfoBanner>
 
         <SalesSection title="Comprobantes">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Tipo de factura por defecto">
               <select className={selectCls()} value={d.tipoFactura ?? 'A'} onChange={e => set('tipoFactura', e.target.value)}>
                 <option value="A">Factura A (Responsable inscripto)</option>
@@ -1121,7 +1121,7 @@ function StepSales({
         </SalesSection>
 
         <SalesSection title="Precios e impuestos">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <FormField label="Moneda base">
               <select className={selectCls()} value={d.moneda ?? 'ARS'} onChange={e => set('moneda', e.target.value)}>
                 <option value="ARS">ARS — Peso argentino</option>
@@ -1150,7 +1150,7 @@ function StepSales({
         </SalesSection>
 
         <SalesSection title="Condiciones de pago">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Condición por defecto">
               <select className={selectCls()} value={d.condPago ?? '30'} onChange={e => set('condPago', e.target.value)}>
                 <option value="0">Contado</option>
@@ -1296,7 +1296,7 @@ function IntegrationRow({
               </>
             )}
             {intg.id === 'email' && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField label="Servidor SMTP">
                   <input type="text" className={inputCls()} placeholder="smtp.gmail.com" />
                 </FormField>
@@ -1365,7 +1365,7 @@ function StepUsers({
       {/* Role reference */}
       <div className="mb-5">
         <div className="text-xs font-semibold text-zinc-600 mb-2.5">Roles disponibles</div>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
           {ROLES.map(r => (
             <div key={r.id} className="p-2 border border-zinc-200 rounded-sm bg-zinc-50">
               <div className="text-[11px] font-medium text-zinc-700">{r.label}</div>
@@ -1499,7 +1499,7 @@ function StepDone({ data, onGoToDashboard }: { data: WizardData; onGoToDashboard
         {/* Quick actions */}
         <div className="w-full mb-6">
           <div className="text-xs font-semibold text-zinc-600 mb-2.5">Primeros pasos sugeridos</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {quickActions.map((a, i) => (
               <a
                 key={i}

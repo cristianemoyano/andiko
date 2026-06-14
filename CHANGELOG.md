@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.7.0](https://github.com/cristianemoyano/andiko/compare/v0.6.0...v0.7.0) (2026-06-14)
+
+### Features
+
+* **core:** mobile bottom tab bar instead of hamburger ([90fa9e4](https://github.com/cristianemoyano/andiko/commit/90fa9e403f5ac504aacd881ec57e56a571d0bd1f))
+* **core:** responsive shell with off-canvas sidebar drawer ([20b7509](https://github.com/cristianemoyano/andiko/commit/20b750938120d7afeeb801328910cdae27324524))
+
+### Bug Fixes
+
+* **accounting:** responsive journal and chart-of-accounts grids ([1c9de7d](https://github.com/cristianemoyano/andiko/commit/1c9de7dabd4bcd8e5fff04f5a3645c418f7d06c4))
+* **contacts:** responsive toolbar, form grids and detail rows ([d329069](https://github.com/cristianemoyano/andiko/commit/d3290698ac25fe09edb7f91845c4bd6a6aaac2ed))
+* **core:** mobile menu toggle, drawer layering, and panel overflow ([6ce1b16](https://github.com/cristianemoyano/andiko/commit/6ce1b16d19f0ed2b02577cfb83469f1405ca2bf1))
+* **core:** responsive grids for onboarding, org admin and config ([e472245](https://github.com/cristianemoyano/andiko/commit/e472245f86c75ce8eaa863c26b63b2d3a2cd7942))
+* **inventory:** responsive catalog grids and search inputs ([7643d48](https://github.com/cristianemoyano/andiko/commit/7643d484f9acc181ef4829c556d8a24f0a293e8c))
+* **inventory:** responsive search inputs and adjustment grid ([7afb5a6](https://github.com/cristianemoyano/andiko/commit/7afb5a62e3cf4b62dccc08fb2baf59c9d1a99141))
+* **purchases:** full-width search inputs on mobile ([2aaba53](https://github.com/cristianemoyano/andiko/commit/2aaba53cd35c2f98d1812e27984dc19b81654cda))
+* **sales:** responsive form and detail grids on mobile ([9ed3641](https://github.com/cristianemoyano/andiko/commit/9ed3641d067c8ec6e4247b233597c7651e05e484))
+
 ## [0.6.0](https://github.com/cristianemoyano/andiko/compare/v0.5.4...v0.6.0) (2026-06-14)
 
 ### Features

@@ -138,7 +138,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             {images.length > 0 && (
               <Section title="Imágenes">
                 <div className="p-4">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {images.map((im) => (
                       <Image
                         key={`${im.url}-${im.position}`}
@@ -174,8 +174,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex items-center gap-4 px-4 py-3">
-      <span className="text-xs text-zinc-500 w-40 flex-shrink-0">{label}</span>
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4 px-4 py-3">
+      <span className="text-xs text-zinc-500 w-full sm:w-40 flex-shrink-0">{label}</span>
       <span className={`text-sm text-zinc-900 ${mono ? 'font-mono' : ''}`}>{value}</span>
     </div>
   )

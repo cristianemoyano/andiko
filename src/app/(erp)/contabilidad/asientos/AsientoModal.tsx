@@ -153,11 +153,11 @@ function AsientoModalForm({
   return (
     <form onSubmit={handleSubmit} noValidate>
       <div className="px-5 py-4 flex flex-col gap-4 max-h-[70vh] overflow-auto">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <FormField label="Fecha" htmlFor="entry_date" required>
             <Input id="entry_date" type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} disabled={saving} required />
           </FormField>
-          <FormField label="Descripción" htmlFor="description" className="col-span-2">
+          <FormField label="Descripción" htmlFor="description" className="sm:col-span-2">
             <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Glosa del asiento" disabled={saving} />
           </FormField>
         </div>

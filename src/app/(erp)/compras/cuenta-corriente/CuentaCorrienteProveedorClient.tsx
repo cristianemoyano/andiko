@@ -313,13 +313,13 @@ export function CuentaCorrienteProveedorClient() {
             emptyMessage="No hay proveedores para mostrar."
             toolbar={
               <>
-                <div className="relative flex items-center">
+                <div className="relative flex w-full items-center sm:w-auto">
                   <svg className="pointer-events-none absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                     <circle cx="7" cy="7" r="4.5" />
                     <path d="M10.5 10.5l3 3" />
                   </svg>
                   <input
-                    className="h-[30px] w-44 rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none"
+                    className="h-[30px] w-full rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none sm:w-44"
                     placeholder="Buscar proveedor..."
                     value={contactSearch}
                     onChange={(e) => {
@@ -380,13 +380,13 @@ export function CuentaCorrienteProveedorClient() {
               emptyMessage="No hay movimientos para este proveedor."
               toolbar={
                 <>
-                  <div className="relative flex items-center">
+                  <div className="relative flex w-full items-center sm:w-auto">
                     <svg className="pointer-events-none absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                       <circle cx="7" cy="7" r="4.5" />
                       <path d="M10.5 10.5l3 3" />
                     </svg>
                     <input
-                      className="h-[30px] w-48 rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none"
+                      className="h-[30px] w-full rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none sm:w-48"
                       placeholder="Buscar comprobante..."
                       value={lineSearch}
                       onChange={(e) => {

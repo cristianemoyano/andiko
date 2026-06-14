@@ -5,6 +5,7 @@ import { getOnboardingStatus } from '@/modules/auth/onboarding.service'
 import { getEffectiveOrganizationSettings, isModuleEnabled } from '@/modules/auth/organization-settings.service'
 import { resolveModuleForPath, type OrgModuleKey } from '@/modules/auth/organization-modules'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { BottomNav } from '@/components/layout/BottomNav'
 import { Providers } from '@/components/layout/Providers'
 
 export default async function ErpLayout({ children }: { children: React.ReactNode }) {
@@ -49,9 +50,10 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
           showSysAdminNavigation={showSysAdminNavigation}
           enabledModules={enabledModules}
         />
-        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden pb-14 md:pb-0">
           {children}
         </main>
+        <BottomNav enabledModules={enabledModules} />
       </div>
     </Providers>
   )

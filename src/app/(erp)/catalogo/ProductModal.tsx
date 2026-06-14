@@ -195,7 +195,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                 <Input id="product_name" placeholder="Ej: Resma A4 500 hojas" error={!!errors.name?.[0]} {...fieldString('name')} />
               </FormField>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField label="Tipo" htmlFor="product_type" error={errors.product_type?.[0]}>
                   <select id="product_type" {...fieldString('product_type')} className="h-8 w-full px-2 text-sm border border-zinc-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
                     <option value="simple">Producto</option>
@@ -226,7 +226,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                 </select>
               </FormField>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField label="Alícuota IVA" htmlFor="product_iva_rate" error={errors.iva_rate?.[0]}>
                   <select id="product_iva_rate" {...fieldString('iva_rate')} className="h-8 w-full px-2 text-sm border border-zinc-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
                     <option value="0">Exento (0%)</option>
@@ -294,7 +294,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
               <div className="border-b border-zinc-100 pb-3">
                 <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">SKU, precios y stock</p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField label="SKU *" htmlFor="product_sku" error={errors.sku?.[0]} required>
                   <Input id="product_sku" placeholder="Ej: RES-A4-500" error={!!errors.sku?.[0]} {...fieldString('sku')} />
                 </FormField>

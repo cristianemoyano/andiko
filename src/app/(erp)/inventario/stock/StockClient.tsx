@@ -236,7 +236,7 @@ export function StockClient() {
                 placeholder="Buscar por producto o SKU…"
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(1) }}
-                className="w-64"
+                className="w-full sm:w-64"
               />
               <Button
                 type="button"

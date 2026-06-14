@@ -129,7 +129,7 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
       <form key={`${contact?.id ?? 'new'}-${String(open)}`} onSubmit={handleSubmit} noValidate>
         <div className="px-5 py-4 flex flex-col gap-4">
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Tipo" htmlFor="type" required error={errors.type?.[0]}>
               <select
                 id="type"
@@ -190,7 +190,7 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
 
           <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Persona de contacto</p>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Nombre" htmlFor="first_name" error={errors.first_name?.[0]}>
               <Input
                 id="first_name"
@@ -235,7 +235,7 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
             />
           </FormField>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Email" htmlFor="email" error={errors.email?.[0]}>
               <Input
                 id="email"

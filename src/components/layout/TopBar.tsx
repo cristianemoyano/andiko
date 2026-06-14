@@ -18,7 +18,7 @@ export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
   return (
     <header
       className={cn(
-        'h-[52px] bg-white border-b border-zinc-200 flex items-center px-5 gap-3 flex-shrink-0',
+        'min-h-[52px] md:h-[52px] bg-white border-b border-zinc-200 flex items-center px-5 gap-3 flex-shrink-0',
         className
       )}
     >
@@ -55,7 +55,7 @@ export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
       </nav>
 
       {actions && (
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
           {actions}
         </div>
       )}
