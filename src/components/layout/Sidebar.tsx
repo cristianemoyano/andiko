@@ -53,7 +53,7 @@ export function Sidebar({
       {/* Backdrop — mobile only, when the drawer is open */}
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          className="fixed inset-x-0 top-0 bottom-14 z-40 bg-black/40 md:hidden"
           aria-hidden
           onClick={() => setOpen(false)}
         />
@@ -63,7 +63,8 @@ export function Sidebar({
         className={cn(
           'flex flex-col w-[220px] flex-shrink-0 bg-white border-r border-zinc-200 h-full',
           // Mobile: off-canvas drawer that slides in from the left.
-          'fixed inset-y-0 left-0 z-40 transition-transform duration-200',
+          'fixed inset-y-0 left-0 z-[45] transition-transform duration-200',
+          'pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0',
           open ? 'translate-x-0' : '-translate-x-full',
           // Desktop (md+): static column in the flex row, always visible.
           'md:static md:z-auto md:translate-x-0'

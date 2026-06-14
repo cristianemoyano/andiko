@@ -21,7 +21,7 @@ interface BottomNavProps {
  */
 export function BottomNav({ enabledModules }: BottomNavProps) {
   const pathname = usePathname()
-  const { open, setOpen } = useSidebar()
+  const { open, setOpen, toggle } = useSidebar()
 
   const primary: NavItem[] = [
     ...NAV_MAIN,
@@ -32,7 +32,7 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch h-14 bg-white border-t border-zinc-200 pb-[env(safe-area-inset-bottom)]"
+      className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-stretch h-14 bg-white border-t border-zinc-200 pb-[env(safe-area-inset-bottom)]"
       aria-label="Navegación principal"
     >
       {primary.map(item => {
@@ -55,8 +55,8 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
 
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Abrir menú"
+        onClick={toggle}
+        aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
         aria-expanded={open}
         className={cn(
           'flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors',

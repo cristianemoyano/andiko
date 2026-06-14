@@ -72,37 +72,37 @@ const ars = (v: number) =>
 // ── Sub-components ──────────────────────────────────────────────────────────
 
 function TrendBadge({ pct }: { pct: number }) {
-  if (pct > 0) return <span className="text-[11px] font-medium text-green-700">↑ {pct}% vs período anterior</span>
-  if (pct < 0) return <span className="text-[11px] font-medium text-red-600">↓ {Math.abs(pct)}% vs período anterior</span>
-  return <span className="text-[11px] text-zinc-400">Sin variación</span>
+  if (pct > 0) return <span className="text-[11px] font-medium text-green-700 truncate block">↑ {pct}% vs período anterior</span>
+  if (pct < 0) return <span className="text-[11px] font-medium text-red-600 truncate block">↓ {Math.abs(pct)}% vs período anterior</span>
+  return <span className="text-[11px] text-zinc-400 truncate block">Sin variación</span>
 }
 
 function KPICard({
   label, value, sub, spark, sparkColor,
 }: { label: string; value: string; sub: React.ReactNode; spark?: number[]; sparkColor?: string }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex flex-col gap-2">
-      <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-[0.06em]">{label}</div>
-      <div className="flex items-end justify-between">
-        <div className="font-mono text-[22px] font-medium text-zinc-900 leading-none">{value}</div>
+    <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex flex-col gap-2 min-w-0">
+      <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-[0.06em] truncate">{label}</div>
+      <div className="flex items-end justify-between gap-2 min-w-0">
+        <div className="font-mono text-lg sm:text-[22px] font-medium text-zinc-900 leading-none truncate">{value}</div>
         {spark && spark.length > 1 && (
           <Sparkline data={spark} color={sparkColor ?? PRIMARY} />
         )}
       </div>
-      <div>{sub}</div>
+      <div className="min-w-0">{sub}</div>
     </div>
   )
 }
 
 function CountCard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex items-center gap-3">
+    <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex items-center gap-3 min-w-0">
       <div className="w-9 h-9 rounded-[4px] bg-[#EEF8FA] flex items-center justify-center shrink-0 text-[#0C647A]">
         {icon}
       </div>
-      <div>
-        <div className="font-mono text-xl font-medium text-zinc-900 leading-none">{value}</div>
-        <div className="text-[11px] text-zinc-500 mt-0.5">{label}</div>
+      <div className="min-w-0">
+        <div className="font-mono text-xl font-medium text-zinc-900 leading-none truncate">{value}</div>
+        <div className="text-[11px] text-zinc-500 mt-0.5 truncate">{label}</div>
       </div>
     </div>
   )
@@ -249,13 +249,14 @@ export function PanelClient() {
       <TopBar breadcrumbs={[{ label: 'Panel' }]} />
 
       {/* Filter bar */}
-      <div className="border-b border-zinc-200 bg-white px-6 py-2.5 flex items-center gap-3 shrink-0 print:hidden">
-        <div className="flex gap-1">
+      <div className="border-b border-zinc-200 bg-white px-4 md:px-6 py-2.5 flex flex-col gap-2 md:flex-row md:items-center md:gap-3 shrink-0 print:hidden">
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-1 w-max md:w-auto flex-nowrap">
           {PERIOD_OPTIONS.map(opt => (
             <button
               key={opt.value}
               onClick={() => updateParams({ period: opt.value })}
-              className={`text-xs px-3 py-1.5 rounded-[4px] font-medium transition-colors ${
+              className={`text-xs px-3 py-1.5 rounded-[4px] font-medium transition-colors whitespace-nowrap shrink-0 ${
                 period === opt.value
                   ? 'bg-[#EEF8FA] text-[#0C647A] border border-[#A2DCE7]'
                   : 'text-zinc-500 hover:bg-zinc-100 border border-transparent'
@@ -266,7 +267,7 @@ export function PanelClient() {
           ))}
           <button
             onClick={() => updateParams({ period: 'custom' })}
-            className={`text-xs px-3 py-1.5 rounded-[4px] font-medium transition-colors ${
+            className={`text-xs px-3 py-1.5 rounded-[4px] font-medium transition-colors whitespace-nowrap shrink-0 ${
               period === 'custom'
                 ? 'bg-[#EEF8FA] text-[#0C647A] border border-[#A2DCE7]'
                 : 'text-zinc-500 hover:bg-zinc-100 border border-transparent'
@@ -274,10 +275,11 @@ export function PanelClient() {
           >
             Personalizado
           </button>
+          </div>
         </div>
 
         {period === 'custom' && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <input
               type="date"
               value={fromDate}
@@ -294,7 +296,7 @@ export function PanelClient() {
           </div>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="md:ml-auto flex items-center gap-2 flex-wrap">
           <Button
             size="sm"
             variant="secondary"
@@ -303,7 +305,7 @@ export function PanelClient() {
           >
             Exportar PDF
           </Button>
-          <div className="w-52">
+          <div className="w-full sm:w-52">
           {branches.length > 0 && (
             <SearchableSelect
               options={branches}
@@ -316,9 +318,9 @@ export function PanelClient() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 bg-zinc-50 print:bg-white print:p-4">
+      <div className="flex-1 overflow-auto p-4 md:p-6 bg-zinc-50 print:bg-white print:p-4">
         {/* KPI cards */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <KPICard
             label="Facturado"
             value={kpis ? ars(kpis.facturado.value) : '—'}
@@ -347,12 +349,12 @@ export function PanelClient() {
           <KPICard
             label="Saldo en cuenta"
             value="—"
-            sub={<span className="text-[11px] text-zinc-400">Módulo contabilidad pendiente</span>}
+            sub={<span className="text-[11px] text-zinc-400 line-clamp-2">Módulo contabilidad pendiente</span>}
           />
         </div>
 
         {/* Count cards */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <CountCard label="Productos activos" value={counts ? counts.productos.toLocaleString('es-AR') : '—'} icon={<IconBox />} />
           <CountCard label="Clientes"          value={counts ? counts.clientes.toLocaleString('es-AR') : '—'} icon={<IconUsers />} />
           <CountCard label="Proveedores"       value={counts ? counts.proveedores.toLocaleString('es-AR') : '—'} icon={<IconBuilding />} />
