@@ -227,7 +227,7 @@ export function EmailLogsTab() {
           emptyMessage="Todavía no hay emails enviados en esta organización."
           toolbar={
             <>
-              <div className="relative flex items-center">
+              <div className="relative flex items-center w-full sm:w-auto">
                 <svg
                   className="absolute left-2 text-zinc-400 pointer-events-none"
                   width="13"
@@ -242,7 +242,7 @@ export function EmailLogsTab() {
                   <path d="M10.5 10.5l3 3" />
                 </svg>
                 <input
-                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-52 bg-white focus:outline-none focus:border-blue-500"
+                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-52 bg-white focus:outline-none focus:border-blue-500"
                   placeholder="Buscar destinatario o asunto…"
                   value={search}
                   onChange={e => {
