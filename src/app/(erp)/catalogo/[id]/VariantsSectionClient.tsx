@@ -288,7 +288,7 @@ function VariantModal({
             <Input id="variant_sku" value={form.sku} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} error={!!errors.sku?.[0]} />
           </FormField>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Precio base" htmlFor="variant_base_price" error={errors.base_price?.[0]}>
               <Input id="variant_base_price" value={form.base_price} onChange={(e) => setForm((f) => ({ ...f, base_price: e.target.value }))} />
             </FormField>
@@ -303,7 +303,7 @@ function VariantModal({
 
           <div className="border-t border-zinc-100 pt-3">
             <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Logística</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField label="Peso (kg)" htmlFor="variant_weight" error={errors.weight_kg?.[0]}>
                 <Input id="variant_weight" value={form.weight_kg} onChange={(e) => setForm((f) => ({ ...f, weight_kg: e.target.value }))} />
               </FormField>
@@ -322,7 +322,7 @@ function VariantModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Gestiona stock" htmlFor="variant_manage_stock" error={errors.manage_stock?.[0]}>
               <select
                 id="variant_manage_stock"
