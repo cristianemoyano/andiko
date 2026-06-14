@@ -10,10 +10,18 @@ export {
 
 export {
   emailSettingsUpdateSchema,
+  emailTestSchema,
   DEFAULT_EMAIL_SETTINGS,
   type PublicEmailSettings,
+  type EmailTestInput,
 } from './email-settings.schema'
 export { getPublicEmailSettings, updateEmailSettings } from './email-settings.service'
+export {
+  sendTestEmail,
+  SMTP_NOT_CONFIGURED,
+  EMAIL_TEST_FAILED,
+  type SendTestEmailResult,
+} from './send-test.service'
 
 export {
   emailTemplatesUpdateSchema,

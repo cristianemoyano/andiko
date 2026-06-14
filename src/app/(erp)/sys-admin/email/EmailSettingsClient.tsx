@@ -32,6 +32,11 @@ export function EmailSettingsClient() {
   const [savedMsg, setSavedMsg] = useState<string | null>(null)
   const [refresh, setRefresh] = useState(0)
 
+  const [testEmail, setTestEmail] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [testError, setTestError] = useState<string | null>(null)
+  const [testMsg, setTestMsg] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
     void (async () => {
@@ -105,6 +110,33 @@ export function EmailSettingsClient() {
       setServerError(getApiErrorMessage(e))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSendTest() {
+    setTestError(null)
+    setTestMsg(null)
+    const to = testEmail.trim()
+    if (!EMAIL.test(to)) {
+      setTestError('Ingresá una dirección de correo válida.')
+      return
+    }
+
+    setTesting(true)
+    try {
+      const result = await fetchJson<{ transport: 'smtp' | 'log'; recipient: string }>(
+        `${ENDPOINT}/test`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to }),
+        },
+      )
+      setTestMsg(`Email de prueba enviado a ${result.recipient}.`)
+    } catch (e) {
+      setTestError(getApiErrorMessage(e))
+    } finally {
+      setTesting(false)
     }
   }
 
@@ -224,6 +256,43 @@ export function EmailSettingsClient() {
                   onChange={e => update('from_address', e.target.value)}
                 />
               </FormField>
+            </section>
+
+            <section className="rounded-sm border border-zinc-200 bg-white p-4 space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold text-zinc-900">Probar configuración</h2>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Envía un email de prueba con la configuración <strong>guardada</strong>. Guardá los
+                  cambios antes de probar.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 sm:items-end">
+                <FormField label="Enviar prueba a" htmlFor="test_email">
+                  <Input
+                    id="test_email"
+                    type="email"
+                    value={testEmail}
+                    placeholder="tu@correo.com"
+                    onChange={e => {
+                      setTestEmail(e.target.value)
+                      setTestError(null)
+                      setTestMsg(null)
+                    }}
+                  />
+                </FormField>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleSendTest}
+                  disabled={testing || saving || !testEmail.trim()}
+                >
+                  {testing ? 'Enviando…' : 'Enviar email de prueba'}
+                </Button>
+              </div>
+
+              {testError ? <p className="text-sm text-red-700">{testError}</p> : null}
+              {testMsg ? <p className="text-sm text-green-700">{testMsg}</p> : null}
             </section>
 
             {serverError ? <p className="text-sm text-red-700">{serverError}</p> : null}

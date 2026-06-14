@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.3](https://github.com/cristianemoyano/andiko/compare/v0.5.2...v0.5.3) (2026-06-14)
+
+### Features
+
+* **core:** add SMTP test email to sys-admin email settings ([970bd6e](https://github.com/cristianemoyano/andiko/commit/970bd6e4b36af6a32b43fe7c801efb59b45b1664))
+
 ## [0.5.2](https://github.com/cristianemoyano/andiko/compare/v0.5.1...v0.5.2) (2026-06-13)
 
 ### Features
