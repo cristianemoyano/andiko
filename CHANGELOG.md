@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.4](https://github.com/cristianemoyano/andiko/compare/v0.5.3...v0.5.4) (2026-06-14)
+
+### Features
+
+* **core:** add Gmail SMTP preset and password show/hide toggle ([31329e0](https://github.com/cristianemoyano/andiko/commit/31329e05e7c666058b0a39e090403b8f06465825))
+
 ## [0.5.3](https://github.com/cristianemoyano/andiko/compare/v0.5.2...v0.5.3) (2026-06-14)
 
 ### Features

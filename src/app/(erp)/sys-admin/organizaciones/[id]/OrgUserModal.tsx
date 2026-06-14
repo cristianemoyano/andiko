@@ -4,6 +4,7 @@ import { useMemo, useReducer, useState } from 'react'
 import { Dialog } from '@/components/primitives/Dialog'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
+import { PasswordInput } from '@/components/primitives/PasswordInput'
 import { FormField } from '@/components/primitives/FormField'
 import type { BranchRow } from './BranchModal'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
@@ -225,9 +226,8 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
         htmlFor="org_user_password"
         error={errors.password?.[0]}
       >
-        <Input
+        <PasswordInput
           id="org_user_password"
-          type="password"
           value={password}
           onChange={e => setPassword(e.target.value)}
           autoComplete="new-password"
@@ -237,9 +237,8 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
       </FormField>
 
       <FormField label="PIN de POS (opcional)" htmlFor="org_user_pos_pin" error={errors.posPin?.[0]}>
-        <Input
+        <PasswordInput
           id="org_user_pos_pin"
-          type="password"
           value={posPin}
           onChange={e => setPosPin(e.target.value)}
           autoComplete="off"
