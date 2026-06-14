@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { useSidebar } from './SidebarContext'
 
 export interface BreadcrumbItem {
   label: string
@@ -16,7 +15,6 @@ interface TopBarProps {
 }
 
 export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
-  const { toggle } = useSidebar()
   return (
     <header
       className={cn(
@@ -24,17 +22,6 @@ export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
         className
       )}
     >
-      <button
-        type="button"
-        onClick={toggle}
-        aria-label="Abrir menú"
-        className="md:hidden -ml-1 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm text-zinc-600 transition-colors hover:bg-zinc-100"
-      >
-        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-          <path d="M2 4h12M2 8h12M2 12h12" />
-        </svg>
-      </button>
-
       <nav className="flex items-center gap-1.5 flex-1 min-w-0" aria-label="Breadcrumb">
         {breadcrumbs.map((crumb, i) => {
           const isLast = i === breadcrumbs.length - 1

@@ -80,7 +80,7 @@ Ningún componente se usa en producción sin su story.
 - [x] Card / Panel
 - [x] Sidebar (navegación principal, logout, estado activo)
 - [x] Tabs
-- [x] Responsive móvil: Sidebar como drawer off-canvas con hamburguesa (<768px), Dialog con scroll y gutters, grillas de formulario/detalle que colapsan a una columna
+- [x] Responsive móvil (<768px): barra de navegación inferior fija con secciones principales (Panel·Ventas·Compras·Contactos) + pestaña "Menú" que abre el drawer con toda la navegación; Dialog con scroll y gutters; grillas de formulario/detalle que colapsan a una columna
 
 ### Componentes ERP-específicos
 - [x] DataTable (columnas configurables, sorting client-side, row actions)
