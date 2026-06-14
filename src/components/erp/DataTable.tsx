@@ -70,7 +70,7 @@ export function DataTable<T extends object>({
   return (
     <div className={cn('bg-white border border-zinc-200 rounded', className)}>
       {toolbar && (
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-200">
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b border-zinc-200">
           {toolbar}
         </div>
       )}
