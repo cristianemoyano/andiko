@@ -21,6 +21,8 @@ interface DataTableProps<T extends object> {
   footer?: React.ReactNode
   emptyMessage?: string
   className?: string
+  /** Pin the first column while the table scrolls horizontally — useful for wide tables on mobile. */
+  stickyFirstColumn?: boolean
 }
 
 type SortDir = 'asc' | 'desc' | null
@@ -35,6 +37,7 @@ export function DataTable<T extends object>({
   footer,
   emptyMessage = 'Sin registros.',
   className,
+  stickyFirstColumn = false,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>(null)
@@ -72,11 +75,11 @@ export function DataTable<T extends object>({
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
+      <div className="overflow-x-auto overscroll-x-contain [scrollbar-width:thin]">
+        <table className="min-w-full border-collapse">
           <thead>
             <tr>
-              {columns.map(col => (
+              {columns.map((col, i) => (
                 <th
                   key={col.key}
                   onClick={col.sortable ? () => handleSort(col.key) : undefined}
@@ -85,6 +88,7 @@ export function DataTable<T extends object>({
                     col.align === 'right' && 'text-right',
                     col.sortable && 'cursor-pointer hover:bg-zinc-100 hover:text-zinc-800',
                     sortKey === col.key && 'text-brand-600 bg-brand-50',
+                    stickyFirstColumn && i === 0 && 'sticky left-0 z-10 bg-zinc-50',
                     col.className
                   )}
                 >
@@ -127,12 +131,13 @@ export function DataTable<T extends object>({
                     onRowClick && 'cursor-pointer'
                   )}
                 >
-                  {columns.map(col => (
+                  {columns.map((col, i) => (
                     <td
                       key={col.key}
                       className={cn(
                         'h-10 px-3 text-[13px] text-zinc-900',
                         col.align === 'right' && 'text-right',
+                        stickyFirstColumn && i === 0 && 'sticky left-0 z-10 bg-white',
                         col.className
                       )}
                     >

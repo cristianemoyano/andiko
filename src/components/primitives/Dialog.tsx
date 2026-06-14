@@ -5,7 +5,10 @@ import { cn } from '@/lib/utils'
 
 const panelVariants = cva(
   [
-    'fixed left-1/2 top-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2',
+    'fixed left-1/2 top-1/2 z-50 grid grid-rows-[auto_minmax(0,1fr)] -translate-x-1/2 -translate-y-1/2',
+    // Mobile: 1rem gutter each side + cap height so tall content scrolls instead of overflowing.
+    // md+ is unchanged: the size variant's max-w-* still caps the width.
+    'w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-hidden',
     'rounded-md bg-white shadow-2xl border border-zinc-200 ring-1 ring-black/5',
     'focus:outline-none',
     'data-[state=open]:animate-in data-[state=closed]:animate-out',
@@ -78,7 +81,7 @@ function Dialog({ open, onOpenChange, title, description, children, size, classN
               </RadixDialog.Close>
             )}
           </div>
-          <div className="min-w-0 overflow-hidden">{children}</div>
+          <div className="min-w-0 overflow-y-auto">{children}</div>
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>

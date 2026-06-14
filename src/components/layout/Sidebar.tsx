@@ -6,6 +6,7 @@ import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { AppVersion } from './AppVersion'
 import { SysAdminImpersonation } from './SysAdminImpersonation'
+import { useSidebar } from './SidebarContext'
 import { NAV_ID_TO_MODULE, type OrgModuleKey } from '@/modules/auth/organization-modules'
 
 interface NavItem {
@@ -134,6 +135,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const { open, setOpen } = useSidebar()
 
   // Re-read from client session so nav updates when impersonation starts/stops without refresh.
   const showSysAdminNavigation = session?.user
@@ -151,7 +153,26 @@ export function Sidebar({
     : '?'
 
   return (
-    <aside className="flex flex-col w-[220px] flex-shrink-0 bg-white border-r border-zinc-200 h-full">
+    <>
+      {/* Backdrop — mobile only, when the drawer is open */}
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          aria-hidden
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      <aside
+        className={cn(
+          'flex flex-col w-[220px] flex-shrink-0 bg-white border-r border-zinc-200 h-full',
+          // Mobile: off-canvas drawer that slides in from the left.
+          'fixed inset-y-0 left-0 z-40 transition-transform duration-200',
+          open ? 'translate-x-0' : '-translate-x-full',
+          // Desktop (md+): static column in the flex row, always visible.
+          'md:static md:z-auto md:translate-x-0'
+        )}
+      >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-[13px] border-b border-zinc-200">
         <div className="w-[22px] h-[22px] bg-brand-600 rounded-sm flex items-center justify-center flex-shrink-0">
@@ -268,7 +289,7 @@ export function Sidebar({
 
       {/* User area */}
       <div className="flex items-center gap-2.5 px-3 py-3 border-t border-zinc-200">
-        <Link href="/perfil" className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity">
+        <Link href="/perfil" onClick={() => setOpen(false)} className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity">
           <div className="w-[26px] h-[26px] rounded-full bg-brand-100 text-brand-800 text-[11px] font-semibold flex items-center justify-center flex-shrink-0">
             {initials}
           </div>
@@ -287,7 +308,8 @@ export function Sidebar({
           </svg>
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 
@@ -300,9 +322,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+  const { setOpen } = useSidebar()
   return (
     <Link
       href={item.href}
+      onClick={() => setOpen(false)}
       className={cn(
         'flex items-center gap-2.5 h-[34px] px-2 rounded-sm text-[13px] mb-px transition-colors',
         active
