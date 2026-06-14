@@ -2,11 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { can, type Permission } from '@/lib/permissions'
 import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
-import {
-  listDocumentEmailLogs,
-  listEmailLogs,
-} from '@/modules/communications/email-logs.service'
-import { emailLogListQuerySchema } from '@/modules/communications/email-logs.schema'
+import { getEmailLog } from '@/modules/communications/email-logs.service'
 import {
   EMAIL_DOCUMENT_TYPES,
   type EmailDocumentType,
@@ -33,17 +29,22 @@ async function getAllowedDocumentTypes(role: UserRole, orgId?: string): Promise<
   return allowed
 }
 
-export async function GET(req: Request) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
   }
 
+  const { id } = await params
+  if (!UUID.test(id)) {
+    return NextResponse.json({ error: 'Invalid id', code: 'VALIDATION_ERROR' }, { status: 422 })
+  }
+
   const role = session.user.role as UserRole
   const orgId = session.user.orgId ?? undefined
-  const { searchParams } = new URL(req.url)
-  const documentType = searchParams.get('document_type') ?? ''
-  const documentId = searchParams.get('document_id') ?? ''
 
   let ctx
   try {
@@ -58,39 +59,18 @@ export async function GET(req: Request) {
     throw err
   }
 
-  // Per-document history (SendDocumentEmail modal).
-  if (documentType || documentId) {
-    if (!EMAIL_DOCUMENT_TYPES.includes(documentType as EmailDocumentType) || !UUID.test(documentId)) {
-      return NextResponse.json(
-        { error: 'Parámetros inválidos: document_type y document_id son obligatorios', code: 'VALIDATION_ERROR' },
-        { status: 422 },
-      )
-    }
-    const type = documentType as EmailDocumentType
-    if (!(await can(role, PERMISSION_BY_TYPE[type], orgId))) {
-      return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 })
-    }
-    const logs = await listDocumentEmailLogs(ctx.orgId, type, documentId)
-    return NextResponse.json({ logs })
-  }
-
-  // Org-wide audit list.
-  const parsed = emailLogListQuerySchema.safeParse(Object.fromEntries(searchParams))
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() },
-      { status: 400 },
-    )
-  }
-
   const allowedDocumentTypes = await getAllowedDocumentTypes(role, orgId)
   if (allowedDocumentTypes.length === 0) {
     return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 })
   }
 
-  const result = await listEmailLogs(ctx.orgId, {
-    ...parsed.data,
-    allowedDocumentTypes,
-  })
-  return NextResponse.json(result)
+  try {
+    const log = await getEmailLog(ctx.orgId, id, allowedDocumentTypes)
+    return NextResponse.json({ log })
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === 'EMAIL_LOG_NOT_FOUND') {
+      return NextResponse.json({ error: 'Registro no encontrado', code: 'NOT_FOUND' }, { status: 404 })
+    }
+    throw err
+  }
 }

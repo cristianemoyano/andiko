@@ -82,6 +82,7 @@ export async function sendDocumentEmail(
 
   const settings = await getResolvedEmailSettings()
   const transport = buildTransport(settings)
+  const html = plainTextToHtml(body)
 
   const base = {
     org_id: ctx.orgId,
@@ -90,6 +91,8 @@ export async function sendDocumentEmail(
     document_id: input.documentId,
     recipient: input.to,
     subject,
+    body_text: body,
+    body_html: html,
     sent_by: actorId,
   }
 
@@ -98,9 +101,15 @@ export async function sendDocumentEmail(
       to: input.to,
       subject,
       text: body,
-      html: plainTextToHtml(body),
+      html,
     })
-    const log = await EmailLog.create({ ...base, status: 'sent', error: null })
+    const log = await EmailLog.create({
+      ...base,
+      status: 'sent',
+      error: null,
+      transport: result.transport,
+      message_id: result.messageId,
+    })
     logger.info(
       { orgId: ctx.orgId, documentType: input.documentType, documentId: input.documentId, transport: result.transport },
       'Document email sent',
@@ -114,7 +123,13 @@ export async function sendDocumentEmail(
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Error desconocido'
-    const log = await EmailLog.create({ ...base, status: 'failed', error: message.slice(0, 1000) })
+    const log = await EmailLog.create({
+      ...base,
+      status: 'failed',
+      error: message.slice(0, 1000),
+      transport: transport.kind,
+      message_id: null,
+    })
     logger.error(
       { orgId: ctx.orgId, documentType: input.documentType, documentId: input.documentId, err: message },
       'Document email send failed',
