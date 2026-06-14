@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.6.0](https://github.com/cristianemoyano/andiko/compare/v0.5.4...v0.6.0) (2026-06-14)
+
+### Features
+
+* **core:** add org email audit inbox with stored content ([401d790](https://github.com/cristianemoyano/andiko/commit/401d7907e4a3fc04fd2b3e563922edda91562dd0))
+
 ## [0.5.4](https://github.com/cristianemoyano/andiko/compare/v0.5.3...v0.5.4) (2026-06-14)
 
 ### Features
