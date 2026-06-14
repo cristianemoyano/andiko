@@ -399,7 +399,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
           <div className="bg-white border border-zinc-200 rounded-sm p-5 flex flex-col gap-4">
             {editMode ? (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField label="Cliente" htmlFor="contact_id" error={errors.contact_id?.[0]}>
                     <SearchableSelect
                       id="contact_id"
@@ -424,7 +424,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                     <DatePicker id="valid_until" value={validUntil} onChange={setValidUntil} placeholder="Seleccionar fecha" />
                   </FormField>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <VentasBranchField value={branchId} onChange={setBranchId} error={errors.branch_id?.[0]} />
                   <FormField label="Lista de precios" htmlFor="price_list_id">
                     <SearchableSelect
@@ -497,7 +497,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
             )}
 
             {editMode ? (
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-zinc-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-zinc-100">
                 <FormField label="Notas para el cliente" htmlFor="notes">
                   <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Condiciones, aclaraciones…" />
                 </FormField>
@@ -507,7 +507,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
               </div>
             ) : (
               (quote.notes || quote.internal_notes) && (
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
                   {quote.notes && (
                     <div>
                       <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Notas</p>

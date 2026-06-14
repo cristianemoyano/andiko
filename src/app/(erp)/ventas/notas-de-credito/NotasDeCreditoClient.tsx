@@ -274,13 +274,13 @@ export function NotasDeCreditoClient() {
           onRowClick={row => router.push(`/ventas/notas-de-credito/${row.id}`)}
           toolbar={
             <>
-              <div className="relative flex items-center">
+              <div className="relative flex items-center w-full sm:w-auto">
                 <svg className="pointer-events-none absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5" />
                   <path d="M10.5 10.5l3 3" />
                 </svg>
                 <input
-                  className="h-[30px] w-52 rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none"
+                  className="h-[30px] w-full sm:w-52 rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none"
                   placeholder="Buscar número o motivo..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1) }}
@@ -343,7 +343,7 @@ export function NotasDeCreditoClient() {
             )}
           </FormField>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Importe neto *" error={errors.netAmount}>
               <Input
                 type="number"

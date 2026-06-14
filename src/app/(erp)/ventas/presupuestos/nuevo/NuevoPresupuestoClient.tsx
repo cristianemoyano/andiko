@@ -163,7 +163,7 @@ export function NuevoPresupuestoClient() {
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
           {/* Header fields */}
           <div className="bg-white border border-zinc-200 rounded-sm p-5 flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Cliente" htmlFor="contact_id" error={errors.contact_id?.[0]}>
                 <SearchableSelect
                   id="contact_id"
@@ -189,7 +189,7 @@ export function NuevoPresupuestoClient() {
               </FormField>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <VentasBranchField value={branchId} onChange={setBranchId} error={errors.branch_id?.[0]} />
               <FormField label="Lista de precios" htmlFor="price_list_id">
                 <SearchableSelect
@@ -203,7 +203,7 @@ export function NuevoPresupuestoClient() {
               </FormField>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Condición de pago">
                 <div className="flex gap-2 flex-wrap">
                 {PAYMENT_CONDITIONS.map(pc => (
@@ -248,7 +248,7 @@ export function NuevoPresupuestoClient() {
 
           {/* Notes */}
           <div className="bg-white border border-zinc-200 rounded-sm p-5">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Notas para el cliente" htmlFor="notes">
                 <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Condiciones, aclaraciones…" />
               </FormField>
