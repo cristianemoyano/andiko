@@ -361,6 +361,8 @@ Envío de documentos e notificaciones por email desde el ERP.
 ### Frontend (completado)
 - [x] Configuración SMTP **a nivel sys-admin/plataforma** (no por org) — pantalla `/sys-admin/email` + link en sidebar; contraseña cifrada, nunca devuelta al cliente. La usan todas las organizaciones.
 - [x] Test de email desde `/sys-admin/email` — `POST /api/v1/sys-admin/email-settings/test` + `sendTestEmail` (usa la config guardada; no persiste en `email_logs`); errores SMTP_NOT_CONFIGURED (409) / EMAIL_TEST_FAILED (502)
+- [x] Preset rápido "Usar Gmail" en `/sys-admin/email` (smtp.gmail.com:465 SSL, sincroniza usuario↔remitente) + ayuda de contraseña de aplicación
+- [x] Toggle mostrar/ocultar (`PasswordInput`) en campos de contraseña SMTP y de usuario/PIN POS (`OrgUserModal`)
 - [x] Templates de email por tipo de documento (presupuesto, pedido, factura, remito) — editor UI por org en `/configuracion` (tab "Plantillas de email") + defaults con variables `{{contact_name}}`, `{{document_number}}`, `{{total}}`, etc.
 - [x] Envío de documentos al cliente desde el detalle (componente `SendDocumentEmail`: botón "Enviar por email" en facturas/pedidos/presupuestos) + servicio de envío que persiste `email_logs`
 - [x] Historial de envíos por documento — listado en el diálogo de envío

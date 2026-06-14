@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
+import { PasswordInput } from '@/components/primitives/PasswordInput'
 import { FormField } from '@/components/primitives/FormField'
 import { Switch } from '@/components/primitives/Switch'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
@@ -61,6 +62,28 @@ export function EmailSettingsClient() {
 
   function update<K extends keyof PublicEmailSettings>(key: K, value: PublicEmailSettings[K]) {
     setForm(f => (f ? { ...f, [key]: value } : f))
+    setSavedMsg(null)
+  }
+
+  /**
+   * Prefill the SMTP fields for a personal Gmail account (smtp.gmail.com, 465,
+   * SSL). Gmail requires the sender to match the authenticated account, so we
+   * sync user ↔ from_address from whichever is already filled.
+   */
+  function applyGmailPreset() {
+    setForm(f => {
+      if (!f) return f
+      const account = f.user.trim() || f.from_address.trim()
+      return {
+        ...f,
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        user: f.user.trim() || account,
+        from_address: f.from_address.trim() || account,
+      }
+    })
+    setErrors({})
     setSavedMsg(null)
   }
 
@@ -179,7 +202,26 @@ export function EmailSettingsClient() {
             </section>
 
             <section className="rounded-sm border border-zinc-200 bg-white p-4 space-y-4">
-              <h2 className="text-sm font-semibold text-zinc-900">Servidor SMTP</h2>
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-sm font-semibold text-zinc-900">Servidor SMTP</h2>
+                <Button type="button" variant="secondary" size="xs" onClick={applyGmailPreset}>
+                  Usar Gmail
+                </Button>
+              </div>
+              <p className="text-xs text-zinc-500">
+                ¿Cuenta personal de Gmail? Tocá <strong>Usar Gmail</strong> para completar servidor,
+                puerto y seguridad. Necesitás{' '}
+                <a
+                  href="https://myaccount.google.com/apppasswords"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-brand-600 underline underline-offset-2 hover:text-brand-700"
+                >
+                  una contraseña de aplicación
+                </a>{' '}
+                (con verificación en 2 pasos activada): tu contraseña habitual de Gmail no funciona
+                por SMTP.
+              </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-4">
                 <FormField label="Host" htmlFor="host" error={errors.host}>
@@ -220,9 +262,8 @@ export function EmailSettingsClient() {
               </FormField>
 
               <FormField label="Contraseña" htmlFor="smtp_password" error={errors.password}>
-                <Input
+                <PasswordInput
                   id="smtp_password"
-                  type="password"
                   value={password}
                   error={!!errors.password}
                   placeholder={form.has_password ? '••••••••' : 'Contraseña o app password'}
