@@ -119,12 +119,12 @@ export function AsientosClient() {
           emptyMessage="No hay asientos. Creá el primero."
           toolbar={
             <>
-              <div className="relative flex items-center">
+              <div className="relative flex items-center w-full sm:w-auto">
                 <svg className="absolute left-2 text-zinc-400 pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
                 </svg>
                 <input
-                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-56 bg-white focus:outline-none focus:border-blue-500"
+                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-56 bg-white focus:outline-none focus:border-blue-500"
                   placeholder="Buscar por número o descripción…"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1) }}

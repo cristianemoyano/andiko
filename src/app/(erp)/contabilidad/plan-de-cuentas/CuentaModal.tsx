@@ -71,7 +71,7 @@ export function CuentaModal({ open, account, accounts, onOpenChange, onSaved }: 
     >
       <form key={`${account?.id ?? 'new'}-${String(open)}`} onSubmit={handleSubmit} noValidate>
         <div className="px-5 py-4 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Código" htmlFor="code" required error={errors.code?.[0]}>
               <Input
                 id="code"
