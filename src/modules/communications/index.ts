@@ -31,4 +31,13 @@ export {
 export { getEffectiveEmailTemplates, updateEmailTemplates } from './email-templates.service'
 
 export { sendDocumentEmail, type SendDocumentEmailResult } from './send-document.service'
-export { listDocumentEmailLogs, type EmailLogView } from './email-logs.service'
+export {
+  listDocumentEmailLogs,
+  listEmailLogs,
+  getEmailLog,
+  getEmailLogDocumentHref,
+  type EmailLogView,
+  type EmailLogListItem,
+  type EmailLogDetail,
+} from './email-logs.service'
+export { emailLogListQuerySchema, type EmailLogListQuery } from './email-logs.schema'

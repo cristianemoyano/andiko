@@ -356,7 +356,7 @@ Envío de documentos e notificaciones por email desde el ERP.
 - [x] Migraciones: `email_logs`, tabla singleton `platform_settings` (SMTP global), columna `email_templates` en `organization_settings`
 - [x] Servicios: config SMTP **global/plataforma** (`email-settings.service` → `platform_settings`), templates por org (`email-templates.service`), transporte SMTP/log (`transport.ts`), resolución de documento (`document-resolver.ts`), cifrado de secretos (`crypto.ts`, AES-256-GCM derivado de `AUTH_SECRET`)
 - [x] Modelo `EmailLog` + historial por documento; modelo `PlatformSetting`
-- [x] API REST: `GET/PUT /api/v1/sys-admin/email-settings` (SMTP global, `requireSysAdmin`), `GET/PUT /api/v1/communications/templates`, `POST /api/v1/communications/send`, `GET /api/v1/communications/logs`
+- [x] API REST: `GET/PUT /api/v1/sys-admin/email-settings` (SMTP global, `requireSysAdmin`), `GET/PUT /api/v1/communications/templates`, `POST /api/v1/communications/send`, `GET /api/v1/communications/logs`, `GET /api/v1/communications/logs/[id]`
 
 ### Frontend (completado)
 - [x] Configuración SMTP **a nivel sys-admin/plataforma** (no por org) — pantalla `/sys-admin/email` + link en sidebar; contraseña cifrada, nunca devuelta al cliente. La usan todas las organizaciones.
@@ -366,6 +366,8 @@ Envío de documentos e notificaciones por email desde el ERP.
 - [x] Templates de email por tipo de documento (presupuesto, pedido, factura, remito) — editor UI por org en `/configuracion` (tab "Plantillas de email") + defaults con variables `{{contact_name}}`, `{{document_number}}`, `{{total}}`, etc.
 - [x] Envío de documentos al cliente desde el detalle (componente `SendDocumentEmail`: botón "Enviar por email" en facturas/pedidos/presupuestos) + servicio de envío que persiste `email_logs`
 - [x] Historial de envíos por documento — listado en el diálogo de envío
+- [x] Bandeja de auditoría **Emails enviados** por organización — tab en `/configuracion` con listado paginado, filtros y detalle del contenido renderizado guardado
+- [x] Persistencia de contenido en `email_logs` (`body_text`, `body_html`, `transport`, `message_id`) para envíos nuevos
 
 ### Pendiente
 - [ ] Notificaciones internas: alertas de stock mínimo, vencimiento de presupuestos *(requiere scheduler/cron — fase posterior)*
