@@ -39,6 +39,14 @@ export const emailSettingsUpdateSchema = z
   .strict()
 export type EmailSettingsUpdateInput = z.infer<typeof emailSettingsUpdateSchema>
 
+/** Payload to send a test email with the saved SMTP settings. */
+export const emailTestSchema = z
+  .object({
+    to: z.string().email('Dirección de correo inválida').max(320),
+  })
+  .strict()
+export type EmailTestInput = z.infer<typeof emailTestSchema>
+
 /** Shape returned to the client — password redacted to a boolean flag. */
 export interface PublicEmailSettings {
   enabled: boolean
