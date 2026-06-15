@@ -20,13 +20,13 @@ export const Default: Story = {
         <TabsTrigger value="cuenta">Cuenta corriente</TabsTrigger>
       </TabsList>
       <TabsContent value="general">
-        <p className="text-[13px] text-zinc-600">Razón social, contacto y dirección.</p>
+        <p className="text-[13px] text-fg-muted">Razón social, contacto y dirección.</p>
       </TabsContent>
       <TabsContent value="fiscal">
-        <p className="text-[13px] text-zinc-600">CUIT, condición frente al IVA, ingresos brutos.</p>
+        <p className="text-[13px] text-fg-muted">CUIT, condición frente al IVA, ingresos brutos.</p>
       </TabsContent>
       <TabsContent value="cuenta">
-        <p className="text-[13px] text-zinc-600">Saldo, movimientos y límite de crédito.</p>
+        <p className="text-[13px] text-fg-muted">Saldo, movimientos y límite de crédito.</p>
       </TabsContent>
     </Tabs>
   ),
@@ -43,13 +43,13 @@ export const WithDisabledTab: Story = {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="detalle">
-        <p className="text-[13px] text-zinc-600">Ítems del comprobante.</p>
+        <p className="text-[13px] text-fg-muted">Ítems del comprobante.</p>
       </TabsContent>
       <TabsContent value="pagos">
-        <p className="text-[13px] text-zinc-600">Pagos aplicados al comprobante.</p>
+        <p className="text-[13px] text-fg-muted">Pagos aplicados al comprobante.</p>
       </TabsContent>
       <TabsContent value="afip">
-        <p className="text-[13px] text-zinc-600">CAE y datos de autorización.</p>
+        <p className="text-[13px] text-fg-muted">CAE y datos de autorización.</p>
       </TabsContent>
     </Tabs>
   ),
@@ -73,13 +73,13 @@ export const WithBadges: Story = {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="pendientes">
-        <p className="text-[13px] text-zinc-600">12 comprobantes pendientes.</p>
+        <p className="text-[13px] text-fg-muted">12 comprobantes pendientes.</p>
       </TabsContent>
       <TabsContent value="aprobados">
-        <p className="text-[13px] text-zinc-600">48 comprobantes aprobados.</p>
+        <p className="text-[13px] text-fg-muted">48 comprobantes aprobados.</p>
       </TabsContent>
       <TabsContent value="anulados">
-        <p className="text-[13px] text-zinc-600">3 comprobantes anulados.</p>
+        <p className="text-[13px] text-fg-muted">3 comprobantes anulados.</p>
       </TabsContent>
     </Tabs>
   ),
@@ -96,19 +96,19 @@ export const ManyTabsLongLabels: Story = {
         <TabsTrigger value="t5">Cuenta corriente consolidada</TabsTrigger>
       </TabsList>
       <TabsContent value="t1">
-        <p className="text-[13px] text-zinc-600">Contenido de la primera pestaña.</p>
+        <p className="text-[13px] text-fg-muted">Contenido de la primera pestaña.</p>
       </TabsContent>
       <TabsContent value="t2">
-        <p className="text-[13px] text-zinc-600">Contenido de la segunda pestaña.</p>
+        <p className="text-[13px] text-fg-muted">Contenido de la segunda pestaña.</p>
       </TabsContent>
       <TabsContent value="t3">
-        <p className="text-[13px] text-zinc-600">Contenido de la tercera pestaña.</p>
+        <p className="text-[13px] text-fg-muted">Contenido de la tercera pestaña.</p>
       </TabsContent>
       <TabsContent value="t4">
-        <p className="text-[13px] text-zinc-600">Contenido de la cuarta pestaña.</p>
+        <p className="text-[13px] text-fg-muted">Contenido de la cuarta pestaña.</p>
       </TabsContent>
       <TabsContent value="t5">
-        <p className="text-[13px] text-zinc-600">Contenido de la quinta pestaña.</p>
+        <p className="text-[13px] text-fg-muted">Contenido de la quinta pestaña.</p>
       </TabsContent>
     </Tabs>
   ),

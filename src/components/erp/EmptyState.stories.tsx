@@ -43,8 +43,8 @@ export const WithCustomIcon: Story = {
 
 export const InTable: Story = {
   render: () => (
-    <div className="rounded-sm border border-zinc-200">
-      <div className="border-b border-zinc-100 px-4 py-2 text-[12px] font-medium text-zinc-500 bg-zinc-50">
+    <div className="rounded-sm border border-border">
+      <div className="border-b border-border px-4 py-2 text-[12px] font-medium text-fg-muted bg-surface-muted">
         COBROS
       </div>
       <EmptyState

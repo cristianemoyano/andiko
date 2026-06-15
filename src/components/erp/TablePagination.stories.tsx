@@ -13,14 +13,14 @@ type Story = StoryObj<typeof TablePagination>
 function StatefulPagination(props: { total: number; pageSize: number; initialPage?: number }) {
   const [page, setPage] = useState(props.initialPage ?? 1)
   return (
-    <div className="max-w-md rounded border border-zinc-200 bg-white p-4">
+    <div className="max-w-md rounded border border-border bg-surface p-4">
       <TablePagination
         page={page}
         pageSize={props.pageSize}
         total={props.total}
         onPageChange={setPage}
       />
-      <p className="mt-3 text-[11px] text-zinc-400">Página en estado: {page}</p>
+      <p className="mt-3 text-[11px] text-fg-subtle">Página en estado: {page}</p>
     </div>
   )
 }

@@ -71,24 +71,24 @@ export function AsientosClient() {
     {
       key: 'entry_number',
       header: 'N°',
-      render: row => <span className="font-mono text-[12px] text-zinc-600">{row.entry_number}</span>,
+      render: row => <span className="font-mono text-[12px] text-fg-muted">{row.entry_number}</span>,
     },
     {
       key: 'entry_date',
       header: 'Fecha',
-      render: row => <span className="text-[13px] text-zinc-800">{formatDate(row.entry_date)}</span>,
+      render: row => <span className="text-[13px] text-fg">{formatDate(row.entry_date)}</span>,
     },
     {
       key: 'description',
       header: 'Descripción',
       render: row => row.description
-        ? <span className="text-[13px] text-zinc-800">{row.description}</span>
-        : <span className="text-zinc-400">—</span>,
+        ? <span className="text-[13px] text-fg">{row.description}</span>
+        : <span className="text-fg-subtle">—</span>,
     },
     {
       key: 'total_debit',
       header: 'Importe',
-      render: row => <span className="font-mono text-[12px] text-zinc-700">{formatARS(row.total_debit)}</span>,
+      render: row => <span className="font-mono text-[12px] text-fg-muted">{formatARS(row.total_debit)}</span>,
     },
     {
       key: 'status',
@@ -107,7 +107,7 @@ export function AsientosClient() {
 
       <div className="flex-1 p-5 overflow-auto">
         {serverError && (
-          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
           </div>
         )}
@@ -120,25 +120,25 @@ export function AsientosClient() {
           toolbar={
             <>
               <div className="relative flex items-center w-full sm:w-auto">
-                <svg className="absolute left-2 text-zinc-400 pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <svg className="absolute left-2 text-fg-subtle pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
                 </svg>
                 <input
-                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-56 bg-white focus:outline-none focus:border-blue-500"
+                  className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-56 bg-surface focus:outline-none focus:border-ring"
                   placeholder="Buscar por número o descripción…"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1) }}
                 />
               </div>
               <select
-                className="h-[30px] text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-500 text-zinc-700"
+                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
                 value={statusFilter}
                 onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
               >
                 {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <span className="flex-1" />
-              <span className="text-[12px] text-zinc-500">{total} registro{total !== 1 ? 's' : ''}</span>
+              <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>
           }
           footer={total > 0 ? <TablePagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} /> : undefined}

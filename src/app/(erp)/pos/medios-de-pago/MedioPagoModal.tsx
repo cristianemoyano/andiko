@@ -100,54 +100,54 @@ export function MedioPagoModal({ open, onOpenChange, editing, onSaved }: Props) 
     >
       <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
         {serverError && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{serverError}</p>
+          <p className="text-sm text-danger bg-danger-bg border border-danger rounded px-3 py-2">{serverError}</p>
         )}
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="pm-name" className="text-xs font-medium text-zinc-700">
-            Nombre <span className="text-red-500">*</span>
+          <label htmlFor="pm-name" className="text-xs font-medium text-fg-muted">
+            Nombre <span className="text-danger">*</span>
           </label>
           <input
             id="pm-name"
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="ej: Efectivo, Tarjeta Visa, QR Mercado Pago"
-            className="border border-zinc-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="border border-border-strong rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
-          {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
+          {errors.name && <p className="text-xs text-danger">{errors.name}</p>}
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="pm-type" className="text-xs font-medium text-zinc-700">Tipo</label>
+          <label htmlFor="pm-type" className="text-xs font-medium text-fg-muted">Tipo</label>
           <select
             id="pm-type"
             value={type}
             onChange={e => setType(e.target.value)}
-            className="border border-zinc-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+            className="border border-border-strong rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-surface"
           >
             {TYPE_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-fg-subtle">
             El tipo determina el comportamiento en el POS (ej: QR muestra código, Efectivo calcula vuelto).
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex-1 flex flex-col gap-1">
-            <label htmlFor="pm-sort" className="text-xs font-medium text-zinc-700">Orden</label>
+            <label htmlFor="pm-sort" className="text-xs font-medium text-fg-muted">Orden</label>
             <input
               id="pm-sort"
               type="number"
               min={0}
               value={sortOrder}
               onChange={e => setSortOrder(Number(e.target.value))}
-              className="border border-zinc-300 rounded-md px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="border border-border-strong rounded-md px-3 py-2 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <div className="flex flex-col gap-1 pt-4">
-            <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-fg-muted cursor-pointer">
               <input
                 type="checkbox"
                 checked={requiresReference}
@@ -157,7 +157,7 @@ export function MedioPagoModal({ open, onOpenChange, editing, onSaved }: Props) 
               Requiere referencia / comprobante
             </label>
             {editing && (
-              <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-fg-muted cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isActive}
@@ -172,21 +172,21 @@ export function MedioPagoModal({ open, onOpenChange, editing, onSaved }: Props) 
 
         {branches.length > 0 && (
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-medium text-zinc-700">Sucursales habilitadas</label>
-            <div className="border border-zinc-200 rounded-md divide-y divide-zinc-100">
+            <label className="text-xs font-medium text-fg-muted">Sucursales habilitadas</label>
+            <div className="border border-border rounded-md divide-y divide-border">
               {branches.map(b => (
-                <label key={b.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-zinc-50">
+                <label key={b.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-surface-muted">
                   <input
                     type="checkbox"
                     checked={selectedBranchIds.includes(b.id)}
                     onChange={() => toggleBranch(b.id)}
                     className="rounded"
                   />
-                  <span className="text-sm text-zinc-800">{b.name}</span>
+                  <span className="text-sm text-fg">{b.name}</span>
                 </label>
               ))}
             </div>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-fg-subtle">
               Solo las sucursales seleccionadas verán este medio en su POS.
             </p>
           </div>

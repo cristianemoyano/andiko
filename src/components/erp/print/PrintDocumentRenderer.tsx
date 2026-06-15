@@ -18,11 +18,11 @@ export function PrintDocumentRenderer({ document: doc }: PrintDocumentRendererPr
     <PrintShell document={doc}>
       {showLines ? (
         <>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Detalle</h2>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-fg-muted">Detalle</h2>
           <PrintLineItemsTable lines={doc.lines} showTaxColumns={showTaxColumns} />
         </>
       ) : doc.kind === 'supplier_payment' ? (
-        <p className="text-sm text-zinc-600">Comprobante de pago registrado en el sistema.</p>
+        <p className="text-sm text-fg-muted">Comprobante de pago registrado en el sistema.</p>
       ) : null}
       <PrintTotalsBlock totals={doc.totals} />
       {doc.payments?.length ? (

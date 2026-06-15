@@ -24,7 +24,7 @@ export function Image({
   if (!src) {
     return (
       <div
-        className={cn('flex items-center justify-center rounded border border-zinc-200 bg-zinc-50 text-[10px] text-zinc-400', className)}
+        className={cn('flex items-center justify-center rounded border border-border bg-surface-muted text-[10px] text-fg-subtle', className)}
         aria-label={safeAlt || fallbackText || 'Sin imagen'}
       >
         {fallbackText ?? null}
@@ -36,7 +36,7 @@ export function Image({
     <NextImage
       src={src}
       alt={safeAlt}
-      className={cn('rounded border border-zinc-200 bg-zinc-50 object-cover', className)}
+      className={cn('rounded border border-border bg-surface-muted object-cover', className)}
       {...props}
     />
   )

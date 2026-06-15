@@ -48,13 +48,13 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
         id={id}
         aria-invalid={error ? 'true' : undefined}
         className={cn(
-          'flex h-8 w-full items-center justify-between gap-2 rounded-sm border bg-white px-2.5 text-[13px] text-left transition-colors',
+          'flex h-8 w-full items-center justify-between gap-2 rounded-sm border bg-surface px-2.5 text-[13px] text-left transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
-          'disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400',
-          'data-[placeholder]:text-zinc-400',
+          'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',
+          'data-[placeholder]:text-fg-subtle',
           error
-            ? 'border-red-500 focus-visible:ring-red-200 text-red-900'
-            : 'border-zinc-300 focus-visible:ring-blue-200 focus-visible:border-blue-500 text-zinc-900 data-[state=open]:border-blue-500 data-[state=open]:ring-2 data-[state=open]:ring-blue-200',
+            ? 'border-danger focus-visible:ring-red-200 text-danger'
+            : 'border-border-strong focus-visible:ring-ring focus-visible:border-ring text-fg data-[state=open]:border-ring data-[state=open]:ring-2 data-[state=open]:ring-ring',
           className,
         )}
       >
@@ -71,7 +71,7 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="flex-shrink-0 text-zinc-400"
+            className="flex-shrink-0 text-fg-subtle"
             aria-hidden
           >
             <path d="m6 9 6 6 6-6" />
@@ -84,7 +84,7 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
           position="popper"
           sideOffset={4}
           className={cn(
-            'z-50 max-h-[280px] overflow-hidden rounded-sm border border-zinc-200 bg-white shadow-md',
+            'z-50 max-h-[280px] overflow-hidden rounded-sm border border-border bg-surface shadow-md',
             'min-w-[var(--radix-select-trigger-width)]',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -94,7 +94,7 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
         >
           <RadixSelect.Viewport className="p-1">
             {options.length === 0 && (
-              <div className="px-3 py-4 text-center text-[12px] text-zinc-400">Sin opciones</div>
+              <div className="px-3 py-4 text-center text-[12px] text-fg-subtle">Sin opciones</div>
             )}
             {options.map(option => {
               const itemValue = option.value === '' ? EMPTY_OPTION_VALUE : option.value
@@ -104,10 +104,10 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
                 value={itemValue}
                 disabled={option.disabled}
                 className={cn(
-                  'relative flex w-full cursor-pointer select-none items-center rounded-[3px] py-1.5 pl-2.5 pr-8 text-[13px] text-zinc-700 outline-none transition-colors',
-                  'data-[highlighted]:bg-zinc-100 data-[highlighted]:text-zinc-900',
+                  'relative flex w-full cursor-pointer select-none items-center rounded-[3px] py-1.5 pl-2.5 pr-8 text-[13px] text-fg-muted outline-none transition-colors',
+                  'data-[highlighted]:bg-surface-hover data-[highlighted]:text-fg',
                   'data-[state=checked]:font-medium data-[state=checked]:text-brand-800',
-                  'data-[disabled]:pointer-events-none data-[disabled]:text-zinc-400',
+                  'data-[disabled]:pointer-events-none data-[disabled]:text-fg-subtle',
                 )}
               >
                 <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>

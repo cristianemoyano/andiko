@@ -92,26 +92,26 @@ export function AsientoDetail({ id }: { id: string }) {
 
       <div className="flex-1 p-5 overflow-auto">
         {loadError && (
-          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{loadError}</div>
+          <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">{loadError}</div>
         )}
 
         {entry && (
           <div className="max-w-4xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-baseline gap-3">
-                <h1 className="text-[16px] font-semibold text-zinc-900 font-mono">{entry.entry_number}</h1>
-                <span className="text-[13px] text-zinc-500">{formatDate(entry.entry_date)}</span>
+                <h1 className="text-[16px] font-semibold text-fg font-mono">{entry.entry_number}</h1>
+                <span className="text-[13px] text-fg-muted">{formatDate(entry.entry_date)}</span>
               </div>
               <StatusBadge value={ENTRY_STATUS_LABEL[entry.status] ?? entry.status} />
             </div>
 
             {entry.description && (
-              <p className="text-[13px] text-zinc-700 mb-4">{entry.description}</p>
+              <p className="text-[13px] text-fg-muted mb-4">{entry.description}</p>
             )}
 
-            <div className="border border-zinc-200 rounded-sm overflow-hidden">
+            <div className="border border-border rounded-sm overflow-hidden">
               <table className="w-full text-[13px]">
-                <thead className="bg-zinc-50 text-zinc-600">
+                <thead className="bg-surface-muted text-fg-muted">
                   <tr>
                     <th className="text-left font-medium px-3 py-2">Cuenta</th>
                     <th className="text-left font-medium px-3 py-2">Sucursal</th>
@@ -122,24 +122,24 @@ export function AsientoDetail({ id }: { id: string }) {
                 </thead>
                 <tbody>
                   {entry.lines.map(line => (
-                    <tr key={line.id} className="border-t border-zinc-100">
-                      <td className="px-3 py-2 text-zinc-800">
-                        {line.account ? <><span className="font-mono text-[12px] text-zinc-500">{line.account.code}</span> {line.account.name}</> : '—'}
+                    <tr key={line.id} className="border-t border-border">
+                      <td className="px-3 py-2 text-fg">
+                        {line.account ? <><span className="font-mono text-[12px] text-fg-muted">{line.account.code}</span> {line.account.name}</> : '—'}
                       </td>
-                      <td className="px-3 py-2 text-zinc-600 text-[12px]">
-                        {line.branch ? `${String(line.branch.branch_code).padStart(2, '0')} — ${line.branch.name}` : <span className="text-zinc-400">—</span>}
+                      <td className="px-3 py-2 text-fg-muted text-[12px]">
+                        {line.branch ? `${String(line.branch.branch_code).padStart(2, '0')} — ${line.branch.name}` : <span className="text-fg-subtle">—</span>}
                       </td>
-                      <td className="px-3 py-2 text-zinc-600 text-[12px]">{line.description ?? <span className="text-zinc-400">—</span>}</td>
-                      <td className="px-3 py-2 text-right font-mono text-zinc-800">{parseFloat(line.debit) > 0 ? formatARS(line.debit) : ''}</td>
-                      <td className="px-3 py-2 text-right font-mono text-zinc-800">{parseFloat(line.credit) > 0 ? formatARS(line.credit) : ''}</td>
+                      <td className="px-3 py-2 text-fg-muted text-[12px]">{line.description ?? <span className="text-fg-subtle">—</span>}</td>
+                      <td className="px-3 py-2 text-right font-mono text-fg">{parseFloat(line.debit) > 0 ? formatARS(line.debit) : ''}</td>
+                      <td className="px-3 py-2 text-right font-mono text-fg">{parseFloat(line.credit) > 0 ? formatARS(line.credit) : ''}</td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-zinc-50 border-t border-zinc-200 font-medium">
+                <tfoot className="bg-surface-muted border-t border-border font-medium">
                   <tr>
-                    <td className="px-3 py-2 text-zinc-600" colSpan={3}>Totales</td>
-                    <td className="px-3 py-2 text-right font-mono text-zinc-900">{formatARS(entry.total_debit)}</td>
-                    <td className="px-3 py-2 text-right font-mono text-zinc-900">{formatARS(entry.total_credit)}</td>
+                    <td className="px-3 py-2 text-fg-muted" colSpan={3}>Totales</td>
+                    <td className="px-3 py-2 text-right font-mono text-fg">{formatARS(entry.total_debit)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-fg">{formatARS(entry.total_credit)}</td>
                   </tr>
                 </tfoot>
               </table>

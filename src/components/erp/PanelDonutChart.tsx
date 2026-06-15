@@ -48,8 +48,8 @@ export function PanelDonutChart({ segments }: PanelDonutChartProps) {
             <div key={i} className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-sm shrink-0" style={{ background: seg.color }} />
               <div>
-                <div className="text-[11px] text-zinc-600">{seg.label}</div>
-                <div className="text-[10px] text-zinc-400 font-mono">{pct}%</div>
+                <div className="text-[11px] text-fg-muted">{seg.label}</div>
+                <div className="text-[10px] text-fg-subtle font-mono">{pct}%</div>
               </div>
             </div>
           )

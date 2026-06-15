@@ -257,17 +257,17 @@ export function ImportModal({
       />
       <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="pointer-events-auto flex w-full max-w-xl max-h-[90vh] flex-col rounded-md border border-zinc-200 bg-white shadow-2xl ring-1 ring-black/5"
+          className="pointer-events-auto flex w-full max-w-xl max-h-[90vh] flex-col rounded-md border border-border bg-surface shadow-2xl ring-1 ring-black/5"
           role="dialog"
           aria-modal="true"
           aria-labelledby="import-modal-title"
           onClick={e => e.stopPropagation()}
         >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-200">
-        <h2 id="import-modal-title" className="text-sm font-semibold text-zinc-900">{title}</h2>
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+        <h2 id="import-modal-title" className="text-sm font-semibold text-fg">{title}</h2>
         <button
-          className="text-zinc-400 hover:text-zinc-700 text-lg leading-none"
+          className="text-fg-subtle hover:text-fg-muted text-lg leading-none"
           onClick={handleClose}
           aria-label="Cerrar"
         >
@@ -276,7 +276,7 @@ export function ImportModal({
       </div>
 
       {/* Step indicator */}
-      <div className="flex gap-0 border-b border-zinc-100 bg-zinc-50 px-5 py-2">
+      <div className="flex gap-0 border-b border-border bg-surface-muted px-5 py-2">
         {(['upload', 'mapping', 'confirm', 'result'] as Step[]).map((s, idx) => {
           const labels: Record<Step, string> = { upload: '1. Archivo', mapping: '2. Columnas', confirm: '3. Acción', result: '4. Resultado' }
           const active = s === step
@@ -285,7 +285,7 @@ export function ImportModal({
             <span
               key={s}
               className={`text-[11px] px-3 py-1 rounded-sm font-medium ${
-                active ? 'text-brand-700 bg-brand-50' : done ? 'text-zinc-500' : 'text-zinc-300'
+                active ? 'text-brand-700 bg-brand-50' : done ? 'text-fg-muted' : 'text-fg-subtle'
               }`}
             >
               {labels[s]}
@@ -295,10 +295,10 @@ export function ImportModal({
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 text-sm text-zinc-800">
+      <div className="flex-1 overflow-y-auto px-5 py-4 text-sm text-fg">
         {step === 'upload' && (
           <div className="flex flex-col gap-3">
-            <p className="text-zinc-500 text-[13px]">
+            <p className="text-fg-muted text-[13px]">
               Seleccioná un archivo <strong>.csv</strong>. El orden de las columnas no importa — en el siguiente paso podés mapearlas.
             </p>
             <input
@@ -306,27 +306,27 @@ export function ImportModal({
               type="file"
               accept=".csv,text/csv"
               onChange={handleFileChange}
-              className="text-[13px] text-zinc-700 file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-zinc-300 file:text-[12px] file:bg-white file:cursor-pointer hover:file:bg-zinc-50"
+              className="text-[13px] text-fg-muted file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-border-strong file:text-[12px] file:bg-surface file:cursor-pointer hover:file:bg-surface-muted"
             />
           </div>
         )}
 
         {step === 'mapping' && (
           <div className="flex flex-col gap-3">
-            <p className="text-zinc-500 text-[13px]">
+            <p className="text-fg-muted text-[13px]">
               Asigná cada campo del sistema a la columna correspondiente de tu CSV ({csvHeaders.length} columnas detectadas).
               Las columnas que no mapees se conservan en el servidor vinculadas al producto o a la fila de origen, para no perder datos.
             </p>
-            <div className="divide-y divide-zinc-100 border border-zinc-200 rounded">
+            <div className="divide-y divide-border border border-border rounded">
               {fields.map((field) => {
                 const col = mapping[field.key] ?? IGNORE
                 const sample = col !== IGNORE ? csvColumnSamples[col] : undefined
                 return (
                 <div key={field.key} className="flex items-start gap-3 px-3 py-2">
-                  <span className="w-36 text-[12px] font-medium text-zinc-700 shrink-0 pt-1">
+                  <span className="w-36 text-[12px] font-medium text-fg-muted shrink-0 pt-1">
                     {field.label}
                     {requiredFields.includes(field.key) && (
-                      <span className="text-red-500 ml-0.5">*</span>
+                      <span className="text-danger ml-0.5">*</span>
                     )}
                   </span>
                   <div className="flex-1 min-w-0 flex flex-col gap-1">
@@ -338,8 +338,8 @@ export function ImportModal({
                           setMappingErrors(err => { const next = { ...err }; delete next[field.key]; return next })
                         }
                       }}
-                      className={`w-full h-7 text-[12px] border rounded-sm px-2 bg-white focus:outline-none focus:border-blue-400 ${
-                        mappingErrors[field.key] ? 'border-red-400' : 'border-zinc-300'
+                      className={`w-full h-7 text-[12px] border rounded-sm px-2 bg-surface focus:outline-none focus:border-ring ${
+                        mappingErrors[field.key] ? 'border-danger' : 'border-border-strong'
                       }`}
                       aria-describedby={col !== IGNORE ? `import-map-sample-${field.key}` : undefined}
                     >
@@ -351,10 +351,10 @@ export function ImportModal({
                     {col !== IGNORE && (
                       <p
                         id={`import-map-sample-${field.key}`}
-                        className="text-[11px] text-zinc-500 leading-snug break-words line-clamp-3"
+                        className="text-[11px] text-fg-muted leading-snug break-words line-clamp-3"
                         title={sample?.full ? sample.full : undefined}
                       >
-                        <span className="font-medium text-zinc-600">Ejemplo:</span>{' '}
+                        <span className="font-medium text-fg-muted">Ejemplo:</span>{' '}
                         {sample?.preview
                           ? sample.preview
                           : 'Sin valor en las primeras filas del archivo.'}
@@ -362,26 +362,26 @@ export function ImportModal({
                     )}
                   </div>
                   {mappingErrors[field.key] && (
-                    <span className="text-[11px] text-red-600 shrink-0 pt-1 max-w-[5.5rem]">{mappingErrors[field.key]}</span>
+                    <span className="text-[11px] text-danger shrink-0 pt-1 max-w-[5.5rem]">{mappingErrors[field.key]}</span>
                   )}
                 </div>
               )})}
             </div>
             {defaultFillFields.length > 0 && (
-              <div className="mt-4 rounded border border-zinc-200 bg-zinc-50/90 px-3 py-3 space-y-3">
+              <div className="mt-4 rounded border border-border bg-surface-muted/90 px-3 py-3 space-y-3">
                 <div>
-                  <p className="text-[12px] font-medium text-zinc-800">Valores por defecto</p>
-                  <p className="text-[11px] text-zinc-500 mt-0.5 leading-snug">
+                  <p className="text-[12px] font-medium text-fg">Valores por defecto</p>
+                  <p className="text-[11px] text-fg-muted mt-0.5 leading-snug">
                     Si la celda del CSV está vacía para un campo que sí mapeaste, se usará el valor que elijas acá. No reemplaza datos que vengan en el archivo.
                   </p>
                 </div>
                 {defaultFillFields.map((f) => (
                   <div key={f.key} className="flex flex-col gap-1">
-                    <label className="text-[12px] font-medium text-zinc-700" htmlFor={`import-default-${f.key}`}>
+                    <label className="text-[12px] font-medium text-fg-muted" htmlFor={`import-default-${f.key}`}>
                       {f.label}
                     </label>
                     {f.description && (
-                      <p className="text-[11px] text-zinc-500 leading-snug">{f.description}</p>
+                      <p className="text-[11px] text-fg-muted leading-snug">{f.description}</p>
                     )}
                     {f.inputKind === 'select' ? (
                       <select
@@ -390,7 +390,7 @@ export function ImportModal({
                         onChange={(e) =>
                           setFillDefaults((prev) => ({ ...prev, [f.key]: e.target.value }))
                         }
-                        className="w-full h-7 text-[12px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-400"
+                        className="w-full h-7 text-[12px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring"
                       >
                         {(f.options ?? [{ value: '', label: '—' }]).map((opt) => (
                           <option key={`${f.key}-${opt.value}`} value={opt.value}>
@@ -407,7 +407,7 @@ export function ImportModal({
                           setFillDefaults((prev) => ({ ...prev, [f.key]: e.target.value }))
                         }
                         placeholder={f.placeholder}
-                        className="w-full h-7 text-[12px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-400"
+                        className="w-full h-7 text-[12px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring"
                       />
                     )}
                   </div>
@@ -419,17 +419,17 @@ export function ImportModal({
 
         {step === 'confirm' && (
           <div className="flex flex-col gap-4">
-            <div className="rounded border border-zinc-200 bg-zinc-50 px-4 py-3 text-[13px] text-zinc-700 space-y-1">
+            <div className="rounded border border-border bg-surface-muted px-4 py-3 text-[13px] text-fg-muted space-y-1">
               <div><span className="font-medium">Archivo:</span> {file?.name}</div>
               <div><span className="font-medium">Filas:</span> {rowCount}</div>
               <div><span className="font-medium">Campos mapeados:</span> {mappedCount} de {fields.length}</div>
             </div>
             <div>
-              <label className="block text-[12px] font-medium text-zinc-700 mb-1">Acción ante registros existentes</label>
+              <label className="block text-[12px] font-medium text-fg-muted mb-1">Acción ante registros existentes</label>
               <select
                 value={action}
                 onChange={e => setAction(e.target.value as ImportAction)}
-                className="w-full h-8 text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-400"
+                className="w-full h-8 text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring"
               >
                 {(Object.entries(ACTION_LABELS) as [ImportAction, string][]).map(([val, label]) => (
                   <option key={val} value={val}>{label}</option>
@@ -437,7 +437,7 @@ export function ImportModal({
               </select>
             </div>
             {serverError && (
-              <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-800">
+              <div className="rounded border border-danger bg-danger-bg px-3 py-2 text-[13px] text-danger">
                 {serverError}
               </div>
             )}
@@ -448,9 +448,9 @@ export function ImportModal({
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
-                { label: 'Creados',   value: result.created, color: 'text-green-700 bg-green-50 border-green-200' },
+                { label: 'Creados',   value: result.created, color: 'text-success bg-success-bg border-success' },
                 { label: 'Actualizados', value: result.updated, color: 'text-blue-700 bg-blue-50 border-blue-200' },
-                { label: 'Omitidos',  value: result.skipped, color: 'text-zinc-600 bg-zinc-50 border-zinc-200' },
+                { label: 'Omitidos',  value: result.skipped, color: 'text-fg-muted bg-surface-muted border-border' },
               ].map(({ label, value, color }) => (
                 <div key={label} className={`rounded border px-2 py-3 ${color}`}>
                   <div className="text-xl font-semibold">{value}</div>
@@ -460,23 +460,23 @@ export function ImportModal({
             </div>
             {result.errors.length > 0 && (
               <div>
-                <p className="text-[12px] font-medium text-red-700 mb-1.5">
+                <p className="text-[12px] font-medium text-danger mb-1.5">
                   {result.errors.length} fila{result.errors.length !== 1 ? 's' : ''} con error
                   {(result.created + result.updated) > 0 ? ' — se importó el resto' : ' — no se importó ningún registro'}
                 </p>
-                <div className="max-h-48 overflow-y-auto border border-red-200 rounded text-[12px]">
+                <div className="max-h-48 overflow-y-auto border border-danger rounded text-[12px]">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-red-50">
-                        <th className="px-3 py-1.5 text-left font-semibold text-red-700 w-16">Fila</th>
-                        <th className="px-3 py-1.5 text-left font-semibold text-red-700">Error</th>
+                      <tr className="bg-danger-bg">
+                        <th className="px-3 py-1.5 text-left font-semibold text-danger w-16">Fila</th>
+                        <th className="px-3 py-1.5 text-left font-semibold text-danger">Error</th>
                       </tr>
                     </thead>
                     <tbody>
                       {result.errors.map((err, idx) => (
-                        <tr key={idx} className="border-t border-red-100">
-                          <td className="px-3 py-1.5 text-zinc-600">{err.row}</td>
-                          <td className="px-3 py-1.5 text-zinc-800">{err.message}</td>
+                        <tr key={idx} className="border-t border-danger">
+                          <td className="px-3 py-1.5 text-fg-muted">{err.row}</td>
+                          <td className="px-3 py-1.5 text-fg">{err.message}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -489,7 +489,7 @@ export function ImportModal({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-100 bg-zinc-50">
+      <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-surface-muted">
         <Button variant="secondary" size="sm" onClick={handleClose} disabled={loading}>
           {step === 'result' ? 'Cerrar' : 'Cancelar'}
         </Button>
@@ -508,8 +508,8 @@ export function ImportModal({
           {step === 'confirm' && (
             <div className="flex items-center gap-2">
               {loading && (
-                <div className="flex items-center gap-2 text-[12px] text-zinc-600">
-                  <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700" aria-hidden />
+                <div className="flex items-center gap-2 text-[12px] text-fg-muted">
+                  <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-border-strong border-t-zinc-700" aria-hidden />
                   Importando…
                 </div>
               )}

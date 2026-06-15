@@ -32,7 +32,7 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-stretch h-14 bg-white border-t border-zinc-200 pb-[env(safe-area-inset-bottom)]"
+      className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-stretch h-14 bg-surface border-t border-border pb-[env(safe-area-inset-bottom)]"
       aria-label="Navegación principal"
     >
       {primary.map(item => {
@@ -44,10 +44,10 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
             onClick={() => setOpen(false)}
             className={cn(
               'flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors',
-              active ? 'text-brand-600' : 'text-zinc-500 hover:text-zinc-800',
+              active ? 'text-brand-600' : 'text-fg-muted hover:text-fg',
             )}
           >
-            <span className={cn('flex-shrink-0', active ? 'text-brand-600' : 'text-zinc-400')}>{item.icon}</span>
+            <span className={cn('flex-shrink-0', active ? 'text-brand-600' : 'text-fg-subtle')}>{item.icon}</span>
             {item.label}
           </Link>
         )
@@ -60,10 +60,10 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
         aria-expanded={open}
         className={cn(
           'flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors',
-          open ? 'text-brand-600' : 'text-zinc-500 hover:text-zinc-800',
+          open ? 'text-brand-600' : 'text-fg-muted hover:text-fg',
         )}
       >
-        <span className={cn('flex-shrink-0', open ? 'text-brand-600' : 'text-zinc-400')}>
+        <span className={cn('flex-shrink-0', open ? 'text-brand-600' : 'text-fg-subtle')}>
           <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="3" cy="3" r="1.6" /><circle cx="8" cy="3" r="1.6" /><circle cx="13" cy="3" r="1.6" />
             <circle cx="3" cy="8" r="1.6" /><circle cx="8" cy="8" r="1.6" /><circle cx="13" cy="8" r="1.6" />

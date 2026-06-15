@@ -104,18 +104,18 @@ export function DeviceEditModal({ device, onOpenChange, onSaved }: Props) {
     <Dialog open={open} onOpenChange={handleClose} title="Editar dispositivo" size="sm">
       <form onSubmit={handleSave} className="p-6 flex flex-col gap-4">
         {serverError && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{serverError}</p>
+          <p className="text-sm text-danger bg-danger-bg border border-danger rounded px-3 py-2">{serverError}</p>
         )}
 
         <div>
-          <p className="text-xs text-zinc-500">Device ID</p>
-          <p className="text-sm font-mono text-zinc-800 mt-0.5">{device?.device_id}</p>
+          <p className="text-xs text-fg-muted">Device ID</p>
+          <p className="text-sm font-mono text-fg mt-0.5">{device?.device_id}</p>
         </div>
 
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-medium text-zinc-700">Estado</p>
-            <p className="text-xs text-zinc-500 mt-0.5">
+            <p className="text-xs font-medium text-fg-muted">Estado</p>
+            <p className="text-xs text-fg-muted mt-0.5">
               Si está inactivo, el POS no debería poder validar licencia ni operar.
             </p>
           </div>
@@ -126,18 +126,18 @@ export function DeviceEditModal({ device, onOpenChange, onSaved }: Props) {
               onChange={(e) => setIsActive(e.target.checked)}
               className="rounded"
             />
-            <span className="text-xs text-zinc-700">{isActive ? 'Activo' : 'Inactivo'}</span>
+            <span className="text-xs text-fg-muted">{isActive ? 'Activo' : 'Inactivo'}</span>
           </label>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-zinc-700">Licencia válida hasta</label>
+          <label className="text-xs font-medium text-fg-muted">Licencia válida hasta</label>
           <input
             type="date"
             value={clearLicense ? '' : licenseDate}
             onChange={e => { setLicenseDate(e.target.value); setClearLicense(false) }}
             disabled={clearLicense}
-            className="border border-zinc-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-zinc-50 disabled:text-zinc-400"
+            className="border border-border-strong rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-surface-muted disabled:text-fg-subtle"
           />
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -146,15 +146,15 @@ export function DeviceEditModal({ device, onOpenChange, onSaved }: Props) {
               onChange={e => setClearLicense(e.target.checked)}
               className="rounded"
             />
-            <span className="text-xs text-zinc-600">Sin fecha de licencia (bloquea el POS)</span>
+            <span className="text-xs text-fg-muted">Sin fecha de licencia (bloquea el POS)</span>
           </label>
         </div>
 
-        <div className="border-t border-zinc-200 pt-4 space-y-2">
+        <div className="border-t border-border pt-4 space-y-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-zinc-700">Token del dispositivo</p>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs font-medium text-fg-muted">Token del dispositivo</p>
+              <p className="text-xs text-fg-muted mt-0.5">
                 Regenerar el token puede cortar la conexión del POS si está activo.
               </p>
             </div>
@@ -164,12 +164,12 @@ export function DeviceEditModal({ device, onOpenChange, onSaved }: Props) {
           </div>
 
           {regeneratedToken && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-md space-y-2">
-              <p className="text-xs font-medium text-amber-900">
+            <div className="p-3 bg-warning-bg border border-warning rounded-md space-y-2">
+              <p className="text-xs font-medium text-warning">
                 Token regenerado. Copialo y actualizalo en el POS. No se vuelve a mostrar.
               </p>
               <div className="flex items-start gap-2 min-w-0">
-                <code className="flex-1 min-w-0 block text-xs font-mono bg-white border border-amber-200 rounded px-3 py-2 text-amber-950 overflow-x-auto whitespace-nowrap">
+                <code className="flex-1 min-w-0 block text-xs font-mono bg-surface border border-warning rounded px-3 py-2 text-warning overflow-x-auto whitespace-nowrap">
                   {regeneratedToken}
                 </code>
                 <Button type="button" size="sm" variant="secondary" onClick={handleCopy} className="flex-shrink-0 mt-0.5">

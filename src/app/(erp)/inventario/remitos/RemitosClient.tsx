@@ -25,23 +25,23 @@ const COLUMNS: Column<DeliveryNote>[] = [
   {
     key: 'delivery_number',
     header: 'N°',
-    render: row => <span className="font-mono text-[12px] text-zinc-600">{row.delivery_number}</span>,
+    render: row => <span className="font-mono text-[12px] text-fg-muted">{row.delivery_number}</span>,
   },
   {
     key: 'contact',
     header: 'Cliente',
     render: row =>
       row.contact ? (
-        <span className="font-medium text-zinc-900">{row.contact.legal_name}</span>
+        <span className="font-medium text-fg">{row.contact.legal_name}</span>
       ) : (
-        <span className="text-zinc-400">—</span>
+        <span className="text-fg-subtle">—</span>
       ),
   },
   {
     key: 'warehouse',
     header: 'Depósito',
     render: row =>
-      row.warehouse ? <span className="text-zinc-700">{row.warehouse.name}</span> : <span className="text-zinc-400">—</span>,
+      row.warehouse ? <span className="text-fg-muted">{row.warehouse.name}</span> : <span className="text-fg-subtle">—</span>,
   },
   {
     key: 'status',
@@ -54,7 +54,7 @@ const COLUMNS: Column<DeliveryNote>[] = [
     render: row =>
       row.delivery_date
         ? new Date(row.delivery_date).toLocaleDateString('es-AR')
-        : <span className="text-zinc-400">—</span>,
+        : <span className="text-fg-subtle">—</span>,
   },
 ]
 
@@ -102,7 +102,7 @@ export function RemitosClient() {
       <InventarioSubNav />
 
       <div className="flex-1 p-5 overflow-auto">
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm text-danger">{error}</p>}
         <DataTable
           columns={COLUMNS}
           data={notes}
@@ -112,7 +112,7 @@ export function RemitosClient() {
           toolbar={
             <>
               <div className="relative flex items-center w-full sm:w-auto">
-                <svg className="absolute left-2 text-zinc-400 pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <svg className="absolute left-2 text-fg-subtle pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
                 </svg>
                 <input
@@ -120,20 +120,20 @@ export function RemitosClient() {
                   placeholder="Buscar por número…"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1) }}
-                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-52 bg-white focus:outline-none focus:border-blue-500"
+                  className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-52 bg-surface focus:outline-none focus:border-ring"
                 />
               </div>
               <select
                 value={status}
                 onChange={e => { setStatus(e.target.value as DeliveryNoteStatus | ''); setPage(1) }}
-                className="h-[30px] text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-500 text-zinc-700"
+                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
               >
                 {STATUS_OPTIONS.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
               <span className="flex-1" />
-              <span className="text-[12px] text-zinc-500">{total} registro{total !== 1 ? 's' : ''}</span>
+              <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>
           }
           footer={

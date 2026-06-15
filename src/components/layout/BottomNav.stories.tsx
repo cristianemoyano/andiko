@@ -14,7 +14,7 @@ const meta: Meta<typeof BottomNav> = {
   decorators: [
     Story => (
       <SidebarProvider>
-        <div className="h-screen bg-zinc-50">
+        <div className="h-screen bg-surface-muted">
           <Story />
         </div>
       </SidebarProvider>

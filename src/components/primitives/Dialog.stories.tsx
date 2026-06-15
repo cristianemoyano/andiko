@@ -46,7 +46,7 @@ export const SmallSize: Story = {
       <>
         <Button onClick={() => setOpen(true)}>Abrir (sm)</Button>
         <Dialog open={open} onOpenChange={setOpen} title="Confirmar" size="sm">
-          <p className="text-[13px] text-zinc-600">¿Estás seguro que querés continuar?</p>
+          <p className="text-[13px] text-fg-muted">¿Estás seguro que querés continuar?</p>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>No</Button>
             <Button size="sm" onClick={() => setOpen(false)}>Sí</Button>
@@ -64,7 +64,7 @@ export const LargeSize: Story = {
       <>
         <Button onClick={() => setOpen(true)}>Abrir (lg)</Button>
         <Dialog open={open} onOpenChange={setOpen} title="Detalle de factura" size="lg">
-          <p className="text-[13px] text-zinc-500">Contenido amplio de la factura…</p>
+          <p className="text-[13px] text-fg-muted">Contenido amplio de la factura…</p>
         </Dialog>
       </>
     )

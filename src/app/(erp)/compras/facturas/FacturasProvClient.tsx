@@ -27,16 +27,16 @@ const COLUMNS: Column<SupplierInvoice>[] = [
   {
     key: 'invoice_number',
     header: 'N° interno',
-    render: row => <span className="font-mono text-[12px] text-zinc-600">{row.invoice_number}</span>,
+    render: row => <span className="font-mono text-[12px] text-fg-muted">{row.invoice_number}</span>,
   },
   {
     key: 'supplier_invoice_number',
     header: 'N° proveedor',
     render: row =>
       row.supplier_invoice_number ? (
-        <span className="text-zinc-700">{row.supplier_invoice_number}</span>
+        <span className="text-fg-muted">{row.supplier_invoice_number}</span>
       ) : (
-        <span className="text-zinc-400">—</span>
+        <span className="text-fg-subtle">—</span>
       ),
   },
   {
@@ -44,9 +44,9 @@ const COLUMNS: Column<SupplierInvoice>[] = [
     header: 'Proveedor',
     render: row =>
       row.contact ? (
-        <span className="font-medium text-zinc-900">{row.contact.legal_name}</span>
+        <span className="font-medium text-fg">{row.contact.legal_name}</span>
       ) : (
-        <span className="text-zinc-400">—</span>
+        <span className="text-fg-subtle">—</span>
       ),
   },
   {
@@ -60,7 +60,7 @@ const COLUMNS: Column<SupplierInvoice>[] = [
     render: row =>
       row.due_date
         ? new Date(row.due_date).toLocaleDateString('es-AR')
-        : <span className="text-zinc-400">—</span>,
+        : <span className="text-fg-subtle">—</span>,
   },
   {
     key: 'total',
@@ -71,7 +71,7 @@ const COLUMNS: Column<SupplierInvoice>[] = [
     key: 'balance',
     header: 'Saldo',
     render: row => (
-      <span className={`tabular-nums ${parseFloat(row.balance) > 0 ? 'text-red-600 font-medium' : 'text-zinc-400'}`}>
+      <span className={`tabular-nums ${parseFloat(row.balance) > 0 ? 'text-danger font-medium' : 'text-fg-subtle'}`}>
         {formatARS(row.balance)}
       </span>
     ),
@@ -124,7 +124,7 @@ export function FacturasProvClient() {
       <ComprasSubNav />
 
       <div className="flex-1 p-5 overflow-auto">
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm text-danger">{error}</p>}
         <DataTable
           columns={COLUMNS}
           data={invoices}
@@ -134,7 +134,7 @@ export function FacturasProvClient() {
           toolbar={
             <>
               <div className="relative flex items-center w-full sm:w-auto">
-                <svg className="absolute left-2 text-zinc-400 pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <svg className="absolute left-2 text-fg-subtle pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
                 </svg>
                 <input
@@ -142,20 +142,20 @@ export function FacturasProvClient() {
                   placeholder="Buscar por número…"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1) }}
-                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-52 bg-white focus:outline-none focus:border-blue-500"
+                  className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-52 bg-surface focus:outline-none focus:border-ring"
                 />
               </div>
               <select
                 value={status}
                 onChange={e => { setStatus(e.target.value as SupplierInvoiceStatus | ''); setPage(1) }}
-                className="h-[30px] text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-500 text-zinc-700"
+                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
               >
                 {STATUS_OPTIONS.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
               <span className="flex-1" />
-              <span className="text-[12px] text-zinc-500">{total} registro{total !== 1 ? 's' : ''}</span>
+              <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>
           }
           footer={

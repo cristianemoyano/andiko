@@ -42,7 +42,7 @@ export const Default: Story = {
     Story => (
       <SessionProvider session={session}>
         <SidebarProvider>
-          <div className="flex h-screen bg-zinc-50">
+          <div className="flex h-screen bg-surface-muted">
             <Story />
           </div>
         </SidebarProvider>
@@ -60,7 +60,7 @@ export const MobileDrawer: Story = {
     Story => (
       <SessionProvider session={session}>
         <SidebarProvider defaultOpen>
-          <div className="h-screen bg-zinc-50">
+          <div className="h-screen bg-surface-muted">
             <Story />
           </div>
         </SidebarProvider>

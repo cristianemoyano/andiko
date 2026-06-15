@@ -119,20 +119,20 @@ export function CategoriesClient() {
       key: 'name',
       header: 'Nombre',
       sortable: true,
-      render: row => <span className="font-medium text-zinc-900">{row.name}</span>,
+      render: row => <span className="font-medium text-fg">{row.name}</span>,
     },
     {
       key: 'parent',
       header: 'Padre',
       render: row =>
         row.parent_id
-          ? <span className="text-zinc-700">{parentNameById.get(row.parent_id) ?? '—'}</span>
-          : <span className="text-zinc-400">—</span>,
+          ? <span className="text-fg-muted">{parentNameById.get(row.parent_id) ?? '—'}</span>
+          : <span className="text-fg-subtle">—</span>,
     },
     {
       key: 'description',
       header: 'Descripción',
-      render: row => row.description ?? <span className="text-zinc-400">—</span>,
+      render: row => row.description ?? <span className="text-fg-subtle">—</span>,
     },
     {
       key: 'status',
@@ -223,15 +223,15 @@ export function CategoriesClient() {
     const [open, setOpen] = useState(true)
 
     return (
-      <div className="border-b border-zinc-100 last:border-0">
+      <div className="border-b border-border last:border-0">
         <div
-          className="flex items-center gap-2 h-10 px-3 hover:bg-zinc-50"
+          className="flex items-center gap-2 h-10 px-3 hover:bg-surface-muted"
           style={{ paddingLeft: 12 + depth * 18 }}
         >
           {children.length > 0 ? (
             <button
               type="button"
-              className="w-5 h-5 text-zinc-500 hover:text-zinc-800"
+              className="w-5 h-5 text-fg-muted hover:text-fg"
               onClick={() => setOpen(o => !o)}
               title={open ? 'Contraer' : 'Expandir'}
             >
@@ -241,11 +241,11 @@ export function CategoriesClient() {
             <span className="w-5 h-5" />
           )}
 
-          <span className="font-medium text-[13px] text-zinc-900">{node.name}</span>
+          <span className="font-medium text-[13px] text-fg">{node.name}</span>
           <Badge status={STATUS_BADGE[node.status] ?? 'neutral'}>
             {STATUS_LABEL[node.status] ?? node.status}
           </Badge>
-          {node.description && <span className="text-[12px] text-zinc-400 truncate">{node.description}</span>}
+          {node.description && <span className="text-[12px] text-fg-subtle truncate">{node.description}</span>}
 
           <span className="flex-1" />
           <div className="flex items-center gap-1">
@@ -286,18 +286,18 @@ export function CategoriesClient() {
             toolbar={
               <>
                 <div className="relative flex items-center w-full sm:w-auto">
-                  <svg className="absolute left-2 text-zinc-400 pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <svg className="absolute left-2 text-fg-subtle pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                     <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
                   </svg>
                   <input
-                    className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-56 bg-white focus:outline-none focus:border-blue-500"
+                    className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-56 bg-surface focus:outline-none focus:border-ring"
                     placeholder="Buscar por nombre…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
                 <select
-                  className="h-[30px] text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-500 text-zinc-700"
+                  className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
                   value={status}
                 onChange={(e) => setStatus(e.target.value as (Category['status'] | ''))}
                 >
@@ -313,21 +313,21 @@ export function CategoriesClient() {
             }
           />
         ) : (
-          <div className="bg-white border border-zinc-200 rounded">
-            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-200">
+          <div className="bg-surface border border-border rounded">
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
               <div className="relative flex items-center w-full sm:w-auto">
-                <svg className="absolute left-2 text-zinc-400 pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <svg className="absolute left-2 text-fg-subtle pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
                 </svg>
                 <input
-                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-56 bg-white focus:outline-none focus:border-blue-500"
+                  className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-56 bg-surface focus:outline-none focus:border-ring"
                   placeholder="Buscar por nombre…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
               <select
-                className="h-[30px] text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-500 text-zinc-700"
+                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as (Category['status'] | ''))}
               >
@@ -341,9 +341,9 @@ export function CategoriesClient() {
 
             <div>
               {loadingAll ? (
-                <div className="h-20 flex items-center justify-center text-sm text-zinc-400">Cargando…</div>
+                <div className="h-20 flex items-center justify-center text-sm text-fg-subtle">Cargando…</div>
               ) : rootCategories.length === 0 ? (
-                <div className="h-20 flex items-center justify-center text-sm text-zinc-400">No hay categorías.</div>
+                <div className="h-20 flex items-center justify-center text-sm text-fg-subtle">No hay categorías.</div>
               ) : (
                 rootCategories.map(c => <TreeRow key={c.id} node={c} depth={0} />)
               )}
@@ -360,18 +360,18 @@ export function CategoriesClient() {
         >
           <form
             onSubmit={handleSubmit}
-            className="bg-white rounded-sm border border-zinc-200 shadow-lg w-full max-w-md"
+            className="bg-surface rounded-sm border border-border shadow-lg w-full max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
-              <h2 className="text-sm font-semibold text-zinc-900">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <h2 className="text-sm font-semibold text-fg">
                 {editing ? 'Editar categoría' : 'Nueva categoría'}
               </h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="text-zinc-400 hover:text-zinc-700 text-lg leading-none">×</button>
+              <button type="button" onClick={() => setModalOpen(false)} className="text-fg-subtle hover:text-fg-muted text-lg leading-none">×</button>
             </div>
             <div className="px-5 py-4 space-y-4">
               {serverError && (
-                <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">{serverError}</div>
+                <div className="text-xs text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">{serverError}</div>
               )}
 
               <FormField label="Nombre *" htmlFor="cat_name" error={errors.name?.[0]} required>
@@ -398,7 +398,7 @@ export function CategoriesClient() {
                   id="cat_status"
                   value={form.status}
                   onChange={(e) => setForm(f => ({ ...f, status: e.target.value as Category['status'] }))}
-                  className="h-8 w-full px-2 text-sm border border-zinc-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="h-8 w-full px-2 text-sm border border-border-strong rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
                 >
                   <option value="active">Activa</option>
                   <option value="archived">Archivada</option>
@@ -410,7 +410,7 @@ export function CategoriesClient() {
                   id="cat_parent"
                   value={form.parent_id}
                   onChange={(e) => setForm(f => ({ ...f, parent_id: e.target.value }))}
-                  className="h-8 w-full px-2 text-sm border border-zinc-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-zinc-100 disabled:text-zinc-400"
+                  className="h-8 w-full px-2 text-sm border border-border-strong rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-surface-hover disabled:text-fg-subtle"
                   disabled={loadingAll}
                 >
                   <option value="">{loadingAll ? 'Cargando…' : 'Sin padre'}</option>
@@ -424,7 +424,7 @@ export function CategoriesClient() {
                 </select>
               </FormField>
             </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-zinc-200">
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
               <Button type="button" variant="secondary" size="sm" onClick={() => setModalOpen(false)}>Cancelar</Button>
               <Button type="submit" size="sm" disabled={saving}>{saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear categoría'}</Button>
             </div>

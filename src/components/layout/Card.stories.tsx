@@ -20,10 +20,10 @@ export const Default: Story = {
       <CardHeader title="Datos fiscales" description="Información impositiva del contacto." />
       <CardContent>
         <dl className="grid grid-cols-2 gap-y-2 text-[13px]">
-          <dt className="text-zinc-500">CUIT</dt>
-          <dd className="text-zinc-900">30-71234567-8</dd>
-          <dt className="text-zinc-500">Condición IVA</dt>
-          <dd className="text-zinc-900">Responsable Inscripto</dd>
+          <dt className="text-fg-muted">CUIT</dt>
+          <dd className="text-fg">30-71234567-8</dd>
+          <dt className="text-fg-muted">Condición IVA</dt>
+          <dd className="text-fg">Responsable Inscripto</dd>
         </dl>
       </CardContent>
     </Card>
@@ -35,7 +35,7 @@ export const Elevated: Story = {
     <Card variant="elevated" className="max-w-md">
       <CardHeader title="Resumen del mes" />
       <CardContent>
-        <p className="text-[13px] text-zinc-600">Total facturado: $ 1.245.300,50</p>
+        <p className="text-[13px] text-fg-muted">Total facturado: $ 1.245.300,50</p>
       </CardContent>
     </Card>
   ),
@@ -55,7 +55,7 @@ export const WithActions: Story = {
         }
       />
       <CardContent>
-        <p className="text-[13px] text-zinc-600">Saldo actual: $ 152.420,00</p>
+        <p className="text-[13px] text-fg-muted">Saldo actual: $ 152.420,00</p>
       </CardContent>
     </Card>
   ),
@@ -66,7 +66,7 @@ export const WithFooter: Story = {
     <Card className="max-w-md">
       <CardHeader title="Nueva sucursal" />
       <CardContent>
-        <p className="text-[13px] text-zinc-600">Completá los datos para crear la sucursal.</p>
+        <p className="text-[13px] text-fg-muted">Completá los datos para crear la sucursal.</p>
       </CardContent>
       <CardFooter>
         <Button variant="secondary" size="sm">Cancelar</Button>
@@ -80,7 +80,7 @@ export const ContentOnly: Story = {
   render: () => (
     <Card className="max-w-md">
       <CardContent>
-        <p className="text-[13px] text-zinc-600">Card sin encabezado ni pie — solo contenido.</p>
+        <p className="text-[13px] text-fg-muted">Card sin encabezado ni pie — solo contenido.</p>
       </CardContent>
     </Card>
   ),
@@ -94,7 +94,7 @@ export const LongTitle: Story = {
         actions={<Button variant="secondary" size="xs">Reintentar</Button>}
       />
       <CardContent>
-        <p className="text-[13px] text-zinc-600">3 comprobantes en cola.</p>
+        <p className="text-[13px] text-fg-muted">3 comprobantes en cola.</p>
       </CardContent>
     </Card>
   ),
@@ -105,7 +105,7 @@ export const EmptyContent: Story = {
     <Card className="max-w-md">
       <CardHeader title="Movimientos" />
       <CardContent>
-        <p className="py-6 text-center text-[12px] text-zinc-400">Sin movimientos registrados.</p>
+        <p className="py-6 text-center text-[12px] text-fg-subtle">Sin movimientos registrados.</p>
       </CardContent>
     </Card>
   ),

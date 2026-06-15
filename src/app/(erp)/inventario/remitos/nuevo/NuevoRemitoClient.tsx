@@ -185,7 +185,7 @@ export function NuevoRemitoClient() {
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {serverError && (
-            <div className="px-4 py-2 bg-red-50 border border-red-200 rounded-sm text-sm text-red-700">
+            <div className="px-4 py-2 bg-danger-bg border border-danger rounded-sm text-sm text-danger">
               {serverError}
             </div>
           )}
@@ -196,7 +196,7 @@ export function NuevoRemitoClient() {
             </div>
           )}
 
-          <div className="bg-white border border-zinc-200 rounded-sm p-5 flex flex-col gap-4">
+          <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField label="Sucursal" required>
                 <BranchSelectField value={branchId} onChange={setBranchId} />
@@ -235,22 +235,22 @@ export function NuevoRemitoClient() {
             </div>
           </div>
 
-          <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-zinc-100">
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide">Ítems a entregar</p>
+          <div className="bg-surface border border-border rounded-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-border">
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide">Ítems a entregar</p>
             </div>
             {items.length > 0 ? (
               <table className="w-full text-sm">
-                <thead className="bg-zinc-50 border-b border-zinc-200">
+                <thead className="bg-surface-muted border-b border-border">
                   <tr>
-                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Descripción</th>
-                    <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Cantidad a entregar</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Descripción</th>
+                    <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Cantidad a entregar</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y divide-border">
                   {items.map((item, idx) => (
                     <tr key={idx}>
-                      <td className="px-4 py-2.5 text-zinc-900">{item.description}</td>
+                      <td className="px-4 py-2.5 text-fg">{item.description}</td>
                       <td className="px-4 py-2.5">
                         <input
                           type="number"
@@ -258,7 +258,7 @@ export function NuevoRemitoClient() {
                           step="0.001"
                           value={item.quantity}
                           onChange={e => updateItem(idx, e.target.value)}
-                          className="w-28 h-8 px-2 text-sm text-right border border-zinc-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 tabular-nums ml-auto block"
+                          className="w-28 h-8 px-2 text-sm text-right border border-border rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500 tabular-nums ml-auto block"
                         />
                       </td>
                     </tr>
@@ -266,11 +266,11 @@ export function NuevoRemitoClient() {
                 </tbody>
               </table>
             ) : (
-              <p className="px-5 py-4 text-[13px] text-zinc-400">Sin ítems. Creá el remito desde un pedido de venta para precargar las líneas.</p>
+              <p className="px-5 py-4 text-[13px] text-fg-subtle">Sin ítems. Creá el remito desde un pedido de venta para precargar las líneas.</p>
             )}
           </div>
 
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+          <div className="bg-surface border border-border rounded-sm p-5">
             <FormField label="Notas">
               <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Observaciones del remito…" />
             </FormField>

@@ -300,7 +300,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
       <div className="flex flex-col h-full">
         <TopBar breadcrumbs={[{ label: 'Ventas', href: '/ventas/presupuestos' }, { label: 'Presupuestos', href: '/ventas/presupuestos' }, { label: '…' }]} />
         <VentasSubNav />
-        <div className="flex-1 flex items-center justify-center text-[13px] text-zinc-400">Cargando…</div>
+        <div className="flex-1 flex items-center justify-center text-[13px] text-fg-subtle">Cargando…</div>
       </div>
     )
   }
@@ -387,16 +387,16 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {/* Status pipeline */}
-          <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4 flex items-center justify-between gap-4">
+          <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-1">Presupuesto</p>
-              <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">{quote.quote_number}</h1>
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">Presupuesto</p>
+              <h1 className="text-[20px] font-bold text-fg tracking-tight">{quote.quote_number}</h1>
             </div>
             <StatusPipeline type="quote" status={quote.status} />
           </div>
 
           {/* Header info card */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5 flex flex-col gap-4">
+          <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
             {editMode ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -448,7 +448,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                           'px-3 py-1 text-[12px] rounded-sm border transition-colors',
                           paymentCondition === pc.value
                             ? 'border-brand-600 bg-brand-50 text-brand-600 font-medium'
-                            : 'border-zinc-300 text-zinc-600 hover:border-zinc-400'
+                            : 'border-border-strong text-fg-muted hover:border-border-strong'
                         )}
                       >
                         {pc.label}
@@ -460,44 +460,44 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[13px]">
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Sucursal</p>
-                  <p className="text-zinc-800">
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Sucursal</p>
+                  <p className="text-fg">
                     {quote.branch
                       ? `${String(quote.branch.branch_code).padStart(2, '0')} — ${quote.branch.name}`
-                      : <span className="text-zinc-400">—</span>}
+                      : <span className="text-fg-subtle">—</span>}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Cliente</p>
-                  <p className="text-zinc-800 font-medium">{quote.contact?.legal_name ?? <span className="text-zinc-400">—</span>}</p>
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Cliente</p>
+                  <p className="text-fg font-medium">{quote.contact?.legal_name ?? <span className="text-fg-subtle">—</span>}</p>
                   {quote.contact?.trade_name && (
-                    <p className="text-[12px] text-zinc-500">{quote.contact.trade_name}</p>
+                    <p className="text-[12px] text-fg-muted">{quote.contact.trade_name}</p>
                   )}
                 </div>
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Condición de pago</p>
-                  <p className="text-zinc-800">{PAYMENT_CONDITION_LABEL[quote.payment_condition]}</p>
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Condición de pago</p>
+                  <p className="text-fg">{PAYMENT_CONDITION_LABEL[quote.payment_condition]}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Válido hasta</p>
-                  <p className="text-zinc-800">
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Válido hasta</p>
+                  <p className="text-fg">
                     {quote.valid_until
                       ? new Date(quote.valid_until).toLocaleDateString('es-AR')
-                      : <span className="text-zinc-400">—</span>
+                      : <span className="text-fg-subtle">—</span>
                     }
                   </p>
                 </div>
                 {quote.salesperson && (
                   <div>
-                    <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Vendedor</p>
-                    <p className="text-zinc-800">{quote.salesperson.name}</p>
+                    <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Vendedor</p>
+                    <p className="text-fg">{quote.salesperson.name}</p>
                   </div>
                 )}
               </div>
             )}
 
             {editMode ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-zinc-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border">
                 <FormField label="Notas para el cliente" htmlFor="notes">
                   <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Condiciones, aclaraciones…" />
                 </FormField>
@@ -507,17 +507,17 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
               </div>
             ) : (
               (quote.notes || quote.internal_notes) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border">
                   {quote.notes && (
                     <div>
-                      <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Notas</p>
-                      <p className="text-[13px] text-zinc-600 whitespace-pre-line">{quote.notes}</p>
+                      <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Notas</p>
+                      <p className="text-[13px] text-fg-muted whitespace-pre-line">{quote.notes}</p>
                     </div>
                   )}
                   {quote.internal_notes && (
                     <div>
-                      <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Notas internas</p>
-                      <p className="text-[13px] text-zinc-600 whitespace-pre-line">{quote.internal_notes}</p>
+                      <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Notas internas</p>
+                      <p className="text-[13px] text-fg-muted whitespace-pre-line">{quote.internal_notes}</p>
                     </div>
                   )}
                 </div>
@@ -525,25 +525,25 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
             )}
 
             {serverError && (
-              <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+              <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
                 {serverError}
               </p>
             )}
           </div>
 
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
-            <h2 className="text-[13px] font-semibold text-zinc-900 mb-3">Trazabilidad</h2>
+          <div className="bg-surface border border-border rounded-sm p-5">
+            <h2 className="text-[13px] font-semibold text-fg mb-3">Trazabilidad</h2>
             {loadingTraceability ? (
-              <p className="text-[13px] text-zinc-500">Cargando relaciones…</p>
+              <p className="text-[13px] text-fg-muted">Cargando relaciones…</p>
             ) : relatedOrders.length === 0 ? (
-              <p className="text-[13px] text-zinc-500">Todavía no se generaron pedidos desde este presupuesto.</p>
+              <p className="text-[13px] text-fg-muted">Todavía no se generaron pedidos desde este presupuesto.</p>
             ) : (
               <div className="space-y-2">
                 {relatedOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between gap-3 rounded-sm border border-zinc-200 px-3 py-2">
+                  <div key={order.id} className="flex items-center justify-between gap-3 rounded-sm border border-border px-3 py-2">
                     <div>
-                      <p className="text-[13px] font-medium text-zinc-900">{order.order_number}</p>
-                      <p className="text-[12px] text-zinc-500">
+                      <p className="text-[13px] font-medium text-fg">{order.order_number}</p>
+                      <p className="text-[12px] text-fg-muted">
                         {ORDER_STATUS_LABEL[order.status] ?? order.status} · {new Date(order.created_at).toLocaleDateString('es-AR')}
                       </p>
                     </div>
@@ -558,43 +558,43 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
 
           {/* Items */}
           {editMode ? (
-            <div className="bg-white border border-zinc-200 rounded-sm p-5">
+            <div className="bg-surface border border-border rounded-sm p-5">
               <SalesLineItemsEditor items={items} onChange={setItems} priceListId={priceListId} />
             </div>
           ) : (
-            <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-zinc-100">
-                <h2 className="text-[13px] font-semibold text-zinc-900">Ítems</h2>
+            <div className="bg-surface border border-border rounded-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-border">
+                <h2 className="text-[13px] font-semibold text-fg">Ítems</h2>
               </div>
               {quote.items && quote.items.length > 0 ? (
                 <table className="w-full text-[12px]">
                   <thead>
-                    <tr className="bg-zinc-50 border-b border-zinc-100">
-                      <th className="px-4 py-2 text-left font-medium text-zinc-500">Descripción</th>
-                      <th className="px-4 py-2 text-right font-medium text-zinc-500">Cant.</th>
-                      <th className="px-4 py-2 text-right font-medium text-zinc-500">P. unitario</th>
-                      <th className="px-4 py-2 text-right font-medium text-zinc-500">Desc.</th>
-                      <th className="px-4 py-2 text-right font-medium text-zinc-500">IVA</th>
-                      <th className="px-4 py-2 text-right font-medium text-zinc-500">Total</th>
+                    <tr className="bg-surface-muted border-b border-border">
+                      <th className="px-4 py-2 text-left font-medium text-fg-muted">Descripción</th>
+                      <th className="px-4 py-2 text-right font-medium text-fg-muted">Cant.</th>
+                      <th className="px-4 py-2 text-right font-medium text-fg-muted">P. unitario</th>
+                      <th className="px-4 py-2 text-right font-medium text-fg-muted">Desc.</th>
+                      <th className="px-4 py-2 text-right font-medium text-fg-muted">IVA</th>
+                      <th className="px-4 py-2 text-right font-medium text-fg-muted">Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {quote.items.map(item => (
-                      <tr key={item.id} className="border-b border-zinc-100 last:border-0">
-                        <td className="px-4 py-2.5 text-zinc-800">{item.description}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-600">{item.quantity}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-600">{formatARS(item.unit_price)}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-500">
+                      <tr key={item.id} className="border-b border-border last:border-0">
+                        <td className="px-4 py-2.5 text-fg">{item.description}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{item.quantity}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{formatARS(item.unit_price)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
                           {parseFloat(item.discount_pct) > 0 ? `${item.discount_pct}%` : '—'}
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-500">{item.iva_rate}%</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums font-medium text-zinc-800">{formatARS(item.total)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{item.iva_rate}%</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-medium text-fg">{formatARS(item.total)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
-                <div className="px-4 py-8 text-center text-[13px] text-zinc-400">Sin ítems</div>
+                <div className="px-4 py-8 text-center text-[13px] text-fg-subtle">Sin ítems</div>
               )}
             </div>
           )}

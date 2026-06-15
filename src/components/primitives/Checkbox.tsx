@@ -30,16 +30,16 @@ const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(
         id={checkboxId}
         disabled={disabled}
         className={cn(
-          'group flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border bg-white transition-colors cursor-pointer',
+          'group flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border bg-surface transition-colors cursor-pointer',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
           'data-[state=checked]:bg-brand-600 data-[state=checked]:border-brand-600',
           'data-[state=indeterminate]:bg-brand-600 data-[state=indeterminate]:border-brand-600',
-          'disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:border-zinc-200',
-          'disabled:data-[state=checked]:bg-zinc-300 disabled:data-[state=checked]:border-zinc-300',
-          'disabled:data-[state=indeterminate]:bg-zinc-300 disabled:data-[state=indeterminate]:border-zinc-300',
+          'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:border-border',
+          'disabled:data-[state=checked]:bg-border-strong disabled:data-[state=checked]:border-border-strong',
+          'disabled:data-[state=indeterminate]:bg-border-strong disabled:data-[state=indeterminate]:border-border-strong',
           error
-            ? 'border-red-500 focus-visible:ring-red-200'
-            : 'border-zinc-300 hover:border-zinc-400 focus-visible:ring-blue-200',
+            ? 'border-danger focus-visible:ring-red-200'
+            : 'border-border-strong hover:border-border-strong focus-visible:ring-ring',
           !label && className,
         )}
         aria-invalid={error ? 'true' : undefined}
@@ -87,7 +87,7 @@ const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(
           htmlFor={checkboxId}
           className={cn(
             'text-[13px] leading-[19px] select-none',
-            disabled ? 'cursor-not-allowed text-zinc-400' : 'cursor-pointer text-zinc-700',
+            disabled ? 'cursor-not-allowed text-fg-subtle' : 'cursor-pointer text-fg-muted',
           )}
         >
           {label}

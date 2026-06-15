@@ -6,17 +6,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/layout/Ta
 import { PrintTemplateTab } from './PrintTemplateTab'
 import { EmailTemplatesTab } from './EmailTemplatesTab'
 import { EmailLogsTab } from './EmailLogsTab'
+import { AppearanceTab } from './AppearanceTab'
 
-type Section = 'impresion' | 'plantillas-email' | 'emails-enviados'
+type Section = 'impresion' | 'plantillas-email' | 'emails-enviados' | 'apariencia'
 
 const SECTION_LABEL: Record<Section, string> = {
   impresion: 'Plantilla de impresión',
   'plantillas-email': 'Plantillas de email',
   'emails-enviados': 'Emails enviados',
+  apariencia: 'Apariencia',
 }
 
 function parseSection(value: string | null): Section {
-  if (value === 'plantillas-email' || value === 'emails-enviados') return value
+  if (value === 'plantillas-email' || value === 'emails-enviados' || value === 'apariencia') return value
   return 'impresion'
 }
 
@@ -39,6 +41,7 @@ export function ConfiguracionClient() {
             <TabsTrigger value="impresion">Impresión</TabsTrigger>
             <TabsTrigger value="plantillas-email">Plantillas de email</TabsTrigger>
             <TabsTrigger value="emails-enviados">Emails enviados</TabsTrigger>
+            <TabsTrigger value="apariencia">Apariencia</TabsTrigger>
           </TabsList>
 
           <TabsContent value="impresion">
@@ -49,6 +52,9 @@ export function ConfiguracionClient() {
           </TabsContent>
           <TabsContent value="emails-enviados">
             <EmailLogsTab />
+          </TabsContent>
+          <TabsContent value="apariencia">
+            <AppearanceTab />
           </TabsContent>
         </Tabs>
       </div>

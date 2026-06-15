@@ -32,7 +32,7 @@ const ROLE_LABEL: Record<TenantRole, string> = {
 }
 
 const selectClass =
-  'flex h-8 w-full rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-500 focus-visible:ring-offset-0'
+  'flex h-8 w-full rounded-sm border border-border-strong bg-surface px-2.5 text-[13px] text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring focus-visible:ring-offset-0'
 
 interface OrgUserModalProps {
   open: boolean
@@ -180,7 +180,7 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
   if (activeBranches.length === 0) {
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-[13px] text-zinc-600">
+        <p className="text-[13px] text-fg-muted">
           Creá al menos una sucursal activa antes de agregar usuarios.
         </p>
         <div className="flex justify-end">
@@ -209,7 +209,7 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
       )}
       {isEdit && (
         <FormField label="Email" htmlFor="org_user_email_ro">
-          <Input id="org_user_email_ro" value={email} readOnly className="bg-zinc-50 text-zinc-600" />
+          <Input id="org_user_email_ro" value={email} readOnly className="bg-surface-muted text-fg-muted" />
         </FormField>
       )}
       <FormField label="Nombre" htmlFor="org_user_name" error={errors.name?.[0]}>
@@ -262,16 +262,16 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
       </FormField>
 
       <div>
-        <p className="text-[12px] font-medium text-zinc-800 mb-2">Sucursales permitidas</p>
-        <ul className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto rounded-sm border border-zinc-200 p-2">
+        <p className="text-[12px] font-medium text-fg mb-2">Sucursales permitidas</p>
+        <ul className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto rounded-sm border border-border p-2">
           {activeBranches.map(b => (
             <li key={b.id}>
-              <label className="flex items-center gap-2 text-[13px] text-zinc-800 cursor-pointer">
+              <label className="flex items-center gap-2 text-[13px] text-fg cursor-pointer">
                 <input
                   type="checkbox"
                   checked={branchIds.includes(b.id)}
                   onChange={() => dispatchBranch({ type: 'toggle', id: b.id })}
-                  className="rounded border-zinc-300"
+                  className="rounded border-border-strong"
                 />
                 <span>{`${String(b.branch_code).padStart(2, '0')} — ${b.name}`}</span>
               </label>
@@ -279,7 +279,7 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
           ))}
         </ul>
         {errors.branchIds?.[0] && (
-          <p className="text-[11px] text-red-600 mt-1">{errors.branchIds[0]}</p>
+          <p className="text-[11px] text-danger mt-1">{errors.branchIds[0]}</p>
         )}
       </div>
 
@@ -303,19 +303,19 @@ function OrgUserForm({ orgId, branches, user, onClose, onSaved }: OrgUserFormPro
       </FormField>
 
       {isEdit && (
-        <label className="flex items-center gap-2 text-[13px] text-zinc-700 cursor-pointer">
+        <label className="flex items-center gap-2 text-[13px] text-fg-muted cursor-pointer">
           <input
             type="checkbox"
             checked={isActive}
             onChange={e => setIsActive(e.target.checked)}
-            className="rounded border-zinc-300"
+            className="rounded border-border-strong"
           />
           Usuario activo
         </label>
       )}
 
       {serverError && (
-        <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+        <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
           {serverError}
         </p>
       )}

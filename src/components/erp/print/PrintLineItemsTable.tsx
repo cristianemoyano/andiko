@@ -10,13 +10,13 @@ export interface PrintLineItemsTableProps {
 
 export function PrintLineItemsTable({ lines, showTaxColumns = true, className }: PrintLineItemsTableProps) {
   if (lines.length === 0) {
-    return <p className={cn('text-sm text-zinc-500', className)}>Sin líneas.</p>
+    return <p className={cn('text-sm text-fg-muted', className)}>Sin líneas.</p>
   }
   return (
     <div className={cn('overflow-x-auto', className)}>
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-zinc-300 text-left text-xs uppercase text-zinc-500 print:border-zinc-500">
+          <tr className="border-b border-border-strong text-left text-xs uppercase text-fg-muted print:border-border-strong">
             <th className="py-2 pr-2">Descripción</th>
             <th className="w-16 py-2 pr-2 text-right">Cant.</th>
             <th className="w-24 py-2 pr-2 text-right">P. unit.</th>
@@ -33,7 +33,7 @@ export function PrintLineItemsTable({ lines, showTaxColumns = true, className }:
           {lines.map((line, idx) => (
             <tr
               key={idx}
-              className="border-b border-zinc-100 print:break-inside-avoid print:border-zinc-200"
+              className="border-b border-border print:break-inside-avoid print:border-border"
             >
               <td className="py-2 pr-2 align-top">{line.description}</td>
               <td className="py-2 pr-2 text-right font-mono align-top">{line.quantity}</td>
