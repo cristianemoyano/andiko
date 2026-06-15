@@ -33,13 +33,13 @@ export function PrintShell({ document: doc, children, className }: PrintShellPro
     <div
       style={shellStyle}
       className={cn(
-        'mx-auto min-h-[297mm] w-[210mm] max-w-full bg-white p-8 text-zinc-900 shadow-sm print:min-h-0 print:w-full print:max-w-none print:p-6 print:shadow-none',
+        'mx-auto min-h-[297mm] w-[210mm] max-w-full bg-surface p-8 text-fg shadow-sm print:min-h-0 print:w-full print:max-w-none print:p-6 print:shadow-none',
         className,
       )}
     >
       {doc.isDraft ? <PrintDraftBanner className="mb-6" /> : null}
 
-      <header className="border-b border-zinc-200 pb-4 print:border-zinc-400">
+      <header className="border-b border-border pb-4 print:border-border-strong">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             {showLogo ? (
@@ -51,19 +51,19 @@ export function PrintShell({ document: doc, children, className }: PrintShellPro
               />
             ) : null}
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{doc.issuer.name}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">{doc.issuer.name}</p>
               <h1 className="text-xl font-semibold" style={{ color: 'var(--print-accent)' }}>
                 {doc.title}
               </h1>
-              <p className="mt-1 font-mono text-sm text-zinc-600">{doc.document_number}</p>
+              <p className="mt-1 font-mono text-sm text-fg-muted">{doc.document_number}</p>
             </div>
           </div>
           <div className="text-right text-sm">
             <p>
-              <span className="text-zinc-500">Estado: </span>
+              <span className="text-fg-muted">Estado: </span>
               <span className="font-medium">{doc.status_label}</span>
             </p>
-            <p className="mt-1 text-zinc-500">{doc.currency}</p>
+            <p className="mt-1 text-fg-muted">{doc.currency}</p>
           </div>
         </div>
 
@@ -71,25 +71,25 @@ export function PrintShell({ document: doc, children, className }: PrintShellPro
           <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
             {doc.issuer.legal_name ? (
               <div className="flex gap-1.5">
-                <dt className="text-zinc-500">Razón social:</dt>
+                <dt className="text-fg-muted">Razón social:</dt>
                 <dd className="font-medium">{doc.issuer.legal_name}</dd>
               </div>
             ) : null}
             {doc.issuer.cuit ? (
               <div className="flex gap-1.5">
-                <dt className="text-zinc-500">CUIT:</dt>
+                <dt className="text-fg-muted">CUIT:</dt>
                 <dd className="font-medium">{doc.issuer.cuit}</dd>
               </div>
             ) : null}
             {doc.issuer.iva_condition_label ? (
               <div className="flex gap-1.5">
-                <dt className="text-zinc-500">Condición IVA:</dt>
+                <dt className="text-fg-muted">Condición IVA:</dt>
                 <dd className="font-medium">{doc.issuer.iva_condition_label}</dd>
               </div>
             ) : null}
             {doc.issuer.fiscal_address ? (
               <div className="flex gap-1.5">
-                <dt className="text-zinc-500">Domicilio:</dt>
+                <dt className="text-fg-muted">Domicilio:</dt>
                 <dd className="font-medium">{doc.issuer.fiscal_address}</dd>
               </div>
             ) : null}
@@ -100,34 +100,34 @@ export function PrintShell({ document: doc, children, className }: PrintShellPro
           <dl className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
             {doc.meta_dates.map(row => (
               <div key={row.label}>
-                <dt className="text-zinc-500">{row.label}</dt>
+                <dt className="text-fg-muted">{row.label}</dt>
                 <dd className="font-medium">{row.value ?? '—'}</dd>
               </div>
             ))}
           </dl>
         ) : null}
         {doc.payment_condition_label ? (
-          <p className="mt-3 text-sm text-zinc-600">
-            Condición de pago: <span className="font-medium text-zinc-900">{doc.payment_condition_label}</span>
+          <p className="mt-3 text-sm text-fg-muted">
+            Condición de pago: <span className="font-medium text-fg">{doc.payment_condition_label}</span>
           </p>
         ) : null}
       </header>
 
       {showBranch ? (
-        <p className="mt-4 text-sm text-zinc-600">
+        <p className="mt-4 text-sm text-fg-muted">
           Sucursal:{' '}
-          <span className="font-medium text-zinc-900">
+          <span className="font-medium text-fg">
             {doc.branch!.name} ({doc.branch!.branch_code})
           </span>
         </p>
       ) : null}
 
       {showCounterparty ? (
-        <section className="mt-6 rounded-md border border-zinc-200 p-4 print:border-zinc-400">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{counterpartyLabel}</h2>
+        <section className="mt-6 rounded-md border border-border p-4 print:border-border-strong">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">{counterpartyLabel}</h2>
           <p className="mt-1 font-medium">{doc.counterparty!.legal_name}</p>
           {doc.counterparty!.trade_name ? (
-            <p className="text-sm text-zinc-600">{doc.counterparty!.trade_name}</p>
+            <p className="text-sm text-fg-muted">{doc.counterparty!.trade_name}</p>
           ) : null}
         </section>
       ) : null}
@@ -135,14 +135,14 @@ export function PrintShell({ document: doc, children, className }: PrintShellPro
       <div className="mt-8">{children}</div>
 
       {showNotes ? (
-        <footer className="mt-10 border-t border-zinc-200 pt-4 text-sm text-zinc-700 print:border-zinc-400">
-          <h3 className="text-xs font-semibold uppercase text-zinc-500">Notas</h3>
+        <footer className="mt-10 border-t border-border pt-4 text-sm text-fg-muted print:border-border-strong">
+          <h3 className="text-xs font-semibold uppercase text-fg-muted">Notas</h3>
           <p className="mt-2 whitespace-pre-wrap">{doc.notes}</p>
         </footer>
       ) : null}
 
       {showFooter ? (
-        <p className="mt-8 border-t border-zinc-200 pt-3 text-center text-xs text-zinc-500 print:border-zinc-400">
+        <p className="mt-8 border-t border-border pt-3 text-center text-xs text-fg-muted print:border-border-strong">
           {t.footer_text}
         </p>
       ) : null}

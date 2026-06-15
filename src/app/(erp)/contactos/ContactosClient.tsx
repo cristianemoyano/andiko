@@ -53,27 +53,27 @@ const COLUMNS: Column<Contact>[] = [
     header: 'Razón social',
     sortable: true,
     render: row => (
-      <span className="font-medium text-zinc-900">{row.legal_name}</span>
+      <span className="font-medium text-fg">{row.legal_name}</span>
     ),
   },
   {
     key: 'trade_name',
     header: 'Nombre comercial',
     sortable: true,
-    render: row => row.trade_name ?? <span className="text-zinc-400">—</span>,
+    render: row => row.trade_name ?? <span className="text-fg-subtle">—</span>,
   },
   {
     key: 'contact_person',
     header: 'Persona de contacto',
     render: row => {
       const name = formatContactPersonLabel(row)
-      if (!name && !row.job_title) return <span className="text-zinc-400">—</span>
-      if (name && !row.job_title) return <span className="text-[13px] text-zinc-800">{name}</span>
-      if (!name && row.job_title) return <span className="text-[13px] text-zinc-800">{row.job_title}</span>
+      if (!name && !row.job_title) return <span className="text-fg-subtle">—</span>
+      if (name && !row.job_title) return <span className="text-[13px] text-fg">{name}</span>
+      if (!name && row.job_title) return <span className="text-[13px] text-fg">{row.job_title}</span>
       return (
         <div className="flex flex-col gap-0.5">
-          <span className="text-[13px] text-zinc-800">{name}</span>
-          <span className="text-[11px] text-zinc-500">{row.job_title}</span>
+          <span className="text-[13px] text-fg">{name}</span>
+          <span className="text-[11px] text-fg-muted">{row.job_title}</span>
         </div>
       )
     },
@@ -83,9 +83,9 @@ const COLUMNS: Column<Contact>[] = [
     header: 'CUIT',
     render: row =>
       row.cuit ? (
-        <span className="font-mono text-[12px] text-zinc-600">{row.cuit}</span>
+        <span className="font-mono text-[12px] text-fg-muted">{row.cuit}</span>
       ) : (
-        <span className="text-zinc-400">—</span>
+        <span className="text-fg-subtle">—</span>
       ),
   },
   {
@@ -102,7 +102,7 @@ const COLUMNS: Column<Contact>[] = [
   {
     key: 'email',
     header: 'Email',
-    render: row => row.email ?? <span className="text-zinc-400">—</span>,
+    render: row => row.email ?? <span className="text-fg-subtle">—</span>,
   },
   {
     key: 'is_active',
@@ -240,7 +240,7 @@ export function ContactosClient() {
 
       <div className="flex-1 p-5 overflow-auto">
         {serverError && (
-          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
           </div>
         )}
@@ -252,11 +252,11 @@ export function ContactosClient() {
           toolbar={
             <>
               <div className="relative flex items-center w-full sm:w-auto">
-                <svg className="absolute left-2 text-zinc-400 pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <svg className="absolute left-2 text-fg-subtle pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
                 </svg>
                 <input
-                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-52 bg-white focus:outline-none focus:border-blue-500"
+                  className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-52 bg-surface focus:outline-none focus:border-ring"
                   placeholder="Buscar por razón social, persona, puesto o CUIT…"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1) }}
@@ -264,7 +264,7 @@ export function ContactosClient() {
               </div>
 
               <select
-                className="h-[30px] text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-500 text-zinc-700"
+                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
                 value={typeFilter}
                 onChange={e => { setTypeFilter(e.target.value as ContactType); setPage(1) }}
               >
@@ -275,7 +275,7 @@ export function ContactosClient() {
               </select>
 
               <span className="flex-1" />
-              <span className="text-[12px] text-zinc-500">{total} registro{total !== 1 ? 's' : ''}</span>
+              <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>
           }
           footer={

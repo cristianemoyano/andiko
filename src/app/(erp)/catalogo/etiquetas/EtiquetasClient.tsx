@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { Button } from '@/components/primitives/Button'
@@ -44,7 +44,7 @@ const formatArs = (v: string | null) =>
 
 export function EtiquetasClient() {
   const [categories, setCategories] = useState<Category[]>([])
-  const [products, setProducts] = useState<Product[]>([])
+  const [, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('')
@@ -140,9 +140,9 @@ export function EtiquetasClient() {
       <TopBar breadcrumbs={[{ label: 'Catálogo', href: '/catalogo/productos' }, { label: 'Etiquetas de góndola' }]} />
       <CatalogoSubNav />
 
-      <div className="flex items-center gap-3 border-b border-zinc-200 bg-white px-5 py-3 print:hidden flex-wrap">
+      <div className="flex items-center gap-3 border-b border-border bg-surface px-5 py-3 print:hidden flex-wrap">
         <select
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-700"
+          className="rounded border border-border-strong px-2 py-1.5 text-sm text-fg-muted"
           value={categoryFilter}
           onChange={e => setCategoryFilter(e.target.value)}
         >
@@ -155,15 +155,15 @@ export function EtiquetasClient() {
         <input
           type="text"
           placeholder="Buscar producto o SKU…"
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-700 w-56"
+          className="rounded border border-border-strong px-2 py-1.5 text-sm text-fg-muted w-56"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
 
         <div className="flex items-center gap-2 ml-auto">
-          <span className="text-xs text-zinc-500">Tamaño:</span>
+          <span className="text-xs text-fg-muted">Tamaño:</span>
           <select
-            className="rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-700"
+            className="rounded border border-border-strong px-2 py-1.5 text-sm text-fg-muted"
             value={size}
             onChange={e => setSize(e.target.value as 'small' | 'large')}
           >
@@ -183,12 +183,12 @@ export function EtiquetasClient() {
 
       <div className="flex-1 overflow-auto">
         {error && (
-          <p className="m-5 text-sm text-red-600">{error}</p>
+          <p className="m-5 text-sm text-danger">{error}</p>
         )}
 
         {!error && (
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-zinc-50 text-left text-xs text-zinc-500 border-b border-zinc-200">
+            <thead className="sticky top-0 bg-surface-muted text-left text-xs text-fg-muted border-b border-border">
               <tr>
                 <th className="px-4 py-2 w-8">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} />
@@ -199,17 +199,17 @@ export function EtiquetasClient() {
                 <th className="px-4 py-2 w-24">Copias</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-border">
               {loading && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-zinc-400">Cargando…</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-fg-subtle">Cargando…</td></tr>
               )}
               {!loading && rows.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-zinc-400">Sin productos</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-fg-subtle">Sin productos</td></tr>
               )}
               {!loading && rows.map(row => (
                 <tr
                   key={row.variantId}
-                  className={row.selected ? 'bg-blue-50' : 'hover:bg-zinc-50'}
+                  className={row.selected ? 'bg-blue-50' : 'hover:bg-surface-muted'}
                   onClick={() => toggleRow(row.variantId)}
                 >
                   <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
@@ -220,12 +220,12 @@ export function EtiquetasClient() {
                     />
                   </td>
                   <td className="px-4 py-2">
-                    <span className="font-medium text-zinc-900">{row.productName}</span>
+                    <span className="font-medium text-fg">{row.productName}</span>
                     {row.variantName && (
-                      <span className="ml-1 text-zinc-500">— {row.variantName}</span>
+                      <span className="ml-1 text-fg-muted">— {row.variantName}</span>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-zinc-500">{row.sku ?? '—'}</td>
+                  <td className="px-4 py-2 text-fg-muted">{row.sku ?? '—'}</td>
                   <td className="px-4 py-2 font-mono">{formatArs(row.price)}</td>
                   <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
                     <input
@@ -234,7 +234,7 @@ export function EtiquetasClient() {
                       max={99}
                       value={row.copies}
                       onChange={e => setCopies(row.variantId, parseInt(e.target.value) || 1)}
-                      className="w-16 rounded border border-zinc-300 px-2 py-1 text-sm text-center"
+                      className="w-16 rounded border border-border-strong px-2 py-1 text-sm text-center"
                     />
                   </td>
                 </tr>

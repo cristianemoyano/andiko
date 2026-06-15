@@ -72,7 +72,7 @@ export function DispositivosClient() {
           size="sm"
           variant="ghost"
           onClick={() => setDeleting(row)}
-          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="text-danger hover:text-danger hover:bg-danger-bg"
         >
           Eliminar
         </Button>
@@ -86,8 +86,8 @@ export function DispositivosClient() {
       header: 'Dispositivo',
       render: row => (
         <div>
-          <span className="font-mono text-sm text-zinc-900">{row.device_id}</span>
-          {row.name && <p className="text-xs text-zinc-500">{row.name}</p>}
+          <span className="font-mono text-sm text-fg">{row.device_id}</span>
+          {row.name && <p className="text-xs text-fg-muted">{row.name}</p>}
         </div>
       ),
     },
@@ -99,16 +99,16 @@ export function DispositivosClient() {
     {
       key: 'last_seen_at',
       header: 'Última conexión',
-      render: row => <span className="text-sm text-zinc-600">{formatDate(row.last_seen_at)}</span>,
+      render: row => <span className="text-sm text-fg-muted">{formatDate(row.last_seen_at)}</span>,
     },
     {
       key: 'license_valid_until',
       header: 'Licencia hasta',
       render: row => {
-        if (!row.license_valid_until) return <span className="text-zinc-400 text-sm">—</span>
+        if (!row.license_valid_until) return <span className="text-fg-subtle text-sm">—</span>
         const expired = new Date(row.license_valid_until) < new Date()
         return (
-          <span className={`text-sm ${expired ? 'text-red-600 font-medium' : 'text-zinc-600'}`}>
+          <span className={`text-sm ${expired ? 'text-danger font-medium' : 'text-fg-muted'}`}>
             {formatDate(row.license_valid_until)}
             {expired && ' (vencida)'}
           </span>
@@ -118,7 +118,7 @@ export function DispositivosClient() {
     {
       key: 'created_at',
       header: 'Registrado',
-      render: row => <span className="text-sm text-zinc-500">{formatDate(row.created_at)}</span>,
+      render: row => <span className="text-sm text-fg-muted">{formatDate(row.created_at)}</span>,
     },
     actionCol,
   ]
@@ -136,10 +136,10 @@ export function DispositivosClient() {
 
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
-          <div className="flex items-center justify-center h-40 text-zinc-400 text-sm">Cargando…</div>
+          <div className="flex items-center justify-center h-40 text-fg-subtle text-sm">Cargando…</div>
         ) : devices.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 gap-2">
-            <p className="text-zinc-500 text-sm">No hay dispositivos registrados.</p>
+            <p className="text-fg-muted text-sm">No hay dispositivos registrados.</p>
             <Button size="sm" onClick={() => setModalOpen(true)}>Registrar el primero</Button>
           </div>
         ) : (

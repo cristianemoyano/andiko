@@ -127,15 +127,15 @@ export function AjustesPreciosClient() {
 
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-2xl space-y-4">
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
-            <h2 className="text-sm font-semibold text-zinc-900 mb-1">Ajuste masivo de precios</h2>
-            <p className="text-xs text-zinc-500 mb-4">
+          <div className="bg-surface border border-border rounded-sm p-5">
+            <h2 className="text-sm font-semibold text-fg mb-1">Ajuste masivo de precios</h2>
+            <p className="text-xs text-fg-muted mb-4">
               Aplicá cambios por categoría, porcentaje o monto fijo sobre el precio base o una lista de precios.
             </p>
 
             <form onSubmit={handlePreview} className="space-y-4">
               {serverError && (
-                <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">{serverError}</div>
+                <div className="text-xs text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">{serverError}</div>
               )}
 
               <FormField label="Canal / destino" htmlFor="target">
@@ -208,9 +208,9 @@ export function AjustesPreciosClient() {
           </div>
 
           {preview && (
-            <div className="bg-white border border-zinc-200 rounded-sm">
-              <div className="px-4 py-3 border-b border-zinc-100">
-                <span className="text-[13px] font-semibold text-zinc-900">
+            <div className="bg-surface border border-border rounded-sm">
+              <div className="px-4 py-3 border-b border-border">
+                <span className="text-[13px] font-semibold text-fg">
                   {preview.updated_count != null && preview.updated_count > 0
                     ? `${preview.updated_count} precios actualizados`
                     : `${preview.affected_count} variantes afectadas`}
@@ -219,7 +219,7 @@ export function AjustesPreciosClient() {
               {preview.sample.length > 0 ? (
                 <table className="w-full text-[13px]">
                   <thead>
-                    <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-500 border-b border-zinc-100">
+                    <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="px-4 py-2">SKU</th>
                       <th className="px-4 py-2 text-right">Actual</th>
                       <th className="px-4 py-2 text-right">Nuevo</th>
@@ -227,16 +227,16 @@ export function AjustesPreciosClient() {
                   </thead>
                   <tbody>
                     {preview.sample.map(row => (
-                      <tr key={row.variant_id} className="border-b border-zinc-50 last:border-0">
+                      <tr key={row.variant_id} className="border-b border-border last:border-0">
                         <td className="px-4 py-2 font-mono text-xs">{row.sku}</td>
-                        <td className="px-4 py-2 text-right tabular-nums text-zinc-500">{formatMoney(row.current_price)}</td>
-                        <td className="px-4 py-2 text-right tabular-nums font-medium text-zinc-900">{formatMoney(row.new_price)}</td>
+                        <td className="px-4 py-2 text-right tabular-nums text-fg-muted">{formatMoney(row.current_price)}</td>
+                        <td className="px-4 py-2 text-right tabular-nums font-medium text-fg">{formatMoney(row.new_price)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
-                <div className="p-6 text-sm text-zinc-400 text-center">Ninguna variante coincide con los filtros</div>
+                <div className="p-6 text-sm text-fg-subtle text-center">Ninguna variante coincide con los filtros</div>
               )}
             </div>
           )}

@@ -72,19 +72,19 @@ const ars = (v: number) =>
 // ── Sub-components ──────────────────────────────────────────────────────────
 
 function TrendBadge({ pct }: { pct: number }) {
-  if (pct > 0) return <span className="text-[11px] font-medium text-green-700 truncate block">↑ {pct}% vs período anterior</span>
-  if (pct < 0) return <span className="text-[11px] font-medium text-red-600 truncate block">↓ {Math.abs(pct)}% vs período anterior</span>
-  return <span className="text-[11px] text-zinc-400 truncate block">Sin variación</span>
+  if (pct > 0) return <span className="text-[11px] font-medium text-success truncate block">↑ {pct}% vs período anterior</span>
+  if (pct < 0) return <span className="text-[11px] font-medium text-danger truncate block">↓ {Math.abs(pct)}% vs período anterior</span>
+  return <span className="text-[11px] text-fg-subtle truncate block">Sin variación</span>
 }
 
 function KPICard({
   label, value, sub, spark, sparkColor,
 }: { label: string; value: string; sub: React.ReactNode; spark?: number[]; sparkColor?: string }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex flex-col gap-2 min-w-0">
-      <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-[0.06em] truncate">{label}</div>
+    <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex flex-col gap-2 min-w-0">
+      <div className="text-[11px] font-semibold text-fg-subtle uppercase tracking-[0.06em] truncate">{label}</div>
       <div className="flex items-end justify-between gap-2 min-w-0">
-        <div className="font-mono text-lg sm:text-[22px] font-medium text-zinc-900 leading-none truncate">{value}</div>
+        <div className="font-mono text-lg sm:text-[22px] font-medium text-fg leading-none truncate">{value}</div>
         {spark && spark.length > 1 && (
           <Sparkline data={spark} color={sparkColor ?? PRIMARY} />
         )}
@@ -96,13 +96,13 @@ function KPICard({
 
 function CountCard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex items-center gap-3 min-w-0">
+    <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex items-center gap-3 min-w-0">
       <div className="w-9 h-9 rounded-[4px] bg-[#EEF8FA] flex items-center justify-center shrink-0 text-[#0C647A]">
         {icon}
       </div>
       <div className="min-w-0">
-        <div className="font-mono text-xl font-medium text-zinc-900 leading-none truncate">{value}</div>
-        <div className="text-[11px] text-zinc-500 mt-0.5 truncate">{label}</div>
+        <div className="font-mono text-xl font-medium text-fg leading-none truncate">{value}</div>
+        <div className="text-[11px] text-fg-muted mt-0.5 truncate">{label}</div>
       </div>
     </div>
   )
@@ -249,7 +249,7 @@ export function PanelClient() {
       <TopBar breadcrumbs={[{ label: 'Panel' }]} />
 
       {/* Filter bar */}
-      <div className="border-b border-zinc-200 bg-white px-4 md:px-6 py-2.5 flex flex-col gap-2 md:flex-row md:items-center md:gap-3 shrink-0 print:hidden">
+      <div className="border-b border-border bg-surface px-4 md:px-6 py-2.5 flex flex-col gap-2 md:flex-row md:items-center md:gap-3 shrink-0 print:hidden">
         <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex gap-1 w-max md:w-auto flex-nowrap">
           {PERIOD_OPTIONS.map(opt => (
@@ -259,7 +259,7 @@ export function PanelClient() {
               className={`text-xs px-3 py-1.5 rounded-[4px] font-medium transition-colors whitespace-nowrap shrink-0 ${
                 period === opt.value
                   ? 'bg-[#EEF8FA] text-[#0C647A] border border-[#A2DCE7]'
-                  : 'text-zinc-500 hover:bg-zinc-100 border border-transparent'
+                  : 'text-fg-muted hover:bg-surface-hover border border-transparent'
               }`}
             >
               {opt.label}
@@ -270,7 +270,7 @@ export function PanelClient() {
             className={`text-xs px-3 py-1.5 rounded-[4px] font-medium transition-colors whitespace-nowrap shrink-0 ${
               period === 'custom'
                 ? 'bg-[#EEF8FA] text-[#0C647A] border border-[#A2DCE7]'
-                : 'text-zinc-500 hover:bg-zinc-100 border border-transparent'
+                : 'text-fg-muted hover:bg-surface-hover border border-transparent'
             }`}
           >
             Personalizado
@@ -284,14 +284,14 @@ export function PanelClient() {
               type="date"
               value={fromDate}
               onChange={e => updateParams({ from: e.target.value })}
-              className="text-xs border border-zinc-200 rounded-[4px] px-2 py-1.5 text-zinc-700 focus:outline-none focus:border-[#0C647A]"
+              className="text-xs border border-border rounded-[4px] px-2 py-1.5 text-fg-muted focus:outline-none focus:border-[#0C647A]"
             />
-            <span className="text-xs text-zinc-400">→</span>
+            <span className="text-xs text-fg-subtle">→</span>
             <input
               type="date"
               value={toDate}
               onChange={e => updateParams({ to: e.target.value })}
-              className="text-xs border border-zinc-200 rounded-[4px] px-2 py-1.5 text-zinc-700 focus:outline-none focus:border-[#0C647A]"
+              className="text-xs border border-border rounded-[4px] px-2 py-1.5 text-fg-muted focus:outline-none focus:border-[#0C647A]"
             />
           </div>
         )}
@@ -318,7 +318,7 @@ export function PanelClient() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 md:p-6 bg-zinc-50 print:bg-white print:p-4">
+      <div className="flex-1 overflow-auto p-4 md:p-6 bg-surface-muted print:bg-surface print:p-4">
         {/* KPI cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <KPICard
@@ -326,14 +326,14 @@ export function PanelClient() {
             value={kpis ? ars(kpis.facturado.value) : '—'}
             spark={kpis?.facturado.spark}
             sparkColor={kpis && kpis.facturado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
-            sub={kpis ? <TrendBadge pct={kpis.facturado.pct_change} /> : <span className="text-[11px] text-zinc-300">Cargando…</span>}
+            sub={kpis ? <TrendBadge pct={kpis.facturado.pct_change} /> : <span className="text-[11px] text-fg-subtle">Cargando…</span>}
           />
           <KPICard
             label="Cobrado"
             value={kpis ? ars(kpis.cobrado.value) : '—'}
             spark={kpis?.cobrado.spark}
             sparkColor={kpis && kpis.cobrado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
-            sub={kpis ? <TrendBadge pct={kpis.cobrado.pct_change} /> : <span className="text-[11px] text-zinc-300">Cargando…</span>}
+            sub={kpis ? <TrendBadge pct={kpis.cobrado.pct_change} /> : <span className="text-[11px] text-fg-subtle">Cargando…</span>}
           />
           <KPICard
             label="Cuentas por cobrar"
@@ -341,15 +341,15 @@ export function PanelClient() {
             sub={
               kpis
                 ? kpis.por_cobrar.overdue_count > 0
-                  ? <span className="text-[11px] font-medium text-amber-700">{kpis.por_cobrar.overdue_count} factura{kpis.por_cobrar.overdue_count > 1 ? 's' : ''} vencida{kpis.por_cobrar.overdue_count > 1 ? 's' : ''}</span>
-                  : <span className="text-[11px] text-green-700">Al día</span>
-                : <span className="text-[11px] text-zinc-300">Cargando…</span>
+                  ? <span className="text-[11px] font-medium text-warning">{kpis.por_cobrar.overdue_count} factura{kpis.por_cobrar.overdue_count > 1 ? 's' : ''} vencida{kpis.por_cobrar.overdue_count > 1 ? 's' : ''}</span>
+                  : <span className="text-[11px] text-success">Al día</span>
+                : <span className="text-[11px] text-fg-subtle">Cargando…</span>
             }
           />
           <KPICard
             label="Saldo en cuenta"
             value="—"
-            sub={<span className="text-[11px] text-zinc-400 line-clamp-2">Módulo contabilidad pendiente</span>}
+            sub={<span className="text-[11px] text-fg-subtle line-clamp-2">Módulo contabilidad pendiente</span>}
           />
         </div>
 
@@ -365,28 +365,28 @@ export function PanelClient() {
         {stockAlerts && (stockAlerts.expired > 0 || stockAlerts.expiring_soon > 0 || stockAlerts.below_minimum > 0) && (
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
             {stockAlerts.expired > 0 && (
-              <Link href="/inventario/stock?expired=true" className="bg-red-50 border border-red-200 rounded-[4px] p-4 flex items-center gap-3 hover:bg-red-100 transition-colors">
-                <div className="w-9 h-9 rounded-[4px] bg-red-100 flex items-center justify-center shrink-0 text-red-600">
+              <Link href="/inventario/stock?expired=true" className="bg-danger-bg border border-danger rounded-[4px] p-4 flex items-center gap-3 hover:bg-danger-bg transition-colors">
+                <div className="w-9 h-9 rounded-[4px] bg-danger-bg flex items-center justify-center shrink-0 text-danger">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                   </svg>
                 </div>
                 <div>
-                  <div className="font-mono text-xl font-medium text-red-700 leading-none">{stockAlerts.expired}</div>
-                  <div className="text-[11px] text-red-600 mt-0.5">Producto{stockAlerts.expired > 1 ? 's' : ''} vencido{stockAlerts.expired > 1 ? 's' : ''}</div>
+                  <div className="font-mono text-xl font-medium text-danger leading-none">{stockAlerts.expired}</div>
+                  <div className="text-[11px] text-danger mt-0.5">Producto{stockAlerts.expired > 1 ? 's' : ''} vencido{stockAlerts.expired > 1 ? 's' : ''}</div>
                 </div>
               </Link>
             )}
             {stockAlerts.expiring_soon > 0 && (
-              <Link href="/inventario/stock?expiring_within_days=7" className="bg-amber-50 border border-amber-200 rounded-[4px] p-4 flex items-center gap-3 hover:bg-amber-100 transition-colors">
-                <div className="w-9 h-9 rounded-[4px] bg-amber-100 flex items-center justify-center shrink-0 text-amber-600">
+              <Link href="/inventario/stock?expiring_within_days=7" className="bg-warning-bg border border-warning rounded-[4px] p-4 flex items-center gap-3 hover:bg-warning-bg transition-colors">
+                <div className="w-9 h-9 rounded-[4px] bg-warning-bg flex items-center justify-center shrink-0 text-warning">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                   </svg>
                 </div>
                 <div>
-                  <div className="font-mono text-xl font-medium text-amber-700 leading-none">{stockAlerts.expiring_soon}</div>
-                  <div className="text-[11px] text-amber-600 mt-0.5">Vence{stockAlerts.expiring_soon > 1 ? 'n' : ''} en 7 días</div>
+                  <div className="font-mono text-xl font-medium text-warning leading-none">{stockAlerts.expiring_soon}</div>
+                  <div className="text-[11px] text-warning mt-0.5">Vence{stockAlerts.expiring_soon > 1 ? 'n' : ''} en 7 días</div>
                 </div>
               </Link>
             )}
@@ -409,9 +409,9 @@ export function PanelClient() {
         {/* Charts row */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
           {/* Flujo de caja */}
-          <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
+          <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
             <div className="flex items-center mb-4">
-              <span className="text-[13px] font-semibold text-zinc-900">Flujo de caja</span>
+              <span className="text-[13px] font-semibold text-fg">Flujo de caja</span>
               <div className="ml-auto flex gap-1">
                 {(['semanal', 'mensual', 'anual'] as const).map(v => (
                   <button
@@ -420,7 +420,7 @@ export function PanelClient() {
                     className={`text-[11px] px-2.5 py-1 rounded-[4px] font-medium capitalize transition-colors ${
                       cashView === v
                         ? 'bg-[#EEF8FA] text-[#0C647A] border border-[#A2DCE7]'
-                        : 'text-zinc-500 hover:bg-zinc-100 border border-transparent'
+                        : 'text-fg-muted hover:bg-surface-hover border border-transparent'
                     }`}
                   >
                     {v.charAt(0).toUpperCase() + v.slice(1)}
@@ -431,19 +431,19 @@ export function PanelClient() {
             {cashFlow ? (
               <PanelBarChart data={cashFlow[cashView]} color={PRIMARY} />
             ) : (
-              <div className="h-40 flex items-center justify-center text-sm text-zinc-300">Cargando…</div>
+              <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Cargando…</div>
             )}
           </div>
 
           {/* Gastos por categoría */}
-          <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
-            <div className="text-[13px] font-semibold text-zinc-900 mb-4">Gastos por proveedor</div>
+          <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
+            <div className="text-[13px] font-semibold text-fg mb-4">Gastos por proveedor</div>
             {gastos.length > 0 ? (
               <PanelDonutChart segments={gastos} />
             ) : loading ? (
-              <div className="h-40 flex items-center justify-center text-sm text-zinc-300">Cargando…</div>
+              <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Cargando…</div>
             ) : (
-              <div className="h-40 flex items-center justify-center text-sm text-zinc-400">Sin datos de compras en el período</div>
+              <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Sin datos de compras en el período</div>
             )}
           </div>
         </div>
@@ -451,9 +451,9 @@ export function PanelClient() {
         {/* Bottom row */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {/* Recent invoices */}
-          <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-100 flex items-center">
-              <span className="text-[13px] font-semibold text-zinc-900">Facturas recientes</span>
+          <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+            <div className="px-4 py-3 border-b border-border flex items-center">
+              <span className="text-[13px] font-semibold text-fg">Facturas recientes</span>
               <Link href="/ventas/facturas" className="ml-auto text-[12px] text-[#0C647A] hover:underline flex items-center gap-1">
                 Ver todas
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -463,19 +463,19 @@ export function PanelClient() {
               <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="bg-zinc-50">
+                  <tr className="bg-surface-muted">
                     {['Comprobante', 'Cliente', 'Fecha', 'Total', 'Estado'].map(h => (
-                      <th key={h} className={`text-[11px] font-semibold text-zinc-400 px-3.5 py-2 border-b border-zinc-100 uppercase tracking-[0.03em] ${h === 'Total' ? 'text-right' : 'text-left'}`}>{h}</th>
+                      <th key={h} className={`text-[11px] font-semibold text-fg-subtle px-3.5 py-2 border-b border-border uppercase tracking-[0.03em] ${h === 'Total' ? 'text-right' : 'text-left'}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {invoices.map((row, i) => (
-                    <tr key={i} className="hover:bg-zinc-50 transition-colors border-b border-zinc-50 last:border-0">
-                      <td className="font-mono text-[12px] px-3.5 py-2.5 text-zinc-500">{row.numero}</td>
-                      <td className="text-[13px] px-3.5 py-2.5 text-zinc-900">{row.cliente}</td>
-                      <td className="font-mono text-[12px] px-3.5 py-2.5 text-zinc-400">{row.fecha}</td>
-                      <td className="font-mono text-[13px] px-3.5 py-2.5 text-right font-medium text-zinc-900">{row.total}</td>
+                    <tr key={i} className="hover:bg-surface-muted transition-colors border-b border-border last:border-0">
+                      <td className="font-mono text-[12px] px-3.5 py-2.5 text-fg-muted">{row.numero}</td>
+                      <td className="text-[13px] px-3.5 py-2.5 text-fg">{row.cliente}</td>
+                      <td className="font-mono text-[12px] px-3.5 py-2.5 text-fg-subtle">{row.fecha}</td>
+                      <td className="font-mono text-[13px] px-3.5 py-2.5 text-right font-medium text-fg">{row.total}</td>
                       <td className="px-3.5 py-2.5">
                         <StatusBadge value={INVOICE_STATUS_MAP[row.status] ?? row.status} />
                       </td>
@@ -485,35 +485,35 @@ export function PanelClient() {
               </table>
               </div>
             ) : loading ? (
-              <div className="p-6 text-sm text-zinc-300 text-center">Cargando…</div>
+              <div className="p-6 text-sm text-fg-subtle text-center">Cargando…</div>
             ) : (
-              <div className="p-6 text-sm text-zinc-400 text-center">Sin facturas en el período</div>
+              <div className="p-6 text-sm text-fg-subtle text-center">Sin facturas en el período</div>
             )}
           </div>
 
           {/* Activity feed */}
-          <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-            <div className="px-4 py-3 border-b border-zinc-100">
-              <span className="text-[13px] font-semibold text-zinc-900">Actividad reciente</span>
+          <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <div className="px-4 py-3 border-b border-border">
+              <span className="text-[13px] font-semibold text-fg">Actividad reciente</span>
             </div>
             {activity.length > 0 ? (
               <div>
                 {activity.map((item, i) => (
-                  <div key={i} className="flex items-start gap-3 px-4 py-2.5 border-b border-zinc-50 last:border-0">
+                  <div key={i} className="flex items-start gap-3 px-4 py-2.5 border-b border-border last:border-0">
                     <div className="w-7 h-7 rounded-full bg-[#D0EEF3] flex items-center justify-center shrink-0 mt-0.5">
                       <ActivityIcon type={item.type} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[12px] text-zinc-800 leading-snug">{item.text}</div>
-                      <div className="text-[11px] text-zinc-400 mt-0.5">{item.time}</div>
+                      <div className="text-[12px] text-fg leading-snug">{item.text}</div>
+                      <div className="text-[11px] text-fg-subtle mt-0.5">{item.time}</div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : loading ? (
-              <div className="p-6 text-sm text-zinc-300 text-center">Cargando…</div>
+              <div className="p-6 text-sm text-fg-subtle text-center">Cargando…</div>
             ) : (
-              <div className="p-6 text-sm text-zinc-400 text-center">Sin actividad reciente</div>
+              <div className="p-6 text-sm text-fg-subtle text-center">Sin actividad reciente</div>
             )}
           </div>
         </div>

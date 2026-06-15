@@ -28,7 +28,7 @@ const COLUMNS: Column<Order>[] = [
     key: 'order_number',
     header: 'N°',
     render: row => (
-      <span className="font-mono text-[12px] text-zinc-600">{row.order_number}</span>
+      <span className="font-mono text-[12px] text-fg-muted">{row.order_number}</span>
     ),
   },
   {
@@ -36,11 +36,11 @@ const COLUMNS: Column<Order>[] = [
     header: 'Sucursal',
     render: row =>
       row.branch ? (
-        <span className="text-[12px] text-zinc-700">
+        <span className="text-[12px] text-fg-muted">
           {String(row.branch.branch_code).padStart(2, '0')} — {row.branch.name}
         </span>
       ) : (
-        <span className="text-zinc-400">—</span>
+        <span className="text-fg-subtle">—</span>
       ),
   },
   {
@@ -49,9 +49,9 @@ const COLUMNS: Column<Order>[] = [
     sortable: true,
     render: row =>
       row.contact ? (
-        <span className="font-medium text-zinc-900">{row.contact.legal_name}</span>
+        <span className="font-medium text-fg">{row.contact.legal_name}</span>
       ) : (
-        <span className="text-zinc-400">—</span>
+        <span className="text-fg-subtle">—</span>
       ),
   },
   {
@@ -70,14 +70,14 @@ const COLUMNS: Column<Order>[] = [
     render: row =>
       row.promised_date
         ? new Date(row.promised_date).toLocaleDateString('es-AR')
-        : <span className="text-zinc-400">—</span>,
+        : <span className="text-fg-subtle">—</span>,
   },
   {
     key: 'salesperson',
     header: 'Vendedor',
     render: row => row.salesperson
-      ? <span className="text-[12px] text-zinc-700">{row.salesperson.name}</span>
-      : <span className="text-zinc-400">—</span>,
+      ? <span className="text-[12px] text-fg-muted">{row.salesperson.name}</span>
+      : <span className="text-fg-subtle">—</span>,
   },
   {
     key: 'total',
@@ -146,7 +146,7 @@ export function PedidosClient() {
 
       <div className="flex-1 p-5 overflow-auto">
         {listError && (
-          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {listError}
           </div>
         )}
@@ -159,18 +159,18 @@ export function PedidosClient() {
           toolbar={
             <>
               <div className="relative flex items-center w-full sm:w-auto">
-                <svg className="absolute left-2 text-zinc-400 pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <svg className="absolute left-2 text-fg-subtle pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
                 </svg>
                 <input
-                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-52 bg-white focus:outline-none focus:border-blue-500"
+                  className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-52 bg-surface focus:outline-none focus:border-ring"
                   placeholder="Buscar por cliente o número…"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1) }}
                 />
               </div>
               <select
-                className="h-[30px] text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-500 text-zinc-700"
+                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
                 value={statusFilter}
                 onChange={e => { setStatusFilter(e.target.value as OrderStatus | ''); setPage(1) }}
               >
@@ -179,7 +179,7 @@ export function PedidosClient() {
                 ))}
               </select>
               <span className="flex-1" />
-              <span className="text-[12px] text-zinc-500">{total} registro{total !== 1 ? 's' : ''}</span>
+              <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>
           }
           footer={

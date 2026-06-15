@@ -43,9 +43,9 @@ export function GroupedDataTable<P extends object, C extends object>({
   className,
 }: GroupedDataTableProps<P, C>) {
   return (
-    <div className={cn('bg-white border border-zinc-200 rounded', className)}>
+    <div className={cn('bg-surface border border-border rounded', className)}>
       {toolbar && (
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-200">
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
           {toolbar}
         </div>
       )}
@@ -58,7 +58,7 @@ export function GroupedDataTable<P extends object, C extends object>({
                 <th
                   key={col.key}
                   className={cn(
-                    'h-9 px-3 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide border-b border-zinc-200 bg-zinc-50 whitespace-nowrap select-none',
+                    'h-9 px-3 text-left text-[11px] font-semibold text-fg-muted uppercase tracking-wide border-b border-border bg-surface-muted whitespace-nowrap select-none',
                     col.align === 'right' && 'text-right',
                     col.className,
                   )}
@@ -71,7 +71,7 @@ export function GroupedDataTable<P extends object, C extends object>({
           <tbody>
             {groups.length === 0 ? (
               <tr>
-                <td colSpan={parentColumns.length} className="h-20 text-center text-sm text-zinc-400">
+                <td colSpan={parentColumns.length} className="h-20 text-center text-sm text-fg-subtle">
                   {emptyMessage}
                 </td>
               </tr>
@@ -84,7 +84,7 @@ export function GroupedDataTable<P extends object, C extends object>({
                     key={parentKey(parent)}
                     onClick={onRowClick ? () => onRowClick(parent) : undefined}
                     className={cn(
-                      'border-b border-zinc-100 last:border-0 hover:bg-zinc-50 transition-colors',
+                      'border-b border-border last:border-0 hover:bg-surface-muted transition-colors',
                       onRowClick && 'cursor-pointer',
                     )}
                   >
@@ -92,7 +92,7 @@ export function GroupedDataTable<P extends object, C extends object>({
                       <td
                         key={col.key}
                         className={cn(
-                          'px-3 py-2.5 text-[13px] text-zinc-900 align-middle',
+                          'px-3 py-2.5 text-[13px] text-fg align-middle',
                           col.align === 'right' && 'text-right',
                           col.className,
                         )}
@@ -111,7 +111,7 @@ export function GroupedDataTable<P extends object, C extends object>({
                             key={childKey(child)}
                             onClick={onRowClick ? () => onRowClick(parent) : undefined}
                             className={cn(
-                              'border-b border-zinc-100 last:border-0 bg-zinc-50/50 hover:bg-blue-50/30 transition-colors',
+                              'border-b border-border last:border-0 bg-surface-muted/50 hover:bg-surface-hover/40 transition-colors',
                               onRowClick && 'cursor-pointer',
                             )}
                           >
@@ -119,7 +119,7 @@ export function GroupedDataTable<P extends object, C extends object>({
                               <td
                                 key={col.key}
                                 className={cn(
-                                  'px-3 py-2 text-[13px] text-zinc-700 align-middle',
+                                  'px-3 py-2 text-[13px] text-fg-muted align-middle',
                                   col.align === 'right' && 'text-right',
                                   col.className,
                                 )}
@@ -127,7 +127,7 @@ export function GroupedDataTable<P extends object, C extends object>({
                                 {ci2 === 0 ? (
                                   // First cell: indent + tree connector
                                   <span className="flex items-center gap-1.5 pl-4">
-                                    <span className="text-zinc-300 text-[11px] select-none font-mono leading-none">
+                                    <span className="text-fg-subtle text-[11px] select-none font-mono leading-none">
                                       {isLast ? '└' : '├'}
                                     </span>
                                     <span>{col.render ? col.render(child) : String((child as Record<string, unknown>)[col.key] ?? '')}</span>
@@ -149,7 +149,7 @@ export function GroupedDataTable<P extends object, C extends object>({
       </div>
 
       {footer && (
-        <div className="px-3 py-2.5 border-t border-zinc-100 flex items-center justify-end gap-4 text-[12px] text-zinc-500">
+        <div className="px-3 py-2.5 border-t border-border flex items-center justify-end gap-4 text-[12px] text-fg-muted">
           {footer}
         </div>
       )}

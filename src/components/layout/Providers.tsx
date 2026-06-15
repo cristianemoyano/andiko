@@ -2,12 +2,28 @@
 
 import type { ReactNode } from 'react'
 import { SessionProvider } from 'next-auth/react'
+import { ThemeProvider } from 'next-themes'
 import { SidebarProvider } from './SidebarContext'
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({
+  children,
+  forcedTheme,
+}: {
+  children: ReactNode
+  /** Pin a theme regardless of user preference (e.g. "light" for print documents). */
+  forcedTheme?: string
+}) {
   return (
     <SessionProvider>
-      <SidebarProvider>{children}</SidebarProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+        forcedTheme={forcedTheme}
+      >
+        <SidebarProvider>{children}</SidebarProvider>
+      </ThemeProvider>
     </SessionProvider>
   )
 }

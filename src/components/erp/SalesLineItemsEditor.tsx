@@ -167,20 +167,20 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
 
   return (
     <div>
-      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-2">
+      <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide mb-2">
         Ítems
       </p>
-      <div className="border border-zinc-200 rounded-sm overflow-hidden">
+      <div className="border border-border rounded-sm overflow-hidden">
         <table className="w-full text-[12px]">
           <thead>
-            <tr className="bg-zinc-50 border-b border-zinc-200">
-              <th className="px-2 py-2 text-left font-medium text-zinc-600 w-[22%]">Producto</th>
-              <th className="px-2 py-2 text-left font-medium text-zinc-600">Descripción</th>
-              <th className="px-2 py-2 text-right font-medium text-zinc-600 w-14">Cant.</th>
-              <th className="px-2 py-2 text-right font-medium text-zinc-600 w-28">P. unitario</th>
-              <th className="px-2 py-2 text-right font-medium text-zinc-600 w-16">Desc %</th>
-              <th className="px-2 py-2 text-right font-medium text-zinc-600 w-16">IVA</th>
-              <th className="px-2 py-2 text-right font-medium text-zinc-600 w-24">Total</th>
+            <tr className="bg-surface-muted border-b border-border">
+              <th className="px-2 py-2 text-left font-medium text-fg-muted w-[22%]">Producto</th>
+              <th className="px-2 py-2 text-left font-medium text-fg-muted">Descripción</th>
+              <th className="px-2 py-2 text-right font-medium text-fg-muted w-14">Cant.</th>
+              <th className="px-2 py-2 text-right font-medium text-fg-muted w-28">P. unitario</th>
+              <th className="px-2 py-2 text-right font-medium text-fg-muted w-16">Desc %</th>
+              <th className="px-2 py-2 text-right font-medium text-fg-muted w-16">IVA</th>
+              <th className="px-2 py-2 text-right font-medium text-fg-muted w-24">Total</th>
               <th className="w-8" />
             </tr>
           </thead>
@@ -188,7 +188,7 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
             {items.map(item => {
               const c = calcLine(item)
               return (
-                <tr key={item.id} className="border-b border-zinc-100 last:border-0">
+                <tr key={item.id} className="border-b border-border last:border-0">
                   <td className="px-2 py-1">
                     <ProductCell
                       productId={item.product_id}
@@ -199,7 +199,7 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
                   </td>
                   <td className="px-2 py-1">
                     <input
-                      className="w-full h-7 text-[12px] bg-transparent border-0 focus:outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded-sm px-1 disabled:text-zinc-500"
+                      className="w-full h-7 text-[12px] bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted"
                       placeholder="Descripción del ítem"
                       value={item.description}
                       onChange={e => updateItem(item.id, { description: e.target.value })}
@@ -208,7 +208,7 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
                   </td>
                   <td className="px-2 py-1">
                     <input
-                      className="w-full h-7 text-[12px] text-right bg-transparent border-0 focus:outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded-sm px-1 disabled:text-zinc-500"
+                      className="w-full h-7 text-[12px] text-right bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted"
                       value={item.quantity}
                       onChange={e => updateItem(item.id, { quantity: e.target.value })}
                       inputMode="decimal"
@@ -225,7 +225,7 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
                   </td>
                   <td className="px-2 py-1">
                     <input
-                      className="w-full h-7 text-[12px] text-right bg-transparent border-0 focus:outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded-sm px-1 disabled:text-zinc-500"
+                      className="w-full h-7 text-[12px] text-right bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted"
                       value={item.discount_pct}
                       onChange={e => updateItem(item.id, { discount_pct: e.target.value })}
                       inputMode="decimal"
@@ -234,7 +234,7 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
                   </td>
                   <td className="px-2 py-1">
                     <select
-                      className="w-full h-7 text-[12px] bg-transparent border-0 focus:outline-none text-right disabled:text-zinc-500"
+                      className="w-full h-7 text-[12px] bg-transparent border-0 focus:outline-none text-right disabled:text-fg-muted"
                       value={item.iva_rate}
                       onChange={e => updateItem(item.id, { iva_rate: e.target.value as IvaRate })}
                       disabled={disabled}
@@ -244,7 +244,7 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
                       ))}
                     </select>
                   </td>
-                  <td className="px-2 py-1 text-right tabular-nums font-medium text-zinc-700">
+                  <td className="px-2 py-1 text-right tabular-nums font-medium text-fg-muted">
                     ${c.total.toFixed(2)}
                   </td>
                   <td className="px-1 py-1">
@@ -252,7 +252,7 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
                       type="button"
                       onClick={() => removeLine(item.id)}
                       disabled={disabled || items.length === 1}
-                      className="p-1 text-zinc-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      className="p-1 text-fg-subtle hover:text-danger disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       aria-label="Eliminar ítem"
                     >
                       <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">

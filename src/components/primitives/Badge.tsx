@@ -6,12 +6,12 @@ const badgeVariants = cva(
   {
     variants: {
       status: {
-        success:  'bg-green-100 text-green-900 border-green-300',
-        pending:  'bg-amber-100 text-amber-900 border-amber-300',
-        error:    'bg-red-100   text-red-900   border-red-300',
-        draft:    'bg-zinc-100  text-zinc-600  border-zinc-300',
+        success:  'bg-success-bg text-success border-success',
+        pending:  'bg-warning-bg text-warning border-warning',
+        error:    'bg-danger-bg   text-danger   border-danger',
+        draft:    'bg-surface-hover  text-fg-muted  border-border-strong',
         info:     'bg-brand-100 text-brand-800 border-brand-200',
-        neutral:  'bg-zinc-100  text-zinc-700  border-zinc-200',
+        neutral:  'bg-surface-hover  text-fg-muted  border-border',
       },
     },
     defaultVariants: { status: 'neutral' },
@@ -22,9 +22,9 @@ const dotColor: Record<string, string> = {
   success: 'bg-green-600',
   pending: 'bg-amber-600',
   error:   'bg-red-600',
-  draft:   'bg-zinc-400',
+  draft:   'bg-fg-subtle',
   info:    'bg-brand-600',
-  neutral: 'bg-zinc-400',
+  neutral: 'bg-fg-subtle',
 }
 
 export interface BadgeProps

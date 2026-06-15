@@ -190,7 +190,7 @@ export function NuevaFacturaProvClient() {
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {serverError && (
-            <div className="px-4 py-2 bg-red-50 border border-red-200 rounded-sm text-sm text-red-700">
+            <div className="px-4 py-2 bg-danger-bg border border-danger rounded-sm text-sm text-danger">
               {serverError}
             </div>
           )}
@@ -212,7 +212,7 @@ export function NuevaFacturaProvClient() {
           )}
 
           {/* Header fields card */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5 flex flex-col gap-4">
+          <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField label="Sucursal" required>
                 <BranchSelectField value={branchId} onChange={setBranchId} />
@@ -244,7 +244,7 @@ export function NuevaFacturaProvClient() {
                 <select
                   value={paymentCondition}
                   onChange={e => setPaymentCondition(e.target.value)}
-                  className="w-full h-9 px-3 text-sm border border-zinc-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full h-9 px-3 text-sm border border-border rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   {PAYMENT_CONDITIONS.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -253,16 +253,16 @@ export function NuevaFacturaProvClient() {
               </FormField>
               {actorName && (
                 <FormField label="Comprador">
-                  <p className="text-[13px] text-zinc-700 py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-sm">{actorName}</p>
+                  <p className="text-[13px] text-fg-muted py-1.5 px-3 bg-surface-muted border border-border rounded-sm">{actorName}</p>
                 </FormField>
               )}
             </div>
           </div>
 
           {/* Items + totals card */}
-          <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
+          <div className="bg-surface border border-border rounded-sm overflow-hidden">
             <SalesLineItemsEditor items={items} onChange={setItems} priceListId={null} />
-            <div className="border-t border-zinc-100">
+            <div className="border-t border-border">
               {(() => {
                 const totals = calcTotals(items)
                 return (
@@ -277,7 +277,7 @@ export function NuevaFacturaProvClient() {
           </div>
 
           {/* Notes card */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+          <div className="bg-surface border border-border rounded-sm p-5">
             <FormField label="Notas">
               <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Notas internas…" />
             </FormField>

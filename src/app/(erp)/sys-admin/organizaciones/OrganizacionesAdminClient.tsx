@@ -23,12 +23,12 @@ const COLUMNS: Column<OrgAdminRow>[] = [
     key: 'name',
     header: 'Organización',
     sortable: true,
-    render: row => <span className="font-medium text-zinc-900">{row.name}</span>,
+    render: row => <span className="font-medium text-fg">{row.name}</span>,
   },
   {
     key: 'slug',
     header: 'Slug',
-    render: row => <span className="font-mono text-[12px] text-zinc-600">{row.slug}</span>,
+    render: row => <span className="font-mono text-[12px] text-fg-muted">{row.slug}</span>,
   },
   {
     key: 'branch_count',

@@ -89,8 +89,8 @@ export function CuentaModal({ open, account, accounts, onOpenChange, onSaved }: 
                 name="type"
                 defaultValue={account?.type ?? 'asset'}
                 className={cn(
-                  'h-8 w-full rounded-sm border px-2.5 text-[13px] text-zinc-900 bg-white focus:outline-none focus:border-blue-500',
-                  errors.type ? 'border-red-500' : 'border-zinc-300'
+                  'h-8 w-full rounded-sm border px-2.5 text-[13px] text-fg bg-surface focus:outline-none focus:border-ring',
+                  errors.type ? 'border-danger' : 'border-border-strong'
                 )}
               >
                 {Object.entries(ACCOUNT_TYPE_LABEL).map(([value, label]) => (
@@ -117,7 +117,7 @@ export function CuentaModal({ open, account, accounts, onOpenChange, onSaved }: 
               id="parent_id"
               name="parent_id"
               defaultValue={account?.parent_id ?? ''}
-              className="h-8 w-full rounded-sm border border-zinc-300 px-2.5 text-[13px] text-zinc-900 bg-white focus:outline-none focus:border-blue-500"
+              className="h-8 w-full rounded-sm border border-border-strong px-2.5 text-[13px] text-fg bg-surface focus:outline-none focus:border-ring"
             >
               <option value="">— Sin cuenta padre —</option>
               {parentOptions.map(a => (
@@ -134,7 +134,7 @@ export function CuentaModal({ open, account, accounts, onOpenChange, onSaved }: 
                 defaultChecked={account ? account.is_postable : true}
                 className="w-4 h-4 rounded-sm accent-brand-600 cursor-pointer"
               />
-              <span className="text-[13px] text-zinc-700">Imputable (recibe asientos)</span>
+              <span className="text-[13px] text-fg-muted">Imputable (recibe asientos)</span>
             </label>
             <label className="flex items-center gap-2.5 cursor-pointer select-none">
               <input
@@ -143,18 +143,18 @@ export function CuentaModal({ open, account, accounts, onOpenChange, onSaved }: 
                 defaultChecked={account ? account.is_active : true}
                 className="w-4 h-4 rounded-sm accent-brand-600 cursor-pointer"
               />
-              <span className="text-[13px] text-zinc-700">Activa</span>
+              <span className="text-[13px] text-fg-muted">Activa</span>
             </label>
           </div>
 
           {serverError && (
-            <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+            <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
               {serverError}
             </p>
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-zinc-200 bg-zinc-50">
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-surface-muted">
           <Button type="button" variant="secondary" size="sm" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>

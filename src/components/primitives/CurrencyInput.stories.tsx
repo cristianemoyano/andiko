@@ -18,7 +18,7 @@ export const Default: Story = {
     return (
       <div className="w-48">
         <CurrencyInput value={val} onChange={setVal} placeholder="$ 0,00" />
-        <p className="mt-2 text-xs text-zinc-400">Valor interno: {val || '(vacío)'}</p>
+        <p className="mt-2 text-xs text-fg-subtle">Valor interno: {val || '(vacío)'}</p>
       </div>
     )
   },
@@ -41,7 +41,7 @@ export const LargeAmount: Story = {
     return (
       <div className="w-56">
         <CurrencyInput value={val} onChange={setVal} />
-        <p className="mt-2 text-xs text-zinc-400">Valor: {val}</p>
+        <p className="mt-2 text-xs text-fg-subtle">Valor: {val}</p>
       </div>
     )
   },

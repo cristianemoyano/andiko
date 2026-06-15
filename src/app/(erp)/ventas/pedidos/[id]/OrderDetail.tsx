@@ -424,7 +424,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
       <div className="flex flex-col h-full">
         <TopBar breadcrumbs={[{ label: 'Ventas', href: '/ventas/presupuestos' }, { label: 'Pedidos', href: '/ventas/pedidos' }, { label: '…' }]} />
         <VentasSubNav />
-        <div className="flex-1 flex items-center justify-center text-[13px] text-zinc-400">Cargando…</div>
+        <div className="flex-1 flex items-center justify-center text-[13px] text-fg-subtle">Cargando…</div>
       </div>
     )
   }
@@ -517,16 +517,16 @@ export function OrderDetail({ id }: OrderDetailProps) {
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {/* Status pipeline */}
-          <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4 flex items-center justify-between gap-4">
+          <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-1">Pedido</p>
-              <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">{order.order_number}</h1>
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">Pedido</p>
+              <h1 className="text-[20px] font-bold text-fg tracking-tight">{order.order_number}</h1>
             </div>
             <StatusPipeline type="order" status={order.status} />
           </div>
 
           {/* Header info card */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5 flex flex-col gap-4">
+          <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
             {editMode ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -582,7 +582,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                           'px-3 py-1 text-[12px] rounded-sm border transition-colors',
                           paymentCondition === pc.value
                             ? 'border-brand-600 bg-brand-50 text-brand-600 font-medium'
-                            : 'border-zinc-300 text-zinc-600 hover:border-zinc-400'
+                            : 'border-border-strong text-fg-muted hover:border-border-strong'
                         )}
                       >
                         {pc.label}
@@ -601,7 +601,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                         const selected = contactAddresses.find(a => a.id === nextId) ?? null
                         setShippingAddress(fromContactAddress(selected))
                       }}
-                      className="h-8 w-full rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 focus:border-blue-500 focus:outline-none"
+                      className="h-8 w-full rounded-sm border border-border-strong bg-surface px-2.5 text-[13px] text-fg focus:border-ring focus:outline-none"
                     >
                       <option value="">Sin dirección predefinida</option>
                       {contactAddresses.filter(a => a.type === 'delivery').map((address) => (
@@ -619,7 +619,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                         const selected = contactAddresses.find(a => a.id === nextId) ?? null
                         setBillingAddress(fromContactAddress(selected))
                       }}
-                      className="h-8 w-full rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 focus:border-blue-500 focus:outline-none"
+                      className="h-8 w-full rounded-sm border border-border-strong bg-surface px-2.5 text-[13px] text-fg focus:border-ring focus:outline-none"
                     >
                       <option value="">Sin dirección predefinida</option>
                       {contactAddresses.filter(a => a.type === 'fiscal').map((address) => (
@@ -636,58 +636,58 @@ export function OrderDetail({ id }: OrderDetailProps) {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[13px]">
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Sucursal</p>
-                  <p className="text-zinc-800">
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Sucursal</p>
+                  <p className="text-fg">
                     {order.branch
                       ? `${String(order.branch.branch_code).padStart(2, '0')} — ${order.branch.name}`
-                      : <span className="text-zinc-400">—</span>}
+                      : <span className="text-fg-subtle">—</span>}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Cliente</p>
-                  <p className="text-zinc-800 font-medium">{order.contact?.legal_name ?? <span className="text-zinc-400">—</span>}</p>
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Cliente</p>
+                  <p className="text-fg font-medium">{order.contact?.legal_name ?? <span className="text-fg-subtle">—</span>}</p>
                   {order.contact?.trade_name && (
-                    <p className="text-[12px] text-zinc-500">{order.contact.trade_name}</p>
+                    <p className="text-[12px] text-fg-muted">{order.contact.trade_name}</p>
                   )}
                 </div>
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Condición de pago</p>
-                  <p className="text-zinc-800">{PAYMENT_CONDITION_LABEL[order.payment_condition]}</p>
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Condición de pago</p>
+                  <p className="text-fg">{PAYMENT_CONDITION_LABEL[order.payment_condition]}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Fecha prometida</p>
-                  <p className="text-zinc-800">
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Fecha prometida</p>
+                  <p className="text-fg">
                     {order.promised_date
                       ? new Date(order.promised_date).toLocaleDateString('es-AR')
-                      : <span className="text-zinc-400">—</span>
+                      : <span className="text-fg-subtle">—</span>
                     }
                   </p>
                 </div>
                 {order.salesperson && (
                   <div>
-                    <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Vendedor</p>
-                    <p className="text-zinc-800">{order.salesperson.name}</p>
+                    <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Vendedor</p>
+                    <p className="text-fg">{order.salesperson.name}</p>
                   </div>
                 )}
               </div>
             )}
 
             {!editMode && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-zinc-100 pt-4 text-[13px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border pt-4 text-[13px]">
                 <div>
-                  <p className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">Dirección de entrega</p>
-                  <p className="text-zinc-700">{displaySnapshot(orderSnapshot('shipping', order)) ?? <span className="text-zinc-400">—</span>}</p>
+                  <p className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle">Dirección de entrega</p>
+                  <p className="text-fg-muted">{displaySnapshot(orderSnapshot('shipping', order)) ?? <span className="text-fg-subtle">—</span>}</p>
                 </div>
                 <div>
-                  <p className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">Dirección de facturación</p>
-                  <p className="text-zinc-700">{displaySnapshot(orderSnapshot('billing', order)) ?? <span className="text-zinc-400">—</span>}</p>
+                  <p className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle">Dirección de facturación</p>
+                  <p className="text-fg-muted">{displaySnapshot(orderSnapshot('billing', order)) ?? <span className="text-fg-subtle">—</span>}</p>
                 </div>
               </div>
             )}
 
             {/* Notes — always visible */}
             {editMode ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-zinc-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border">
                 <FormField label="Notas para el cliente" htmlFor="notes">
                   <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Condiciones, aclaraciones…" />
                 </FormField>
@@ -697,17 +697,17 @@ export function OrderDetail({ id }: OrderDetailProps) {
               </div>
             ) : (
               (order.notes || order.internal_notes) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border">
                   {order.notes && (
                     <div>
-                      <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Notas</p>
-                      <p className="text-[13px] text-zinc-600 whitespace-pre-line">{order.notes}</p>
+                      <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Notas</p>
+                      <p className="text-[13px] text-fg-muted whitespace-pre-line">{order.notes}</p>
                     </div>
                   )}
                   {order.internal_notes && (
                     <div>
-                      <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Notas internas</p>
-                      <p className="text-[13px] text-zinc-600 whitespace-pre-line">{order.internal_notes}</p>
+                      <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Notas internas</p>
+                      <p className="text-[13px] text-fg-muted whitespace-pre-line">{order.internal_notes}</p>
                     </div>
                   )}
                 </div>
@@ -715,38 +715,38 @@ export function OrderDetail({ id }: OrderDetailProps) {
             )}
 
             {serverError && (
-              <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+              <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
                 {serverError}
               </p>
             )}
           </div>
 
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
-            <h2 className="text-[13px] font-semibold text-zinc-900 mb-3">Trazabilidad</h2>
+          <div className="bg-surface border border-border rounded-sm p-5">
+            <h2 className="text-[13px] font-semibold text-fg mb-3">Trazabilidad</h2>
             <div className="space-y-3">
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-1">Origen</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-1">Origen</p>
                 {order.quote_id ? (
                   <Button variant="ghost" size="xs" asChild>
                     <Link href={`/ventas/presupuestos/${order.quote_id}`}>Ver presupuesto origen</Link>
                   </Button>
                 ) : (
-                  <p className="text-[13px] text-zinc-500">Pedido creado manualmente (sin presupuesto origen).</p>
+                  <p className="text-[13px] text-fg-muted">Pedido creado manualmente (sin presupuesto origen).</p>
                 )}
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-1">Destino</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-1">Destino</p>
                 {loadingTraceability ? (
-                  <p className="text-[13px] text-zinc-500">Cargando facturas relacionadas…</p>
+                  <p className="text-[13px] text-fg-muted">Cargando facturas relacionadas…</p>
                 ) : relatedInvoices.length === 0 ? (
-                  <p className="text-[13px] text-zinc-500">Todavía no hay facturas generadas desde este pedido.</p>
+                  <p className="text-[13px] text-fg-muted">Todavía no hay facturas generadas desde este pedido.</p>
                 ) : (
                   <div className="space-y-2">
                     {relatedInvoices.map((invoice) => (
-                      <div key={invoice.id} className="flex items-center justify-between gap-3 rounded-sm border border-zinc-200 px-3 py-2">
+                      <div key={invoice.id} className="flex items-center justify-between gap-3 rounded-sm border border-border px-3 py-2">
                         <div>
-                          <p className="text-[13px] font-medium text-zinc-900">{invoice.invoice_number}</p>
-                          <p className="text-[12px] text-zinc-500">
+                          <p className="text-[13px] font-medium text-fg">{invoice.invoice_number}</p>
+                          <p className="text-[12px] text-fg-muted">
                             {INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status} · {new Date(invoice.issue_date ?? invoice.created_at).toLocaleDateString('es-AR')}
                           </p>
                         </div>
@@ -763,43 +763,43 @@ export function OrderDetail({ id }: OrderDetailProps) {
 
           {/* Items */}
           {editMode ? (
-            <div className="bg-white border border-zinc-200 rounded-sm p-5">
+            <div className="bg-surface border border-border rounded-sm p-5">
               <SalesLineItemsEditor items={items} onChange={setItems} priceListId={priceListId} />
             </div>
           ) : (
-            <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-zinc-100">
-                <h2 className="text-[13px] font-semibold text-zinc-900">Ítems</h2>
+            <div className="bg-surface border border-border rounded-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-border">
+                <h2 className="text-[13px] font-semibold text-fg">Ítems</h2>
               </div>
               {order.items && order.items.length > 0 ? (
                 <table className="w-full text-[12px]">
                   <thead>
-                    <tr className="bg-zinc-50 border-b border-zinc-100">
-                      <th className="px-4 py-2 text-left font-medium text-zinc-500">Descripción</th>
-                      <th className="px-4 py-2 text-right font-medium text-zinc-500">Cant.</th>
-                      <th className="px-4 py-2 text-right font-medium text-zinc-500">P. unitario</th>
-                      <th className="px-4 py-2 text-right font-medium text-zinc-500">Desc.</th>
-                      <th className="px-4 py-2 text-right font-medium text-zinc-500">IVA</th>
-                      <th className="px-4 py-2 text-right font-medium text-zinc-500">Total</th>
+                    <tr className="bg-surface-muted border-b border-border">
+                      <th className="px-4 py-2 text-left font-medium text-fg-muted">Descripción</th>
+                      <th className="px-4 py-2 text-right font-medium text-fg-muted">Cant.</th>
+                      <th className="px-4 py-2 text-right font-medium text-fg-muted">P. unitario</th>
+                      <th className="px-4 py-2 text-right font-medium text-fg-muted">Desc.</th>
+                      <th className="px-4 py-2 text-right font-medium text-fg-muted">IVA</th>
+                      <th className="px-4 py-2 text-right font-medium text-fg-muted">Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {order.items.map(item => (
-                      <tr key={item.id} className="border-b border-zinc-100 last:border-0">
-                        <td className="px-4 py-2.5 text-zinc-800">{item.description}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-600">{item.quantity}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-600">{formatARS(item.unit_price)}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-500">
+                      <tr key={item.id} className="border-b border-border last:border-0">
+                        <td className="px-4 py-2.5 text-fg">{item.description}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{item.quantity}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{formatARS(item.unit_price)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
                           {parseFloat(item.discount_pct) > 0 ? `${item.discount_pct}%` : '—'}
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-500">{item.iva_rate}%</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums font-medium text-zinc-800">{formatARS(item.total)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{item.iva_rate}%</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-medium text-fg">{formatARS(item.total)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
-                <div className="px-4 py-8 text-center text-[13px] text-zinc-400">Sin ítems</div>
+                <div className="px-4 py-8 text-center text-[13px] text-fg-subtle">Sin ítems</div>
               )}
             </div>
           )}
@@ -875,8 +875,8 @@ function AddressSnapshotFields({
   }
 
   return (
-    <div className="rounded-sm border border-zinc-200 p-3">
-      <p className="mb-3 text-[12px] font-medium text-zinc-600">{title}</p>
+    <div className="rounded-sm border border-border p-3">
+      <p className="mb-3 text-[12px] font-medium text-fg-muted">{title}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FormField label="Calle" htmlFor={`${prefix}_street`}>
           <Input id={`${prefix}_street`} value={value.street} onChange={(e) => patch({ street: e.target.value })} />

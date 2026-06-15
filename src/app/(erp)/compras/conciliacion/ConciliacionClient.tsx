@@ -42,16 +42,16 @@ const COLUMNS: Column<ReconciliationListRow>[] = [
   {
     key: 'order_number',
     header: 'N°',
-    render: row => <span className="font-mono text-[12px] text-zinc-600">{row.order_number}</span>,
+    render: row => <span className="font-mono text-[12px] text-fg-muted">{row.order_number}</span>,
   },
   {
     key: 'contact',
     header: 'Proveedor',
     render: row =>
       row.contact ? (
-        <span className="font-medium text-zinc-900">{row.contact.trade_name ?? row.contact.legal_name}</span>
+        <span className="font-medium text-fg">{row.contact.trade_name ?? row.contact.legal_name}</span>
       ) : (
-        <span className="text-zinc-400">—</span>
+        <span className="text-fg-subtle">—</span>
       ),
   },
   {
@@ -63,14 +63,14 @@ const COLUMNS: Column<ReconciliationListRow>[] = [
     key: 'ordered_qty',
     header: 'Cant. pedida',
     align: 'right',
-    render: row => <span className="tabular-nums text-zinc-700">{row.ordered_qty}</span>,
+    render: row => <span className="tabular-nums text-fg-muted">{row.ordered_qty}</span>,
   },
   {
     key: 'received_qty',
     header: 'Cant. recibida',
     align: 'right',
     render: row => (
-      <span className={`tabular-nums ${row.qty_mismatch ? 'font-medium text-red-600' : 'text-zinc-700'}`}>
+      <span className={`tabular-nums ${row.qty_mismatch ? 'font-medium text-danger' : 'text-fg-muted'}`}>
         {row.received_qty}
       </span>
     ),
@@ -80,7 +80,7 @@ const COLUMNS: Column<ReconciliationListRow>[] = [
     header: 'Cant. facturada',
     align: 'right',
     render: row => (
-      <span className={`tabular-nums ${row.qty_mismatch ? 'font-medium text-red-600' : 'text-zinc-700'}`}>
+      <span className={`tabular-nums ${row.qty_mismatch ? 'font-medium text-danger' : 'text-fg-muted'}`}>
         {row.invoiced_qty}
       </span>
     ),
@@ -89,14 +89,14 @@ const COLUMNS: Column<ReconciliationListRow>[] = [
     key: 'ordered_total',
     header: 'Total OC',
     align: 'right',
-    render: row => <span className="tabular-nums text-zinc-700">{formatARS(row.ordered_total)}</span>,
+    render: row => <span className="tabular-nums text-fg-muted">{formatARS(row.ordered_total)}</span>,
   },
   {
     key: 'invoiced_total',
     header: 'Total facturado',
     align: 'right',
     render: row => (
-      <span className={`tabular-nums ${row.price_mismatch ? 'font-medium text-red-600' : 'text-zinc-700'}`}>
+      <span className={`tabular-nums ${row.price_mismatch ? 'font-medium text-danger' : 'text-fg-muted'}`}>
         {formatARS(row.invoiced_total)}
       </span>
     ),
@@ -150,7 +150,7 @@ export function ConciliacionClient() {
       <ComprasSubNav />
 
       <div className="flex-1 overflow-auto p-5">
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm text-danger">{error}</p>}
         <DataTable
           columns={COLUMNS}
           data={rows}
@@ -166,7 +166,7 @@ export function ConciliacionClient() {
           toolbar={
             <>
               <div className="relative flex items-center">
-                <svg className="pointer-events-none absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <svg className="pointer-events-none absolute left-2 text-fg-subtle" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5l3 3" />
                 </svg>
                 <input
@@ -174,10 +174,10 @@ export function ConciliacionClient() {
                   placeholder="Buscar por proveedor o número…"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1) }}
-                  className="h-[30px] w-60 rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none"
+                  className="h-[30px] w-60 rounded-sm border border-border-strong bg-surface pl-7 pr-3 text-[13px] focus:border-ring focus:outline-none"
                 />
               </div>
-              <label className="flex cursor-pointer items-center gap-1.5 text-[13px] text-zinc-700">
+              <label className="flex cursor-pointer items-center gap-1.5 text-[13px] text-fg-muted">
                 <input
                   type="checkbox"
                   checked={onlyDifferences}
@@ -187,7 +187,7 @@ export function ConciliacionClient() {
                 Solo con diferencias
               </label>
               <span className="flex-1" />
-              <span className="text-[12px] text-zinc-500">{total} orden{total !== 1 ? 'es' : ''}</span>
+              <span className="text-[12px] text-fg-muted">{total} orden{total !== 1 ? 'es' : ''}</span>
             </>
           }
           footer={

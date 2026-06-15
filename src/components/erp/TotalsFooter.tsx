@@ -29,10 +29,10 @@ function TotalsRow({
 }) {
   return (
     <div className={cn('flex items-baseline justify-between gap-4', className)}>
-      <span className={cn('text-[12px] text-zinc-500', bold && 'font-semibold text-zinc-900')}>
+      <span className={cn('text-[12px] text-fg-muted', bold && 'font-semibold text-fg')}>
         {label}
       </span>
-      <span className={cn('text-[13px] tabular-nums text-zinc-700', bold && 'font-semibold text-zinc-900 text-[15px]')}>
+      <span className={cn('text-[13px] tabular-nums text-fg-muted', bold && 'font-semibold text-fg text-[15px]')}>
         {formatARS(value)}
       </span>
     </div>
@@ -50,14 +50,14 @@ function TotalsFooter({
   const hasDiscount = discountAmount !== undefined && Number(discountAmount) > 0
 
   return (
-    <div className={cn('flex flex-col gap-1.5 rounded-sm border border-zinc-200 bg-zinc-50 p-4', className)}>
+    <div className={cn('flex flex-col gap-1.5 rounded-sm border border-border bg-surface-muted p-4', className)}>
       <TotalsRow label="Subtotal" value={subtotal} />
 
       {hasDiscount && (
         <TotalsRow
           label="Descuento"
           value={`-${formatARS(discountAmount)}`}
-          className="text-red-600"
+          className="text-danger"
         />
       )}
 
@@ -73,7 +73,7 @@ function TotalsFooter({
         <TotalsRow label="IVA" value={taxAmount} />
       )}
 
-      <div className="my-1 border-t border-zinc-200" />
+      <div className="my-1 border-t border-border" />
       <TotalsRow label="Total" value={total} bold />
     </div>
   )

@@ -71,7 +71,7 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
         <TopBar breadcrumbs={[{ label: 'Órdenes de compra', href: '/compras/ordenes' }, { label: '…' }]} />
         <ComprasSubNav />
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-zinc-400 text-sm">Cargando…</span>
+          <span className="text-fg-subtle text-sm">Cargando…</span>
         </div>
       </div>
     )
@@ -152,17 +152,17 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {actionError && (
-            <div className="px-4 py-2 bg-red-50 border border-red-200 rounded-sm text-sm text-red-700">
+            <div className="px-4 py-2 bg-danger-bg border border-danger rounded-sm text-sm text-danger">
               {actionError}
             </div>
           )}
 
           {/* Header card */}
-          <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4 flex items-start justify-between gap-4">
+          <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-1">Orden de compra</p>
-              <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">{order.order_number}</h1>
-              <p className="text-[13px] text-zinc-500 mt-0.5">
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">Orden de compra</p>
+              <h1 className="text-[20px] font-bold text-fg tracking-tight">{order.order_number}</h1>
+              <p className="text-[13px] text-fg-muted mt-0.5">
                 {order.contact?.legal_name ?? 'Sin proveedor'} · {order.branch?.name ?? 'Sin sucursal'}
               </p>
             </div>
@@ -170,68 +170,68 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
           </div>
 
           {/* Metadata card */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+          <div className="bg-surface border border-border rounded-sm p-5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[13px]">
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Condición de pago</p>
-                <p className="text-zinc-800">{PAYMENT_CONDITION_LABEL[order.payment_condition] ?? order.payment_condition}</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Condición de pago</p>
+                <p className="text-fg">{PAYMENT_CONDITION_LABEL[order.payment_condition] ?? order.payment_condition}</p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Fecha esperada</p>
-                <p className="text-zinc-800">
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Fecha esperada</p>
+                <p className="text-fg">
                   {order.expected_date ? new Date(order.expected_date).toLocaleDateString('es-AR') : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Moneda</p>
-                <p className="text-zinc-800">{order.currency}</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Moneda</p>
+                <p className="text-fg">{order.currency}</p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Creada</p>
-                <p className="text-zinc-800">{new Date(order.created_at).toLocaleDateString('es-AR')}</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Creada</p>
+                <p className="text-fg">{new Date(order.created_at).toLocaleDateString('es-AR')}</p>
               </div>
               {order.buyer && (
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Comprador</p>
-                  <p className="text-zinc-800">{order.buyer.name}</p>
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Comprador</p>
+                  <p className="text-fg">{order.buyer.name}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Items card */}
-          <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
+          <div className="bg-surface border border-border rounded-sm overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-zinc-50 border-b border-zinc-200">
+              <thead className="bg-surface-muted border-b border-border">
                 <tr>
-                  <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Descripción</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Cant.</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Recibido</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">P. Unitario</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">IVA</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Total</th>
+                  <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Descripción</th>
+                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Cant.</th>
+                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Recibido</th>
+                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">P. Unitario</th>
+                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">IVA</th>
+                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-border">
                 {(order.items ?? []).length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-zinc-400 text-sm">Sin ítems</td>
+                    <td colSpan={6} className="px-4 py-8 text-center text-fg-subtle text-sm">Sin ítems</td>
                   </tr>
                 ) : (
                   (order.items ?? []).map(item => (
-                    <tr key={item.id} className="hover:bg-zinc-50/50">
-                      <td className="px-4 py-2.5 text-zinc-900">{item.description}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-zinc-700">{parseFloat(item.quantity).toLocaleString('es-AR')}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-zinc-500">{parseFloat(item.received_qty ?? '0').toLocaleString('es-AR')}</td>
+                    <tr key={item.id} className="hover:bg-surface-muted/50">
+                      <td className="px-4 py-2.5 text-fg">{item.description}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{parseFloat(item.quantity).toLocaleString('es-AR')}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{parseFloat(item.received_qty ?? '0').toLocaleString('es-AR')}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{formatARS(item.unit_price)}</td>
-                      <td className="px-4 py-2.5 text-right text-zinc-500">{item.iva_rate}%</td>
+                      <td className="px-4 py-2.5 text-right text-fg-muted">{item.iva_rate}%</td>
                       <td className="px-4 py-2.5 text-right tabular-nums font-medium">{formatARS(item.total)}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
-            <div className="border-t border-zinc-100">
+            <div className="border-t border-border">
               <TotalsFooter
                 subtotal={String(subtotal.toFixed(2))}
                 taxAmount={String(taxAmt.toFixed(2))}
@@ -241,16 +241,16 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
           </div>
 
           {order.notes && (
-            <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4 text-[13px] text-zinc-700">
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-1.5">Notas</p>
+            <div className="bg-surface border border-border rounded-sm px-5 py-4 text-[13px] text-fg-muted">
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1.5">Notas</p>
               {order.notes}
             </div>
           )}
 
           {/* Receipts traceability card */}
-          <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between">
-              <p className="text-[12px] font-semibold text-zinc-500 uppercase tracking-wide">Recepciones</p>
+          <div className="bg-surface border border-border rounded-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+              <p className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide">Recepciones</p>
               {(isSent || isPartiallyReceived) && (
                 <button
                   onClick={() => router.push(`/compras/recepciones/nueva?order_id=${order.id}`)}
@@ -261,25 +261,25 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
               )}
             </div>
             {(order.receipts ?? []).length === 0 ? (
-              <p className="px-5 py-4 text-[13px] text-zinc-400">Sin recepciones registradas.</p>
+              <p className="px-5 py-4 text-[13px] text-fg-subtle">Sin recepciones registradas.</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-zinc-50 border-b border-zinc-100">
+                <thead className="bg-surface-muted border-b border-border">
                   <tr>
-                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Número</th>
-                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Fecha</th>
-                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Estado</th>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Número</th>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Fecha</th>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Estado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y divide-border">
                   {(order.receipts ?? []).map(rec => (
                     <tr
                       key={rec.id}
-                      className="hover:bg-zinc-50/50 cursor-pointer"
+                      className="hover:bg-surface-muted/50 cursor-pointer"
                       onClick={() => router.push(`/compras/recepciones/${rec.id}`)}
                     >
-                      <td className="px-4 py-2.5 text-zinc-900 font-medium text-[13px]">{rec.receipt_number}</td>
-                      <td className="px-4 py-2.5 text-zinc-600 text-[13px]">
+                      <td className="px-4 py-2.5 text-fg font-medium text-[13px]">{rec.receipt_number}</td>
+                      <td className="px-4 py-2.5 text-fg-muted text-[13px]">
                         {rec.receipt_date ? new Date(rec.receipt_date).toLocaleDateString('es-AR') : '—'}
                       </td>
                       <td className="px-4 py-2.5">
@@ -293,9 +293,9 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
           </div>
 
           {/* Supplier invoices traceability card */}
-          <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between">
-              <p className="text-[12px] font-semibold text-zinc-500 uppercase tracking-wide">Facturas de proveedor</p>
+          <div className="bg-surface border border-border rounded-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+              <p className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide">Facturas de proveedor</p>
               {(isSent || isPartiallyReceived || isReceived) && (
                 <button
                   onClick={() => router.push(`/compras/facturas/nueva?order_id=${order.id}`)}
@@ -306,25 +306,25 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
               )}
             </div>
             {(order.supplierInvoices ?? []).length === 0 ? (
-              <p className="px-5 py-4 text-[13px] text-zinc-400">Sin facturas vinculadas.</p>
+              <p className="px-5 py-4 text-[13px] text-fg-subtle">Sin facturas vinculadas.</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-zinc-50 border-b border-zinc-100">
+                <thead className="bg-surface-muted border-b border-border">
                   <tr>
-                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Número</th>
-                    <th className="text-right px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Total</th>
-                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Estado</th>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Número</th>
+                    <th className="text-right px-4 py-2 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Total</th>
+                    <th className="text-left px-4 py-2 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Estado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y divide-border">
                   {(order.supplierInvoices ?? []).map(inv => (
                     <tr
                       key={inv.id}
-                      className="hover:bg-zinc-50/50 cursor-pointer"
+                      className="hover:bg-surface-muted/50 cursor-pointer"
                       onClick={() => router.push(`/compras/facturas/${inv.id}`)}
                     >
-                      <td className="px-4 py-2.5 text-zinc-900 font-medium text-[13px]">{inv.invoice_number}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-zinc-700 text-[13px]">{formatARS(inv.total)}</td>
+                      <td className="px-4 py-2.5 text-fg font-medium text-[13px]">{inv.invoice_number}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted text-[13px]">{formatARS(inv.total)}</td>
                       <td className="px-4 py-2.5">
                         <StatusBadge value={SUPPLIER_INVOICE_STATUS_LABEL[inv.status]} />
                       </td>

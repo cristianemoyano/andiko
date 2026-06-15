@@ -44,13 +44,13 @@ export default async function PerfilPage() {
         <div className="max-w-lg space-y-4">
 
           {/* Avatar + nombre */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5 flex items-center gap-4">
+          <div className="bg-surface border border-border rounded-sm p-5 flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-brand-100 text-brand-800 text-lg font-semibold flex items-center justify-center flex-shrink-0 select-none">
               {initials}
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-zinc-900">{name ?? '—'}</div>
-              <div className="text-xs text-zinc-500 truncate">{email}</div>
+              <div className="text-sm font-semibold text-fg">{name ?? '—'}</div>
+              <div className="text-xs text-fg-muted truncate">{email}</div>
             </div>
             <div className="ml-auto">
               <Badge status={ROLE_STATUS[role] ?? 'neutral'}>
@@ -60,7 +60,7 @@ export default async function PerfilPage() {
           </div>
 
           {/* Detalles */}
-          <div className="bg-white border border-zinc-200 rounded-sm divide-y divide-zinc-100">
+          <div className="bg-surface border border-border rounded-sm divide-y divide-border">
             <Row label="Nombre" value={name ?? '—'} />
             <Row label="Email" value={email ?? '—'} />
             <Row label="Rol" value={ROLE_LABEL[role] ?? role} />
@@ -77,8 +77,8 @@ export default async function PerfilPage() {
 function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
     <div className="flex items-center gap-4 px-4 py-3">
-      <span className="text-xs text-zinc-500 w-32 flex-shrink-0">{label}</span>
-      <span className={`text-sm ${muted ? 'text-zinc-400 italic' : 'text-zinc-900'}`}>{value}</span>
+      <span className="text-xs text-fg-muted w-32 flex-shrink-0">{label}</span>
+      <span className={`text-sm ${muted ? 'text-fg-subtle italic' : 'text-fg'}`}>{value}</span>
     </div>
   )
 }

@@ -213,7 +213,7 @@ export function CreditNoteDetail() {
     <div className="flex h-full flex-col">
       <TopBar breadcrumbs={[{ label: 'Notas de crédito', href: '/ventas/notas-de-credito' }, { label: 'No encontrada' }]} />
       <VentasSubNav />
-      <div className="p-10 text-center text-zinc-500">Nota de crédito no encontrada.</div>
+      <div className="p-10 text-center text-fg-muted">Nota de crédito no encontrada.</div>
     </div>
   )
 
@@ -245,11 +245,11 @@ export function CreditNoteDetail() {
         <div className="mx-auto max-w-2xl space-y-5">
 
           {/* Header card */}
-          <div className="rounded border border-zinc-200 bg-white p-5">
+          <div className="rounded border border-border bg-surface p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[12px] uppercase tracking-wide text-zinc-400">Nota de crédito</p>
-                <h1 className="mt-0.5 text-[22px] font-semibold text-zinc-900">{note.credit_note_number}</h1>
+                <p className="text-[12px] uppercase tracking-wide text-fg-subtle">Nota de crédito</p>
+                <h1 className="mt-0.5 text-[22px] font-semibold text-fg">{note.credit_note_number}</h1>
               </div>
               <StatusBadge value={STATUS_LABEL[note.status]} />
             </div>
@@ -262,21 +262,21 @@ export function CreditNoteDetail() {
             </div>
 
             {note.contact && (
-              <div className="mt-3 border-t border-zinc-100 pt-3 text-[13px] text-zinc-700">
-                <span className="text-zinc-400">Cliente: </span>
+              <div className="mt-3 border-t border-border pt-3 text-[13px] text-fg-muted">
+                <span className="text-fg-subtle">Cliente: </span>
                 {note.contact.legal_name}
-                {note.contact.trade_name ? <span className="text-zinc-400"> · {note.contact.trade_name}</span> : null}
+                {note.contact.trade_name ? <span className="text-fg-subtle"> · {note.contact.trade_name}</span> : null}
               </div>
             )}
             {note.invoice && (
-              <div className="text-[13px] text-zinc-700">
-                <span className="text-zinc-400">Factura original: </span>
+              <div className="text-[13px] text-fg-muted">
+                <span className="text-fg-subtle">Factura original: </span>
                 <span className="font-mono">{note.invoice.invoice_number}</span>
               </div>
             )}
             {note.reason && (
-              <div className="mt-2 text-[13px] text-zinc-700">
-                <span className="text-zinc-400">Motivo: </span>{note.reason}
+              <div className="mt-2 text-[13px] text-fg-muted">
+                <span className="text-fg-subtle">Motivo: </span>{note.reason}
               </div>
             )}
           </div>
@@ -284,7 +284,7 @@ export function CreditNoteDetail() {
           {/* Edit form */}
           {editing && (
             <div className="rounded border border-blue-200 bg-blue-50/30 p-5 space-y-4">
-              <p className="text-[13px] font-medium text-zinc-700">Editar borrador</p>
+              <p className="text-[13px] font-medium text-fg-muted">Editar borrador</p>
 
               <FormField label="Sucursal">
                 <BranchSelectField value={branchId} onChange={v => setBranchId(v ?? '')} />
@@ -301,14 +301,14 @@ export function CreditNoteDetail() {
 
               <FormField label="Factura original (opcional)">
                 {loadingInvoices ? (
-                  <p className="text-[12px] text-zinc-400 py-1">Cargando facturas…</p>
+                  <p className="text-[12px] text-fg-subtle py-1">Cargando facturas…</p>
                 ) : !contactId ? (
-                  <p className="text-[12px] text-zinc-400 py-1">Seleccioná un cliente primero</p>
+                  <p className="text-[12px] text-fg-subtle py-1">Seleccioná un cliente primero</p>
                 ) : invoiceOptions.length === 0 ? (
-                  <p className="text-[12px] text-zinc-400 py-1">No hay facturas con saldo para este cliente</p>
+                  <p className="text-[12px] text-fg-subtle py-1">No hay facturas con saldo para este cliente</p>
                 ) : (
                   <select
-                    className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="h-9 w-full rounded-md border border-border bg-surface px-3 text-[13px] text-fg focus:outline-none focus:ring-2 focus:ring-ring"
                     value={invoiceId}
                     onChange={e => setInvoiceId(e.target.value)}
                   >
@@ -321,7 +321,7 @@ export function CreditNoteDetail() {
                   </select>
                 )}
                 {selectedInvoice && (
-                  <p className="mt-1 text-[11px] text-zinc-500">
+                  <p className="mt-1 text-[11px] text-fg-muted">
                     Total: {formatARS(selectedInvoice.total)} · Saldo: {formatARS(selectedInvoice.balance)}
                   </p>
                 )}
@@ -333,7 +333,7 @@ export function CreditNoteDetail() {
                 </FormField>
                 <FormField label="Alícuota IVA">
                   <select
-                    className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="h-9 w-full rounded-md border border-border bg-surface px-3 text-[13px] text-fg focus:outline-none focus:ring-2 focus:ring-ring"
                     value={ivaRate}
                     onChange={e => setIvaRate(e.target.value)}
                   >
@@ -343,14 +343,14 @@ export function CreditNoteDetail() {
               </div>
 
               {netDec.gt(0) && (
-                <div className="rounded-sm border border-zinc-100 bg-white px-3 py-2 text-[12px] text-zinc-600 flex flex-col gap-0.5">
+                <div className="rounded-sm border border-border bg-surface px-3 py-2 text-[12px] text-fg-muted flex flex-col gap-0.5">
                   <div className="flex justify-between">
                     <span>Subtotal neto</span><span className="tabular-nums">{formatARS(netDec.toFixed(2))}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>IVA ({(Number(ivaRate) * 100).toFixed(1)}%)</span><span className="tabular-nums">{formatARS(taxDec.toFixed(2))}</span>
                   </div>
-                  <div className="flex justify-between font-semibold text-zinc-900 border-t border-zinc-200 mt-1 pt-1">
+                  <div className="flex justify-between font-semibold text-fg border-t border-border mt-1 pt-1">
                     <span>Total nota de crédito</span><span className="tabular-nums">{formatARS(totalDec.toFixed(2))}</span>
                   </div>
                 </div>
@@ -368,27 +368,27 @@ export function CreditNoteDetail() {
                 <Input value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Opcional" />
               </FormField>
 
-              {saveError && <p className="text-[13px] text-red-600">{saveError}</p>}
+              {saveError && <p className="text-[13px] text-danger">{saveError}</p>}
             </div>
           )}
 
           {/* Amounts breakdown (read-only) */}
           {!editing && (
-            <div className="rounded border border-zinc-200 bg-white p-5">
-              <p className="text-[12px] font-medium uppercase tracking-wide text-zinc-400 mb-3">Detalle de importes</p>
+            <div className="rounded border border-border bg-surface p-5">
+              <p className="text-[12px] font-medium uppercase tracking-wide text-fg-subtle mb-3">Detalle de importes</p>
               <div className="space-y-1 text-[13px]">
-                <div className="flex justify-between text-zinc-600">
+                <div className="flex justify-between text-fg-muted">
                   <span>Subtotal neto</span><span className="tabular-nums">{formatARS(note.subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-zinc-600">
+                <div className="flex justify-between text-fg-muted">
                   <span>IVA</span><span className="tabular-nums">{formatARS(note.tax_amount)}</span>
                 </div>
-                <div className="flex justify-between font-semibold text-zinc-900 border-t border-zinc-100 pt-2 mt-2">
+                <div className="flex justify-between font-semibold text-fg border-t border-border pt-2 mt-2">
                   <span>Total</span><span className="tabular-nums">{formatARS(note.total)}</span>
                 </div>
               </div>
               {note.notes && (
-                <p className="mt-3 text-[12px] text-zinc-500 border-t border-zinc-100 pt-3">{note.notes}</p>
+                <p className="mt-3 text-[12px] text-fg-muted border-t border-border pt-3">{note.notes}</p>
               )}
             </div>
           )}
@@ -419,9 +419,9 @@ export function CreditNoteDetail() {
 
 function Metric({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
   return (
-    <div className="rounded border border-zinc-100 bg-zinc-50 p-3">
-      <p className="text-[11px] text-zinc-400">{label}</p>
-      <p className={`tabular-nums text-[15px] font-semibold ${emphasis ? 'text-zinc-900' : 'text-zinc-700'}`}>{value}</p>
+    <div className="rounded border border-border bg-surface-muted p-3">
+      <p className="text-[11px] text-fg-subtle">{label}</p>
+      <p className={`tabular-nums text-[15px] font-semibold ${emphasis ? 'text-fg' : 'text-fg-muted'}`}>{value}</p>
     </div>
   )
 }

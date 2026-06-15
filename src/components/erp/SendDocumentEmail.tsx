@@ -160,7 +160,7 @@ export function SendDocumentEmail({
       >
         <div className="max-h-[70vh] overflow-y-auto px-5 py-4 space-y-4">
           {loading ? (
-            <p className="text-sm text-zinc-500">Cargando…</p>
+            <p className="text-sm text-fg-muted">Cargando…</p>
           ) : (
             <>
               <FormField label="Para" htmlFor="email-to" error={errors.to}>
@@ -193,44 +193,44 @@ export function SendDocumentEmail({
                 />
               </FormField>
 
-              {serverError ? <p className="text-sm text-red-700">{serverError}</p> : null}
+              {serverError ? <p className="text-sm text-danger">{serverError}</p> : null}
               {result ? (
                 result.transport === 'log' ? (
-                  <p className="text-sm text-amber-700">
+                  <p className="text-sm text-warning">
                     Email registrado pero no entregado: configurá el servidor SMTP en Configuración → Email para
                     enviarlo realmente.
                   </p>
                 ) : (
-                  <p className="text-sm text-green-700">Email enviado a {result.recipient}.</p>
+                  <p className="text-sm text-success">Email enviado a {result.recipient}.</p>
                 )
               ) : null}
 
               {/* Send history */}
-              <div className="border-t border-zinc-100 pt-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-2">
+              <div className="border-t border-border pt-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-fg-muted mb-2">
                   Historial de envíos
                 </p>
                 {logs.length === 0 ? (
-                  <p className="text-[13px] text-zinc-400">Todavía no se envió este documento por email.</p>
+                  <p className="text-[13px] text-fg-subtle">Todavía no se envió este documento por email.</p>
                 ) : (
                   <ul className="space-y-1.5">
                     {logs.map(log => (
                       <li key={log.id} className="flex items-start justify-between gap-3 text-[13px]">
                         <div className="min-w-0">
-                          <span className="text-zinc-800">{log.recipient}</span>
-                          {log.error ? <p className="truncate text-xs text-red-600">{log.error}</p> : null}
+                          <span className="text-fg">{log.recipient}</span>
+                          {log.error ? <p className="truncate text-xs text-danger">{log.error}</p> : null}
                         </div>
                         <div className="flex flex-shrink-0 items-center gap-2">
                           <span
                             className={
                               log.status === 'sent'
-                                ? 'rounded-sm bg-green-50 px-1.5 py-0.5 text-[11px] font-medium text-green-700'
-                                : 'rounded-sm bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700'
+                                ? 'rounded-sm bg-success-bg px-1.5 py-0.5 text-[11px] font-medium text-success'
+                                : 'rounded-sm bg-danger-bg px-1.5 py-0.5 text-[11px] font-medium text-danger'
                             }
                           >
                             {log.status === 'sent' ? 'Enviado' : 'Falló'}
                           </span>
-                          <span className="text-xs text-zinc-400">{formatDate(log.sent_at)}</span>
+                          <span className="text-xs text-fg-subtle">{formatDate(log.sent_at)}</span>
                         </div>
                       </li>
                     ))}
@@ -241,7 +241,7 @@ export function SendDocumentEmail({
           )}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-zinc-100 px-5 py-3">
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
           <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
             Cerrar
           </Button>

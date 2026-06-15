@@ -147,31 +147,31 @@ export function ReportesClient() {
     {
       key: 'label',
       header: GROUP_LABEL[groupBy],
-      render: row => <span className="font-medium text-zinc-900">{row.label}</span>,
+      render: row => <span className="font-medium text-fg">{row.label}</span>,
     },
     {
       key: 'count',
       header: 'Comprobantes',
       align: 'right',
-      render: row => <span className="tabular-nums text-zinc-700">{row.count}</span>,
+      render: row => <span className="tabular-nums text-fg-muted">{row.count}</span>,
     },
     {
       key: 'subtotal',
       header: 'Subtotal',
       align: 'right',
-      render: row => <span className="tabular-nums text-zinc-700">{formatARS(row.subtotal)}</span>,
+      render: row => <span className="tabular-nums text-fg-muted">{formatARS(row.subtotal)}</span>,
     },
     {
       key: 'tax_amount',
       header: 'IVA',
       align: 'right',
-      render: row => <span className="tabular-nums text-zinc-700">{formatARS(row.tax_amount)}</span>,
+      render: row => <span className="tabular-nums text-fg-muted">{formatARS(row.tax_amount)}</span>,
     },
     {
       key: 'total',
       header: 'Total',
       align: 'right',
-      render: row => <span className="tabular-nums font-medium text-zinc-900">{formatARS(row.total)}</span>,
+      render: row => <span className="tabular-nums font-medium text-fg">{formatARS(row.total)}</span>,
     },
   ], [groupBy])
 
@@ -193,10 +193,10 @@ export function ReportesClient() {
       <ComprasSubNav />
 
       <div className="flex-1 overflow-auto p-5">
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm text-danger">{error}</p>}
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-sm border border-zinc-300 bg-white p-0.5" role="group" aria-label="Agrupar por">
+          <div className="inline-flex rounded-sm border border-border-strong bg-surface p-0.5" role="group" aria-label="Agrupar por">
             {GROUP_BY_OPTIONS.map(option => (
               <Button
                 key={option.value}
@@ -216,7 +216,7 @@ export function ReportesClient() {
 
           {groupBy === 'period' && (
             <select
-              className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+              className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
               value={granularity}
               onChange={e => setGranularity(e.target.value as Granularity)}
               aria-label="Granularidad"
@@ -227,34 +227,34 @@ export function ReportesClient() {
             </select>
           )}
 
-          <label className="flex items-center gap-1 text-[12px] text-zinc-600">
+          <label className="flex items-center gap-1 text-[12px] text-fg-muted">
             Desde
             <input
               type="date"
-              className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+              className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
               value={fromDate}
               onChange={e => setFromDate(e.target.value)}
             />
           </label>
-          <label className="flex items-center gap-1 text-[12px] text-zinc-600">
+          <label className="flex items-center gap-1 text-[12px] text-fg-muted">
             Hasta
             <input
               type="date"
-              className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+              className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
               value={toDate}
               onChange={e => setToDate(e.target.value)}
             />
           </label>
 
           <span className="flex-1" />
-          <span className="text-[12px] text-zinc-500">
+          <span className="text-[12px] text-fg-muted">
             {totals.count} comprobante{totals.count !== 1 ? 's' : ''}
           </span>
         </div>
 
         {groupBy === 'period' && rows.length > 0 && (
-          <div className="mb-4 rounded border border-zinc-200 bg-white p-4">
-            <p className="mb-2 text-[12px] uppercase tracking-wide text-zinc-500">Compras por período</p>
+          <div className="mb-4 rounded border border-border bg-surface p-4">
+            <p className="mb-2 text-[12px] uppercase tracking-wide text-fg-muted">Compras por período</p>
             <PanelBarChart data={chartData} />
           </div>
         )}
@@ -266,7 +266,7 @@ export function ReportesClient() {
           emptyMessage={loading ? 'Cargando…' : 'No hay compras para los filtros seleccionados.'}
           footer={
             rows.length > 0 ? (
-              <div className="flex items-center justify-between px-3 py-2 text-[13px] font-medium text-zinc-900">
+              <div className="flex items-center justify-between px-3 py-2 text-[13px] font-medium text-fg">
                 <span>Total</span>
                 <div className="flex items-center gap-6">
                   <span className="tabular-nums">{totals.count} comp.</span>

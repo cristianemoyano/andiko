@@ -115,13 +115,13 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
         <div className="flex flex-col gap-4">
 
           {/* Header card */}
-          <div className="bg-white border border-zinc-200 rounded p-5 flex items-start justify-between gap-4">
+          <div className="bg-surface border border-border rounded p-5 flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-[18px] font-semibold text-zinc-900 tracking-tight">
+              <h1 className="text-[18px] font-semibold text-fg tracking-tight">
                 {contact.legal_name}
               </h1>
               {contact.trade_name && (
-                <p className="text-[13px] text-zinc-500 mt-0.5">{contact.trade_name}</p>
+                <p className="text-[13px] text-fg-muted mt-0.5">{contact.trade_name}</p>
               )}
               <div className="flex items-center gap-2 mt-3">
                 <Badge status="neutral">{TYPE_LABEL[contact.type]}</Badge>
@@ -130,8 +130,8 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
             </div>
             {contact.cuit && (
               <div className="text-right flex-shrink-0">
-                <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wide mb-1">CUIT</div>
-                <div className="font-mono text-[14px] text-zinc-800">{contact.cuit}</div>
+                <div className="text-[10px] font-semibold text-fg-subtle uppercase tracking-wide mb-1">CUIT</div>
+                <div className="font-mono text-[14px] text-fg">{contact.cuit}</div>
               </div>
             )}
           </div>
@@ -161,12 +161,12 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
           {/* Notas */}
           {contact.notes && (
             <Section title="Notas">
-              <p className="text-[13px] text-zinc-700 leading-relaxed">{contact.notes}</p>
+              <p className="text-[13px] text-fg-muted leading-relaxed">{contact.notes}</p>
             </Section>
           )}
 
           {/* Metadata */}
-          <div className="text-[11px] text-zinc-400 flex gap-4">
+          <div className="text-[11px] text-fg-subtle flex gap-4">
             <span>Creado: {createdAt}</span>
             <span>Modificado: {updatedAt}</span>
           </div>
@@ -195,11 +195,11 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-zinc-100 bg-zinc-50">
-        <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">{title}</span>
+    <div className="bg-surface border border-border rounded overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-border bg-surface-muted">
+        <span className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide">{title}</span>
       </div>
-      <div className="divide-y divide-zinc-100">{children}</div>
+      <div className="divide-y divide-border">{children}</div>
     </div>
   )
 }
@@ -212,9 +212,9 @@ function Row({ label, value, empty = null, mono = false }: {
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center px-4 py-2.5 gap-0.5 sm:gap-4">
-      <span className="text-[12px] text-zinc-500 w-full sm:w-36 flex-shrink-0">{label}</span>
-      <span className={`text-[13px] ${mono ? 'font-mono text-zinc-700' : 'text-zinc-900'}`}>
-        {value ?? empty ?? <span className="text-zinc-400">—</span>}
+      <span className="text-[12px] text-fg-muted w-full sm:w-36 flex-shrink-0">{label}</span>
+      <span className={`text-[13px] ${mono ? 'font-mono text-fg-muted' : 'text-fg'}`}>
+        {value ?? empty ?? <span className="text-fg-subtle">—</span>}
       </span>
     </div>
   )

@@ -89,7 +89,7 @@ function BranchModalForm({ orgId, branch, onClose, onSaved }: BranchModalFormPro
           <Textarea id="branch_address" value={address} onChange={e => setAddress(e.target.value)} rows={3} />
         </FormField>
         {serverError && (
-          <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+          <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
             {serverError}
           </p>
         )}

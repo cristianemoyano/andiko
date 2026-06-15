@@ -70,18 +70,18 @@ export function AddressesSection({ contactId, initialAddresses }: AddressesSecti
   function openEdit(a: Address) { setEditing(a); setModalOpen(true) }
 
   return (
-    <div className="bg-white border border-zinc-200 rounded overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Direcciones</span>
+    <div className="bg-surface border border-border rounded overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-border bg-surface-muted flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Direcciones</span>
         <Button variant="ghost" size="xs" onClick={openCreate}>+ Agregar</Button>
       </div>
 
       {addresses.length === 0 ? (
-        <div className="px-4 py-6 text-center text-[13px] text-zinc-400">
+        <div className="px-4 py-6 text-center text-[13px] text-fg-subtle">
           Sin direcciones registradas.
         </div>
       ) : (
-        <div className="divide-y divide-zinc-100">
+        <div className="divide-y divide-border">
           {addresses.map(addr => (
             <div key={addr.id} className="px-4 py-3 flex items-start justify-between gap-4 group">
               <div className="flex items-start gap-3 min-w-0">
@@ -89,9 +89,9 @@ export function AddressesSection({ contactId, initialAddresses }: AddressesSecti
                   {TYPE_LABEL[addr.type]}
                 </Badge>
                 <div>
-                  <p className="text-[13px] text-zinc-900">{formatAddress(addr)}</p>
+                  <p className="text-[13px] text-fg">{formatAddress(addr)}</p>
                   {addr.is_default && (
-                    <span className="text-[11px] text-zinc-400">Principal</span>
+                    <span className="text-[11px] text-fg-subtle">Principal</span>
                   )}
                 </div>
               </div>
@@ -180,12 +180,12 @@ function AddressModal({ contactId, address, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded shadow-xl w-full max-w-md flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
-          <h2 className="text-[15px] font-semibold text-zinc-900 tracking-tight">
+      <div className="relative bg-surface rounded shadow-xl w-full max-w-md flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-[15px] font-semibold text-fg tracking-tight">
             {isEdit ? 'Editar dirección' : 'Nueva dirección'}
           </h2>
-          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-zinc-700">
+          <button type="button" onClick={onClose} className="text-fg-subtle hover:text-fg-muted">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <path d="M3 3l10 10M13 3L3 13"/>
             </svg>
@@ -198,7 +198,7 @@ function AddressModal({ contactId, address, onClose, onSaved }: {
               <select
                 id="type" name="type"
                 defaultValue={address?.type ?? 'fiscal'}
-                className={cn('h-8 w-full rounded-sm border px-2.5 text-[13px] text-zinc-900 bg-white focus:outline-none focus:border-blue-500', errors.type ? 'border-red-500' : 'border-zinc-300')}
+                className={cn('h-8 w-full rounded-sm border px-2.5 text-[13px] text-fg bg-surface focus:outline-none focus:border-ring', errors.type ? 'border-danger' : 'border-border-strong')}
               >
                 <option value="fiscal">Fiscal</option>
                 <option value="delivery">Entrega</option>
@@ -246,11 +246,11 @@ function AddressModal({ contactId, address, onClose, onSaved }: {
 
             <label className="flex items-center gap-2.5 cursor-pointer select-none">
               <input type="checkbox" name="is_default" defaultChecked={address?.is_default ?? false} className="w-4 h-4 rounded-sm cursor-pointer" />
-              <span className="text-[13px] text-zinc-700">Dirección principal</span>
+              <span className="text-[13px] text-fg-muted">Dirección principal</span>
             </label>
           </div>
 
-          <div className="flex items-center justify-between px-5 py-4 border-t border-zinc-200 bg-zinc-50">
+          <div className="flex items-center justify-between px-5 py-4 border-t border-border bg-surface-muted">
             <div>
               {isEdit && (
                 <Button type="button" variant="danger" size="sm" onClick={handleDelete} disabled={saving}>Eliminar</Button>
