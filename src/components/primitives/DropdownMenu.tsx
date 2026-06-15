@@ -17,7 +17,7 @@ const DropdownMenuContent = forwardRef<
       sideOffset={sideOffset}
       align={align}
       className={cn(
-        'z-50 min-w-[10rem] overflow-hidden rounded-sm border border-zinc-200 bg-white p-1 shadow-md',
+        'z-50 min-w-[10rem] overflow-hidden rounded-sm border border-border bg-surface p-1 shadow-md',
         'data-[state=open]:animate-in data-[state=closed]:animate-out',
         'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
@@ -33,13 +33,13 @@ DropdownMenuContent.displayName = 'DropdownMenuContent'
 const itemVariants = cva(
   [
     'flex w-full cursor-pointer select-none items-center gap-2 rounded-[3px] px-2.5 py-1.5 text-[13px] outline-none transition-colors',
-    'data-[disabled]:pointer-events-none data-[disabled]:text-zinc-400',
+    'data-[disabled]:pointer-events-none data-[disabled]:text-fg-subtle',
   ].join(' '),
   {
     variants: {
       variant: {
-        default: 'text-zinc-700 data-[highlighted]:bg-zinc-100 data-[highlighted]:text-zinc-900',
-        destructive: 'text-red-600 data-[highlighted]:bg-red-50 data-[highlighted]:text-red-700',
+        default: 'text-fg-muted data-[highlighted]:bg-surface-hover data-[highlighted]:text-fg',
+        destructive: 'text-danger data-[highlighted]:bg-danger-bg data-[highlighted]:text-danger',
       },
     },
     defaultVariants: { variant: 'default' },
@@ -68,7 +68,7 @@ const DropdownMenuSeparator = forwardRef<
 >(({ className, ...props }, ref) => (
   <RadixDropdown.Separator
     ref={ref}
-    className={cn('-mx-1 my-1 h-px bg-zinc-100', className)}
+    className={cn('-mx-1 my-1 h-px bg-surface-hover', className)}
     {...props}
   />
 ))
@@ -80,7 +80,7 @@ const DropdownMenuLabel = forwardRef<
 >(({ className, ...props }, ref) => (
   <RadixDropdown.Label
     ref={ref}
-    className={cn('px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400', className)}
+    className={cn('px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-subtle', className)}
     {...props}
   />
 ))

@@ -119,8 +119,8 @@ const STOCK_COLUMNS: Column<StockRow>[] = [
       const { name, sku } = variantLabel(row.variant, row.variant_id)
       return (
         <div>
-          <p className="font-medium text-zinc-900 text-[13px]">{name}</p>
-          <p className="text-zinc-400 text-[11px] font-mono">{sku}</p>
+          <p className="font-medium text-fg text-[13px]">{name}</p>
+          <p className="text-fg-subtle text-[11px] font-mono">{sku}</p>
         </div>
       )
     },
@@ -134,14 +134,14 @@ const STOCK_COLUMNS: Column<StockRow>[] = [
     key: 'minimum_quantity' as keyof StockRow,
     header: 'Mín.',
     render: row => (
-      <span className="tabular-nums text-[13px] text-zinc-600">{row.minimum_quantity ?? '0'}</span>
+      <span className="tabular-nums text-[13px] text-fg-muted">{row.minimum_quantity ?? '0'}</span>
     ),
   },
   {
     key: 'expires_on' as keyof StockRow,
     header: 'Vence',
     render: row => (
-      <span className="text-[13px] text-zinc-600">
+      <span className="text-[13px] text-fg-muted">
         {row.expires_on ? String(row.expires_on).slice(0, 10).split('-').reverse().join('/') : '—'}
       </span>
     ),
@@ -157,7 +157,7 @@ const STOCK_COLUMNS: Column<StockRow>[] = [
           {low && <Badge status="pending" dot>Bajo mínimo</Badge>}
           {expired && <Badge status="error" dot>Vencido</Badge>}
           {!expired && soon && <Badge status="pending" dot>Vence pronto</Badge>}
-          {!low && !expired && !soon && <span className="text-zinc-400 text-[12px]">—</span>}
+          {!low && !expired && !soon && <span className="text-fg-subtle text-[12px]">—</span>}
         </div>
       )
     },
@@ -181,8 +181,8 @@ const MOVEMENT_COLUMNS: Column<MovementRow>[] = [
       const { name, sku } = variantLabel(row.variant, '—')
       return (
         <div>
-          <p className="font-medium text-zinc-900 text-[13px]">{name}</p>
-          <p className="text-zinc-400 text-[11px] font-mono">{sku}</p>
+          <p className="font-medium text-fg text-[13px]">{name}</p>
+          <p className="text-fg-subtle text-[11px] font-mono">{sku}</p>
         </div>
       )
     },
@@ -191,14 +191,14 @@ const MOVEMENT_COLUMNS: Column<MovementRow>[] = [
     key: 'reference_type',
     header: 'Origen',
     render: row => (
-      <span className="text-zinc-600 text-[12px]">{referenceLabel(row)}</span>
+      <span className="text-fg-muted text-[12px]">{referenceLabel(row)}</span>
     ),
   },
   {
     key: 'quantity_delta',
     header: 'Delta',
     render: row => (
-      <span className={`font-medium tabular-nums text-[13px] ${Number(row.quantity_delta) < 0 ? 'text-red-600' : 'text-green-700'}`}>
+      <span className={`font-medium tabular-nums text-[13px] ${Number(row.quantity_delta) < 0 ? 'text-danger' : 'text-success'}`}>
         {Number(row.quantity_delta) > 0 ? '+' : ''}{row.quantity_delta}
       </span>
     ),
@@ -212,7 +212,7 @@ const MOVEMENT_COLUMNS: Column<MovementRow>[] = [
     key: 'created_at',
     header: 'Fecha',
     render: row => (
-      <span className="text-zinc-500 text-[12px]">
+      <span className="text-fg-muted text-[12px]">
         {new Date(row.created_at).toLocaleDateString('es-AR')}
       </span>
     ),
@@ -286,7 +286,7 @@ export function DepositoDetail() {
 
       <div className="flex-1 overflow-auto p-5 flex flex-col gap-6">
         <section>
-          <h2 className="text-sm font-semibold text-zinc-700 mb-2">Stock actual</h2>
+          <h2 className="text-sm font-semibold text-fg-muted mb-2">Stock actual</h2>
           <DataTable
             columns={STOCK_COLUMNS}
             data={stock}
@@ -301,7 +301,7 @@ export function DepositoDetail() {
         </section>
 
         <section>
-          <h2 className="text-sm font-semibold text-zinc-700 mb-2">Movimientos</h2>
+          <h2 className="text-sm font-semibold text-fg-muted mb-2">Movimientos</h2>
           <DataTable
             columns={MOVEMENT_COLUMNS}
             data={movements}

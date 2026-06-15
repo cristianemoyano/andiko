@@ -48,8 +48,8 @@ export function StatusPipeline({ type, status, className }: StatusPipelineProps)
       <div className={cn('flex items-center gap-3', className)}>
         <span className={cn(
           'inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-medium border',
-          neg.variant === 'red'   && 'bg-red-50 text-red-700 border-red-200',
-          neg.variant === 'amber' && 'bg-amber-50 text-amber-700 border-amber-200',
+          neg.variant === 'red'   && 'bg-danger-bg text-danger border-danger',
+          neg.variant === 'amber' && 'bg-warning-bg text-warning border-warning',
         )}>
           {neg.label}
         </span>
@@ -69,15 +69,15 @@ export function StatusPipeline({ type, status, className }: StatusPipelineProps)
             {idx > 0 && (
               <div className={cn(
                 'mt-3 h-px w-8 flex-shrink-0',
-                isDone ? 'bg-brand-600' : 'bg-zinc-300',
+                isDone ? 'bg-brand-600' : 'bg-border-strong',
               )} />
             )}
             <div className="flex flex-col items-center gap-1 min-w-0">
               <div className={cn(
                 'flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-semibold border-2 transition-colors flex-shrink-0',
                 isDone   && 'bg-brand-600 border-brand-600 text-white',
-                isActive && 'bg-white border-brand-600 text-brand-600',
-                !isDone && !isActive && 'bg-white border-zinc-300 text-zinc-400',
+                isActive && 'bg-surface border-brand-600 text-brand-600',
+                !isDone && !isActive && 'bg-surface border-border-strong text-fg-subtle',
               )}>
                 {isDone ? (
                   <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -90,8 +90,8 @@ export function StatusPipeline({ type, status, className }: StatusPipelineProps)
               <span className={cn(
                 'text-[10px] whitespace-nowrap leading-tight',
                 isActive ? 'text-brand-600 font-semibold' : '',
-                isDone   ? 'text-zinc-500' : '',
-                !isDone && !isActive ? 'text-zinc-400' : '',
+                isDone   ? 'text-fg-muted' : '',
+                !isDone && !isActive ? 'text-fg-subtle' : '',
               )}>
                 {step.label}
               </span>

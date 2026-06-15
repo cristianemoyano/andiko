@@ -46,7 +46,7 @@ export function AndikoLogo({ href = '/', className, size = 'md' }: AndikoLogoPro
           <rect x="2" y="5" width="8" height="2.5" />
         </svg>
       </div>
-      <span className={cn('font-semibold tracking-tight text-zinc-900', styles.text)}>andiko</span>
+      <span className={cn('font-semibold tracking-tight text-fg', styles.text)}>andiko</span>
     </>
   )
 

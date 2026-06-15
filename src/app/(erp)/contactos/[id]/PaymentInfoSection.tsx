@@ -51,36 +51,36 @@ export function PaymentInfoSection({ contactId, initialPaymentInfo }: PaymentInf
   function openEdit(item: PaymentInfo) { setEditing(item); setModalOpen(true) }
 
   return (
-    <div className="bg-white border border-zinc-200 rounded overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Datos de pago</span>
+    <div className="bg-surface border border-border rounded overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-border bg-surface-muted flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Datos de pago</span>
         <Button variant="ghost" size="xs" onClick={openCreate}>+ Agregar</Button>
       </div>
 
       {items.length === 0 ? (
-        <div className="px-4 py-6 text-center text-[13px] text-zinc-400">
+        <div className="px-4 py-6 text-center text-[13px] text-fg-subtle">
           Sin datos de pago registrados.
         </div>
       ) : (
-        <div className="divide-y divide-zinc-100">
+        <div className="divide-y divide-border">
           {items.map(item => (
             <div key={item.id} className="px-4 py-3 flex items-start justify-between gap-4 group">
               <div className="min-w-0">
                 {item.bank_name && (
-                  <p className="text-[13px] font-medium text-zinc-900">{item.bank_name}</p>
+                  <p className="text-[13px] font-medium text-fg">{item.bank_name}</p>
                 )}
                 <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                   {item.cbu && (
-                    <span className="font-mono text-[12px] text-zinc-700">CBU {formatCbu(item.cbu)}</span>
+                    <span className="font-mono text-[12px] text-fg-muted">CBU {formatCbu(item.cbu)}</span>
                   )}
                   {item.alias && (
-                    <span className="text-[12px] text-zinc-500">Alias: {item.alias}</span>
+                    <span className="text-[12px] text-fg-muted">Alias: {item.alias}</span>
                   )}
                   {item.account_type && (
-                    <span className="text-[11px] text-zinc-400">{ACCOUNT_TYPE_LABEL[item.account_type]}</span>
+                    <span className="text-[11px] text-fg-subtle">{ACCOUNT_TYPE_LABEL[item.account_type]}</span>
                   )}
                   {item.is_default && (
-                    <span className="text-[11px] text-zinc-400">Principal</span>
+                    <span className="text-[11px] text-fg-subtle">Principal</span>
                   )}
                 </div>
               </div>
@@ -171,12 +171,12 @@ function PaymentInfoModal({ contactId, item, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded shadow-xl w-full max-w-md flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
-          <h2 className="text-[15px] font-semibold text-zinc-900 tracking-tight">
+      <div className="relative bg-surface rounded shadow-xl w-full max-w-md flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-[15px] font-semibold text-fg tracking-tight">
             {isEdit ? 'Editar dato de pago' : 'Nuevo dato de pago'}
           </h2>
-          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-zinc-700">
+          <button type="button" onClick={onClose} className="text-fg-subtle hover:text-fg-muted">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <path d="M3 3l10 10M13 3L3 13"/>
             </svg>
@@ -201,7 +201,7 @@ function PaymentInfoModal({ contactId, item, onClose, onSaved }: {
               <select
                 id="account_type" name="account_type"
                 defaultValue={item?.account_type ?? ''}
-                className={cn('h-8 w-full rounded-sm border px-2.5 text-[13px] text-zinc-900 bg-white focus:outline-none focus:border-blue-500', errors.account_type ? 'border-red-500' : 'border-zinc-300')}
+                className={cn('h-8 w-full rounded-sm border px-2.5 text-[13px] text-fg bg-surface focus:outline-none focus:border-ring', errors.account_type ? 'border-danger' : 'border-border-strong')}
                 disabled={saving}
               >
                 <option value="">Sin especificar</option>
@@ -217,11 +217,11 @@ function PaymentInfoModal({ contactId, item, onClose, onSaved }: {
                 defaultChecked={item?.is_default ?? false}
                 className="w-4 h-4 rounded-sm cursor-pointer"
               />
-              <span className="text-[13px] text-zinc-700">Dato de pago principal</span>
+              <span className="text-[13px] text-fg-muted">Dato de pago principal</span>
             </label>
           </div>
 
-          <div className="flex items-center justify-between px-5 py-4 border-t border-zinc-200 bg-zinc-50">
+          <div className="flex items-center justify-between px-5 py-4 border-t border-border bg-surface-muted">
             <div>
               {isEdit && (
                 <Button type="button" variant="danger" size="sm" onClick={handleDelete} disabled={saving}>Eliminar</Button>

@@ -101,7 +101,7 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
           </FormField>
 
           {serverError && (
-            <p className="text-red-600 text-sm">{serverError}</p>
+            <p className="text-danger text-sm">{serverError}</p>
           )}
 
           <div className="flex justify-between gap-2 pt-1">

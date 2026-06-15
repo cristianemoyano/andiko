@@ -56,7 +56,7 @@ const COLUMNS: Column<CreditNoteRow>[] = [
   {
     key: 'credit_note_number',
     header: 'Número',
-    render: row => <span className="font-mono text-[12px] text-zinc-700">{row.credit_note_number}</span>,
+    render: row => <span className="font-mono text-[12px] text-fg-muted">{row.credit_note_number}</span>,
   },
   {
     key: 'status',
@@ -69,18 +69,18 @@ const COLUMNS: Column<CreditNoteRow>[] = [
     render: row => row.contact
       ? (
         <div className="min-w-0">
-          <p className="truncate font-medium text-zinc-900">{row.contact.legal_name}</p>
-          {row.contact.trade_name ? <p className="text-[12px] text-zinc-500 truncate">{row.contact.trade_name}</p> : null}
+          <p className="truncate font-medium text-fg">{row.contact.legal_name}</p>
+          {row.contact.trade_name ? <p className="text-[12px] text-fg-muted truncate">{row.contact.trade_name}</p> : null}
         </div>
       )
-      : <span className="text-zinc-400">—</span>,
+      : <span className="text-fg-subtle">—</span>,
   },
   {
     key: 'invoice',
     header: 'Factura orig.',
     render: row => row.invoice
-      ? <span className="font-mono text-[12px] text-zinc-700">{row.invoice.invoice_number}</span>
-      : <span className="text-zinc-400">—</span>,
+      ? <span className="font-mono text-[12px] text-fg-muted">{row.invoice.invoice_number}</span>
+      : <span className="text-fg-subtle">—</span>,
   },
   {
     key: 'issue_date',
@@ -97,12 +97,12 @@ const COLUMNS: Column<CreditNoteRow>[] = [
     key: 'remaining',
     header: 'Disponible',
     align: 'right',
-    render: row => <span className="tabular-nums text-zinc-600">{formatARS(row.remaining)}</span>,
+    render: row => <span className="tabular-nums text-fg-muted">{formatARS(row.remaining)}</span>,
   },
   {
     key: 'reason',
     header: 'Motivo',
-    render: row => <span className="text-[12px] text-zinc-500 truncate max-w-[200px] block">{row.reason ?? '—'}</span>,
+    render: row => <span className="text-[12px] text-fg-muted truncate max-w-[200px] block">{row.reason ?? '—'}</span>,
   },
 ]
 
@@ -275,19 +275,19 @@ export function NotasDeCreditoClient() {
           toolbar={
             <>
               <div className="relative flex items-center w-full sm:w-auto">
-                <svg className="pointer-events-none absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <svg className="pointer-events-none absolute left-2 text-fg-subtle" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5" />
                   <path d="M10.5 10.5l3 3" />
                 </svg>
                 <input
-                  className="h-[30px] w-full sm:w-52 rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none"
+                  className="h-[30px] w-full sm:w-52 rounded-sm border border-border-strong bg-surface pl-7 pr-3 text-[13px] focus:border-ring focus:outline-none"
                   placeholder="Buscar número o motivo..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1) }}
                 />
               </div>
               <span className="flex-1" />
-              <span className="text-[12px] text-zinc-500">{total} nota{total !== 1 ? 's' : ''}</span>
+              <span className="text-[12px] text-fg-muted">{total} nota{total !== 1 ? 's' : ''}</span>
             </>
           }
           footer={
@@ -317,14 +317,14 @@ export function NotasDeCreditoClient() {
 
           <FormField label="Factura original (opcional)">
             {loadingInvoices ? (
-              <p className="text-[12px] text-zinc-400 py-1">Cargando facturas…</p>
+              <p className="text-[12px] text-fg-subtle py-1">Cargando facturas…</p>
             ) : !contactId ? (
-              <p className="text-[12px] text-zinc-400 py-1">Seleccioná un cliente primero</p>
+              <p className="text-[12px] text-fg-subtle py-1">Seleccioná un cliente primero</p>
             ) : invoiceOptions.length === 0 ? (
-              <p className="text-[12px] text-zinc-400 py-1">No hay facturas con saldo para este cliente</p>
+              <p className="text-[12px] text-fg-subtle py-1">No hay facturas con saldo para este cliente</p>
             ) : (
               <select
-                className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 w-full rounded-md border border-border bg-surface px-3 text-[13px] text-fg focus:outline-none focus:ring-2 focus:ring-ring"
                 value={invoiceId}
                 onChange={e => setInvoiceId(e.target.value)}
               >
@@ -337,7 +337,7 @@ export function NotasDeCreditoClient() {
               </select>
             )}
             {selectedInvoice && (
-              <p className="mt-1 text-[11px] text-zinc-500">
+              <p className="mt-1 text-[11px] text-fg-muted">
                 Total factura: {formatARS(selectedInvoice.total)} · Saldo pendiente: {formatARS(selectedInvoice.balance)}
               </p>
             )}
@@ -357,7 +357,7 @@ export function NotasDeCreditoClient() {
 
             <FormField label="Alícuota IVA">
               <select
-                className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 w-full rounded-md border border-border bg-surface px-3 text-[13px] text-fg focus:outline-none focus:ring-2 focus:ring-ring"
                 value={ivaRate}
                 onChange={e => setIvaRate(e.target.value)}
               >
@@ -368,7 +368,7 @@ export function NotasDeCreditoClient() {
 
           {/* Calculated totals */}
           {netDec.gt(0) && (
-            <div className="rounded-sm border border-zinc-100 bg-zinc-50 px-3 py-2 text-[12px] text-zinc-600 flex flex-col gap-0.5">
+            <div className="rounded-sm border border-border bg-surface-muted px-3 py-2 text-[12px] text-fg-muted flex flex-col gap-0.5">
               <div className="flex justify-between">
                 <span>Subtotal neto</span>
                 <span className="tabular-nums">{formatARS(netDec.toFixed(2))}</span>
@@ -377,7 +377,7 @@ export function NotasDeCreditoClient() {
                 <span>IVA ({(Number(ivaRate) * 100).toFixed(1)}%)</span>
                 <span className="tabular-nums">{formatARS(taxDec.toFixed(2))}</span>
               </div>
-              <div className="flex justify-between font-semibold text-zinc-900 border-t border-zinc-200 mt-1 pt-1">
+              <div className="flex justify-between font-semibold text-fg border-t border-border mt-1 pt-1">
                 <span>Total nota de crédito</span>
                 <span className="tabular-nums">{formatARS(totalDec.toFixed(2))}</span>
               </div>
@@ -408,7 +408,7 @@ export function NotasDeCreditoClient() {
             />
           </FormField>
 
-          {serverError && <p className="text-[13px] text-red-600">{serverError}</p>}
+          {serverError && <p className="text-[13px] text-danger">{serverError}</p>}
 
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>

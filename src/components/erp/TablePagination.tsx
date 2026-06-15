@@ -39,7 +39,7 @@ export function TablePagination({
       >
         ← Anterior
       </Button>
-      <span className="text-[12px] text-zinc-500 tabular-nums">
+      <span className="text-[12px] text-fg-muted tabular-nums">
         Pág. {page} de {totalPages}
       </span>
       <Button

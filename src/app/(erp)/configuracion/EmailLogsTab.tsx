@@ -140,20 +140,20 @@ export function EmailLogsTab() {
       header: 'Fecha',
       sortable: true,
       render: row => (
-        <span className="text-[12px] text-zinc-600 tabular-nums">{formatDateTime(row.sent_at)}</span>
+        <span className="text-[12px] text-fg-muted tabular-nums">{formatDateTime(row.sent_at)}</span>
       ),
     },
     {
       key: 'recipient',
       header: 'Destinatario',
       sortable: true,
-      render: row => <span className="text-zinc-900">{row.recipient}</span>,
+      render: row => <span className="text-fg">{row.recipient}</span>,
     },
     {
       key: 'subject',
       header: 'Asunto',
       render: row => (
-        <span className="block max-w-[280px] truncate text-zinc-800" title={row.subject}>
+        <span className="block max-w-[280px] truncate text-fg" title={row.subject}>
           {row.subject}
         </span>
       ),
@@ -162,7 +162,7 @@ export function EmailLogsTab() {
       key: 'document_type',
       header: 'Documento',
       render: row => (
-        <span className="text-[12px] text-zinc-700">
+        <span className="text-[12px] text-fg-muted">
           {row.document_label}
           {row.document_number ? ` · ${row.document_number}` : ''}
         </span>
@@ -177,7 +177,7 @@ export function EmailLogsTab() {
       key: 'transport',
       header: 'Transporte',
       render: row => (
-        <span className="text-[12px] text-zinc-600">{transportLabel(row.transport)}</span>
+        <span className="text-[12px] text-fg-muted">{transportLabel(row.transport)}</span>
       ),
     },
     {
@@ -185,11 +185,11 @@ export function EmailLogsTab() {
       header: 'Error',
       render: row =>
         row.error ? (
-          <span className="block max-w-[180px] truncate text-[12px] text-red-600" title={row.error}>
+          <span className="block max-w-[180px] truncate text-[12px] text-danger" title={row.error}>
             {row.error}
           </span>
         ) : (
-          <span className="text-zinc-400">—</span>
+          <span className="text-fg-subtle">—</span>
         ),
     },
     {
@@ -211,13 +211,13 @@ export function EmailLogsTab() {
   return (
     <>
       {serverError ? (
-        <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
           {serverError}
         </div>
       ) : null}
 
       {loading && rows.length === 0 ? (
-        <p className="text-sm text-zinc-500">Cargando…</p>
+        <p className="text-sm text-fg-muted">Cargando…</p>
       ) : (
         <DataTable
           columns={columns}
@@ -229,7 +229,7 @@ export function EmailLogsTab() {
             <>
               <div className="relative flex items-center w-full sm:w-auto">
                 <svg
-                  className="absolute left-2 text-zinc-400 pointer-events-none"
+                  className="absolute left-2 text-fg-subtle pointer-events-none"
                   width="13"
                   height="13"
                   viewBox="0 0 16 16"
@@ -242,7 +242,7 @@ export function EmailLogsTab() {
                   <path d="M10.5 10.5l3 3" />
                 </svg>
                 <input
-                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-52 bg-white focus:outline-none focus:border-blue-500"
+                  className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-52 bg-surface focus:outline-none focus:border-ring"
                   placeholder="Buscar destinatario o asunto…"
                   value={search}
                   onChange={e => {
@@ -253,7 +253,7 @@ export function EmailLogsTab() {
               </div>
 
               <select
-                className="h-[30px] text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-500 text-zinc-700"
+                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
                 value={statusFilter}
                 onChange={e => {
                   setStatusFilter(e.target.value as EmailLogStatus | '')
@@ -266,7 +266,7 @@ export function EmailLogsTab() {
               </select>
 
               <select
-                className="h-[30px] text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-500 text-zinc-700"
+                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
                 value={typeFilter}
                 onChange={e => {
                   setTypeFilter(e.target.value as EmailDocumentType | '')
@@ -282,7 +282,7 @@ export function EmailLogsTab() {
               </select>
 
               <span className="flex-1" />
-              <span className="text-[12px] text-zinc-500">
+              <span className="text-[12px] text-fg-muted">
                 {total} registro{total !== 1 ? 's' : ''}
               </span>
             </>
@@ -304,28 +304,28 @@ export function EmailLogsTab() {
       >
         <div className="max-h-[70vh] overflow-y-auto px-5 py-4 space-y-4">
           {detailLoading ? (
-            <p className="text-sm text-zinc-500">Cargando…</p>
+            <p className="text-sm text-fg-muted">Cargando…</p>
           ) : detailError ? (
-            <p className="text-sm text-red-700">{detailError}</p>
+            <p className="text-sm text-danger">{detailError}</p>
           ) : detail ? (
             <>
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
                 <div>
-                  <dt className="text-zinc-500">Destinatario</dt>
-                  <dd className="text-zinc-900">{detail.recipient}</dd>
+                  <dt className="text-fg-muted">Destinatario</dt>
+                  <dd className="text-fg">{detail.recipient}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">Estado</dt>
+                  <dt className="text-fg-muted">Estado</dt>
                   <dd>
                     <StatusBadge value={statusLabel(detail.status)} />
                   </dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="text-zinc-500">Asunto</dt>
-                  <dd className="text-zinc-900">{detail.subject}</dd>
+                  <dt className="text-fg-muted">Asunto</dt>
+                  <dd className="text-fg">{detail.subject}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">Documento</dt>
+                  <dt className="text-fg-muted">Documento</dt>
                   <dd>
                     <Link
                       href={DOCUMENT_HREF[detail.document_type](detail.document_id)}
@@ -337,33 +337,33 @@ export function EmailLogsTab() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">Transporte</dt>
-                  <dd className="text-zinc-900">{transportLabel(detail.transport)}</dd>
+                  <dt className="text-fg-muted">Transporte</dt>
+                  <dd className="text-fg">{transportLabel(detail.transport)}</dd>
                 </div>
                 {detail.message_id ? (
                   <div className="sm:col-span-2">
-                    <dt className="text-zinc-500">Message ID</dt>
-                    <dd className="font-mono text-[12px] text-zinc-700 break-all">{detail.message_id}</dd>
+                    <dt className="text-fg-muted">Message ID</dt>
+                    <dd className="font-mono text-[12px] text-fg-muted break-all">{detail.message_id}</dd>
                   </div>
                 ) : null}
                 {detail.error ? (
                   <div className="sm:col-span-2">
-                    <dt className="text-zinc-500">Error</dt>
-                    <dd className="text-red-700">{detail.error}</dd>
+                    <dt className="text-fg-muted">Error</dt>
+                    <dd className="text-danger">{detail.error}</dd>
                   </div>
                 ) : null}
               </dl>
 
-              <div className="border-t border-zinc-100 pt-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-2">
+              <div className="border-t border-border pt-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-fg-muted mb-2">
                   Contenido
                 </p>
                 {detail.body_text ? (
-                  <pre className="whitespace-pre-wrap rounded-sm border border-zinc-200 bg-zinc-50 p-3 text-[13px] text-zinc-800 font-sans leading-relaxed">
+                  <pre className="whitespace-pre-wrap rounded-sm border border-border bg-surface-muted p-3 text-[13px] text-fg font-sans leading-relaxed">
                     {detail.body_text}
                   </pre>
                 ) : (
-                  <p className="text-[13px] text-zinc-500">
+                  <p className="text-[13px] text-fg-muted">
                     Este envío fue registrado antes de guardar contenido.
                   </p>
                 )}
@@ -372,7 +372,7 @@ export function EmailLogsTab() {
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-zinc-100 px-5 py-3">
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
           <Button type="button" variant="ghost" size="sm" onClick={() => setDetailOpen(false)}>
             Cerrar
           </Button>

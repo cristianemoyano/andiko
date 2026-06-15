@@ -63,6 +63,13 @@ Ningún componente se usa en producción sin su story.
 - [x] `src/lib/utils.ts` — helper `cn()` (clsx + tailwind-merge)
 - [ ] Chromatic para visual regression testing (fase posterior)
 
+### Theming
+- [x] Soporte light/dark/system con `next-themes` y CSS variables semánticas
+- [x] Tokens de color con `@theme inline` (swappable en `.dark`) — `bg`, `surface`, `fg`, `border`, `ring`, danger, success, warning
+- [x] Selector Light/Dark/System en Configuración (persistido en localStorage)
+- [x] Refactor 150+ archivos (components + ERP pages) de colores hardcodeados a tokens semánticos
+- [x] Documentos fiscales (print) pinned a light mode para garantizar AFIP compliance
+
 ### Primitivas base
 - [x] Button (variantes: primary, secondary, ghost, danger; tamaños: sm, md, lg)
 - [x] Input (estados: error, disabled, readonly)

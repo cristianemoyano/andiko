@@ -255,9 +255,9 @@ export function CatalogoClient() {
             height={56}
             className="h-14 w-14 flex-shrink-0"
           />
-          <span className="font-medium text-zinc-900 leading-tight">{p.name}</span>
+          <span className="font-medium text-fg leading-tight">{p.name}</span>
           {p.variants.length > 1 && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-500 border border-zinc-200">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-hover text-fg-muted border border-border">
               {p.variants.length} variantes
             </span>
           )}
@@ -268,25 +268,25 @@ export function CatalogoClient() {
       key: 'sku',
       header: 'SKU',
       render: p => {
-        if (p.variants.length > 1) return <span className="text-zinc-400 text-xs italic">múltiples</span>
+        if (p.variants.length > 1) return <span className="text-fg-subtle text-xs italic">múltiples</span>
         const sku = p.variants[0]?.sku
-        return sku ? <span className="font-mono text-xs text-zinc-600">{sku}</span> : <span className="text-zinc-400">—</span>
+        return sku ? <span className="font-mono text-xs text-fg-muted">{sku}</span> : <span className="text-fg-subtle">—</span>
       },
     },
     {
       key: 'category',
       header: 'Categoría',
       render: p => p.category?.name
-        ? <span className="text-zinc-600">{p.category.name}</span>
-        : <span className="text-zinc-400">—</span>,
+        ? <span className="text-fg-muted">{p.category.name}</span>
+        : <span className="text-fg-subtle">—</span>,
     },
     {
       key: 'type',
       header: 'Tipo · IVA',
       render: p => (
         <>
-          <span className="text-zinc-600">{TYPE_LABEL[p.product_type] ?? p.product_type}</span>
-          <span className="text-zinc-400 text-xs ml-1">· {p.iva_rate}%</span>
+          <span className="text-fg-muted">{TYPE_LABEL[p.product_type] ?? p.product_type}</span>
+          <span className="text-fg-subtle text-xs ml-1">· {p.iva_rate}%</span>
         </>
       ),
     },
@@ -296,7 +296,7 @@ export function CatalogoClient() {
       align: 'right',
       render: p => {
         const display = priceRange(p.variants)
-        return display ? <span className="tabular-nums">{display}</span> : <span className="text-zinc-400">—</span>
+        return display ? <span className="tabular-nums">{display}</span> : <span className="text-fg-subtle">—</span>
       },
     },
     {
@@ -305,7 +305,7 @@ export function CatalogoClient() {
       align: 'right',
       render: p => {
         const managed = p.variants.filter(v => v.manage_stock)
-        if (!managed.length) return <span className="text-zinc-400 text-xs">—</span>
+        if (!managed.length) return <span className="text-fg-subtle text-xs">—</span>
         const total = managed.reduce((s, v) => s + v.stock_quantity, 0)
         return <span className="tabular-nums">{total}{p.variants.length > 1 ? ' total' : ''}</span>
       },
@@ -342,24 +342,24 @@ export function CatalogoClient() {
     {
       key: 'name',
       header: '',
-      render: v => <span className="text-zinc-600 text-[13px]">{v.name ?? 'Variante'}</span>,
+      render: v => <span className="text-fg-muted text-[13px]">{v.name ?? 'Variante'}</span>,
     },
     {
       key: 'sku',
       header: '',
       render: v => v.sku
-        ? <span className="font-mono text-xs text-zinc-500">{v.sku}</span>
-        : <span className="text-zinc-300">—</span>,
+        ? <span className="font-mono text-xs text-fg-muted">{v.sku}</span>
+        : <span className="text-fg-subtle">—</span>,
     },
-    { key: 'category', header: '', render: () => <span className="text-zinc-300">—</span> },
-    { key: 'type',     header: '', render: () => <span className="text-zinc-300">—</span> },
+    { key: 'category', header: '', render: () => <span className="text-fg-subtle">—</span> },
+    { key: 'type',     header: '', render: () => <span className="text-fg-subtle">—</span> },
     {
       key: 'price',
       header: '',
       align: 'right',
       render: v => {
         const p = fmtPrice(v.base_price)
-        return p ? <span className="tabular-nums text-zinc-600">{p}</span> : <span className="text-zinc-300">—</span>
+        return p ? <span className="tabular-nums text-fg-muted">{p}</span> : <span className="text-fg-subtle">—</span>
       },
     },
     {
@@ -367,8 +367,8 @@ export function CatalogoClient() {
       header: '',
       align: 'right',
       render: v => v.manage_stock
-        ? <span className="tabular-nums text-zinc-600">{v.stock_quantity}</span>
-        : <span className="text-zinc-300">—</span>,
+        ? <span className="tabular-nums text-fg-muted">{v.stock_quantity}</span>
+        : <span className="text-fg-subtle">—</span>,
     },
     { key: 'status',  header: '', render: () => null },
     { key: 'actions', header: '', render: () => null },
@@ -408,7 +408,7 @@ export function CatalogoClient() {
 
       <div className="flex-1 p-5 overflow-auto">
         {serverError && (
-          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
           </div>
         )}
@@ -423,7 +423,7 @@ export function CatalogoClient() {
           toolbar={
             <>
               <div className="relative flex items-center w-full sm:w-auto">
-                <svg className="absolute left-2 text-zinc-400 pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <svg className="absolute left-2 text-fg-subtle pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
                 </svg>
                 <input
@@ -431,13 +431,13 @@ export function CatalogoClient() {
                   placeholder="Buscar por nombre o proveedor…"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1) }}
-                  className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-full sm:w-56 bg-white focus:outline-none focus:border-blue-500"
+                  className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-56 bg-surface focus:outline-none focus:border-ring"
                 />
               </div>
               <select
                 value={status}
                 onChange={e => { setStatus(e.target.value); setPage(1) }}
-                className="h-[30px] text-[13px] border border-zinc-300 rounded-sm px-2 bg-white focus:outline-none focus:border-blue-500 text-zinc-700"
+                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
               >
                 <option value="">Todos los estados</option>
                 <option value="draft">Borrador</option>
@@ -445,7 +445,7 @@ export function CatalogoClient() {
                 <option value="archived">Archivado</option>
               </select>
               <span className="flex-1" />
-              <span className="text-[12px] text-zinc-500">{total} producto{total !== 1 ? 's' : ''}</span>
+              <span className="text-[12px] text-fg-muted">{total} producto{total !== 1 ? 's' : ''}</span>
             </>
           }
           footer={

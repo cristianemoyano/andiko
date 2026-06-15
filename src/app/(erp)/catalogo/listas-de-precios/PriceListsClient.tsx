@@ -28,7 +28,7 @@ const COLUMNS: Column<PriceList>[] = [
     header: 'Nombre',
     sortable: true,
     render: row => (
-      <span className="font-medium text-zinc-900">
+      <span className="font-medium text-fg">
         {row.name}
         {row.is_default && (
           <Badge status="info" className="ml-2">Predeterminada</Badge>
@@ -39,7 +39,7 @@ const COLUMNS: Column<PriceList>[] = [
   {
     key: 'description',
     header: 'Descripción',
-    render: row => row.description ?? <span className="text-zinc-400">—</span>,
+    render: row => row.description ?? <span className="text-fg-subtle">—</span>,
   },
   {
     key: 'is_active',
@@ -174,16 +174,16 @@ export function PriceListsClient() {
         >
           <form
             onSubmit={handleCreate}
-            className="bg-white rounded-sm border border-zinc-200 shadow-lg w-full max-w-md"
+            className="bg-surface rounded-sm border border-border shadow-lg w-full max-w-md"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
-              <h2 className="text-sm font-semibold text-zinc-900">Nueva lista de precios</h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="text-zinc-400 hover:text-zinc-700 text-lg leading-none">×</button>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <h2 className="text-sm font-semibold text-fg">Nueva lista de precios</h2>
+              <button type="button" onClick={() => setModalOpen(false)} className="text-fg-subtle hover:text-fg-muted text-lg leading-none">×</button>
             </div>
             <div className="px-5 py-4 space-y-4">
               {formError && (
-                <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">{formError}</div>
+                <div className="text-xs text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">{formError}</div>
               )}
               <FormField label="Nombre *" htmlFor="price_list_name">
                 <Input
@@ -202,7 +202,7 @@ export function PriceListsClient() {
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 />
               </FormField>
-              <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-fg-muted cursor-pointer">
                 <input
                   type="checkbox"
                   checked={form.is_default}
@@ -212,7 +212,7 @@ export function PriceListsClient() {
                 Marcar como lista predeterminada
               </label>
             </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-zinc-200">
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
               <Button type="button" variant="secondary" size="sm" onClick={() => setModalOpen(false)}>Cancelar</Button>
               <Button type="submit" size="sm" disabled={saving}>{saving ? 'Guardando…' : 'Crear lista'}</Button>
             </div>

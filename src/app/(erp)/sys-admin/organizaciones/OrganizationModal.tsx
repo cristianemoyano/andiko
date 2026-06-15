@@ -88,11 +88,11 @@ export function OrganizationModal({ open, onClose, onSaved }: OrganizationModalP
               error={!!errors.slug}
             />
           </FormField>
-          <p className="text-[12px] text-zinc-500">
+          <p className="text-[12px] text-fg-muted">
             Si lo dejás vacío, se genera a partir del nombre. Si el slug está ocupado, se agrega un sufijo automático.
           </p>
           {serverError && (
-            <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+            <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
               {serverError}
             </p>
           )}

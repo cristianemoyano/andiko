@@ -6,8 +6,10 @@ export default async function DocumentPrintLayout({ children }: { children: Reac
   const session = await auth()
   if (!session) redirect('/login')
 
+  // Fiscal documents must always render light, regardless of the user's theme,
+  // so on-screen previews and printed/PDF output stay white.
   return (
-    <Providers>
+    <Providers forcedTheme="light">
       <div className="min-h-screen bg-zinc-100 print:bg-white">{children}</div>
     </Providers>
   )

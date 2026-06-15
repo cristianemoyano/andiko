@@ -23,16 +23,16 @@ const COLUMNS: Column<PaymentRow>[] = [
   {
     key: 'payment_number',
     header: 'N°',
-    render: row => <span className="font-mono text-[12px] text-zinc-600">{row.payment_number}</span>,
+    render: row => <span className="font-mono text-[12px] text-fg-muted">{row.payment_number}</span>,
   },
   {
     key: 'invoice',
     header: 'Factura',
     render: row =>
       row.invoice ? (
-        <span className="text-zinc-700 font-mono text-[12px]">{row.invoice.invoice_number}</span>
+        <span className="text-fg-muted font-mono text-[12px]">{row.invoice.invoice_number}</span>
       ) : (
-        <span className="text-zinc-400">—</span>
+        <span className="text-fg-subtle">—</span>
       ),
   },
   {
@@ -40,9 +40,9 @@ const COLUMNS: Column<PaymentRow>[] = [
     header: 'Proveedor',
     render: row =>
       row.contact ? (
-        <span className="font-medium text-zinc-900">{row.contact.legal_name}</span>
+        <span className="font-medium text-fg">{row.contact.legal_name}</span>
       ) : (
-        <span className="text-zinc-400">—</span>
+        <span className="text-fg-subtle">—</span>
       ),
   },
   {
@@ -106,7 +106,7 @@ export function PagosProvClient() {
       <ComprasSubNav />
 
       <div className="flex-1 p-5 overflow-auto">
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm text-danger">{error}</p>}
         <DataTable
           columns={COLUMNS}
           data={payments}
@@ -115,7 +115,7 @@ export function PagosProvClient() {
           toolbar={
             <>
               <span className="flex-1" />
-              <span className="text-[12px] text-zinc-500">{total} registro{total !== 1 ? 's' : ''}</span>
+              <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>
           }
           footer={

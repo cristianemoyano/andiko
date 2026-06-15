@@ -50,7 +50,7 @@ export const Controlled: Story = {
     return (
       <div className="flex flex-col gap-2">
         <Switch label="Notificar vencimientos" checked={enabled} onCheckedChange={setEnabled} />
-        <p className="text-[11px] text-zinc-500">Estado: {enabled ? 'activado' : 'desactivado'}</p>
+        <p className="text-[11px] text-fg-muted">Estado: {enabled ? 'activado' : 'desactivado'}</p>
       </div>
     )
   },

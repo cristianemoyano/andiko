@@ -162,7 +162,7 @@ export function NuevoPresupuestoClient() {
       <div className="flex-1 p-5 overflow-auto">
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
           {/* Header fields */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5 flex flex-col gap-4">
+          <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Cliente" htmlFor="contact_id" error={errors.contact_id?.[0]}>
                 <SearchableSelect
@@ -215,7 +215,7 @@ export function NuevoPresupuestoClient() {
                       'px-3 py-1 text-[12px] rounded-sm border transition-colors',
                       paymentCondition === pc.value
                         ? 'border-brand-600 bg-brand-50 text-brand-600 font-medium'
-                        : 'border-zinc-300 text-zinc-600 hover:border-zinc-400'
+                        : 'border-border-strong text-fg-muted hover:border-border-strong'
                     )}
                   >
                     {pc.label}
@@ -225,14 +225,14 @@ export function NuevoPresupuestoClient() {
               </FormField>
               {actorName && (
                 <FormField label="Vendedor">
-                  <p className="text-[13px] text-zinc-700 py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-sm">{actorName}</p>
+                  <p className="text-[13px] text-fg-muted py-1.5 px-3 bg-surface-muted border border-border rounded-sm">{actorName}</p>
                 </FormField>
               )}
             </div>
           </div>
 
           {/* Line items */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+          <div className="bg-surface border border-border rounded-sm p-5">
             <SalesLineItemsEditor items={items} onChange={setItems} priceListId={priceListId} />
           </div>
 
@@ -247,7 +247,7 @@ export function NuevoPresupuestoClient() {
           />
 
           {/* Notes */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+          <div className="bg-surface border border-border rounded-sm p-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Notas para el cliente" htmlFor="notes">
                 <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Condiciones, aclaraciones…" />
@@ -259,7 +259,7 @@ export function NuevoPresupuestoClient() {
           </div>
 
           {serverError && (
-            <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+            <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
               {serverError}
             </p>
           )}

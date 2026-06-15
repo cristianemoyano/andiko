@@ -195,7 +195,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
       <div className="flex flex-col h-full">
         <TopBar breadcrumbs={[{ label: 'Ventas', href: '/ventas/presupuestos' }, { label: 'Facturas', href: '/ventas/facturas' }, { label: '…' }]} />
         <VentasSubNav />
-        <div className="flex-1 flex items-center justify-center text-[13px] text-zinc-400">Cargando…</div>
+        <div className="flex-1 flex items-center justify-center text-[13px] text-fg-subtle">Cargando…</div>
       </div>
     )
   }
@@ -275,90 +275,90 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
       <div className="flex-1 p-5 overflow-auto">
         <div className="max-w-3xl mx-auto flex flex-col gap-5">
           {/* Status pipeline */}
-          <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4 flex items-center justify-between gap-4">
+          <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-1">Factura</p>
-              <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">{invoice.invoice_number}</h1>
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">Factura</p>
+              <h1 className="text-[20px] font-bold text-fg tracking-tight">{invoice.invoice_number}</h1>
             </div>
             <StatusPipeline type="invoice" status={invoice.status} />
           </div>
 
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+          <div className="bg-surface border border-border rounded-sm p-5">
             <div className="flex items-start justify-between gap-4 mb-4">
               <StatusBadge value={INVOICE_STATUS_LABEL[invoice.status]} />
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[13px]">
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Sucursal</p>
-                <p className="text-zinc-800">
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Sucursal</p>
+                <p className="text-fg">
                   {invoice.branch
                     ? `${String(invoice.branch.branch_code).padStart(2, '0')} — ${invoice.branch.name}`
-                    : <span className="text-zinc-400">—</span>}
+                    : <span className="text-fg-subtle">—</span>}
                 </p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Cliente</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Cliente</p>
                 {displayContact ? (
                   <>
                     <Link
                       href={`/contactos/${displayContact.id}`}
-                      className="text-zinc-800 font-medium hover:text-blue-600 hover:underline"
+                      className="text-fg font-medium hover:text-blue-600 hover:underline"
                     >
                       {displayContact.legal_name}
                     </Link>
                     {displayContact.trade_name && (
-                      <p className="text-[12px] text-zinc-500">{displayContact.trade_name}</p>
+                      <p className="text-[12px] text-fg-muted">{displayContact.trade_name}</p>
                     )}
                   </>
                 ) : (
-                  <p className="text-zinc-800 font-medium">{invoice.contact_id ? '—' : <span className="text-zinc-400">—</span>}</p>
+                  <p className="text-fg font-medium">{invoice.contact_id ? '—' : <span className="text-fg-subtle">—</span>}</p>
                 )}
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Condición de pago</p>
-                <p className="text-zinc-800">{PAYMENT_CONDITION_LABEL[invoice.payment_condition]}</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Condición de pago</p>
+                <p className="text-fg">{PAYMENT_CONDITION_LABEL[invoice.payment_condition]}</p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Saldo</p>
-                <p className={cn('tabular-nums font-semibold', balanceNum > 0 ? 'text-red-600' : 'text-green-700')}>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Saldo</p>
+                <p className={cn('tabular-nums font-semibold', balanceNum > 0 ? 'text-danger' : 'text-success')}>
                   {formatARS(invoice.balance)}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pt-4 border-t border-zinc-100 text-[13px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pt-4 border-t border-border text-[13px]">
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Emisión</p>
-                <p className="text-zinc-800">
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Emisión</p>
+                <p className="text-fg">
                   {invoice.issue_date
                     ? new Date(invoice.issue_date).toLocaleDateString('es-AR')
-                    : <span className="text-zinc-400">—</span>}
+                    : <span className="text-fg-subtle">—</span>}
                 </p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Vencimiento</p>
-                <p className="text-zinc-800">
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Vencimiento</p>
+                <p className="text-fg">
                   {invoice.due_date
                     ? new Date(invoice.due_date).toLocaleDateString('es-AR')
-                    : <span className="text-zinc-400">—</span>}
+                    : <span className="text-fg-subtle">—</span>}
                 </p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Cobrado</p>
-                <p className="text-zinc-800 tabular-nums">{formatARS(invoice.paid_amount)}</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Cobrado</p>
+                <p className="text-fg tabular-nums">{formatARS(invoice.paid_amount)}</p>
               </div>
               {invoice.salesperson && (
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Vendedor</p>
-                  <p className="text-zinc-800">{invoice.salesperson.name}</p>
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Vendedor</p>
+                  <p className="text-fg">{invoice.salesperson.name}</p>
                 </div>
               )}
             </div>
 
             {(invoice.quote_id || invoice.order_id) && (
-              <div className="mt-4 pt-4 border-t border-zinc-100 flex flex-wrap gap-2">
-                <span className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide self-center mr-2">Origen</span>
+              <div className="mt-4 pt-4 border-t border-border flex flex-wrap gap-2">
+                <span className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide self-center mr-2">Origen</span>
                 {invoice.quote_id && (
                   <Button variant="ghost" size="xs" asChild>
                     <Link href={`/ventas/presupuestos/${invoice.quote_id}`}>Ver presupuesto</Link>
@@ -373,56 +373,56 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
             )}
 
             {(invoice.notes || invoice.internal_notes) && (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border">
                 {invoice.notes && (
                   <div>
-                    <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Notas</p>
-                    <p className="text-[13px] text-zinc-600 whitespace-pre-line">{invoice.notes}</p>
+                    <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Notas</p>
+                    <p className="text-[13px] text-fg-muted whitespace-pre-line">{invoice.notes}</p>
                   </div>
                 )}
                 {invoice.internal_notes && (
                   <div>
-                    <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Notas internas</p>
-                    <p className="text-[13px] text-zinc-600 whitespace-pre-line">{invoice.internal_notes}</p>
+                    <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Notas internas</p>
+                    <p className="text-[13px] text-fg-muted whitespace-pre-line">{invoice.internal_notes}</p>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-zinc-100">
-              <h2 className="text-[13px] font-semibold text-zinc-900">Ítems</h2>
+          <div className="bg-surface border border-border rounded-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-border">
+              <h2 className="text-[13px] font-semibold text-fg">Ítems</h2>
             </div>
             {invoice.items && invoice.items.length > 0 ? (
               <table className="w-full text-[12px]">
                 <thead>
-                  <tr className="bg-zinc-50 border-b border-zinc-100">
-                    <th className="px-4 py-2 text-left font-medium text-zinc-500">Descripción</th>
-                    <th className="px-4 py-2 text-right font-medium text-zinc-500">Cant.</th>
-                    <th className="px-4 py-2 text-right font-medium text-zinc-500">P. unitario</th>
-                    <th className="px-4 py-2 text-right font-medium text-zinc-500">Desc.</th>
-                    <th className="px-4 py-2 text-right font-medium text-zinc-500">IVA</th>
-                    <th className="px-4 py-2 text-right font-medium text-zinc-500">Total</th>
+                  <tr className="bg-surface-muted border-b border-border">
+                    <th className="px-4 py-2 text-left font-medium text-fg-muted">Descripción</th>
+                    <th className="px-4 py-2 text-right font-medium text-fg-muted">Cant.</th>
+                    <th className="px-4 py-2 text-right font-medium text-fg-muted">P. unitario</th>
+                    <th className="px-4 py-2 text-right font-medium text-fg-muted">Desc.</th>
+                    <th className="px-4 py-2 text-right font-medium text-fg-muted">IVA</th>
+                    <th className="px-4 py-2 text-right font-medium text-fg-muted">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {invoice.items.map(item => (
-                    <tr key={item.id} className="border-b border-zinc-100 last:border-0">
-                      <td className="px-4 py-2.5 text-zinc-800">{item.description}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-zinc-600">{item.quantity}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-zinc-600">{formatARS(item.unit_price)}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-zinc-500">
+                    <tr key={item.id} className="border-b border-border last:border-0">
+                      <td className="px-4 py-2.5 text-fg">{item.description}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{item.quantity}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{formatARS(item.unit_price)}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
                         {parseFloat(item.discount_pct) > 0 ? `${item.discount_pct}%` : '—'}
                       </td>
-                      <td className="px-4 py-2.5 text-right tabular-nums text-zinc-500">{item.iva_rate}%</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums font-medium text-zinc-800">{formatARS(item.total)}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{item.iva_rate}%</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-medium text-fg">{formatARS(item.total)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <div className="px-4 py-8 text-center text-[13px] text-zinc-400">Sin ítems</div>
+              <div className="px-4 py-8 text-center text-[13px] text-fg-subtle">Sin ítems</div>
             )}
           </div>
 
@@ -435,8 +435,8 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
           />
 
           {canPay && (
-            <div className="bg-white border border-zinc-200 rounded-sm p-5">
-              <h2 className="text-[13px] font-semibold text-zinc-900 mb-4">Registrar cobro</h2>
+            <div className="bg-surface border border-border rounded-sm p-5">
+              <h2 className="text-[13px] font-semibold text-fg mb-4">Registrar cobro</h2>
               <form onSubmit={handleRegisterPayment} className="flex flex-col gap-4 max-w-lg">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField label="Importe" htmlFor="pay_amount">
@@ -456,7 +456,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                     id="pay_method"
                     value={paymentMethod}
                     onChange={e => setPaymentMethod(e.target.value as PaymentMethod)}
-                    className="flex h-8 w-full max-w-xs rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-500"
+                    className="flex h-8 w-full max-w-xs rounded-sm border border-border-strong bg-surface px-2.5 text-[13px] text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
                   >
                     {PAYMENT_METHOD_OPTIONS.map(o => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -470,7 +470,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                   <Textarea id="pay_notes" value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} rows={2} />
                 </FormField>
                 {paymentError && (
-                  <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+                  <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
                     {paymentError}
                   </p>
                 )}
@@ -484,31 +484,31 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
           )}
 
           {payments.length > 0 && (
-            <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-zinc-100">
-                <h2 className="text-[13px] font-semibold text-zinc-900">Cobros registrados</h2>
+            <div className="bg-surface border border-border rounded-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-border">
+                <h2 className="text-[13px] font-semibold text-fg">Cobros registrados</h2>
               </div>
               <table className="w-full text-[12px]">
                 <thead>
-                  <tr className="bg-zinc-50 border-b border-zinc-100">
-                    <th className="px-4 py-2 text-left font-medium text-zinc-500">N°</th>
-                    <th className="px-4 py-2 text-left font-medium text-zinc-500">Fecha</th>
-                    <th className="px-4 py-2 text-right font-medium text-zinc-500">Importe</th>
-                    <th className="px-4 py-2 text-left font-medium text-zinc-500">Medio</th>
-                    <th className="px-4 py-2 text-left font-medium text-zinc-500">Referencia</th>
-                    <th className="px-4 py-2 text-right font-medium text-zinc-500 w-20" />
+                  <tr className="bg-surface-muted border-b border-border">
+                    <th className="px-4 py-2 text-left font-medium text-fg-muted">N°</th>
+                    <th className="px-4 py-2 text-left font-medium text-fg-muted">Fecha</th>
+                    <th className="px-4 py-2 text-right font-medium text-fg-muted">Importe</th>
+                    <th className="px-4 py-2 text-left font-medium text-fg-muted">Medio</th>
+                    <th className="px-4 py-2 text-left font-medium text-fg-muted">Referencia</th>
+                    <th className="px-4 py-2 text-right font-medium text-fg-muted w-20" />
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map(p => (
-                    <tr key={p.id} className="border-b border-zinc-100 last:border-0">
-                      <td className="px-4 py-2.5 font-mono text-zinc-600">{p.payment_number}</td>
-                      <td className="px-4 py-2.5 text-zinc-700">
+                    <tr key={p.id} className="border-b border-border last:border-0">
+                      <td className="px-4 py-2.5 font-mono text-fg-muted">{p.payment_number}</td>
+                      <td className="px-4 py-2.5 text-fg-muted">
                         {new Date(p.payment_date).toLocaleDateString('es-AR')}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums font-medium">{formatARS(p.amount)}</td>
-                      <td className="px-4 py-2.5 text-zinc-600">{PAYMENT_METHOD_LABEL[p.payment_method]}</td>
-                      <td className="px-4 py-2.5 text-zinc-500">{p.reference ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-fg-muted">{PAYMENT_METHOD_LABEL[p.payment_method]}</td>
+                      <td className="px-4 py-2.5 text-fg-muted">{p.reference ?? '—'}</td>
                       <td className="px-4 py-2.5 text-right">
                         {invoice.status !== 'cancelled' && (
                           <Button type="button" variant="ghost" size="xs" onClick={() => setPaymentToDelete(p)}>

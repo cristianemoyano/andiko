@@ -11,7 +11,7 @@ const TabsList = forwardRef<
 >(({ className, ...props }, ref) => (
   <RadixTabs.List
     ref={ref}
-    className={cn('flex items-center gap-1 border-b border-zinc-200', className)}
+    className={cn('flex items-center gap-1 border-b border-border', className)}
     {...props}
   />
 ))
@@ -24,11 +24,11 @@ const TabsTrigger = forwardRef<
   <RadixTabs.Trigger
     ref={ref}
     className={cn(
-      '-mb-px border-b-2 border-transparent px-3 py-2 text-[13px] font-medium text-zinc-500 transition-colors cursor-pointer',
-      'hover:text-zinc-900',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-200',
-      'data-[state=active]:border-brand-600 data-[state=active]:text-zinc-900',
-      'data-[disabled]:pointer-events-none data-[disabled]:text-zinc-300',
+      '-mb-px border-b-2 border-transparent px-3 py-2 text-[13px] font-medium text-fg-muted transition-colors cursor-pointer',
+      'hover:text-fg',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+      'data-[state=active]:border-brand-600 data-[state=active]:text-fg',
+      'data-[disabled]:pointer-events-none data-[disabled]:text-fg-subtle',
       className,
     )}
     {...props}

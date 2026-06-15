@@ -1,11 +1,11 @@
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
-const cardVariants = cva('rounded-md bg-white', {
+const cardVariants = cva('rounded-md bg-surface', {
   variants: {
     variant: {
-      default: 'border border-zinc-200',
-      elevated: 'border border-zinc-200 shadow-sm',
+      default: 'border border-border',
+      elevated: 'border border-border shadow-sm',
     },
   },
   defaultVariants: { variant: 'default' },
@@ -29,12 +29,12 @@ export interface CardHeaderProps extends Omit<React.HTMLAttributes<HTMLDivElemen
 function CardHeader({ title, description, actions, className, children, ...props }: CardHeaderProps) {
   return (
     <div
-      className={cn('flex items-start justify-between gap-4 border-b border-zinc-100 px-4 py-3', className)}
+      className={cn('flex items-start justify-between gap-4 border-b border-border px-4 py-3', className)}
       {...props}
     >
       <div className="min-w-0">
-        {title && <h3 className="text-[14px] font-semibold text-zinc-900 leading-snug">{title}</h3>}
-        {description && <p className="mt-0.5 text-[12px] text-zinc-500">{description}</p>}
+        {title && <h3 className="text-[14px] font-semibold text-fg leading-snug">{title}</h3>}
+        {description && <p className="mt-0.5 text-[12px] text-fg-muted">{description}</p>}
         {children}
       </div>
       {actions && <div className="flex flex-shrink-0 items-center gap-2">{actions}</div>}
@@ -49,7 +49,7 @@ function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('flex items-center justify-end gap-2 border-t border-zinc-100 px-4 py-3', className)}
+      className={cn('flex items-center justify-end gap-2 border-t border-border px-4 py-3', className)}
       {...props}
     />
   )

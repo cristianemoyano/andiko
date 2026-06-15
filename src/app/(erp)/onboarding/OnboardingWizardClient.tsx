@@ -166,27 +166,27 @@ function AndikoLogo({ size = 24 }: { size?: number }) {
 function SectionTitle({ children, sub }: { children: React.ReactNode; sub?: string }) {
   return (
     <div className="mb-5">
-      <div className="text-base font-semibold text-zinc-900 tracking-tight">{children}</div>
-      {sub && <div className="text-sm text-zinc-500 mt-1 leading-relaxed">{sub}</div>}
+      <div className="text-base font-semibold text-fg tracking-tight">{children}</div>
+      {sub && <div className="text-sm text-fg-muted mt-1 leading-relaxed">{sub}</div>}
     </div>
   )
 }
 
 function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
-    <label className="block text-xs font-medium text-zinc-600 mb-1">
+    <label className="block text-xs font-medium text-fg-muted mb-1">
       {children}
-      {required && <span className="text-red-600 ml-0.5">*</span>}
+      {required && <span className="text-danger ml-0.5">*</span>}
     </label>
   )
 }
 
 function FieldHint({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11px] text-zinc-400 mt-1">{children}</p>
+  return <p className="text-[11px] text-fg-subtle mt-1">{children}</p>
 }
 
 function FieldError({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11px] text-red-600 mt-1">{children}</p>
+  return <p className="text-[11px] text-danger mt-1">{children}</p>
 }
 
 function FormField({
@@ -213,22 +213,22 @@ function FormField({
 }
 
 const inputCls = (error?: string) =>
-  `w-full h-[34px] px-2.5 text-[13px] text-zinc-900 bg-white border rounded-sm outline-none transition-colors
-   ${error ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-zinc-300 focus:border-teal-600 focus:ring-2 focus:ring-teal-100'}`
+  `w-full h-[34px] px-2.5 text-[13px] text-fg bg-surface border rounded-sm outline-none transition-colors
+   ${error ? 'border-danger focus:border-danger focus:ring-2 focus:ring-red-200' : 'border-border-strong focus:border-teal-600 focus:ring-2 focus:ring-teal-100'}`
 
 const selectCls = (error?: string) =>
-  `w-full h-[34px] px-2.5 text-[13px] text-zinc-900 bg-white border rounded-sm outline-none appearance-none transition-colors
-   ${error ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-zinc-300 focus:border-teal-600 focus:ring-2 focus:ring-teal-100'}`
+  `w-full h-[34px] px-2.5 text-[13px] text-fg bg-surface border rounded-sm outline-none appearance-none transition-colors
+   ${error ? 'border-danger focus:border-danger focus:ring-2 focus:ring-red-200' : 'border-border-strong focus:border-teal-600 focus:ring-2 focus:ring-teal-100'}`
 
 function Divider() {
-  return <div className="h-px bg-zinc-200 my-5" />
+  return <div className="h-px bg-surface-hover my-5" />
 }
 
 function InfoBanner({ children, variant = 'teal' }: { children: React.ReactNode; variant?: 'teal' | 'amber' }) {
   const cls =
     variant === 'teal'
       ? 'bg-teal-50 border-teal-200 text-teal-800'
-      : 'bg-amber-50 border-amber-300 text-amber-900'
+      : 'bg-warning-bg border-warning text-warning'
   return (
     <div className={`flex gap-2.5 items-start p-3 border rounded-sm text-xs leading-relaxed ${cls}`}>
       <svg
@@ -246,10 +246,10 @@ function InfoBanner({ children, variant = 'teal' }: { children: React.ReactNode;
 
 function Badge({ children, color = 'zinc' }: { children: React.ReactNode; color?: 'zinc' | 'teal' | 'amber' | 'green' }) {
   const map = {
-    zinc:  'bg-zinc-100 text-zinc-600 border-zinc-300',
+    zinc:  'bg-surface-hover text-fg-muted border-border-strong',
     teal:  'bg-teal-50 text-teal-700 border-teal-200',
-    amber: 'bg-amber-100 text-amber-900 border-amber-300',
-    green: 'bg-green-100 text-green-900 border-green-300',
+    amber: 'bg-warning-bg text-warning border-warning',
+    green: 'bg-success-bg text-success border-success',
   }
   return (
     <span className={`inline-block text-[11px] font-medium px-1.5 py-0.5 rounded-sm border whitespace-nowrap ${map[color]}`}>
@@ -284,8 +284,8 @@ function Btn({
   }
   const variants = {
     primary:   'bg-teal-600 hover:bg-teal-700 text-white border-transparent',
-    secondary: 'bg-white hover:bg-zinc-50 text-zinc-900 border-zinc-300',
-    ghost:     'bg-transparent hover:bg-zinc-100 text-zinc-600 border-transparent',
+    secondary: 'bg-surface hover:bg-surface-muted text-fg border-border-strong',
+    ghost:     'bg-transparent hover:bg-surface-hover text-fg-muted border-transparent',
     teal:      'bg-teal-50 hover:bg-teal-100 text-teal-700 border-teal-200',
   }
   return (
@@ -315,25 +315,25 @@ function ProgressRail({
   const pct = Math.round((completedSteps.length / displaySteps.length) * 100)
 
   return (
-    <div className="w-[220px] flex-shrink-0 bg-white border-r border-zinc-200 flex flex-col h-full">
+    <div className="w-[220px] flex-shrink-0 bg-surface border-r border-border flex flex-col h-full">
       {/* Logo */}
-      <div className="px-5 py-4 border-b border-zinc-200 flex items-center gap-2.5">
+      <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
         <AndikoLogo size={24} />
-        <span className="text-[15px] font-semibold text-zinc-900 tracking-tight">andiko</span>
+        <span className="text-[15px] font-semibold text-fg tracking-tight">andiko</span>
       </div>
 
       {/* Progress summary */}
-      <div className="px-5 py-3.5 border-b border-zinc-200">
-        <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">
+      <div className="px-5 py-3.5 border-b border-border">
+        <div className="text-[11px] font-semibold text-fg-subtle uppercase tracking-widest mb-1">
           Configuración inicial
         </div>
-        <div className="h-1 bg-zinc-200 rounded-sm overflow-hidden">
+        <div className="h-1 bg-surface-hover rounded-sm overflow-hidden">
           <div
             className="h-full bg-teal-600 rounded-sm transition-all duration-300"
             style={{ width: `${pct}%` }}
           />
         </div>
-        <div className="text-[11px] text-zinc-400 mt-1.5">
+        <div className="text-[11px] text-fg-subtle mt-1.5">
           {completedSteps.length} de {displaySteps.length} pasos completados
         </div>
       </div>
@@ -351,34 +351,34 @@ function ProgressRail({
               onClick={() => isAccessible && onJump(stepIdx)}
               disabled={!isAccessible}
               className={`w-full flex items-center gap-2.5 px-5 py-[7px] text-left transition-colors
-                ${isActive ? 'bg-teal-50' : isAccessible ? 'hover:bg-zinc-100' : ''}
+                ${isActive ? 'bg-teal-50' : isAccessible ? 'hover:bg-surface-hover' : ''}
                 ${isAccessible ? 'cursor-pointer' : 'cursor-default'}`}
             >
               {/* Indicator */}
               <div
                 className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center border transition-all
-                  ${isDone || isActive ? 'bg-teal-600 border-teal-600' : 'bg-zinc-200 border-zinc-300'}`}
+                  ${isDone || isActive ? 'bg-teal-600 border-teal-600' : 'bg-surface-hover border-border-strong'}`}
               >
                 {isDone ? (
                   <IcoCheck size={10} color="#fff" />
                 ) : (
-                  <span className={`text-[10px] font-semibold ${isActive ? 'text-white' : 'text-zinc-400'}`}>
+                  <span className={`text-[10px] font-semibold ${isActive ? 'text-white' : 'text-fg-subtle'}`}>
                     {idx + 1}
                   </span>
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <div
-                  className={`text-xs truncate ${isActive ? 'font-medium text-teal-700' : isDone ? 'text-zinc-700' : 'text-zinc-500'}`}
+                  className={`text-xs truncate ${isActive ? 'font-medium text-teal-700' : isDone ? 'text-fg-muted' : 'text-fg-muted'}`}
                 >
                   {step.label}
                 </div>
                 {step.optional && (
-                  <div className="text-[10px] text-zinc-400">Opcional</div>
+                  <div className="text-[10px] text-fg-subtle">Opcional</div>
                 )}
               </div>
               {step.time && !isDone && (
-                <span className="text-[10px] text-zinc-400 flex-shrink-0">{step.time}</span>
+                <span className="text-[10px] text-fg-subtle flex-shrink-0">{step.time}</span>
               )}
             </button>
           )
@@ -386,9 +386,9 @@ function ProgressRail({
       </nav>
 
       {/* Footer */}
-      <div className="px-5 py-3 border-t border-zinc-200">
-        <p className="text-[11px] text-zinc-400">
-          Tiempo estimado: <span className="font-medium text-zinc-600">~15 min</span>
+      <div className="px-5 py-3 border-t border-border">
+        <p className="text-[11px] text-fg-subtle">
+          Tiempo estimado: <span className="font-medium text-fg-muted">~15 min</span>
         </p>
       </div>
     </div>
@@ -424,7 +424,7 @@ function StepWrapper({
         {children}
       </div>
       {!isLast && (
-        <div className="border-t border-zinc-200 px-10 py-3.5 flex items-center gap-2.5 bg-white flex-shrink-0">
+        <div className="border-t border-border px-10 py-3.5 flex items-center gap-2.5 bg-surface flex-shrink-0">
           {!isFirst && onBack && (
             <Btn variant="secondary" onClick={onBack}>
               <IcoArrow dir="left" size={13} color="#3F3F46" />
@@ -456,15 +456,15 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
         <div className="flex justify-center mb-6">
           <AndikoLogo size={52} />
         </div>
-        <h1 className="text-[22px] font-semibold text-zinc-900 tracking-tight mb-2.5">
+        <h1 className="text-[22px] font-semibold text-fg tracking-tight mb-2.5">
           Bienvenido a Andiko
         </h1>
-        <p className="text-sm text-zinc-500 leading-relaxed max-w-[460px] mx-auto mb-8">
+        <p className="text-sm text-fg-muted leading-relaxed max-w-[460px] mx-auto mb-8">
           En los próximos minutos vas a configurar tu empresa y dejar el sistema listo para operar. Podés completar los pasos ahora o volver más tarde.
         </p>
 
-        <div className="bg-zinc-50 border border-zinc-200 rounded p-5 text-left max-w-[440px] mx-auto mb-8">
-          <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-3.5">
+        <div className="bg-surface-muted border border-border rounded p-5 text-left max-w-[440px] mx-auto mb-8">
+          <div className="text-[11px] font-semibold text-fg-subtle uppercase tracking-widest mb-3.5">
             En esta configuración
           </div>
           <div className="flex flex-col gap-3">
@@ -479,7 +479,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
                 <div className="w-4 h-4 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
                   <IcoCheck size={9} color="#0C647A" />
                 </div>
-                <span className="text-[13px] text-zinc-700">{text}</span>
+                <span className="text-[13px] text-fg-muted">{text}</span>
               </div>
             ))}
           </div>
@@ -489,7 +489,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
           <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="#A1A1AA" strokeWidth={1.5} strokeLinecap="round">
             <circle cx="6" cy="6" r="5" /><path d="M6 4v2.5L8 8" />
           </svg>
-          <span className="text-xs text-zinc-400">Tiempo estimado: 15 minutos</span>
+          <span className="text-xs text-fg-subtle">Tiempo estimado: 15 minutos</span>
         </div>
       </div>
     </StepWrapper>
@@ -598,7 +598,7 @@ function StepCompany({
         </div>
 
         <Divider />
-        <div className="text-[13px] font-medium text-zinc-700 -mb-2">Domicilio fiscal</div>
+        <div className="text-[13px] font-medium text-fg-muted -mb-2">Domicilio fiscal</div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="Calle y número">
@@ -713,21 +713,21 @@ function StepModules({
               type="button"
               onClick={() => toggle(mod.id)}
               className={`flex gap-3 items-start p-3.5 border-[1.5px] rounded text-left transition-all
-                ${isOn ? 'border-teal-400 bg-teal-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50'}`}
+                ${isOn ? 'border-teal-400 bg-teal-50' : 'border-border bg-surface hover:border-border-strong hover:bg-surface-muted'}`}
             >
-              <div className={`w-8 h-8 rounded-sm flex items-center justify-center flex-shrink-0 ${isOn ? 'bg-teal-100' : 'bg-zinc-100'}`}>
+              <div className={`w-8 h-8 rounded-sm flex items-center justify-center flex-shrink-0 ${isOn ? 'bg-teal-100' : 'bg-surface-hover'}`}>
                 <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke={isOn ? '#0C647A' : '#71717A'} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="2" width="12" height="12" rx="1" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className={`text-[13px] font-medium ${isOn ? 'text-teal-700' : 'text-zinc-800'}`}>{mod.label}</span>
+                  <span className={`text-[13px] font-medium ${isOn ? 'text-teal-700' : 'text-fg'}`}>{mod.label}</span>
                   {mod.recommended && <Badge color="teal">Recomendado</Badge>}
                 </div>
-                <p className="text-[11px] text-zinc-500 leading-snug">{mod.desc}</p>
+                <p className="text-[11px] text-fg-muted leading-snug">{mod.desc}</p>
               </div>
-              <div className={`w-4 h-4 rounded-sm border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${isOn ? 'bg-teal-600 border-teal-600' : 'bg-white border-zinc-300'}`}>
+              <div className={`w-4 h-4 rounded-sm border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${isOn ? 'bg-teal-600 border-teal-600' : 'bg-surface border-border-strong'}`}>
                 {isOn && <IcoCheck size={9} color="#fff" />}
               </div>
             </button>
@@ -736,7 +736,7 @@ function StepModules({
       </div>
 
       {selected.length === 0 && (
-        <p className="mt-3 text-xs text-red-600">Seleccioná al menos un módulo para continuar.</p>
+        <p className="mt-3 text-xs text-danger">Seleccioná al menos un módulo para continuar.</p>
       )}
 
       <InfoBanner variant="teal" >
@@ -803,13 +803,13 @@ function StepProducts({
               key={opt.id}
               type="button"
               onClick={() => { setMode(opt.id); setData(prev => ({ ...prev, productsMode: opt.id as 'manual' | 'csv' | 'later' })) }}
-              className="flex flex-col items-center p-5 border-[1.5px] border-zinc-200 rounded bg-white hover:border-teal-400 hover:bg-teal-50 transition-all text-center"
+              className="flex flex-col items-center p-5 border-[1.5px] border-border rounded bg-surface hover:border-teal-400 hover:bg-teal-50 transition-all text-center"
             >
-              <div className="w-9 h-9 bg-zinc-100 rounded-sm flex items-center justify-center mb-2.5">
+              <div className="w-9 h-9 bg-surface-hover rounded-sm flex items-center justify-center mb-2.5">
                 <IcoPlus size={18} color="#71717A" />
               </div>
-              <span className="text-[13px] font-medium text-zinc-800 mb-1">{opt.label}</span>
-              <span className="text-[11px] text-zinc-400 leading-snug">{opt.desc}</span>
+              <span className="text-[13px] font-medium text-fg mb-1">{opt.label}</span>
+              <span className="text-[11px] text-fg-subtle leading-snug">{opt.desc}</span>
             </button>
           ))}
         </div>
@@ -821,12 +821,12 @@ function StepProducts({
             <IcoArrow dir="left" size={12} color="#71717A" />
             Cambiar método
           </Btn>
-          <div className="mt-3.5 border border-zinc-200 rounded overflow-hidden">
+          <div className="mt-3.5 border border-border rounded overflow-hidden">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-zinc-50 border-b border-zinc-200">
+                <tr className="bg-surface-muted border-b border-border">
                   {['Nombre del producto', 'SKU / Código', 'Precio (ARS)', 'Categoría', 'Stock inicial'].map(h => (
-                    <th key={h} className="text-[11px] font-semibold text-zinc-600 p-2 text-left whitespace-nowrap">
+                    <th key={h} className="text-[11px] font-semibold text-fg-muted p-2 text-left whitespace-nowrap">
                       {h}
                     </th>
                   ))}
@@ -834,7 +834,7 @@ function StepProducts({
               </thead>
               <tbody>
                 {products.map((p, i) => (
-                  <tr key={i} className="border-b border-zinc-100">
+                  <tr key={i} className="border-b border-border">
                     <td className="p-1">
                       <input type="text" value={p.nombre} onChange={e => setCell(i, 'nombre', e.target.value)} placeholder="Ej: Notebook HP 15" className="w-full border-0 outline-none text-[12px] px-1.5 py-1 bg-transparent" />
                     </td>
@@ -875,29 +875,29 @@ function StepProducts({
             onDragLeave={() => setDragOver(false)}
             onDrop={e => { e.preventDefault(); setDragOver(false) }}
             className={`mt-3.5 border-2 border-dashed rounded p-10 text-center transition-all
-              ${dragOver ? 'border-teal-400 bg-teal-50' : 'border-zinc-300 bg-zinc-50'}`}
+              ${dragOver ? 'border-teal-400 bg-teal-50' : 'border-border-strong bg-surface-muted'}`}
           >
             <IcoUpload size={28} color={dragOver ? '#0C647A' : '#A1A1AA'} />
-            <p className="text-sm font-medium text-zinc-700 mt-3 mb-1">
+            <p className="text-sm font-medium text-fg-muted mt-3 mb-1">
               Arrastrá tu archivo CSV o Excel aquí
             </p>
-            <p className="text-xs text-zinc-400 mb-4">Formatos aceptados: .csv, .xlsx — hasta 10.000 filas</p>
+            <p className="text-xs text-fg-subtle mb-4">Formatos aceptados: .csv, .xlsx — hasta 10.000 filas</p>
             <Btn variant="secondary" size="sm">
               <IcoUpload size={12} color="#3F3F46" />
               Seleccionar archivo
             </Btn>
           </div>
-          <div className="mt-3 p-2.5 bg-zinc-50 border border-zinc-200 rounded-sm text-xs text-zinc-500">
+          <div className="mt-3 p-2.5 bg-surface-muted border border-border rounded-sm text-xs text-fg-muted">
             Tu archivo debe tener columnas:{' '}
-            <code className="font-mono text-zinc-700">nombre, sku, precio, categoria, stock</code>
+            <code className="font-mono text-fg-muted">nombre, sku, precio, categoria, stock</code>
           </div>
         </div>
       )}
 
       {mode === 'later' && (
-        <div className="p-6 bg-zinc-50 border border-zinc-200 rounded text-center">
-          <p className="text-sm font-medium text-zinc-700 mb-1">Sin productos por ahora</p>
-          <p className="text-xs text-zinc-400">Podés cargar productos desde Inventario → Productos en cualquier momento.</p>
+        <div className="p-6 bg-surface-muted border border-border rounded text-center">
+          <p className="text-sm font-medium text-fg-muted mb-1">Sin productos por ahora</p>
+          <p className="text-xs text-fg-subtle">Podés cargar productos desde Inventario → Productos en cualquier momento.</p>
           <div className="mt-3.5">
             <Btn variant="ghost" size="sm" onClick={() => setMode(null)}>Elegir otro método</Btn>
           </div>
@@ -929,14 +929,14 @@ function StepContacts({
       </SectionTitle>
 
       {/* Tabs */}
-      <div className="flex border-b border-zinc-200 mb-5">
+      <div className="flex border-b border-border mb-5">
         {(['clientes', 'proveedores'] as const).map(t => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-[13px] capitalize transition-colors border-b-2 -mb-px
-              ${tab === t ? 'border-teal-600 text-teal-700 font-medium' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+              ${tab === t ? 'border-teal-600 text-teal-700 font-medium' : 'border-transparent text-fg-muted hover:text-fg-muted'}`}
           >
             {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
@@ -976,10 +976,10 @@ function ContactPanel({
             key={opt.id}
             type="button"
             onClick={() => setMode(opt.id)}
-            className="flex flex-col items-center p-4 border-[1.5px] border-zinc-200 rounded bg-white hover:border-teal-400 hover:bg-teal-50 transition-all text-center"
+            className="flex flex-col items-center p-4 border-[1.5px] border-border rounded bg-surface hover:border-teal-400 hover:bg-teal-50 transition-all text-center"
           >
-            <span className="text-xs font-medium text-zinc-800">{opt.label}</span>
-            <span className="text-[11px] text-zinc-400 mt-0.5">{opt.desc}</span>
+            <span className="text-xs font-medium text-fg">{opt.label}</span>
+            <span className="text-[11px] text-fg-subtle mt-0.5">{opt.desc}</span>
           </button>
         ))}
       </div>
@@ -1046,12 +1046,12 @@ function ContactPanel({
           <IcoArrow dir="left" size={12} color="#71717A" />
           Cambiar
         </Btn>
-        <div className="mt-3.5 border-2 border-dashed border-zinc-300 rounded p-8 text-center bg-zinc-50">
+        <div className="mt-3.5 border-2 border-dashed border-border-strong rounded p-8 text-center bg-surface-muted">
           <IcoUpload size={24} color="#A1A1AA" />
-          <p className="text-[13px] font-medium text-zinc-700 mt-2.5 mb-1">
+          <p className="text-[13px] font-medium text-fg-muted mt-2.5 mb-1">
             Importar {type} desde CSV
           </p>
-          <p className="text-[11px] text-zinc-400 mb-3">Columnas: razón social, CUIT, email, teléfono</p>
+          <p className="text-[11px] text-fg-subtle mb-3">Columnas: razón social, CUIT, email, teléfono</p>
           <Btn variant="secondary" size="sm">Seleccionar archivo</Btn>
         </div>
       </div>
@@ -1059,8 +1059,8 @@ function ContactPanel({
   }
 
   return (
-    <div className="p-6 bg-zinc-50 border border-zinc-200 rounded text-center">
-      <p className="text-[13px] text-zinc-500">
+    <div className="p-6 bg-surface-muted border border-border rounded text-center">
+      <p className="text-[13px] text-fg-muted">
         Podés agregar {type} desde <strong>Contactos</strong> en cualquier momento.
       </p>
       <div className="mt-3">
@@ -1178,9 +1178,9 @@ function StepSales({
 
 function SalesSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border border-zinc-200 rounded overflow-hidden">
-      <div className="px-4 py-2.5 bg-zinc-50 border-b border-zinc-200">
-        <span className="text-xs font-semibold text-zinc-600">{title}</span>
+    <div className="border border-border rounded overflow-hidden">
+      <div className="px-4 py-2.5 bg-surface-muted border-b border-border">
+        <span className="text-xs font-semibold text-fg-muted">{title}</span>
       </div>
       <div className="p-4">{children}</div>
     </div>
@@ -1218,7 +1218,7 @@ function StepIntegrations({
       <div className="flex flex-col gap-5">
         {categories.map(cat => (
           <div key={cat}>
-            <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">{cat}</div>
+            <div className="text-[11px] font-semibold text-fg-subtle uppercase tracking-widest mb-2">{cat}</div>
             <div className="flex flex-col gap-2">
               {INTEGRATIONS.filter(i => i.category === cat).map(intg => (
                 <IntegrationRow
@@ -1248,18 +1248,18 @@ function IntegrationRow({
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div className={`border rounded overflow-hidden transition-all ${isOn ? 'border-teal-200 bg-teal-50' : 'border-zinc-200 bg-white'}`}>
+    <div className={`border rounded overflow-hidden transition-all ${isOn ? 'border-teal-200 bg-teal-50' : 'border-border bg-surface'}`}>
       <div className="flex items-center gap-3 p-3 pr-3.5">
-        <div className={`w-8 h-8 rounded-sm flex items-center justify-center flex-shrink-0 ${isOn ? 'bg-teal-100' : 'bg-zinc-100'}`}>
+        <div className={`w-8 h-8 rounded-sm flex items-center justify-center flex-shrink-0 ${isOn ? 'bg-teal-100' : 'bg-surface-hover'}`}>
           <IcoLink size={15} color={isOn ? '#0C647A' : '#71717A'} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-[13px] font-medium text-zinc-800">{intg.label}</span>
+            <span className="text-[13px] font-medium text-fg">{intg.label}</span>
             {intg.recommended && <Badge color="amber">Recomendado</Badge>}
             {isOn && <Badge color="green">Activado</Badge>}
           </div>
-          <p className="text-[11px] text-zinc-500 leading-snug">{intg.desc}</p>
+          <p className="text-[11px] text-fg-muted leading-snug">{intg.desc}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {isOn && (
@@ -1271,10 +1271,10 @@ function IntegrationRow({
           <button
             type="button"
             onClick={onToggle}
-            className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${isOn ? 'bg-teal-600' : 'bg-zinc-300'}`}
+            className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${isOn ? 'bg-teal-600' : 'bg-border-strong'}`}
           >
             <span
-              className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${isOn ? 'left-[18px]' : 'left-0.5'}`}
+              className={`absolute top-0.5 w-4 h-4 bg-surface rounded-full shadow-sm transition-all ${isOn ? 'left-[18px]' : 'left-0.5'}`}
             />
           </button>
         </div>
@@ -1364,21 +1364,21 @@ function StepUsers({
 
       {/* Role reference */}
       <div className="mb-5">
-        <div className="text-xs font-semibold text-zinc-600 mb-2.5">Roles disponibles</div>
+        <div className="text-xs font-semibold text-fg-muted mb-2.5">Roles disponibles</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
           {ROLES.map(r => (
-            <div key={r.id} className="p-2 border border-zinc-200 rounded-sm bg-zinc-50">
-              <div className="text-[11px] font-medium text-zinc-700">{r.label}</div>
-              <div className="text-[10px] text-zinc-400 mt-0.5 leading-snug">{r.desc}</div>
+            <div key={r.id} className="p-2 border border-border rounded-sm bg-surface-muted">
+              <div className="text-[11px] font-medium text-fg-muted">{r.label}</div>
+              <div className="text-[10px] text-fg-subtle mt-0.5 leading-snug">{r.desc}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* User table */}
-      <div className="border border-zinc-200 rounded overflow-hidden mb-3">
-        <div className="px-3 py-2 bg-zinc-50 border-b border-zinc-200">
-          <div className="grid gap-2 text-[11px] font-semibold text-zinc-600" style={{ gridTemplateColumns: '1fr 1fr 160px 32px' }}>
+      <div className="border border-border rounded overflow-hidden mb-3">
+        <div className="px-3 py-2 bg-surface-muted border-b border-border">
+          <div className="grid gap-2 text-[11px] font-semibold text-fg-muted" style={{ gridTemplateColumns: '1fr 1fr 160px 32px' }}>
             <span>Email</span>
             <span>Nombre</span>
             <span>Rol</span>
@@ -1386,32 +1386,32 @@ function StepUsers({
           </div>
         </div>
         {/* Owner row */}
-        <div className="grid gap-2 px-3 py-2 border-b border-zinc-100 items-center bg-teal-50" style={{ gridTemplateColumns: '1fr 1fr 160px 32px' }}>
-          <span className="text-xs font-mono text-zinc-600">{userEmail}</span>
-          <span className="text-xs text-zinc-600">{userName || 'Vos'}</span>
+        <div className="grid gap-2 px-3 py-2 border-b border-border items-center bg-teal-50" style={{ gridTemplateColumns: '1fr 1fr 160px 32px' }}>
+          <span className="text-xs font-mono text-fg-muted">{userEmail}</span>
+          <span className="text-xs text-fg-muted">{userName || 'Vos'}</span>
           <Badge color="teal">Administrador</Badge>
           <span />
         </div>
         {users.map((u, idx) => (
-          <div key={idx} className="grid gap-2 px-3 py-1.5 border-b border-zinc-100 items-center" style={{ gridTemplateColumns: '1fr 1fr 160px 32px' }}>
+          <div key={idx} className="grid gap-2 px-3 py-1.5 border-b border-border items-center" style={{ gridTemplateColumns: '1fr 1fr 160px 32px' }}>
             <input
               type="email"
               value={u.email}
               onChange={e => setUser(idx, 'email', e.target.value)}
               placeholder="nombre@empresa.com"
-              className="text-xs h-7 px-2 border border-zinc-200 rounded-sm outline-none focus:border-teal-500"
+              className="text-xs h-7 px-2 border border-border rounded-sm outline-none focus:border-teal-500"
             />
             <input
               type="text"
               value={u.nombre}
               onChange={e => setUser(idx, 'nombre', e.target.value)}
               placeholder="Nombre y apellido"
-              className="text-xs h-7 px-2 border border-zinc-200 rounded-sm outline-none focus:border-teal-500"
+              className="text-xs h-7 px-2 border border-border rounded-sm outline-none focus:border-teal-500"
             />
             <select
               value={u.rol}
               onChange={e => setUser(idx, 'rol', e.target.value)}
-              className="text-xs h-7 px-2 border border-zinc-200 rounded-sm outline-none focus:border-teal-500 bg-white"
+              className="text-xs h-7 px-2 border border-border rounded-sm outline-none focus:border-teal-500 bg-surface"
             >
               {ROLES.map(r => (
                 <option key={r.id} value={r.id}>{r.label}</option>
@@ -1420,7 +1420,7 @@ function StepUsers({
             <button
               type="button"
               onClick={() => removeUser(idx)}
-              className="flex items-center justify-center w-8 h-7 text-zinc-400 hover:text-red-600 transition-colors"
+              className="flex items-center justify-center w-8 h-7 text-fg-subtle hover:text-danger transition-colors"
             >
               <IcoX size={12} />
             </button>
@@ -1457,21 +1457,21 @@ function StepDone({ data, onGoToDashboard }: { data: WizardData; onGoToDashboard
     <div className="flex-1 flex flex-col overflow-y-auto">
       <div className="flex-1 px-10 py-10 flex flex-col items-center max-w-[640px] w-full mx-auto">
         {/* Success mark */}
-        <div className="w-14 h-14 bg-green-100 border border-green-300 rounded-full flex items-center justify-center mb-5">
+        <div className="w-14 h-14 bg-success-bg border border-success rounded-full flex items-center justify-center mb-5">
           <IcoCheck size={26} color="#16A34A" />
         </div>
 
-        <h1 className="text-[22px] font-semibold text-zinc-900 tracking-tight mb-2 text-center">
+        <h1 className="text-[22px] font-semibold text-fg tracking-tight mb-2 text-center">
           Configuración completada
         </h1>
-        <p className="text-sm text-zinc-500 leading-relaxed text-center max-w-[420px] mb-8">
+        <p className="text-sm text-fg-muted leading-relaxed text-center max-w-[420px] mb-8">
           Tu empresa está lista para operar en Andiko. Podés ajustar cualquier configuración desde el panel de administración.
         </p>
 
         {/* Summary */}
-        <div className="w-full border border-zinc-200 rounded overflow-hidden mb-6">
-          <div className="px-4 py-2.5 bg-zinc-50 border-b border-zinc-200">
-            <span className="text-xs font-semibold text-zinc-600">Resumen de configuración</span>
+        <div className="w-full border border-border rounded overflow-hidden mb-6">
+          <div className="px-4 py-2.5 bg-surface-muted border-b border-border">
+            <span className="text-xs font-semibold text-fg-muted">Resumen de configuración</span>
           </div>
           {[
             { label: 'Empresa',           value: data.company?.razonSocial ?? 'Sin configurar' },
@@ -1488,28 +1488,28 @@ function StepDone({ data, onGoToDashboard }: { data: WizardData; onGoToDashboard
           ].map((row, i, arr) => (
             <div
               key={i}
-              className={`flex gap-4 px-4 py-2.5 ${i < arr.length - 1 ? 'border-b border-zinc-100' : ''}`}
+              className={`flex gap-4 px-4 py-2.5 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}
             >
-              <span className="text-xs text-zinc-500 w-36 flex-shrink-0">{row.label}</span>
-              <span className={`text-xs font-medium text-zinc-800 ${row.mono ? 'font-mono' : ''}`}>{row.value}</span>
+              <span className="text-xs text-fg-muted w-36 flex-shrink-0">{row.label}</span>
+              <span className={`text-xs font-medium text-fg ${row.mono ? 'font-mono' : ''}`}>{row.value}</span>
             </div>
           ))}
         </div>
 
         {/* Quick actions */}
         <div className="w-full mb-6">
-          <div className="text-xs font-semibold text-zinc-600 mb-2.5">Primeros pasos sugeridos</div>
+          <div className="text-xs font-semibold text-fg-muted mb-2.5">Primeros pasos sugeridos</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {quickActions.map((a, i) => (
               <a
                 key={i}
                 href={a.href}
-                className="flex items-center gap-2.5 p-3 border border-zinc-200 rounded bg-white hover:border-teal-400 hover:bg-teal-50 transition-all"
+                className="flex items-center gap-2.5 p-3 border border-border rounded bg-surface hover:border-teal-400 hover:bg-teal-50 transition-all"
               >
-                <div className="w-7 h-7 bg-zinc-100 rounded-sm flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 bg-surface-hover rounded-sm flex items-center justify-center flex-shrink-0">
                   <IcoArrow size={13} color="#71717A" />
                 </div>
-                <span className="text-[13px] text-zinc-800 flex-1">{a.label}</span>
+                <span className="text-[13px] text-fg flex-1">{a.label}</span>
                 <IcoArrow size={12} color="#A1A1AA" />
               </a>
             ))}
@@ -1537,13 +1537,13 @@ function WizardTopBar({
   onSaveAndExit: () => void
 }) {
   return (
-    <div className="h-12 bg-white border-b border-zinc-200 flex items-center px-5 gap-3 flex-shrink-0">
+    <div className="h-12 bg-surface border-b border-border flex items-center px-5 gap-3 flex-shrink-0">
       <div className="flex-1" />
-      <span className="text-xs text-zinc-400">
+      <span className="text-xs text-fg-subtle">
         Paso{' '}
-        <span className="text-zinc-700 font-medium">{Math.min(currentStep + 1, totalSteps)}</span>
+        <span className="text-fg-muted font-medium">{Math.min(currentStep + 1, totalSteps)}</span>
         {' '}de{' '}
-        <span className="font-medium text-zinc-700">{totalSteps}</span>
+        <span className="font-medium text-fg-muted">{totalSteps}</span>
       </span>
       <Btn variant="ghost" size="sm" onClick={onSaveAndExit}>
         Guardar y salir
@@ -1716,7 +1716,7 @@ export function OnboardingWizardClient({
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-zinc-50">
+    <div className="h-screen flex flex-col overflow-hidden bg-surface-muted">
       <WizardTopBar
         currentStep={step}
         totalSteps={displaySteps.length}
@@ -1730,13 +1730,13 @@ export function OnboardingWizardClient({
             onJump={jumpTo}
           />
         )}
-        <div className="flex-1 flex overflow-hidden bg-zinc-50">
+        <div className="flex-1 flex overflow-hidden bg-surface-muted">
           {renderStep()}
         </div>
       </div>
       {saving && (
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white rounded px-5 py-3 text-sm text-zinc-700 shadow-lg">
+          <div className="bg-surface rounded px-5 py-3 text-sm text-fg-muted shadow-lg">
             Guardando configuración...
           </div>
         </div>

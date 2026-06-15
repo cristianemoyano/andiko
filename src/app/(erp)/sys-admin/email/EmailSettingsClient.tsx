@@ -176,22 +176,22 @@ export function EmailSettingsClient() {
 
       <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
-          <p className="text-sm text-zinc-500">Cargando…</p>
+          <p className="text-sm text-fg-muted">Cargando…</p>
         ) : !form ? (
-          <p className="text-sm text-red-700">{serverError ?? 'No se pudo cargar la configuración.'}</p>
+          <p className="text-sm text-danger">{serverError ?? 'No se pudo cargar la configuración.'}</p>
         ) : (
           <div className="max-w-xl space-y-5">
-            <p className="text-[13px] text-zinc-500">
+            <p className="text-[13px] text-fg-muted">
               Configuración de email <strong>a nivel plataforma</strong>: la usan todas las organizaciones para
               enviar documentos. Sin esta configuración, los envíos quedan registrados pero no se entregan. El
               contenido de los emails se define por organización en Configuración → Plantillas de email.
             </p>
 
-            <section className="rounded-sm border border-zinc-200 bg-white p-4 space-y-4">
+            <section className="rounded-sm border border-border bg-surface p-4 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">Envío de emails habilitado</p>
-                  <p className="text-xs text-zinc-500">Activá para entregar documentos por SMTP.</p>
+                  <p className="text-sm font-semibold text-fg">Envío de emails habilitado</p>
+                  <p className="text-xs text-fg-muted">Activá para entregar documentos por SMTP.</p>
                 </div>
                 <Switch
                   checked={form.enabled}
@@ -201,14 +201,14 @@ export function EmailSettingsClient() {
               </div>
             </section>
 
-            <section className="rounded-sm border border-zinc-200 bg-white p-4 space-y-4">
+            <section className="rounded-sm border border-border bg-surface p-4 space-y-4">
               <div className="flex items-start justify-between gap-3">
-                <h2 className="text-sm font-semibold text-zinc-900">Servidor SMTP</h2>
+                <h2 className="text-sm font-semibold text-fg">Servidor SMTP</h2>
                 <Button type="button" variant="secondary" size="xs" onClick={applyGmailPreset}>
                   Usar Gmail
                 </Button>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-fg-muted">
                 ¿Cuenta personal de Gmail? Tocá <strong>Usar Gmail</strong> para completar servidor,
                 puerto y seguridad. Necesitás{' '}
                 <a
@@ -246,8 +246,8 @@ export function EmailSettingsClient() {
 
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[13px] text-zinc-700">Conexión segura (SSL/TLS)</p>
-                  <p className="text-xs text-zinc-400">Activá para puerto 465. Para 587 (STARTTLS) dejalo desactivado.</p>
+                  <p className="text-[13px] text-fg-muted">Conexión segura (SSL/TLS)</p>
+                  <p className="text-xs text-fg-subtle">Activá para puerto 465. Para 587 (STARTTLS) dejalo desactivado.</p>
                 </div>
                 <Switch checked={form.secure} onCheckedChange={v => update('secure', v)} aria-label="Conexión segura" />
               </div>
@@ -270,13 +270,13 @@ export function EmailSettingsClient() {
                   onChange={e => setPassword(e.target.value)}
                 />
                 {form.has_password ? (
-                  <p className="mt-1 text-xs text-zinc-400">Hay una contraseña guardada. Dejá vacío para mantenerla.</p>
+                  <p className="mt-1 text-xs text-fg-subtle">Hay una contraseña guardada. Dejá vacío para mantenerla.</p>
                 ) : null}
               </FormField>
             </section>
 
-            <section className="rounded-sm border border-zinc-200 bg-white p-4 space-y-4">
-              <h2 className="text-sm font-semibold text-zinc-900">Remitente</h2>
+            <section className="rounded-sm border border-border bg-surface p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-fg">Remitente</h2>
 
               <FormField label="Nombre del remitente" htmlFor="from_name" error={errors.from_name}>
                 <Input
@@ -299,10 +299,10 @@ export function EmailSettingsClient() {
               </FormField>
             </section>
 
-            <section className="rounded-sm border border-zinc-200 bg-white p-4 space-y-4">
+            <section className="rounded-sm border border-border bg-surface p-4 space-y-4">
               <div>
-                <h2 className="text-sm font-semibold text-zinc-900">Probar configuración</h2>
-                <p className="mt-1 text-xs text-zinc-500">
+                <h2 className="text-sm font-semibold text-fg">Probar configuración</h2>
+                <p className="mt-1 text-xs text-fg-muted">
                   Envía un email de prueba con la configuración <strong>guardada</strong>. Guardá los
                   cambios antes de probar.
                 </p>
@@ -332,12 +332,12 @@ export function EmailSettingsClient() {
                 </Button>
               </div>
 
-              {testError ? <p className="text-sm text-red-700">{testError}</p> : null}
-              {testMsg ? <p className="text-sm text-green-700">{testMsg}</p> : null}
+              {testError ? <p className="text-sm text-danger">{testError}</p> : null}
+              {testMsg ? <p className="text-sm text-success">{testMsg}</p> : null}
             </section>
 
-            {serverError ? <p className="text-sm text-red-700">{serverError}</p> : null}
-            {savedMsg ? <p className="text-sm text-green-700">{savedMsg}</p> : null}
+            {serverError ? <p className="text-sm text-danger">{serverError}</p> : null}
+            {savedMsg ? <p className="text-sm text-success">{savedMsg}</p> : null}
           </div>
         )}
       </div>

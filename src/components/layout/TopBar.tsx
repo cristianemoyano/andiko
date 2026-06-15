@@ -18,7 +18,7 @@ export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
   return (
     <header
       className={cn(
-        'min-h-[52px] md:h-[52px] bg-white border-b border-zinc-200 flex items-center px-5 gap-3 flex-shrink-0',
+        'min-h-[52px] md:h-[52px] bg-surface border-b border-border flex items-center px-5 gap-3 flex-shrink-0',
         className
       )}
     >
@@ -28,15 +28,15 @@ export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
           return (
             <span key={i} className="flex items-center gap-1.5 min-w-0">
               {i > 0 && (
-                <span className="text-zinc-300 text-sm flex-shrink-0">›</span>
+                <span className="text-fg-subtle text-sm flex-shrink-0">›</span>
               )}
               {isLast || !crumb.href ? (
                 <span
                   className={cn(
                     'truncate',
                     isLast
-                      ? 'text-[14px] font-semibold text-zinc-900 tracking-tight'
-                      : 'text-[13px] text-zinc-500'
+                      ? 'text-[14px] font-semibold text-fg tracking-tight'
+                      : 'text-[13px] text-fg-muted'
                   )}
                 >
                   {crumb.label}
@@ -44,7 +44,7 @@ export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
               ) : (
                 <Link
                   href={crumb.href}
-                  className="text-[13px] text-zinc-500 hover:text-zinc-800 transition-colors truncate"
+                  className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate"
                 >
                   {crumb.label}
                 </Link>

@@ -15,16 +15,16 @@ function FormField({ label, htmlFor, error, required, className, children }: For
     <div className={cn('flex flex-col gap-1.5', className)}>
       <Label.Root
         htmlFor={htmlFor}
-        className="text-[12px] font-medium text-zinc-600"
+        className="text-[12px] font-medium text-fg-muted"
       >
         {label}
-        {required && <span className="ml-1 text-red-500" aria-hidden>*</span>}
+        {required && <span className="ml-1 text-danger" aria-hidden>*</span>}
       </Label.Root>
 
       {children}
 
       {error && (
-        <p role="alert" className="text-xs text-red-600">
+        <p role="alert" className="text-xs text-danger">
           {error}
         </p>
       )}

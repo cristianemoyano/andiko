@@ -34,8 +34,8 @@ const SAMPLE_DATA: Invoice[] = [
 const COLUMNS = [
   { key: 'comprobante', header: 'Comprobante', sortable: true, className: 'font-mono text-[12px]' },
   { key: 'cliente',     header: 'Cliente',     sortable: true },
-  { key: 'fecha',       header: 'Fecha',       sortable: true, className: 'text-zinc-500' },
-  { key: 'vencimiento', header: 'Vencimiento', sortable: true, className: 'text-zinc-500' },
+  { key: 'fecha',       header: 'Fecha',       sortable: true, className: 'text-fg-muted' },
+  { key: 'vencimiento', header: 'Vencimiento', sortable: true, className: 'text-fg-muted' },
   { key: 'monto_neto',  header: 'Monto neto',  sortable: true, align: 'right' as const, className: 'font-mono' },
   { key: 'total',       header: 'Total',       sortable: true, align: 'right' as const, className: 'font-mono font-medium' },
   {
@@ -64,17 +64,17 @@ export const WithToolbar: Story = {
       toolbar={
         <>
           <div className="relative flex items-center">
-            <svg className="absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <svg className="absolute left-2 text-fg-subtle" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
             </svg>
             <input
-              className="pl-7 pr-3 h-[30px] text-[13px] border border-zinc-300 rounded-sm w-52 focus:outline-none focus:border-blue-500"
+              className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-52 focus:outline-none focus:border-ring"
               placeholder="Buscar facturas…"
             />
           </div>
           <Button variant="secondary" size="xs">Filtros</Button>
           <span className="flex-1" />
-          <span className="text-[12px] text-zinc-500">{SAMPLE_DATA.length} registros</span>
+          <span className="text-[12px] text-fg-muted">{SAMPLE_DATA.length} registros</span>
           <Button variant="secondary" size="xs">Exportar</Button>
           <Button size="xs">+ Nueva factura</Button>
         </>
@@ -82,9 +82,9 @@ export const WithToolbar: Story = {
       footer={
         <>
           <span>Monto neto:</span>
-          <span className="font-mono font-semibold text-zinc-900">$ 53.000,00</span>
+          <span className="font-mono font-semibold text-fg">$ 53.000,00</span>
           <span>Total:</span>
-          <span className="font-mono font-bold text-zinc-900 text-[13px]">$ 64.130,00</span>
+          <span className="font-mono font-bold text-fg text-[13px]">$ 64.130,00</span>
         </>
       }
     />
@@ -112,7 +112,7 @@ function DataTableWithPagination() {
       columns={COLUMNS}
       data={slice}
       keyExtractor={r => r.id}
-      toolbar={<span className="text-[12px] text-zinc-500">Ejemplo: {total} filas, {pageSize} por página</span>}
+      toolbar={<span className="text-[12px] text-fg-muted">Ejemplo: {total} filas, {pageSize} por página</span>}
       footer={<TablePagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />}
     />
   )

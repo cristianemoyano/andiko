@@ -92,8 +92,8 @@ const COLUMNS: Column<MovementRow>[] = [
       const { name, sku } = productLabel(row)
       return (
         <div>
-          <p className="font-medium text-zinc-900 text-[13px]">{name}</p>
-          <p className="text-zinc-400 text-[11px] font-mono">{sku}</p>
+          <p className="font-medium text-fg text-[13px]">{name}</p>
+          <p className="text-fg-subtle text-[11px] font-mono">{sku}</p>
         </div>
       )
     },
@@ -102,7 +102,7 @@ const COLUMNS: Column<MovementRow>[] = [
     key: 'reference_type',
     header: 'Origen',
     render: row => (
-      <span className="text-zinc-600 text-[12px]">{referenceLabel(row)}</span>
+      <span className="text-fg-muted text-[12px]">{referenceLabel(row)}</span>
     ),
   },
   {
@@ -110,15 +110,15 @@ const COLUMNS: Column<MovementRow>[] = [
     header: 'Lote',
     render: row => {
       if (!row.batch || (!row.batch.batch_code && !row.batch.expiry_date)) {
-        return <span className="text-zinc-400 text-[12px]">—</span>
+        return <span className="text-fg-subtle text-[12px]">—</span>
       }
       return (
         <div className="text-[12px]">
           {row.batch.batch_code && (
-            <span className="font-mono text-zinc-700">{row.batch.batch_code}</span>
+            <span className="font-mono text-fg-muted">{row.batch.batch_code}</span>
           )}
           {row.batch.expiry_date && (
-            <span className="block text-zinc-400 text-[11px]">
+            <span className="block text-fg-subtle text-[11px]">
               Vto. {String(row.batch.expiry_date).slice(0, 10).split('-').reverse().join('/')}
             </span>
           )}
@@ -130,7 +130,7 @@ const COLUMNS: Column<MovementRow>[] = [
     key: 'quantity_delta',
     header: 'Delta',
     render: row => (
-      <span className={`font-medium tabular-nums text-[13px] ${Number(row.quantity_delta) < 0 ? 'text-red-600' : 'text-green-700'}`}>
+      <span className={`font-medium tabular-nums text-[13px] ${Number(row.quantity_delta) < 0 ? 'text-danger' : 'text-success'}`}>
         {Number(row.quantity_delta) > 0 ? '+' : ''}{row.quantity_delta}
       </span>
     ),
@@ -143,13 +143,13 @@ const COLUMNS: Column<MovementRow>[] = [
   {
     key: 'notes',
     header: 'Notas',
-    render: row => <span className="text-zinc-500 text-[12px]">{row.notes ?? '—'}</span>,
+    render: row => <span className="text-fg-muted text-[12px]">{row.notes ?? '—'}</span>,
   },
   {
     key: 'created_at',
     header: 'Fecha',
     render: row => (
-      <span className="text-zinc-500 text-[12px]">
+      <span className="text-fg-muted text-[12px]">
         {new Date(row.created_at).toLocaleDateString('es-AR')}
       </span>
     ),
@@ -202,7 +202,7 @@ export function MovimientosClient() {
       <TopBar breadcrumbs={[{ label: 'Inventario' }, { label: 'Movimientos' }]} />
       <InventarioSubNav />
       <div className="flex-1 overflow-auto p-5">
-        {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+        {error && <p className="text-danger text-sm mb-4">{error}</p>}
         <DataTable
           columns={COLUMNS}
           data={rows}
@@ -217,7 +217,7 @@ export function MovimientosClient() {
                 className="w-full sm:w-64"
               />
               <select
-                className="h-8 rounded-md border border-zinc-200 bg-white px-2 text-[13px] text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400"
+                className="h-8 rounded-md border border-border bg-surface px-2 text-[13px] text-fg-muted focus:outline-none focus:ring-2 focus:ring-border-strong"
                 value={refType}
                 onChange={e => { setRefType(e.target.value); setPage(1) }}
               >

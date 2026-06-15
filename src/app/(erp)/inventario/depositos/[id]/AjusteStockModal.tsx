@@ -182,7 +182,7 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
         </FormField>
 
         {variantId && loadingRow && (
-          <p className="text-zinc-500 text-xs">Cargando datos de stock…</p>
+          <p className="text-fg-muted text-xs">Cargando datos de stock…</p>
         )}
 
         <div className="flex flex-col gap-1.5">
@@ -196,13 +196,13 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
               placeholder="0"
             />
           </FormField>
-          <p className="text-[11px] text-zinc-500 -mt-1">
+          <p className="text-[11px] text-fg-muted -mt-1">
             Si no la modificás, solo se actualizan mínimo y vencimiento (sin movimiento en el historial).
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border border-zinc-100 bg-zinc-50/60 p-3">
-          <div className="sm:col-span-2 text-[11px] font-medium text-zinc-500">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border border-border bg-surface-muted/60 p-3">
+          <div className="sm:col-span-2 text-[11px] font-medium text-fg-muted">
             Lote del ingreso (opcional — solo si aumentás la cantidad)
           </div>
           <FormField label="Código de lote">
@@ -245,7 +245,7 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
           />
         </FormField>
 
-        {serverError && <p className="text-red-600 text-sm">{serverError}</p>}
+        {serverError && <p className="text-danger text-sm">{serverError}</p>}
 
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>

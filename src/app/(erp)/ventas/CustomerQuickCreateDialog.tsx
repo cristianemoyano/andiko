@@ -129,7 +129,7 @@ export function CustomerQuickCreateDialog({
             id="quick_iva_condition"
             value={ivaCondition}
             onChange={(e) => setIvaCondition(e.target.value as IvaCondition)}
-            className="h-8 w-full rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 focus:border-blue-500 focus:outline-none"
+            className="h-8 w-full rounded-sm border border-border-strong bg-surface px-2.5 text-[13px] text-fg focus:border-ring focus:outline-none"
             disabled={saving}
           >
             {IVA_OPTIONS.map((option) => (
@@ -139,7 +139,7 @@ export function CustomerQuickCreateDialog({
         </FormField>
 
         {serverError ? (
-          <p role="alert" className="rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-600">
+          <p role="alert" className="rounded-sm border border-danger bg-danger-bg px-3 py-2 text-[12px] text-danger">
             {serverError}
           </p>
         ) : null}

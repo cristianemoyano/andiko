@@ -69,11 +69,11 @@ function UserPickRow({
         type="button"
         disabled={disabled}
         onClick={onPick}
-        className="w-full text-left px-3 py-2 text-[13px] hover:bg-zinc-50 disabled:opacity-50"
+        className="w-full text-left px-3 py-2 text-[13px] hover:bg-surface-muted disabled:opacity-50"
       >
-        <div className="font-medium text-zinc-900">{user.name}</div>
-        <div className="text-[11px] text-zinc-500">{user.email}</div>
-        <div className="text-[10px] text-zinc-400 mt-0.5">{user.role}</div>
+        <div className="font-medium text-fg">{user.name}</div>
+        <div className="text-[11px] text-fg-muted">{user.email}</div>
+        <div className="text-[10px] text-fg-subtle mt-0.5">{user.role}</div>
       </button>
     </li>
   )
@@ -184,10 +184,10 @@ export function SysAdminImpersonation() {
     <div className="flex flex-col gap-1.5 mb-1">
       {imp && (
         <div
-          className="rounded-sm border border-amber-200 bg-amber-50 px-2 py-2 text-[11px] text-amber-950 leading-snug"
+          className="rounded-sm border border-warning bg-warning-bg px-2 py-2 text-[11px] text-warning leading-snug"
           role="status"
         >
-          <div className="font-semibold text-amber-900">Impersonando</div>
+          <div className="font-semibold text-warning">Impersonando</div>
           <div className="truncate mt-0.5">
             {imp.name} · {imp.email}
           </div>
@@ -205,11 +205,11 @@ export function SysAdminImpersonation() {
         onClick={openImpersonationModal}
         className={cn(
           'flex w-full items-center gap-2.5 h-[34px] px-2 rounded-sm text-[13px] mb-px transition-colors text-left cursor-pointer',
-          'text-zinc-700 hover:bg-zinc-100',
+          'text-fg-muted hover:bg-surface-hover',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 focus-visible:ring-offset-0',
         )}
       >
-        <span className="flex-shrink-0 text-zinc-400">
+        <span className="flex-shrink-0 text-fg-subtle">
           <ImpersonateActionIcon />
         </span>
         <span className="truncate">{imp ? 'Cambiar usuario' : 'Impersonar usuario'}</span>
@@ -241,8 +241,8 @@ export function SysAdminImpersonation() {
           />
           {trimmedQuery.length < 2 && recentUsers.length > 0 && (
             <div>
-              <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-zinc-500">Recientes</p>
-              <ul className="max-h-[180px] overflow-y-auto divide-y divide-zinc-100 rounded-sm border border-zinc-200">
+              <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-fg-muted">Recientes</p>
+              <ul className="max-h-[180px] overflow-y-auto divide-y divide-border rounded-sm border border-border">
                 {recentUsers.map(u => (
                   <UserPickRow
                     key={u.id}
@@ -255,13 +255,13 @@ export function SysAdminImpersonation() {
             </div>
           )}
           {loading && trimmedQuery.length >= 2 && (
-            <p className="text-[11px] text-zinc-500">Buscando…</p>
+            <p className="text-[11px] text-fg-muted">Buscando…</p>
           )}
           {!loading && trimmedQuery.length >= 2 && displayHits.length === 0 && (
-            <p className="text-[11px] text-zinc-500">Sin resultados.</p>
+            <p className="text-[11px] text-fg-muted">Sin resultados.</p>
           )}
           {trimmedQuery.length >= 2 && displayHits.length > 0 && (
-            <ul className="max-h-[240px] overflow-y-auto divide-y divide-zinc-100 rounded-sm border border-zinc-200">
+            <ul className="max-h-[240px] overflow-y-auto divide-y divide-border rounded-sm border border-border">
               {displayHits.map(h => (
                 <UserPickRow
                   key={h.id}
@@ -273,7 +273,7 @@ export function SysAdminImpersonation() {
             </ul>
           )}
           {error && (
-            <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+            <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
               {error}
             </p>
           )}

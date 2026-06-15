@@ -67,7 +67,7 @@ export function MediosDePagoClient() {
         <Button
           size="sm" variant="ghost"
           onClick={() => setDeleting(row)}
-          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="text-danger hover:text-danger hover:bg-danger-bg"
         >
           Eliminar
         </Button>
@@ -81,9 +81,9 @@ export function MediosDePagoClient() {
       header: 'Nombre',
       render: row => (
         <div>
-          <span className="text-sm font-medium text-zinc-900">{row.name}</span>
+          <span className="text-sm font-medium text-fg">{row.name}</span>
           {row.requires_reference && (
-            <p className="text-xs text-zinc-400 mt-0.5">Requiere referencia</p>
+            <p className="text-xs text-fg-subtle mt-0.5">Requiere referencia</p>
           )}
         </div>
       ),
@@ -92,7 +92,7 @@ export function MediosDePagoClient() {
       key: 'type',
       header: 'Tipo',
       render: row => (
-        <span className="text-sm text-zinc-600">{TYPE_LABELS[row.type] ?? row.type}</span>
+        <span className="text-sm text-fg-muted">{TYPE_LABELS[row.type] ?? row.type}</span>
       ),
     },
     {
@@ -101,8 +101,8 @@ export function MediosDePagoClient() {
       render: row => {
         const count = row.branchAssignments?.length ?? 0
         return (
-          <span className="text-sm text-zinc-600">
-            {count === 0 ? <span className="text-zinc-400">Ninguna</span> : `${count} sucursal${count !== 1 ? 'es' : ''}`}
+          <span className="text-sm text-fg-muted">
+            {count === 0 ? <span className="text-fg-subtle">Ninguna</span> : `${count} sucursal${count !== 1 ? 'es' : ''}`}
           </span>
         )
       },
@@ -110,7 +110,7 @@ export function MediosDePagoClient() {
     {
       key: 'sort_order',
       header: 'Orden',
-      render: row => <span className="text-sm text-zinc-500">{row.sort_order}</span>,
+      render: row => <span className="text-sm text-fg-muted">{row.sort_order}</span>,
     },
     {
       key: 'is_active',
@@ -131,11 +131,11 @@ export function MediosDePagoClient() {
 
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
-          <div className="flex items-center justify-center h-40 text-zinc-400 text-sm">Cargando…</div>
+          <div className="flex items-center justify-center h-40 text-fg-subtle text-sm">Cargando…</div>
         ) : methods.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 gap-2">
-            <p className="text-zinc-500 text-sm">No hay medios de pago configurados.</p>
-            <p className="text-zinc-400 text-xs">Los medios creados aquí se sincronizan al POS según la sucursal asignada.</p>
+            <p className="text-fg-muted text-sm">No hay medios de pago configurados.</p>
+            <p className="text-fg-subtle text-xs">Los medios creados aquí se sincronizan al POS según la sucursal asignada.</p>
             <Button size="sm" onClick={() => setModalOpen(true)}>Crear el primero</Button>
           </div>
         ) : (

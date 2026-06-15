@@ -51,8 +51,8 @@ const SUMMARY_COLUMNS: Column<AccountStatementSummaryRow>[] = [
     header: 'Cliente',
     render: row => (
       <div className="min-w-0">
-        <p className="font-medium text-zinc-900 truncate">{row.legal_name}</p>
-        {row.trade_name ? <p className="text-[12px] text-zinc-500 truncate">{row.trade_name}</p> : null}
+        <p className="font-medium text-fg truncate">{row.legal_name}</p>
+        {row.trade_name ? <p className="text-[12px] text-fg-muted truncate">{row.trade_name}</p> : null}
       </div>
     ),
   },
@@ -60,8 +60,8 @@ const SUMMARY_COLUMNS: Column<AccountStatementSummaryRow>[] = [
     key: 'cuit',
     header: 'CUIT',
     render: row => row.cuit
-      ? <span className="font-mono text-[12px] text-zinc-600">{row.cuit}</span>
-      : <span className="text-zinc-400">—</span>,
+      ? <span className="font-mono text-[12px] text-fg-muted">{row.cuit}</span>
+      : <span className="text-fg-subtle">—</span>,
   },
   {
     key: 'debt_status',
@@ -73,7 +73,7 @@ const SUMMARY_COLUMNS: Column<AccountStatementSummaryRow>[] = [
     header: 'Facturado',
     align: 'right',
     render: row => (
-      <span className="tabular-nums text-zinc-700">{formatARS(row.total_invoiced)}</span>
+      <span className="tabular-nums text-fg-muted">{formatARS(row.total_invoiced)}</span>
     ),
   },
   {
@@ -83,7 +83,7 @@ const SUMMARY_COLUMNS: Column<AccountStatementSummaryRow>[] = [
     render: row => {
       const balance = Number(row.balance)
       return (
-        <span className={`tabular-nums font-medium ${balance > 0 ? 'text-red-600' : 'text-green-700'}`}>
+        <span className={`tabular-nums font-medium ${balance > 0 ? 'text-danger' : 'text-success'}`}>
           {formatARS(row.balance)}
         </span>
       )
@@ -96,7 +96,7 @@ const SUMMARY_COLUMNS: Column<AccountStatementSummaryRow>[] = [
     render: row => {
       const overdue = Number(row.overdue_balance)
       return (
-        <span className={`tabular-nums ${overdue > 0 ? 'font-medium text-red-600' : 'text-zinc-700'}`}>
+        <span className={`tabular-nums ${overdue > 0 ? 'font-medium text-danger' : 'text-fg-muted'}`}>
           {formatARS(row.overdue_balance)}
         </span>
       )
@@ -120,8 +120,8 @@ const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
     header: 'Comprobante',
     render: row => (
       <div className="min-w-0">
-        <p className="font-mono text-[12px] text-zinc-700">{row.document_number}</p>
-        {row.description ? <p className="text-[12px] text-zinc-500 truncate">{row.description}</p> : null}
+        <p className="font-mono text-[12px] text-fg-muted">{row.document_number}</p>
+        {row.description ? <p className="text-[12px] text-fg-muted truncate">{row.description}</p> : null}
       </div>
     ),
   },
@@ -130,7 +130,7 @@ const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
     header: 'Debe',
     align: 'right',
     render: row => (
-      <span className="tabular-nums text-zinc-700">{Number(row.debit) > 0 ? formatARS(row.debit) : '—'}</span>
+      <span className="tabular-nums text-fg-muted">{Number(row.debit) > 0 ? formatARS(row.debit) : '—'}</span>
     ),
   },
   {
@@ -138,7 +138,7 @@ const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
     header: 'Haber',
     align: 'right',
     render: row => (
-      <span className="tabular-nums text-zinc-700">{Number(row.credit) > 0 ? formatARS(row.credit) : '—'}</span>
+      <span className="tabular-nums text-fg-muted">{Number(row.credit) > 0 ? formatARS(row.credit) : '—'}</span>
     ),
   },
   {
@@ -148,7 +148,7 @@ const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
     render: row => {
       const running = Number(row.running_balance)
       return (
-        <span className={`tabular-nums font-medium ${running > 0 ? 'text-red-600' : 'text-green-700'}`}>
+        <span className={`tabular-nums font-medium ${running > 0 ? 'text-danger' : 'text-success'}`}>
           {formatARS(row.running_balance)}
         </span>
       )
@@ -226,7 +226,7 @@ function SummaryList({ onSelect }: { onSelect: (contactId: string) => void }) {
   return (
     <div className="space-y-3">
       {listError && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <div className="rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
           {listError}
         </div>
       )}
@@ -243,12 +243,12 @@ function SummaryList({ onSelect }: { onSelect: (contactId: string) => void }) {
         toolbar={
           <>
             <div className="relative flex items-center w-full sm:w-auto">
-              <svg className="pointer-events-none absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <svg className="pointer-events-none absolute left-2 text-fg-subtle" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                 <circle cx="7" cy="7" r="4.5" />
                 <path d="M10.5 10.5l3 3" />
               </svg>
               <input
-                className="h-[30px] w-full sm:w-56 rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none"
+                className="h-[30px] w-full sm:w-56 rounded-sm border border-border-strong bg-surface pl-7 pr-3 text-[13px] focus:border-ring focus:outline-none"
                 placeholder="Buscar por cliente o CUIT…"
                 value={search}
                 onChange={(e) => {
@@ -258,7 +258,7 @@ function SummaryList({ onSelect }: { onSelect: (contactId: string) => void }) {
               />
             </div>
             <select
-              className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+              className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
               value={balanceFilter}
               onChange={(e) => {
                 setBalanceFilter(e.target.value as 'with_balance' | 'all')
@@ -270,7 +270,7 @@ function SummaryList({ onSelect }: { onSelect: (contactId: string) => void }) {
               ))}
             </select>
             <span className="flex-1" />
-            <span className="text-[12px] text-zinc-500">{total} cliente{total !== 1 ? 's' : ''}</span>
+            <span className="text-[12px] text-fg-muted">{total} cliente{total !== 1 ? 's' : ''}</span>
           </>
         }
         footer={
@@ -334,17 +334,17 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
   return (
     <div className="space-y-4">
       {detailError && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <div className="rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
           {detailError}
         </div>
       )}
 
-      <div className="rounded border border-zinc-200 bg-white p-4">
+      <div className="rounded border border-border bg-surface p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[12px] uppercase tracking-wide text-zinc-500">Cuenta corriente</p>
-            <h2 className="mt-1 text-[20px] font-semibold text-zinc-900">{contact?.legal_name ?? '—'}</h2>
-            {contact?.trade_name ? <p className="text-[13px] text-zinc-500">{contact.trade_name}</p> : null}
+            <p className="text-[12px] uppercase tracking-wide text-fg-muted">Cuenta corriente</p>
+            <h2 className="mt-1 text-[20px] font-semibold text-fg">{contact?.legal_name ?? '—'}</h2>
+            {contact?.trade_name ? <p className="text-[13px] text-fg-muted">{contact.trade_name}</p> : null}
             <div className="mt-3 flex items-center gap-2">
               <StatusBadge value={ACCOUNT_DEBT_STATUS_LABEL[summary.debt_status]} />
             </div>
@@ -370,12 +370,12 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
         toolbar={
           <>
             <div className="relative flex items-center">
-              <svg className="pointer-events-none absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <svg className="pointer-events-none absolute left-2 text-fg-subtle" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                 <circle cx="7" cy="7" r="4.5" />
                 <path d="M10.5 10.5l3 3" />
               </svg>
               <input
-                className="h-[30px] w-48 rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none"
+                className="h-[30px] w-48 rounded-sm border border-border-strong bg-surface pl-7 pr-3 text-[13px] focus:border-ring focus:outline-none"
                 placeholder="Buscar comprobante..."
                 value={lineSearch}
                 onChange={(e) => {
@@ -385,7 +385,7 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
               />
             </div>
             <select
-              className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+              className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
               value={lineTypeFilter}
               onChange={(e) => {
                 setLineTypeFilter(e.target.value as '' | 'invoice' | 'payment' | 'credit_note')
@@ -398,7 +398,7 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
             </select>
             <input
               type="date"
-              className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+              className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
               value={fromDate}
               onChange={(e) => {
                 setFromDate(e.target.value)
@@ -407,7 +407,7 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
             />
             <input
               type="date"
-              className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+              className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
               value={toDate}
               onChange={(e) => {
                 setToDate(e.target.value)
@@ -415,7 +415,7 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
               }}
             />
             <span className="flex-1" />
-            <span className="text-[12px] text-zinc-500">{lineTotal} movimiento{lineTotal !== 1 ? 's' : ''}</span>
+            <span className="text-[12px] text-fg-muted">{lineTotal} movimiento{lineTotal !== 1 ? 's' : ''}</span>
           </>
         }
         footer={
@@ -435,9 +435,9 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
 
 function SummaryMetric({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
   return (
-    <div className="rounded border border-zinc-200 bg-zinc-50 p-3">
-      <p className="text-[12px] text-zinc-500">{label}</p>
-      <p className={`tabular-nums text-[16px] font-semibold ${emphasis ? 'text-zinc-900' : 'text-zinc-700'}`}>
+    <div className="rounded border border-border bg-surface-muted p-3">
+      <p className="text-[12px] text-fg-muted">{label}</p>
+      <p className={`tabular-nums text-[16px] font-semibold ${emphasis ? 'text-fg' : 'text-fg-muted'}`}>
         {formatARS(value)}
       </p>
     </div>

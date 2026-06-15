@@ -111,15 +111,15 @@ export function EmailTemplatesTab() {
     }
   }
 
-  if (loading) return <p className="text-sm text-zinc-500">Cargando…</p>
-  if (!templates) return <p className="text-sm text-red-700">{serverError ?? 'No se pudieron cargar las plantillas.'}</p>
+  if (loading) return <p className="text-sm text-fg-muted">Cargando…</p>
+  if (!templates) return <p className="text-sm text-danger">{serverError ?? 'No se pudieron cargar las plantillas.'}</p>
 
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-start justify-between gap-4">
-        <p className="text-[13px] text-zinc-500">
+        <p className="text-[13px] text-fg-muted">
           Definí el asunto y el cuerpo del email para cada tipo de documento. Usá variables como{' '}
-          <code className="rounded-sm bg-zinc-100 px-1 py-0.5 text-[12px]">{'{{contact_name}}'}</code> para
+          <code className="rounded-sm bg-surface-hover px-1 py-0.5 text-[12px]">{'{{contact_name}}'}</code> para
           personalizar el mensaje.
         </p>
         <Button type="button" onClick={handleSave} disabled={saving}>
@@ -138,7 +138,7 @@ export function EmailTemplatesTab() {
 
         {DOC_TYPES.map(type => (
           <TabsContent key={type} value={type}>
-            <div className="space-y-4 rounded-sm border border-zinc-200 bg-white p-4">
+            <div className="space-y-4 rounded-sm border border-border bg-surface p-4">
               <FormField label="Asunto" htmlFor={`${type}-subject`} error={errors[`${type}.subject`]}>
                 <Input
                   id={`${type}-subject`}
@@ -160,7 +160,7 @@ export function EmailTemplatesTab() {
               </FormField>
 
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-fg-subtle">
                   Variables: {variables.map(v => `{{${v}}}`).join(', ')}
                 </p>
                 <Button type="button" variant="ghost" size="sm" onClick={() => resetToDefault(type)}>
@@ -172,8 +172,8 @@ export function EmailTemplatesTab() {
         ))}
       </Tabs>
 
-      {serverError ? <p className="text-sm text-red-700">{serverError}</p> : null}
-      {savedMsg ? <p className="text-sm text-green-700">{savedMsg}</p> : null}
+      {serverError ? <p className="text-sm text-danger">{serverError}</p> : null}
+      {savedMsg ? <p className="text-sm text-success">{savedMsg}</p> : null}
     </div>
   )
 }
