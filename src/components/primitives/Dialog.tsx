@@ -9,7 +9,7 @@ const panelVariants = cva(
     // Mobile: 1rem gutter each side + cap height so tall content scrolls instead of overflowing.
     // md+ is unchanged: the size variant's max-w-* still caps the width.
     'w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-hidden',
-    'rounded-md bg-white shadow-2xl border border-zinc-200 ring-1 ring-black/5',
+    'rounded-md bg-surface shadow-2xl border border-border ring-1 ring-black/5',
     'focus:outline-none',
     'data-[state=open]:animate-in data-[state=closed]:animate-out',
     'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -55,13 +55,13 @@ function Dialog({ open, onOpenChange, title, description, children, size, classN
           )}
         />
         <RadixDialog.Content className={cn(panelVariants({ size }), className)}>
-          <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-5 py-4">
+          <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div>
-              <RadixDialog.Title className="text-[14px] font-semibold text-zinc-900">
+              <RadixDialog.Title className="text-[14px] font-semibold text-fg">
                 {title}
               </RadixDialog.Title>
               {description ? (
-                <RadixDialog.Description className="mt-0.5 text-[12px] text-zinc-500">
+                <RadixDialog.Description className="mt-0.5 text-[12px] text-fg-muted">
                   {description}
                 </RadixDialog.Description>
               ) : (
@@ -72,7 +72,7 @@ function Dialog({ open, onOpenChange, title, description, children, size, classN
             </div>
             {!hideClose && (
               <RadixDialog.Close
-                className="rounded-sm text-zinc-400 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 disabled:pointer-events-none mt-0.5 flex-shrink-0"
+                className="rounded-sm text-fg-subtle transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong focus-visible:ring-offset-1 disabled:pointer-events-none mt-0.5 flex-shrink-0"
                 aria-label="Cerrar"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

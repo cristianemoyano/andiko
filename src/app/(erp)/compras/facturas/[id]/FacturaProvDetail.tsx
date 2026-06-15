@@ -128,7 +128,7 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
         <TopBar breadcrumbs={[{ label: 'Facturas proveedor', href: '/compras/facturas' }, { label: '…' }]} />
         <ComprasSubNav />
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-zinc-400 text-sm">Cargando…</span>
+          <span className="text-fg-subtle text-sm">Cargando…</span>
         </div>
       </div>
     )
@@ -192,20 +192,20 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {actionError && (
-            <div className="px-4 py-2 bg-red-50 border border-red-200 rounded-sm text-sm text-red-700">
+            <div className="px-4 py-2 bg-danger-bg border border-danger rounded-sm text-sm text-danger">
               {actionError}
             </div>
           )}
 
           {/* Header card */}
-          <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4 flex items-start justify-between gap-4">
+          <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-1">Factura proveedor</p>
-              <h1 className="text-[20px] font-bold text-zinc-900 tracking-tight">{invoice.invoice_number}</h1>
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">Factura proveedor</p>
+              <h1 className="text-[20px] font-bold text-fg tracking-tight">{invoice.invoice_number}</h1>
               {invoice.supplier_invoice_number && (
-                <p className="text-[13px] text-zinc-500 mt-0.5">N° proveedor: {invoice.supplier_invoice_number}</p>
+                <p className="text-[13px] text-fg-muted mt-0.5">N° proveedor: {invoice.supplier_invoice_number}</p>
               )}
-              <p className="text-[13px] text-zinc-500 mt-0.5">
+              <p className="text-[13px] text-fg-muted mt-0.5">
                 {invoice.contact?.legal_name ?? 'Sin proveedor'} · {invoice.branch?.name ?? 'Sin sucursal'}
               </p>
             </div>
@@ -213,68 +213,68 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
           </div>
 
           {/* Metadata card */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+          <div className="bg-surface border border-border rounded-sm p-5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[13px]">
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Condición de pago</p>
-                <p className="text-zinc-800">{PAYMENT_CONDITION_LABEL[invoice.payment_condition] ?? invoice.payment_condition}</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Condición de pago</p>
+                <p className="text-fg">{PAYMENT_CONDITION_LABEL[invoice.payment_condition] ?? invoice.payment_condition}</p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Vencimiento</p>
-                <p className="text-zinc-800">
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Vencimiento</p>
+                <p className="text-fg">
                   {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('es-AR') : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Total</p>
-                <p className="text-zinc-800 tabular-nums font-medium">{formatARS(invoice.total)}</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Total</p>
+                <p className="text-fg tabular-nums font-medium">{formatARS(invoice.total)}</p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Saldo</p>
-                <p className={`tabular-nums font-medium ${parseFloat(invoice.balance) > 0 ? 'text-red-600' : 'text-green-700'}`}>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Saldo</p>
+                <p className={`tabular-nums font-medium ${parseFloat(invoice.balance) > 0 ? 'text-danger' : 'text-success'}`}>
                   {formatARS(invoice.balance)}
                 </p>
               </div>
               {invoice.buyer && (
                 <div>
-                  <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">Comprador</p>
-                  <p className="text-zinc-800">{invoice.buyer.name}</p>
+                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Comprador</p>
+                  <p className="text-fg">{invoice.buyer.name}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Items card */}
-          <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
+          <div className="bg-surface border border-border rounded-sm overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-zinc-50 border-b border-zinc-200">
+              <thead className="bg-surface-muted border-b border-border">
                 <tr>
-                  <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Descripción</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Cant.</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">P. Unit.</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">IVA</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Total</th>
+                  <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Descripción</th>
+                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Cant.</th>
+                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">P. Unit.</th>
+                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">IVA</th>
+                  <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-border">
                 {(invoice.items ?? []).length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-zinc-400 text-sm">Sin ítems</td>
+                    <td colSpan={5} className="px-4 py-8 text-center text-fg-subtle text-sm">Sin ítems</td>
                   </tr>
                 ) : (
                   (invoice.items ?? []).map(item => (
-                    <tr key={item.id} className="hover:bg-zinc-50/50">
-                      <td className="px-4 py-2.5 text-zinc-900">{item.description}</td>
+                    <tr key={item.id} className="hover:bg-surface-muted/50">
+                      <td className="px-4 py-2.5 text-fg">{item.description}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{parseFloat(item.quantity).toLocaleString('es-AR')}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{formatARS(item.unit_price)}</td>
-                      <td className="px-4 py-2.5 text-right text-zinc-500">{item.iva_rate}%</td>
+                      <td className="px-4 py-2.5 text-right text-fg-muted">{item.iva_rate}%</td>
                       <td className="px-4 py-2.5 text-right tabular-nums font-medium">{formatARS(item.total)}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
-            <div className="border-t border-zinc-100">
+            <div className="border-t border-border">
               <TotalsFooter
                 subtotal={String(subtotal.toFixed(2))}
                 taxAmount={String(taxAmt.toFixed(2))}
@@ -284,32 +284,32 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
           </div>
 
           {/* Payments card */}
-          <div className="bg-white border border-zinc-200 rounded-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-zinc-100">
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide">Pagos registrados</p>
+          <div className="bg-surface border border-border rounded-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-border">
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide">Pagos registrados</p>
             </div>
             {(invoice.payments ?? []).length > 0 ? (
               <table className="w-full text-sm">
-                <thead className="bg-zinc-50 border-b border-zinc-200">
+                <thead className="bg-surface-muted border-b border-border">
                   <tr>
-                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">N°</th>
-                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Fecha</th>
-                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Método</th>
-                    <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Monto</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">N°</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Fecha</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Método</th>
+                    <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Monto</th>
                     <th className="px-4 py-2.5"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y divide-border">
                   {(invoice.payments ?? []).map(payment => (
-                    <tr key={payment.id} className="hover:bg-zinc-50/50">
-                      <td className="px-4 py-2.5 font-mono text-[12px] text-zinc-600">{payment.payment_number}</td>
-                      <td className="px-4 py-2.5 text-zinc-700">{new Date(payment.payment_date).toLocaleDateString('es-AR')}</td>
-                      <td className="px-4 py-2.5 text-zinc-700">{PAYMENT_METHOD_LABEL[payment.payment_method as PaymentMethod] ?? payment.payment_method}</td>
+                    <tr key={payment.id} className="hover:bg-surface-muted/50">
+                      <td className="px-4 py-2.5 font-mono text-[12px] text-fg-muted">{payment.payment_number}</td>
+                      <td className="px-4 py-2.5 text-fg-muted">{new Date(payment.payment_date).toLocaleDateString('es-AR')}</td>
+                      <td className="px-4 py-2.5 text-fg-muted">{PAYMENT_METHOD_LABEL[payment.payment_method as PaymentMethod] ?? payment.payment_method}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums font-medium">{formatARS(payment.amount)}</td>
                       <td className="px-4 py-2.5">
                         <button
                           onClick={() => setPaymentToDelete(payment)}
-                          className="text-red-500 hover:text-red-700 text-[12px]"
+                          className="text-danger hover:text-danger text-[12px]"
                         >
                           Eliminar
                         </button>
@@ -319,14 +319,14 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
                 </tbody>
               </table>
             ) : (
-              <p className="px-5 py-4 text-[13px] text-zinc-400">Sin pagos registrados</p>
+              <p className="px-5 py-4 text-[13px] text-fg-subtle">Sin pagos registrados</p>
             )}
 
             {canPay && (
-              <div className="border-t border-zinc-100 px-5 py-4 space-y-3 bg-zinc-50/50">
-                <p className="text-[12px] font-semibold text-zinc-600 uppercase tracking-wide">Registrar pago</p>
+              <div className="border-t border-border px-5 py-4 space-y-3 bg-surface-muted/50">
+                <p className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide">Registrar pago</p>
                 {paymentError && (
-                  <p className="text-sm text-red-600">{paymentError}</p>
+                  <p className="text-sm text-danger">{paymentError}</p>
                 )}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <FormField label="Monto">
@@ -343,7 +343,7 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
                     <select
                       value={paymentMethod}
                       onChange={e => setPaymentMethod(e.target.value as PaymentMethod)}
-                      className="w-full h-9 px-3 text-sm border border-zinc-200 rounded-md bg-white focus:outline-none"
+                      className="w-full h-9 px-3 text-sm border border-border rounded-md bg-surface focus:outline-none"
                     >
                       {PAYMENT_METHODS.map(m => (
                         <option key={m.value} value={m.value}>{m.label}</option>
@@ -362,29 +362,29 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
 
           {/* Traceability card */}
           {(invoice.order ?? invoice.receipt) && (
-            <div className="bg-white border border-zinc-200 rounded-sm px-5 py-4">
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-3">Documentos vinculados</p>
+            <div className="bg-surface border border-border rounded-sm px-5 py-4">
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-3">Documentos vinculados</p>
               <div className="flex flex-col gap-2">
                 {invoice.order && (
                   <div
-                    className="flex items-center justify-between cursor-pointer hover:bg-zinc-50 -mx-5 px-5 py-1.5 rounded-sm"
+                    className="flex items-center justify-between cursor-pointer hover:bg-surface-muted -mx-5 px-5 py-1.5 rounded-sm"
                     onClick={() => router.push(`/compras/ordenes/${invoice.order!.id}`)}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-zinc-400 uppercase tracking-wide font-medium">Orden</span>
-                      <span className="text-[13px] font-medium text-zinc-900">{invoice.order.order_number}</span>
+                      <span className="text-[11px] text-fg-subtle uppercase tracking-wide font-medium">Orden</span>
+                      <span className="text-[13px] font-medium text-fg">{invoice.order.order_number}</span>
                     </div>
                     <StatusBadge value={PURCHASE_ORDER_STATUS_LABEL[invoice.order.status]} />
                   </div>
                 )}
                 {invoice.receipt && (
                   <div
-                    className="flex items-center justify-between cursor-pointer hover:bg-zinc-50 -mx-5 px-5 py-1.5 rounded-sm"
+                    className="flex items-center justify-between cursor-pointer hover:bg-surface-muted -mx-5 px-5 py-1.5 rounded-sm"
                     onClick={() => router.push(`/compras/recepciones/${invoice.receipt!.id}`)}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-zinc-400 uppercase tracking-wide font-medium">Recepción</span>
-                      <span className="text-[13px] font-medium text-zinc-900">{invoice.receipt.receipt_number}</span>
+                      <span className="text-[11px] text-fg-subtle uppercase tracking-wide font-medium">Recepción</span>
+                      <span className="text-[13px] font-medium text-fg">{invoice.receipt.receipt_number}</span>
                     </div>
                     <StatusBadge value={PURCHASE_RECEIPT_STATUS_LABEL[invoice.receipt.status]} />
                   </div>

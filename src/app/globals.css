@@ -1,9 +1,74 @@
 @import "tailwindcss";
 
+/* Class-based dark variant — toggled by next-themes on <html class="dark"> */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Font vars come from Next.js font system — must use inline */
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/*
+  Semantic color tokens. `@theme inline` makes the generated utilities emit
+  `var(--…)` references instead of baking the value, so overriding the
+  underlying variable under `.dark` swaps every utility at runtime.
+*/
+@theme inline {
+  --color-bg:            var(--bg);            /* app background */
+  --color-surface:       var(--surface);       /* cards, sidebar, topbar, table */
+  --color-surface-muted: var(--surface-muted); /* zinc-50 zones: table headers */
+  --color-surface-hover: var(--surface-hover); /* hover states */
+  --color-fg:            var(--fg);            /* primary text */
+  --color-fg-muted:      var(--fg-muted);      /* secondary text */
+  --color-fg-subtle:     var(--fg-subtle);     /* placeholder / tertiary */
+  --color-border:        var(--border);        /* default borders/dividers */
+  --color-border-strong: var(--border-strong); /* input borders */
+  --color-danger:        var(--danger);
+  --color-danger-bg:     var(--danger-bg);
+  --color-success:       var(--success);
+  --color-success-bg:    var(--success-bg);
+  --color-warning:       var(--warning);
+  --color-warning-bg:    var(--warning-bg);
+  --color-ring:          var(--ring);          /* focus ring */
+}
+
+:root {
+  --bg: #FAFAFA;
+  --surface: #FFFFFF;
+  --surface-muted: #FAFAFA;
+  --surface-hover: #F4F4F5;   /* zinc-100 */
+  --fg: #18181B;              /* zinc-900 */
+  --fg-muted: #52525B;        /* zinc-600 */
+  --fg-subtle: #A1A1AA;       /* zinc-400 */
+  --border: #E4E4E7;          /* zinc-200 */
+  --border-strong: #D4D4D8;   /* zinc-300 */
+  --danger: #DC2626;          /* red-600 */
+  --danger-bg: #FEF2F2;       /* red-50 */
+  --success: #15803D;         /* green-700 */
+  --success-bg: #F0FDF4;      /* green-50 */
+  --warning: #B45309;         /* amber-700 */
+  --warning-bg: #FEF3C7;      /* amber-100 */
+  --ring: #BFDBFE;            /* blue-200 */
+}
+
+.dark {
+  --bg: #18181B;              /* zinc-900 */
+  --surface: #27272A;         /* zinc-800 */
+  --surface-muted: #1F1F23;
+  --surface-hover: #3F3F46;   /* zinc-700 */
+  --fg: #FAFAFA;
+  --fg-muted: #A1A1AA;        /* zinc-400 */
+  --fg-subtle: #71717A;       /* zinc-500 */
+  --border: #3F3F46;          /* zinc-700 */
+  --border-strong: #52525B;   /* zinc-600 */
+  --danger: #F87171;          /* red-400 */
+  --danger-bg: #3B1D1D;
+  --success: #4ADE80;         /* green-400 */
+  --success-bg: #14271B;
+  --warning: #FBBF24;         /* amber-400 */
+  --warning-bg: #3A2E12;
+  --ring: #1D4ED8;            /* blue-700 */
 }
 
 /* Andiko brand palette */
@@ -37,8 +102,8 @@ html {
 }
 
 body {
-  background: #FAFAFA;
-  color: #18181B;
+  background: var(--bg);
+  color: var(--fg);
   font-family: var(--font-sans, sans-serif);
   font-size: 14px;
   line-height: 1.5;

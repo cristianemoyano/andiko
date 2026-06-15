@@ -22,7 +22,7 @@ const DefaultIcon = () => (
     strokeWidth="1.5"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="text-zinc-300"
+    className="text-fg-subtle"
   >
     <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
     <path d="M3 9h18M9 21V9" />
@@ -32,13 +32,13 @@ const DefaultIcon = () => (
 function EmptyState({ title, description, action, icon, className }: EmptyStateProps) {
   return (
     <div className={cn('flex flex-col items-center justify-center gap-3 py-16 text-center', className)}>
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-hover">
         {icon ?? <DefaultIcon />}
       </div>
       <div className="flex flex-col gap-1">
-        <p className="text-[14px] font-medium text-zinc-700">{title}</p>
+        <p className="text-[14px] font-medium text-fg-muted">{title}</p>
         {description && (
-          <p className="text-[12px] text-zinc-400 max-w-xs">{description}</p>
+          <p className="text-[12px] text-fg-subtle max-w-xs">{description}</p>
         )}
       </div>
       {action && (

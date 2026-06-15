@@ -59,7 +59,7 @@ function Tooltip({
             )}
           >
             {content}
-            <RadixTooltip.Arrow className="fill-zinc-900" width={8} height={4} />
+            <RadixTooltip.Arrow className="fill-fg" width={8} height={4} />
           </RadixTooltip.Content>
         </RadixTooltip.Portal>
       </RadixTooltip.Root>

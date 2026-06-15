@@ -42,7 +42,7 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
 
   return (
     <Providers>
-      <div className="flex h-screen overflow-hidden bg-zinc-50">
+      <div className="flex h-screen overflow-hidden bg-bg">
         <Sidebar
           userName={userName}
           userRole={userRole}

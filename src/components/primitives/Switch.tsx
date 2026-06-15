@@ -8,8 +8,8 @@ const switchVariants = cva(
   [
     'group inline-flex flex-shrink-0 items-center rounded-full border-2 border-transparent transition-colors cursor-pointer',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand-600',
-    'data-[state=unchecked]:bg-zinc-300 data-[state=checked]:bg-brand-600',
-    'disabled:cursor-not-allowed disabled:data-[state=unchecked]:bg-zinc-200 disabled:data-[state=checked]:bg-zinc-300',
+    'data-[state=unchecked]:bg-border-strong data-[state=checked]:bg-brand-600',
+    'disabled:cursor-not-allowed disabled:data-[state=unchecked]:bg-surface-hover disabled:data-[state=checked]:bg-border-strong',
   ].join(' '),
   {
     variants: {
@@ -23,7 +23,7 @@ const switchVariants = cva(
 )
 
 const thumbVariants = cva(
-  'pointer-events-none block rounded-full bg-white shadow-sm transition-transform data-[state=unchecked]:translate-x-0',
+  'pointer-events-none block rounded-full bg-surface shadow-sm transition-transform data-[state=unchecked]:translate-x-0',
   {
     variants: {
       size: {
@@ -74,7 +74,7 @@ const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
           htmlFor={switchId}
           className={cn(
             'text-[13px] select-none',
-            disabled ? 'cursor-not-allowed text-zinc-400' : 'cursor-pointer text-zinc-700',
+            disabled ? 'cursor-not-allowed text-fg-subtle' : 'cursor-pointer text-fg-muted',
           )}
         >
           {label}

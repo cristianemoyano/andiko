@@ -76,9 +76,9 @@ export function VariantsSectionClient({
   }
 
   return (
-    <div className="bg-white border border-zinc-200 rounded-sm">
-      <div className="px-4 py-2.5 border-b border-zinc-100 flex items-center justify-between">
-        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Variantes</span>
+    <div className="bg-surface border border-border rounded-sm">
+      <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
+        <span className="text-xs font-semibold text-fg-muted uppercase tracking-wider">Variantes</span>
         <Button size="xs" variant="secondary" onClick={() => setCreating(true)}>
           + Nueva variante
         </Button>
@@ -88,7 +88,7 @@ export function VariantsSectionClient({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-500">
+              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted">
                 <th className="py-2 pr-3">Variante</th>
                 <th className="py-2 pr-3">SKU</th>
                 <th className="py-2 pr-3 text-right">Precio</th>
@@ -99,21 +99,21 @@ export function VariantsSectionClient({
             </thead>
             <tbody>
               {rows.map((v) => (
-                <tr key={v.id} className="border-t border-zinc-100">
-                  <td className="py-2 pr-3 text-zinc-800">
+                <tr key={v.id} className="border-t border-border">
+                  <td className="py-2 pr-3 text-fg">
                     <div className="flex items-center gap-2">
                       <span>{v.name ?? (v.is_default ? productName : 'Variante')}</span>
                       {v.is_default && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-500 border border-zinc-200">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-hover text-fg-muted border border-border">
                           default
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="py-2 pr-3 font-mono text-xs text-zinc-600">{v.sku}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums text-zinc-700">{formatMoney(v.base_price)}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums text-zinc-700">{v.manage_stock ? v.stock_quantity : '—'}</td>
-                  <td className="py-2 pr-3 text-xs text-zinc-500">
+                  <td className="py-2 pr-3 font-mono text-xs text-fg-muted">{v.sku}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-fg-muted">{formatMoney(v.base_price)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-fg-muted">{v.manage_stock ? v.stock_quantity : '—'}</td>
+                  <td className="py-2 pr-3 text-xs text-fg-muted">
                     {v.weight_kg ? `${v.weight_kg} kg` : '—'}
                     {v.length_cm && v.width_cm && v.height_cm
                       ? ` · ${v.length_cm}×${v.width_cm}×${v.height_cm} cm`
@@ -130,7 +130,7 @@ export function VariantsSectionClient({
                         Editar
                       </button>
                       <button
-                        className="text-red-700 hover:text-red-800 text-[12px] font-medium"
+                        className="text-danger hover:text-danger text-[12px] font-medium"
                         onClick={() => setDeleting(v)}
                         type="button"
                         disabled={v.is_default}
@@ -144,7 +144,7 @@ export function VariantsSectionClient({
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-zinc-400">
+                  <td colSpan={6} className="py-6 text-center text-fg-subtle">
                     Sin variantes.
                   </td>
                 </tr>
@@ -267,17 +267,17 @@ function VariantModal({
       <div className="absolute inset-0 bg-black/40" aria-hidden onClick={onClose} />
       <form
         onSubmit={submit}
-        className="relative bg-white rounded-sm border border-zinc-200 shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="relative bg-surface rounded-sm border border-border shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
-          <h2 className="text-sm font-semibold text-zinc-900">{isEdit ? 'Editar variante' : 'Nueva variante'}</h2>
-          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-lg leading-none">×</button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold text-fg">{isEdit ? 'Editar variante' : 'Nueva variante'}</h2>
+          <button type="button" onClick={onClose} className="text-fg-subtle hover:text-fg-muted text-lg leading-none">×</button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
           {serverError && (
-            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">{serverError}</div>
+            <div className="text-xs text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">{serverError}</div>
           )}
 
           <FormField label="Nombre" htmlFor="variant_name" error={errors.name?.[0]}>
@@ -301,8 +301,8 @@ function VariantModal({
             <Input id="variant_barcode" value={form.barcode} onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))} />
           </FormField>
 
-          <div className="border-t border-zinc-100 pt-3">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Logística</p>
+          <div className="border-t border-border pt-3">
+            <p className="text-xs font-semibold text-fg-muted uppercase tracking-wider mb-3">Logística</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField label="Peso (kg)" htmlFor="variant_weight" error={errors.weight_kg?.[0]}>
                 <Input id="variant_weight" value={form.weight_kg} onChange={(e) => setForm((f) => ({ ...f, weight_kg: e.target.value }))} />
@@ -328,7 +328,7 @@ function VariantModal({
                 id="variant_manage_stock"
                 value={form.manage_stock ? '1' : '0'}
                 onChange={(e) => setForm((f) => ({ ...f, manage_stock: e.target.value === '1' }))}
-                className="h-8 w-full px-2 text-sm border border-zinc-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="h-8 w-full px-2 text-sm border border-border-strong rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="1">Sí</option>
                 <option value="0">No</option>
@@ -345,7 +345,7 @@ function VariantModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-zinc-100 bg-zinc-50">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border bg-surface-muted">
           <Button variant="secondary" size="sm" type="button" onClick={onClose} disabled={saving}>
             Cancelar
           </Button>

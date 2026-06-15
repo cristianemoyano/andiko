@@ -267,7 +267,7 @@ export function NuevoPedidoClient() {
       <div className="flex-1 p-5 overflow-auto">
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
           {/* Header fields */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5 flex flex-col gap-4">
+          <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Cliente" htmlFor="contact_id" error={errors.contact_id?.[0]}>
                 <SearchableSelect
@@ -320,7 +320,7 @@ export function NuevoPedidoClient() {
                         'px-3 py-1 text-[12px] rounded-sm border transition-colors',
                         paymentCondition === pc.value
                           ? 'border-brand-600 bg-brand-50 text-brand-600 font-medium'
-                          : 'border-zinc-300 text-zinc-600 hover:border-zinc-400'
+                          : 'border-border-strong text-fg-muted hover:border-border-strong'
                       )}
                     >
                       {pc.label}
@@ -330,14 +330,14 @@ export function NuevoPedidoClient() {
               </FormField>
               {actorName && (
                 <FormField label="Vendedor">
-                  <p className="text-[13px] text-zinc-700 py-1.5 px-3 bg-zinc-50 border border-zinc-200 rounded-sm">{actorName}</p>
+                  <p className="text-[13px] text-fg-muted py-1.5 px-3 bg-surface-muted border border-border rounded-sm">{actorName}</p>
                 </FormField>
               )}
             </div>
           </div>
 
           {/* Line items */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+          <div className="bg-surface border border-border rounded-sm p-5">
             <SalesLineItemsEditor items={items} onChange={setItems} priceListId={priceListId} />
           </div>
 
@@ -352,7 +352,7 @@ export function NuevoPedidoClient() {
           />
 
           {/* Notes */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+          <div className="bg-surface border border-border rounded-sm p-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Notas para el cliente" htmlFor="notes">
                 <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Condiciones, aclaraciones…" />
@@ -373,7 +373,7 @@ export function NuevoPedidoClient() {
                   const selected = contactAddresses.find(a => a.id === nextId) ?? null
                   setShippingAddress(fromContactAddress(selected))
                 }}
-                className="h-8 w-full rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 focus:border-blue-500 focus:outline-none"
+                className="h-8 w-full rounded-sm border border-border-strong bg-surface px-2.5 text-[13px] text-fg focus:border-ring focus:outline-none"
               >
                 <option value="">Sin dirección predefinida</option>
                 {contactAddresses
@@ -393,7 +393,7 @@ export function NuevoPedidoClient() {
                   const selected = contactAddresses.find(a => a.id === nextId) ?? null
                   setBillingAddress(fromContactAddress(selected))
                 }}
-                className="h-8 w-full rounded-sm border border-zinc-300 bg-white px-2.5 text-[13px] text-zinc-900 focus:border-blue-500 focus:outline-none"
+                className="h-8 w-full rounded-sm border border-border-strong bg-surface px-2.5 text-[13px] text-fg focus:border-ring focus:outline-none"
               >
                 <option value="">Sin dirección predefinida</option>
                 {contactAddresses
@@ -422,7 +422,7 @@ export function NuevoPedidoClient() {
           </div>
 
           {serverError && (
-            <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+            <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
               {serverError}
             </p>
           )}
@@ -458,8 +458,8 @@ function AddressSnapshotFields({
   }
 
   return (
-    <div className="rounded-sm border border-zinc-200 p-3">
-      <p className="mb-3 text-[12px] font-medium text-zinc-600">{title}</p>
+    <div className="rounded-sm border border-border p-3">
+      <p className="mb-3 text-[12px] font-medium text-fg-muted">{title}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FormField label="Calle" htmlFor={`${prefix}_street`}>
           <Input id={`${prefix}_street`} value={value.street} onChange={(e) => patch({ street: e.target.value })} />

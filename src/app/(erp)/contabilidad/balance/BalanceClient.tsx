@@ -72,19 +72,19 @@ export function BalanceClient() {
       <div className="flex-1 p-5 overflow-auto">
         <div className="flex items-end gap-3 mb-4">
           <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-zinc-600">Desde</label>
+            <label className="text-[12px] font-medium text-fg-muted">Desde</label>
             <Input type="date" value={from} onChange={e => setFrom(e.target.value)} className="w-40" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-zinc-600">Hasta</label>
+            <label className="text-[12px] font-medium text-fg-muted">Hasta</label>
             <Input type="date" value={to} onChange={e => setTo(e.target.value)} className="w-40" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-zinc-600">Sucursal</label>
+            <label className="text-[12px] font-medium text-fg-muted">Sucursal</label>
             <select
               value={branchId}
               onChange={e => setBranchId(e.target.value)}
-              className="h-8 rounded-sm border border-zinc-300 px-2 text-[13px] bg-white focus:outline-none focus:border-blue-500"
+              className="h-8 rounded-sm border border-border-strong px-2 text-[13px] bg-surface focus:outline-none focus:border-ring"
               disabled={branches.length === 0}
             >
               <option value="">Todas</option>
@@ -96,12 +96,12 @@ export function BalanceClient() {
         </div>
 
         {serverError && (
-          <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{serverError}</div>
+          <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">{serverError}</div>
         )}
 
-        <div className="border border-zinc-200 rounded-sm overflow-hidden">
+        <div className="border border-border rounded-sm overflow-hidden">
           <table className="w-full text-[13px]">
-            <thead className="bg-zinc-50 text-zinc-600">
+            <thead className="bg-surface-muted text-fg-muted">
               <tr>
                 <th className="text-left font-medium px-3 py-2">Código</th>
                 <th className="text-left font-medium px-3 py-2">Cuenta</th>
@@ -113,27 +113,27 @@ export function BalanceClient() {
             </thead>
             <tbody>
               {data && data.rows.length === 0 && (
-                <tr><td colSpan={6} className="px-3 py-8 text-center text-zinc-400">No hay movimientos contabilizados en el período.</td></tr>
+                <tr><td colSpan={6} className="px-3 py-8 text-center text-fg-subtle">No hay movimientos contabilizados en el período.</td></tr>
               )}
               {data?.rows.map(row => (
-                <tr key={row.account_id} className="border-t border-zinc-100">
-                  <td className="px-3 py-1.5 font-mono text-[12px] text-zinc-500">{row.code}</td>
-                  <td className="px-3 py-1.5 text-zinc-800">{row.name}</td>
-                  <td className="px-3 py-1.5 text-right font-mono text-zinc-700">{formatARS(row.total_debit)}</td>
-                  <td className="px-3 py-1.5 text-right font-mono text-zinc-700">{formatARS(row.total_credit)}</td>
-                  <td className="px-3 py-1.5 text-right font-mono text-zinc-700">{parseFloat(row.saldo_debit) > 0 ? formatARS(row.saldo_debit) : ''}</td>
-                  <td className="px-3 py-1.5 text-right font-mono text-zinc-700">{parseFloat(row.saldo_credit) > 0 ? formatARS(row.saldo_credit) : ''}</td>
+                <tr key={row.account_id} className="border-t border-border">
+                  <td className="px-3 py-1.5 font-mono text-[12px] text-fg-muted">{row.code}</td>
+                  <td className="px-3 py-1.5 text-fg">{row.name}</td>
+                  <td className="px-3 py-1.5 text-right font-mono text-fg-muted">{formatARS(row.total_debit)}</td>
+                  <td className="px-3 py-1.5 text-right font-mono text-fg-muted">{formatARS(row.total_credit)}</td>
+                  <td className="px-3 py-1.5 text-right font-mono text-fg-muted">{parseFloat(row.saldo_debit) > 0 ? formatARS(row.saldo_debit) : ''}</td>
+                  <td className="px-3 py-1.5 text-right font-mono text-fg-muted">{parseFloat(row.saldo_credit) > 0 ? formatARS(row.saldo_credit) : ''}</td>
                 </tr>
               ))}
             </tbody>
             {data && data.rows.length > 0 && (
-              <tfoot className="bg-zinc-50 border-t border-zinc-200 font-medium">
+              <tfoot className="bg-surface-muted border-t border-border font-medium">
                 <tr>
-                  <td className="px-3 py-2 text-zinc-600" colSpan={2}>Totales</td>
-                  <td className="px-3 py-2 text-right font-mono text-zinc-900">{formatARS(data.totals.total_debit)}</td>
-                  <td className="px-3 py-2 text-right font-mono text-zinc-900">{formatARS(data.totals.total_credit)}</td>
-                  <td className="px-3 py-2 text-right font-mono text-zinc-900">{formatARS(data.totals.saldo_debit)}</td>
-                  <td className="px-3 py-2 text-right font-mono text-zinc-900">{formatARS(data.totals.saldo_credit)}</td>
+                  <td className="px-3 py-2 text-fg-muted" colSpan={2}>Totales</td>
+                  <td className="px-3 py-2 text-right font-mono text-fg">{formatARS(data.totals.total_debit)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-fg">{formatARS(data.totals.total_credit)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-fg">{formatARS(data.totals.saldo_debit)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-fg">{formatARS(data.totals.saldo_credit)}</td>
                 </tr>
               </tfoot>
             )}

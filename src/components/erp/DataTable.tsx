@@ -68,9 +68,9 @@ export function DataTable<T extends object>({
   }, [data, sortKey, sortDir])
 
   return (
-    <div className={cn('bg-white border border-zinc-200 rounded', className)}>
+    <div className={cn('bg-surface border border-border rounded', className)}>
       {toolbar && (
-        <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b border-zinc-200">
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b border-border">
           {toolbar}
         </div>
       )}
@@ -84,11 +84,11 @@ export function DataTable<T extends object>({
                   key={col.key}
                   onClick={col.sortable ? () => handleSort(col.key) : undefined}
                   className={cn(
-                    'h-9 px-3 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide border-b border-zinc-200 bg-zinc-50 whitespace-nowrap select-none',
+                    'h-9 px-3 text-left text-[11px] font-semibold text-fg-muted uppercase tracking-wide border-b border-border bg-surface-muted whitespace-nowrap select-none',
                     col.align === 'right' && 'text-right',
-                    col.sortable && 'cursor-pointer hover:bg-zinc-100 hover:text-zinc-800',
+                    col.sortable && 'cursor-pointer hover:bg-surface-hover hover:text-fg',
                     sortKey === col.key && 'text-brand-600 bg-brand-50',
-                    stickyFirstColumn && i === 0 && 'sticky left-0 z-10 bg-zinc-50',
+                    stickyFirstColumn && i === 0 && 'sticky left-0 z-10 bg-surface-muted',
                     col.className
                   )}
                 >
@@ -107,7 +107,7 @@ export function DataTable<T extends object>({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="h-20 text-center text-sm text-zinc-400"
+                  className="h-20 text-center text-sm text-fg-subtle"
                 >
                   {emptyMessage}
                 </td>
@@ -127,7 +127,7 @@ export function DataTable<T extends object>({
                       : undefined
                   }
                   className={cn(
-                    'border-b border-zinc-100 last:border-0 hover:bg-zinc-50 transition-colors',
+                    'border-b border-border last:border-0 hover:bg-surface-muted transition-colors',
                     onRowClick && 'cursor-pointer'
                   )}
                 >
@@ -135,9 +135,9 @@ export function DataTable<T extends object>({
                     <td
                       key={col.key}
                       className={cn(
-                        'h-10 px-3 text-[13px] text-zinc-900',
+                        'h-10 px-3 text-[13px] text-fg',
                         col.align === 'right' && 'text-right',
-                        stickyFirstColumn && i === 0 && 'sticky left-0 z-10 bg-white',
+                        stickyFirstColumn && i === 0 && 'sticky left-0 z-10 bg-surface',
                         col.className
                       )}
                     >
@@ -152,7 +152,7 @@ export function DataTable<T extends object>({
       </div>
 
       {footer && (
-        <div className="px-3 py-2.5 border-t border-zinc-100 flex items-center justify-end gap-4 text-[12px] text-zinc-500">
+        <div className="px-3 py-2.5 border-t border-border flex items-center justify-end gap-4 text-[12px] text-fg-muted">
           {footer}
         </div>
       )}
@@ -165,13 +165,13 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
     <span className="inline-flex flex-col gap-px">
       <svg
         width="7" height="4" viewBox="0 0 7 4"
-        className={cn('block', active && dir === 'asc' ? 'text-brand-600' : 'text-zinc-300')}
+        className={cn('block', active && dir === 'asc' ? 'text-brand-600' : 'text-fg-subtle')}
       >
         <path d="M3.5 0L7 4H0z" fill="currentColor" />
       </svg>
       <svg
         width="7" height="4" viewBox="0 0 7 4"
-        className={cn('block', active && dir === 'desc' ? 'text-brand-600' : 'text-zinc-300')}
+        className={cn('block', active && dir === 'desc' ? 'text-brand-600' : 'text-fg-subtle')}
       >
         <path d="M3.5 4L0 0h7z" fill="currentColor" />
       </svg>

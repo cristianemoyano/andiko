@@ -25,12 +25,12 @@ const COLUMNS: Column<Warehouse>[] = [
   {
     key: 'name',
     header: 'Nombre',
-    render: row => <span className="font-medium text-zinc-900">{row.name}</span>,
+    render: row => <span className="font-medium text-fg">{row.name}</span>,
   },
   {
     key: 'description',
     header: 'Descripción',
-    render: row => <span className="text-zinc-500 text-[13px]">{row.description ?? '—'}</span>,
+    render: row => <span className="text-fg-muted text-[13px]">{row.description ?? '—'}</span>,
   },
   {
     key: 'is_active',
@@ -89,7 +89,7 @@ export function DepositosClient() {
       <InventarioSubNav />
 
       <div className="flex-1 overflow-auto p-5">
-        {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+        {error && <p className="text-danger text-sm mb-4">{error}</p>}
         <DataTable
           columns={COLUMNS}
           data={warehouses}
@@ -97,7 +97,7 @@ export function DepositosClient() {
           onRowClick={row => router.push(`/inventario/depositos/${row.id}`)}
           emptyMessage="No hay depósitos. Creá uno para empezar."
           toolbar={
-            <span className="text-[13px] text-zinc-500">
+            <span className="text-[13px] text-fg-muted">
               {total > 0 ? `${total} depósito${total !== 1 ? 's' : ''}` : ''}
             </span>
           }

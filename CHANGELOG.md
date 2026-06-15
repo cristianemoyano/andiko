@@ -1,3 +1,10 @@
+# [0.8.0](https://127.0.0.1/43429/git/cristianemoyano/compare/v0.7.0...v0.8.0) (2026-06-15)
+
+
+### Features
+
+* **core:** add light/dark/system theme support ([41d3fc7](https://127.0.0.1/43429/git/cristianemoyano/commits/41d3fc70122bcbb3e7fbedc18f20f03ac2b61d30))
+
 # Changelog
 
 ## [0.7.1](https://github.com/cristianemoyano/andiko/compare/v0.7.0...v0.7.1) (2026-06-15)

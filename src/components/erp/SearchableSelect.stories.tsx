@@ -34,7 +34,7 @@ export const ContactSelector: Story = {
             placeholder="Buscar cliente…"
           />
         </FormField>
-        <p className="mt-2 text-xs text-zinc-400">Seleccionado: {value ?? '(ninguno)'}</p>
+        <p className="mt-2 text-xs text-fg-subtle">Seleccionado: {value ?? '(ninguno)'}</p>
       </div>
     )
   },

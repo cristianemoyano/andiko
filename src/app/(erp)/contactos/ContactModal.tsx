@@ -105,18 +105,18 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
   return (
     <dialog
       ref={dialogRef}
-      className="m-auto w-full max-w-lg rounded bg-white p-0 shadow-xl backdrop:bg-black/40 open:flex open:flex-col"
+      className="m-auto w-full max-w-lg rounded bg-surface p-0 shadow-xl backdrop:bg-black/40 open:flex open:flex-col"
       onCancel={onClose}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
-        <h2 className="text-[15px] font-semibold text-zinc-900 tracking-tight">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <h2 className="text-[15px] font-semibold text-fg tracking-tight">
           {isEdit ? 'Editar contacto' : 'Nuevo contacto'}
         </h2>
         <button
           type="button"
           onClick={onClose}
-          className="text-zinc-400 hover:text-zinc-700 transition-colors"
+          className="text-fg-subtle hover:text-fg-muted transition-colors"
           aria-label="Cerrar"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -136,8 +136,8 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
                 name="type"
                 defaultValue={contact?.type ?? 'customer'}
                 className={cn(
-                  'h-8 w-full rounded-sm border px-2.5 text-[13px] text-zinc-900 bg-white focus:outline-none focus:border-blue-500',
-                  errors.type ? 'border-red-500' : 'border-zinc-300'
+                  'h-8 w-full rounded-sm border px-2.5 text-[13px] text-fg bg-surface focus:outline-none focus:border-ring',
+                  errors.type ? 'border-danger' : 'border-border-strong'
                 )}
               >
                 <option value="customer">Cliente</option>
@@ -152,8 +152,8 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
                 name="iva_condition"
                 defaultValue={contact?.iva_condition ?? 'responsable_inscripto'}
                 className={cn(
-                  'h-8 w-full rounded-sm border px-2.5 text-[13px] text-zinc-900 bg-white focus:outline-none focus:border-blue-500',
-                  errors.iva_condition ? 'border-red-500' : 'border-zinc-300'
+                  'h-8 w-full rounded-sm border px-2.5 text-[13px] text-fg bg-surface focus:outline-none focus:border-ring',
+                  errors.iva_condition ? 'border-danger' : 'border-border-strong'
                 )}
               >
                 <option value="responsable_inscripto">Responsable Inscripto</option>
@@ -188,7 +188,7 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
             />
           </FormField>
 
-          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Persona de contacto</p>
+          <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Persona de contacto</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Nombre" htmlFor="first_name" error={errors.first_name?.[0]}>
@@ -268,19 +268,19 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
                 defaultChecked={contact?.is_active ?? true}
                 className="w-4 h-4 rounded-sm accent-brand-600 cursor-pointer"
               />
-              <span className="text-[13px] text-zinc-700">Contacto activo</span>
+              <span className="text-[13px] text-fg-muted">Contacto activo</span>
             </label>
           )}
 
           {serverError && (
-            <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+            <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
               {serverError}
             </p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-4 border-t border-zinc-200 bg-zinc-50">
+        <div className="flex items-center justify-between px-5 py-4 border-t border-border bg-surface-muted">
           <div>
             {isEdit && (
               <Button type="button" variant="danger" size="sm" onClick={handleDelete} disabled={saving}>

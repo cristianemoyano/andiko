@@ -262,18 +262,18 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     {
       key: 'email',
       header: 'Email',
-      render: row => <span className="font-medium text-zinc-900">{row.email}</span>,
+      render: row => <span className="font-medium text-fg">{row.email}</span>,
     },
     {
       key: 'name',
       header: 'Nombre',
-      render: row => <span className="text-zinc-700 text-[13px]">{row.name}</span>,
+      render: row => <span className="text-fg-muted text-[13px]">{row.name}</span>,
     },
     {
       key: 'role',
       header: 'Rol',
       render: row => (
-        <span className="text-[13px] text-zinc-600">{roleLabel[row.role] ?? row.role}</span>
+        <span className="text-[13px] text-fg-muted">{roleLabel[row.role] ?? row.role}</span>
       ),
     },
     {
@@ -285,7 +285,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
           .map(bid => branchList.find(b => b.id === bid)?.name)
           .filter((n): n is string => Boolean(n))
         return (
-          <span className="text-[13px] text-zinc-600">{names.length ? names.join(', ') : '—'}</span>
+          <span className="text-[13px] text-fg-muted">{names.length ? names.join(', ') : '—'}</span>
         )
       },
     },
@@ -322,19 +322,19 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
       key: 'branch_code',
       header: 'N°',
       render: row => (
-        <span className="font-mono text-[12px] text-zinc-600">{String(row.branch_code).padStart(2, '0')}</span>
+        <span className="font-mono text-[12px] text-fg-muted">{String(row.branch_code).padStart(2, '0')}</span>
       ),
     },
     {
       key: 'name',
       header: 'Sucursal',
-      render: row => <span className="font-medium text-zinc-900">{row.name}</span>,
+      render: row => <span className="font-medium text-fg">{row.name}</span>,
     },
     {
       key: 'address',
       header: 'Dirección',
       render: row => (
-        <span className="text-zinc-600 text-[13px]">{row.address ?? '—'}</span>
+        <span className="text-fg-muted text-[13px]">{row.address ?? '—'}</span>
       ),
     },
     {
@@ -362,7 +362,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     return (
       <div className="flex flex-col h-full">
         <TopBar breadcrumbs={[{ label: 'Sys-admin', href: '/sys-admin/organizaciones' }, { label: '…' }]} />
-        <div className="flex-1 flex items-center justify-center text-[13px] text-zinc-400">Cargando…</div>
+        <div className="flex-1 flex items-center justify-center text-[13px] text-fg-subtle">Cargando…</div>
       </div>
     )
   }
@@ -372,7 +372,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
       <div className="flex flex-col h-full">
         <TopBar breadcrumbs={[{ label: 'Sys-admin', href: '/sys-admin/organizaciones' }, { label: 'No encontrado' }]} />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
-          <p className="text-[13px] text-zinc-600">Organización no encontrada.</p>
+          <p className="text-[13px] text-fg-muted">Organización no encontrada.</p>
           <Link href="/sys-admin/organizaciones">
             <Button variant="secondary" size="sm">Volver al listado</Button>
           </Link>
@@ -405,44 +405,44 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
 
       <div className="flex-1 p-5 overflow-auto">
         <div className="max-w-4xl mx-auto flex flex-col gap-6">
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
-            <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide mb-2">Organización</p>
-            <h1 className="text-[22px] font-bold text-zinc-900">{org.name}</h1>
-            <p className="mt-2 text-[13px] text-zinc-600">
+          <div className="bg-surface border border-border rounded-sm p-5">
+            <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-2">Organización</p>
+            <h1 className="text-[22px] font-bold text-fg">{org.name}</h1>
+            <p className="mt-2 text-[13px] text-fg-muted">
               Slug: <span className="font-mono">{org.slug}</span>
             </p>
             <div className="mt-3">
               <StatusBadge value={org.is_active ? 'Activa' : 'Inactiva'} />
             </div>
-            <div className="mt-4 pt-4 border-t border-zinc-100 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-              <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide sm:col-span-2">Datos fiscales</p>
+            <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide sm:col-span-2">Datos fiscales</p>
               <div>
-                <p className="text-[12px] text-zinc-500">Razón social legal</p>
-                <p className="text-[13px] text-zinc-800">{org.legal_name ?? '—'}</p>
+                <p className="text-[12px] text-fg-muted">Razón social legal</p>
+                <p className="text-[13px] text-fg">{org.legal_name ?? '—'}</p>
               </div>
               <div>
-                <p className="text-[12px] text-zinc-500">CUIT</p>
-                <p className="text-[13px] text-zinc-800 font-mono">{org.cuit ?? '—'}</p>
+                <p className="text-[12px] text-fg-muted">CUIT</p>
+                <p className="text-[13px] text-fg font-mono">{org.cuit ?? '—'}</p>
               </div>
               <div>
-                <p className="text-[12px] text-zinc-500">Condición IVA</p>
-                <p className="text-[13px] text-zinc-800">
+                <p className="text-[12px] text-fg-muted">Condición IVA</p>
+                <p className="text-[13px] text-fg">
                   {org.iva_condition ? IVA_CONDITION_LABEL[org.iva_condition] ?? org.iva_condition : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-[12px] text-zinc-500">Domicilio fiscal</p>
-                <p className="text-[13px] text-zinc-800">{org.fiscal_address ?? '—'}</p>
+                <p className="text-[12px] text-fg-muted">Domicilio fiscal</p>
+                <p className="text-[13px] text-fg">{org.fiscal_address ?? '—'}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white border border-zinc-200 rounded-sm p-5">
+          <div className="bg-surface border border-border rounded-sm p-5">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wide">Módulos habilitados</p>
+                <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide">Módulos habilitados</p>
                 {settingsDefault ? (
-                  <p className="mt-1 text-[12px] text-zinc-500">Usando configuración por defecto (todos los módulos).</p>
+                  <p className="mt-1 text-[12px] text-fg-muted">Usando configuración por defecto (todos los módulos).</p>
                 ) : null}
               </div>
               <Button size="sm" onClick={() => void handleSaveSettings()} disabled={settingsSaving}>
@@ -450,16 +450,16 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               </Button>
             </div>
             {settingsError ? (
-              <p role="alert" className="mb-3 text-[12px] text-red-600">{settingsError}</p>
+              <p role="alert" className="mb-3 text-[12px] text-danger">{settingsError}</p>
             ) : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {(['base', 'premium'] as const).map(tier => (
                 <div key={tier}>
-                  <p className="mb-2 text-[12px] font-medium text-zinc-700 capitalize">{tier === 'base' ? 'Base' : 'Premium'}</p>
+                  <p className="mb-2 text-[12px] font-medium text-fg-muted capitalize">{tier === 'base' ? 'Base' : 'Premium'}</p>
                   <ul className="space-y-2">
                     {ORG_MODULE_DEFS.filter(m => m.tier === tier).map(mod => (
                       <li key={mod.key}>
-                        <label className="flex cursor-pointer items-center gap-2 text-[13px] text-zinc-800">
+                        <label className="flex cursor-pointer items-center gap-2 text-[13px] text-fg">
                           <input
                             type="checkbox"
                             checked={enabledModules.includes(mod.key)}
@@ -478,7 +478,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
 
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[14px] font-semibold text-zinc-900">Usuarios</h2>
+              <h2 className="text-[14px] font-semibold text-fg">Usuarios</h2>
               <Button
                 size="sm"
                 onClick={() => {
@@ -500,7 +500,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
 
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[14px] font-semibold text-zinc-900">Sucursales</h2>
+              <h2 className="text-[14px] font-semibold text-fg">Sucursales</h2>
               <Button
                 size="sm"
                 onClick={() => {
@@ -582,17 +582,17 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               />
             </FormField>
           </div>
-          <label className="flex items-center gap-2 text-[13px] text-zinc-700 cursor-pointer">
+          <label className="flex items-center gap-2 text-[13px] text-fg-muted cursor-pointer">
             <input
               type="checkbox"
               checked={orgActive}
               onChange={e => setOrgActive(e.target.checked)}
-              className="rounded border-zinc-300"
+              className="rounded border-border-strong"
             />
             Organización activa
           </label>
           {orgError && (
-            <p role="alert" className="text-[12px] text-red-600">{orgError}</p>
+            <p role="alert" className="text-[12px] text-danger">{orgError}</p>
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => setEditOrgOpen(false)}>

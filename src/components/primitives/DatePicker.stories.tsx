@@ -18,7 +18,7 @@ export const Default: Story = {
     return (
       <div className="w-48">
         <DatePicker value={date} onChange={setDate} />
-        <p className="mt-2 text-xs text-zinc-400">
+        <p className="mt-2 text-xs text-fg-subtle">
           {date ? date.toISOString().slice(0, 10) : '(sin fecha)'}
         </p>
       </div>

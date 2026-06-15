@@ -61,7 +61,7 @@ export function Sidebar({
 
       <aside
         className={cn(
-          'flex flex-col w-[220px] flex-shrink-0 bg-white border-r border-zinc-200 h-full',
+          'flex flex-col w-[220px] flex-shrink-0 bg-surface border-r border-border h-full',
           // Mobile: off-canvas drawer that slides in from the left.
           'fixed inset-y-0 left-0 z-[45] transition-transform duration-200',
           'pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0',
@@ -71,7 +71,7 @@ export function Sidebar({
         )}
       >
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 py-[13px] border-b border-zinc-200">
+      <div className="flex items-center gap-2.5 px-4 py-[13px] border-b border-border">
         <div className="w-[22px] h-[22px] bg-brand-600 rounded-sm flex items-center justify-center flex-shrink-0">
           <svg viewBox="0 0 12 12" className="w-3 h-3 fill-white">
             <rect x="0" y="1" width="3" height="10"/>
@@ -80,7 +80,7 @@ export function Sidebar({
             <rect x="2" y="5" width="8" height="2.5"/>
           </svg>
         </div>
-        <span className="text-[15px] font-semibold text-zinc-900 tracking-tight">andiko</span>
+        <span className="text-[15px] font-semibold text-fg tracking-tight">andiko</span>
         <AppVersion className="ml-auto" />
       </div>
 
@@ -185,20 +185,20 @@ export function Sidebar({
       </nav>
 
       {/* User area */}
-      <div className="flex items-center gap-2.5 px-3 py-3 border-t border-zinc-200">
+      <div className="flex items-center gap-2.5 px-3 py-3 border-t border-border">
         <Link href="/perfil" onClick={() => setOpen(false)} className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity">
           <div className="w-[26px] h-[26px] rounded-full bg-brand-100 text-brand-800 text-[11px] font-semibold flex items-center justify-center flex-shrink-0">
             {initials}
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-medium text-zinc-900 truncate">{displayName ?? '—'}</div>
-            <div className="text-[11px] text-zinc-400 truncate">{displayRole ?? ''}</div>
+            <div className="text-xs font-medium text-fg truncate">{displayName ?? '—'}</div>
+            <div className="text-[11px] text-fg-subtle truncate">{displayRole ?? ''}</div>
           </div>
         </Link>
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           title="Cerrar sesión"
-          className="flex-shrink-0 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer"
+          className="flex-shrink-0 text-fg-subtle hover:text-fg-muted transition-colors cursor-pointer"
         >
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l3-3-3-3M13 8H6"/>
@@ -212,7 +212,7 @@ export function Sidebar({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest px-2 pt-3 pb-1">
+    <div className="text-[10px] font-semibold text-fg-subtle uppercase tracking-widest px-2 pt-3 pb-1">
       {children}
     </div>
   )
@@ -228,15 +228,15 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
         'flex items-center gap-2.5 h-[34px] px-2 rounded-sm text-[13px] mb-px transition-colors',
         active
           ? 'bg-brand-50 text-brand-600 font-medium'
-          : 'text-zinc-700 hover:bg-zinc-100'
+          : 'text-fg-muted hover:bg-surface-hover'
       )}
     >
-      <span className={cn('flex-shrink-0', active ? 'text-brand-600' : 'text-zinc-400')}>
+      <span className={cn('flex-shrink-0', active ? 'text-brand-600' : 'text-fg-subtle')}>
         {item.icon}
       </span>
       {item.label}
       {item.badge != null && (
-        <span className="ml-auto text-[10px] font-semibold bg-amber-100 text-amber-800 rounded-sm px-1.5 h-4 flex items-center">
+        <span className="ml-auto text-[10px] font-semibold bg-warning-bg text-warning rounded-sm px-1.5 h-4 flex items-center">
           {item.badge}
         </span>
       )}

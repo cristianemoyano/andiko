@@ -8,12 +8,12 @@ export function PrintDraftBanner({ className }: PrintDraftBannerProps) {
   return (
     <div
       className={cn(
-        'rounded-md border-2 border-dashed border-zinc-900 bg-zinc-200 px-4 py-3 text-center print:border-black print:bg-zinc-300',
+        'rounded-md border-2 border-dashed border-fg bg-surface-hover px-4 py-3 text-center print:border-black print:bg-border-strong',
         className,
       )}
     >
-      <p className="text-sm font-bold uppercase tracking-wide text-zinc-900 print:text-black">Borrador</p>
-      <p className="mt-1 text-xs text-zinc-700 print:text-zinc-900">
+      <p className="text-sm font-bold uppercase tracking-wide text-fg print:text-black">Borrador</p>
+      <p className="mt-1 text-xs text-fg-muted print:text-fg">
         Uso interno — no válido como comprobante
       </p>
     </div>

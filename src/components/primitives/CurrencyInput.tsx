@@ -65,13 +65,13 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
           onFocus={handleFocus}
           onBlur={handleBlur}
           className={cn(
-            'flex h-8 w-full rounded-sm border bg-white px-2.5 text-[13px] text-zinc-900 transition-colors text-right tabular-nums',
-            'placeholder:text-zinc-400',
+            'flex h-8 w-full rounded-sm border bg-surface px-2.5 text-[13px] text-fg transition-colors text-right tabular-nums',
+            'placeholder:text-fg-subtle',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
-            'disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400',
+            'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',
             error
-              ? 'border-red-500 focus-visible:ring-red-200'
-              : 'border-zinc-300 focus-visible:ring-blue-200 focus-visible:border-blue-500',
+              ? 'border-danger focus-visible:ring-red-200'
+              : 'border-border-strong focus-visible:ring-ring focus-visible:border-ring',
             className,
           )}
           aria-invalid={error ? 'true' : undefined}

@@ -162,9 +162,9 @@ function AsientoModalForm({
           </FormField>
         </div>
 
-        <div className="border border-zinc-200 rounded-sm overflow-hidden">
+        <div className="border border-border rounded-sm overflow-hidden">
           <table className="w-full text-[13px]">
-            <thead className="bg-zinc-50 text-zinc-600">
+            <thead className="bg-surface-muted text-fg-muted">
               <tr>
                 <th className="text-left font-medium px-2 py-1.5 w-[34%]">Cuenta</th>
                 <th className="text-left font-medium px-2 py-1.5 w-[18%]">Sucursal</th>
@@ -176,12 +176,12 @@ function AsientoModalForm({
             </thead>
             <tbody>
               {lines.map((line, idx) => (
-                <tr key={idx} className="border-t border-zinc-100">
+                <tr key={idx} className="border-t border-border">
                   <td className="px-2 py-1">
                     <select
                       value={line.account_id}
                       onChange={e => updateLine(idx, { account_id: e.target.value })}
-                      className="h-8 w-full rounded-sm border border-zinc-300 px-2 text-[12px] bg-white focus:outline-none focus:border-blue-500"
+                      className="h-8 w-full rounded-sm border border-border-strong px-2 text-[12px] bg-surface focus:outline-none focus:border-ring"
                     >
                       <option value="">— Elegir cuenta —</option>
                       {accounts.map(a => (
@@ -193,7 +193,7 @@ function AsientoModalForm({
                     <select
                       value={line.branch_id}
                       onChange={e => updateLine(idx, { branch_id: e.target.value })}
-                      className="h-8 w-full rounded-sm border border-zinc-300 px-2 text-[12px] bg-white focus:outline-none focus:border-blue-500"
+                      className="h-8 w-full rounded-sm border border-border-strong px-2 text-[12px] bg-surface focus:outline-none focus:border-ring"
                       disabled={branches.length === 0}
                     >
                       <option value="">— Sin sucursal —</option>
@@ -234,7 +234,7 @@ function AsientoModalForm({
                       type="button"
                       onClick={() => removeLine(idx)}
                       disabled={lines.length <= 2}
-                      className="text-zinc-400 hover:text-red-600 disabled:opacity-30 disabled:hover:text-zinc-400"
+                      className="text-fg-subtle hover:text-danger disabled:opacity-30 disabled:hover:text-fg-subtle"
                       aria-label="Quitar línea"
                     >
                       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg>
@@ -243,11 +243,11 @@ function AsientoModalForm({
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-zinc-50 border-t border-zinc-200 font-medium">
+            <tfoot className="bg-surface-muted border-t border-border font-medium">
               <tr>
-                <td className="px-2 py-1.5 text-zinc-600" colSpan={3}>Totales</td>
-                <td className="px-2 py-1.5 text-right font-mono text-zinc-800">{formatARS(totalDebit)}</td>
-                <td className="px-2 py-1.5 text-right font-mono text-zinc-800">{formatARS(totalCredit)}</td>
+                <td className="px-2 py-1.5 text-fg-muted" colSpan={3}>Totales</td>
+                <td className="px-2 py-1.5 text-right font-mono text-fg">{formatARS(totalDebit)}</td>
+                <td className="px-2 py-1.5 text-right font-mono text-fg">{formatARS(totalCredit)}</td>
                 <td />
               </tr>
             </tfoot>
@@ -258,19 +258,19 @@ function AsientoModalForm({
           <Button type="button" variant="secondary" size="xs" onClick={() => setLines(prev => [...prev, emptyLine()])} disabled={saving}>
             + Agregar línea
           </Button>
-          <span className={cn('text-[12px] font-medium px-2 py-1 rounded-sm', balanced ? 'text-green-700 bg-green-50' : 'text-amber-700 bg-amber-50')}>
+          <span className={cn('text-[12px] font-medium px-2 py-1 rounded-sm', balanced ? 'text-success bg-success-bg' : 'text-warning bg-warning-bg')}>
             {balanced ? 'Asiento balanceado' : `Diferencia: ${formatARS(Math.abs(difference))}`}
           </span>
         </div>
 
         {serverError && (
-          <p role="alert" className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">
+          <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
             {serverError}
           </p>
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-zinc-200 bg-zinc-50">
+      <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-surface-muted">
         <Button type="button" variant="secondary" size="sm" onClick={() => onOpenChange(false)} disabled={saving}>
           Cancelar
         </Button>

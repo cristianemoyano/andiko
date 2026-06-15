@@ -56,9 +56,9 @@ const ITEM_COLUMNS: Column<ReconciliationItemLine>[] = [
     header: 'Ítem',
     render: row => (
       <div className="min-w-0">
-        <span className="font-medium text-zinc-900">{row.description}</span>
+        <span className="font-medium text-fg">{row.description}</span>
         {row.is_extra ? (
-          <p className="text-[12px] text-amber-600">Línea extra (sin OC)</p>
+          <p className="text-[12px] text-warning">Línea extra (sin OC)</p>
         ) : null}
       </div>
     ),
@@ -67,14 +67,14 @@ const ITEM_COLUMNS: Column<ReconciliationItemLine>[] = [
     key: 'ordered_qty',
     header: 'Pedida',
     align: 'right',
-    render: row => <span className="tabular-nums text-zinc-700">{row.ordered_qty}</span>,
+    render: row => <span className="tabular-nums text-fg-muted">{row.ordered_qty}</span>,
   },
   {
     key: 'received_qty',
     header: 'Recibida',
     align: 'right',
     render: row => (
-      <span className={`tabular-nums ${row.qty_mismatch ? 'font-medium text-red-600' : 'text-zinc-700'}`}>
+      <span className={`tabular-nums ${row.qty_mismatch ? 'font-medium text-danger' : 'text-fg-muted'}`}>
         {row.received_qty}
       </span>
     ),
@@ -84,7 +84,7 @@ const ITEM_COLUMNS: Column<ReconciliationItemLine>[] = [
     header: 'Facturada',
     align: 'right',
     render: row => (
-      <span className={`tabular-nums ${row.qty_mismatch ? 'font-medium text-red-600' : 'text-zinc-700'}`}>
+      <span className={`tabular-nums ${row.qty_mismatch ? 'font-medium text-danger' : 'text-fg-muted'}`}>
         {row.invoiced_qty}
       </span>
     ),
@@ -94,7 +94,7 @@ const ITEM_COLUMNS: Column<ReconciliationItemLine>[] = [
     header: 'Precio OC',
     align: 'right',
     render: row => (
-      <span className="tabular-nums text-zinc-700">
+      <span className="tabular-nums text-fg-muted">
         {row.ordered_unit_price ? formatARS(row.ordered_unit_price) : '—'}
       </span>
     ),
@@ -104,7 +104,7 @@ const ITEM_COLUMNS: Column<ReconciliationItemLine>[] = [
     header: 'Precio fact.',
     align: 'right',
     render: row => (
-      <span className={`tabular-nums ${row.price_mismatch ? 'font-medium text-red-600' : 'text-zinc-700'}`}>
+      <span className={`tabular-nums ${row.price_mismatch ? 'font-medium text-danger' : 'text-fg-muted'}`}>
         {row.invoiced_unit_price ? formatARS(row.invoiced_unit_price) : '—'}
       </span>
     ),
@@ -164,7 +164,7 @@ export function ConciliacionDetail({ id }: ConciliacionDetailProps) {
         <TopBar breadcrumbs={[{ label: 'Conciliación', href: '/compras/conciliacion' }, { label: '…' }]} />
         <ComprasSubNav />
         <div className="flex flex-1 items-center justify-center">
-          <span className="text-sm text-zinc-400">Cargando…</span>
+          <span className="text-sm text-fg-subtle">Cargando…</span>
         </div>
       </div>
     )
@@ -175,7 +175,7 @@ export function ConciliacionDetail({ id }: ConciliacionDetailProps) {
       <div className="flex h-full flex-col">
         <TopBar breadcrumbs={[{ label: 'Conciliación', href: '/compras/conciliacion' }, { label: 'No encontrada' }]} />
         <ComprasSubNav />
-        {error ? <p className="p-5 text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="p-5 text-sm text-danger">{error}</p> : null}
         <EmptyState title="Orden no encontrada" description="La orden de compra no existe o no tenés acceso." />
       </div>
     )
@@ -196,44 +196,44 @@ export function ConciliacionDetail({ id }: ConciliacionDetailProps) {
 
       <div className="flex-1 overflow-auto p-5">
         <div className="mb-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded border border-zinc-200 bg-white p-4">
-            <p className="text-[12px] uppercase tracking-wide text-zinc-500">Proveedor</p>
-            <p className="mt-1 font-medium text-zinc-900">{supplierName}</p>
-            <p className="mt-2 text-[12px] text-zinc-500">
+          <div className="rounded border border-border bg-surface p-4">
+            <p className="text-[12px] uppercase tracking-wide text-fg-muted">Proveedor</p>
+            <p className="mt-1 font-medium text-fg">{supplierName}</p>
+            <p className="mt-2 text-[12px] text-fg-muted">
               OC{' '}
               <Link href={`/compras/ordenes/${order.id}`} className="font-mono text-brand-600 hover:underline">
                 {order.order_number}
               </Link>
             </p>
           </div>
-          <div className="rounded border border-zinc-200 bg-white p-4">
-            <p className="text-[12px] uppercase tracking-wide text-zinc-500">Estado OC</p>
+          <div className="rounded border border-border bg-surface p-4">
+            <p className="text-[12px] uppercase tracking-wide text-fg-muted">Estado OC</p>
             <div className="mt-2">
               <StatusBadge value={PURCHASE_ORDER_STATUS_LABEL[order.status] ?? order.status} />
             </div>
           </div>
-          <div className="rounded border border-zinc-200 bg-white p-4">
-            <p className="text-[12px] uppercase tracking-wide text-zinc-500">Conciliación</p>
+          <div className="rounded border border-border bg-surface p-4">
+            <p className="text-[12px] uppercase tracking-wide text-fg-muted">Conciliación</p>
             <div className="mt-2">
               <ReconciliationChip hasDifferences={summary.has_differences} />
             </div>
           </div>
-          <div className="rounded border border-zinc-200 bg-white p-4">
-            <p className="text-[12px] uppercase tracking-wide text-zinc-500">Totales</p>
-            <p className="mt-1 text-[13px] text-zinc-700">
+          <div className="rounded border border-border bg-surface p-4">
+            <p className="text-[12px] uppercase tracking-wide text-fg-muted">Totales</p>
+            <p className="mt-1 text-[13px] text-fg-muted">
               OC {formatARS(summary.ordered_total)} · Facturado {formatARS(summary.invoiced_total)}
             </p>
-            <p className="mt-1 text-[12px] text-zinc-500">
+            <p className="mt-1 text-[12px] text-fg-muted">
               Cant. {summary.ordered_qty} / {summary.received_qty} / {summary.invoiced_qty}
             </p>
           </div>
         </div>
 
         <div className="mb-5 grid gap-4 md:grid-cols-2">
-          <div className="rounded border border-zinc-200 bg-white p-4">
-            <p className="mb-2 text-[13px] font-semibold text-zinc-900">Recepciones ({receipts.length})</p>
+          <div className="rounded border border-border bg-surface p-4">
+            <p className="mb-2 text-[13px] font-semibold text-fg">Recepciones ({receipts.length})</p>
             {receipts.length === 0 ? (
-              <p className="text-[13px] text-zinc-500">Sin recepciones confirmadas.</p>
+              <p className="text-[13px] text-fg-muted">Sin recepciones confirmadas.</p>
             ) : (
               <ul className="space-y-1">
                 {receipts.map(r => (
@@ -246,10 +246,10 @@ export function ConciliacionDetail({ id }: ConciliacionDetailProps) {
               </ul>
             )}
           </div>
-          <div className="rounded border border-zinc-200 bg-white p-4">
-            <p className="mb-2 text-[13px] font-semibold text-zinc-900">Facturas ({invoices.length})</p>
+          <div className="rounded border border-border bg-surface p-4">
+            <p className="mb-2 text-[13px] font-semibold text-fg">Facturas ({invoices.length})</p>
             {invoices.length === 0 ? (
-              <p className="text-[13px] text-zinc-500">Sin facturas de proveedor.</p>
+              <p className="text-[13px] text-fg-muted">Sin facturas de proveedor.</p>
             ) : (
               <ul className="space-y-1">
                 {invoices.map(inv => (
@@ -258,7 +258,7 @@ export function ConciliacionDetail({ id }: ConciliacionDetailProps) {
                       {inv.invoice_number}
                       {inv.supplier_invoice_number ? ` (${inv.supplier_invoice_number})` : ''}
                     </Link>
-                    <span className="tabular-nums text-zinc-600">{formatARS(inv.total)}</span>
+                    <span className="tabular-nums text-fg-muted">{formatARS(inv.total)}</span>
                   </li>
                 ))}
               </ul>

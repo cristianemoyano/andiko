@@ -114,17 +114,17 @@ function SearchableSelect({
           aria-expanded={open}
           aria-haspopup="listbox"
           className={cn(
-            'flex h-8 w-full items-center justify-between gap-2 rounded-sm border bg-white px-2.5 text-[13px] transition-colors text-left',
+            'flex h-8 w-full items-center justify-between gap-2 rounded-sm border bg-surface px-2.5 text-[13px] transition-colors text-left',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
-            'disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400',
+            'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',
             error
-              ? 'border-red-500 focus-visible:ring-red-200 text-red-900'
-              : 'border-zinc-300 focus-visible:ring-blue-200 focus-visible:border-blue-500',
-            open && !error && 'border-blue-500 ring-2 ring-blue-200',
+              ? 'border-danger focus-visible:ring-red-200 text-danger'
+              : 'border-border-strong focus-visible:ring-ring focus-visible:border-ring',
+            open && !error && 'border-ring ring-2 ring-ring',
             className,
           )}
         >
-          <span className={cn('truncate', !selectedOption && 'text-zinc-400')}>
+          <span className={cn('truncate', !selectedOption && 'text-fg-subtle')}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           <span className="flex items-center gap-1 flex-shrink-0">
@@ -135,7 +135,7 @@ function SearchableSelect({
                 tabIndex={0}
                 onClick={handleClear}
                 onKeyDown={e => e.key === 'Enter' && handleClear(e as unknown as React.MouseEvent)}
-                className="rounded text-zinc-400 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 p-0.5"
+                className="rounded text-fg-subtle hover:text-fg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong p-0.5"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 6 6 18M6 6l12 12" />
@@ -151,7 +151,7 @@ function SearchableSelect({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={cn('text-zinc-400 transition-transform duration-150', open && 'rotate-180')}
+              className={cn('text-fg-subtle transition-transform duration-150', open && 'rotate-180')}
             >
               <path d="m6 9 6 6 6-6" />
             </svg>
@@ -164,7 +164,7 @@ function SearchableSelect({
           align="start"
           sideOffset={4}
           className={cn(
-            'z-50 rounded-sm border border-zinc-200 bg-white shadow-md',
+            'z-50 rounded-sm border border-border bg-surface shadow-md',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
@@ -172,7 +172,7 @@ function SearchableSelect({
           )}
           style={{ width: 'var(--radix-popover-trigger-width)', maxHeight: '320px' }}
         >
-          <div className="p-1.5 border-b border-zinc-100">
+          <div className="p-1.5 border-b border-border">
             <div className="relative">
               <svg
                 width="13"
@@ -183,7 +183,7 @@ function SearchableSelect({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-400"
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-fg-subtle"
               >
                 <circle cx="11" cy="11" r="8" />
                 <path d="m21 21-4.3-4.3" />
@@ -194,23 +194,23 @@ function SearchableSelect({
                 value={query}
                 onChange={e => handleSearch(e.target.value)}
                 placeholder="Buscar…"
-                className="h-7 w-full rounded-sm border border-zinc-200 bg-white pl-7 pr-2 text-[12px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-blue-500"
+                className="h-7 w-full rounded-sm border border-border bg-surface pl-7 pr-2 text-[12px] text-fg placeholder:text-fg-subtle focus:outline-none focus:border-ring"
               />
             </div>
           </div>
 
           <div className="overflow-y-auto" style={{ maxHeight: '260px' }} role="listbox">
             {loading && (
-              <div className="py-6 text-center text-[12px] text-zinc-400">Buscando…</div>
+              <div className="py-6 text-center text-[12px] text-fg-subtle">Buscando…</div>
             )}
             {!loading && filteredOptions.length === 0 && (
-              <div className="px-3 py-4 text-center text-[12px] text-zinc-400">
+              <div className="px-3 py-4 text-center text-[12px] text-fg-subtle">
                 <p>{query ? 'Sin resultados' : 'Sin opciones'}</p>
                 {onCreateRequest && query.trim().length > 0 && (
                   <button
                     type="button"
                     onClick={() => onCreateRequest(query.trim())}
-                    className="mt-2 inline-flex items-center rounded-sm border border-zinc-300 bg-white px-2.5 py-1 text-[12px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+                    className="mt-2 inline-flex items-center rounded-sm border border-border-strong bg-surface px-2.5 py-1 text-[12px] font-medium text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg"
                   >
                     {createActionLabel}
                   </button>
@@ -226,13 +226,13 @@ function SearchableSelect({
                 onClick={() => handleSelect(option)}
                 className={cn(
                   'flex w-full flex-col gap-0.5 px-3 py-2 text-left text-[13px] transition-colors',
-                  'hover:bg-zinc-50 focus-visible:bg-zinc-50 focus-visible:outline-none',
+                  'hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none',
                   option.value === value && 'bg-brand-50 text-brand-800',
                 )}
               >
                 <span className="font-medium leading-tight">{option.label}</span>
                 {option.sublabel && (
-                  <span className="text-[11px] text-zinc-500 leading-tight">{option.sublabel}</span>
+                  <span className="text-[11px] text-fg-muted leading-tight">{option.sublabel}</span>
                 )}
               </button>
             ))}

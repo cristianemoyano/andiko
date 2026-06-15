@@ -64,8 +64,8 @@ const BASE_CONTACT_COLUMNS: Column<ContactStatementRow>[] = [
     header: 'Proveedor',
     render: row => (
       <div className="min-w-0">
-        <p className="font-medium text-zinc-900 truncate">{row.legal_name}</p>
-        {row.trade_name ? <p className="text-[12px] text-zinc-500 truncate">{row.trade_name}</p> : null}
+        <p className="font-medium text-fg truncate">{row.legal_name}</p>
+        {row.trade_name ? <p className="text-[12px] text-fg-muted truncate">{row.trade_name}</p> : null}
       </div>
     ),
   },
@@ -81,7 +81,7 @@ const BASE_CONTACT_COLUMNS: Column<ContactStatementRow>[] = [
     render: row => {
       const balance = Number(row.summary.balance)
       return (
-        <span className={`tabular-nums font-medium ${balance > 0 ? 'text-red-600' : 'text-green-700'}`}>
+        <span className={`tabular-nums font-medium ${balance > 0 ? 'text-danger' : 'text-success'}`}>
           {formatARS(row.summary.balance)}
         </span>
       )
@@ -92,7 +92,7 @@ const BASE_CONTACT_COLUMNS: Column<ContactStatementRow>[] = [
     header: 'Vencido',
     align: 'right',
     render: row => (
-      <span className="tabular-nums text-zinc-700">{formatARS(row.summary.overdue_balance)}</span>
+      <span className="tabular-nums text-fg-muted">{formatARS(row.summary.overdue_balance)}</span>
     ),
   },
 ]
@@ -113,8 +113,8 @@ const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
     header: 'Comprobante',
     render: row => (
       <div className="min-w-0">
-        <p className="font-mono text-[12px] text-zinc-700">{row.document_number}</p>
-        {row.description ? <p className="text-[12px] text-zinc-500 truncate">{row.description}</p> : null}
+        <p className="font-mono text-[12px] text-fg-muted">{row.document_number}</p>
+        {row.description ? <p className="text-[12px] text-fg-muted truncate">{row.description}</p> : null}
       </div>
     ),
   },
@@ -123,7 +123,7 @@ const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
     header: 'Debe',
     align: 'right',
     render: row => (
-      <span className="tabular-nums text-zinc-700">{Number(row.debit) > 0 ? formatARS(row.debit) : '—'}</span>
+      <span className="tabular-nums text-fg-muted">{Number(row.debit) > 0 ? formatARS(row.debit) : '—'}</span>
     ),
   },
   {
@@ -131,7 +131,7 @@ const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
     header: 'Haber',
     align: 'right',
     render: row => (
-      <span className="tabular-nums text-zinc-700">{Number(row.credit) > 0 ? formatARS(row.credit) : '—'}</span>
+      <span className="tabular-nums text-fg-muted">{Number(row.credit) > 0 ? formatARS(row.credit) : '—'}</span>
     ),
   },
   {
@@ -141,7 +141,7 @@ const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
     render: row => {
       const running = Number(row.running_balance)
       return (
-        <span className={`tabular-nums font-medium ${running > 0 ? 'text-red-600' : 'text-green-700'}`}>
+        <span className={`tabular-nums font-medium ${running > 0 ? 'text-danger' : 'text-success'}`}>
           {formatARS(row.running_balance)}
         </span>
       )
@@ -314,12 +314,12 @@ export function CuentaCorrienteProveedorClient() {
             toolbar={
               <>
                 <div className="relative flex w-full items-center sm:w-auto">
-                  <svg className="pointer-events-none absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <svg className="pointer-events-none absolute left-2 text-fg-subtle" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                     <circle cx="7" cy="7" r="4.5" />
                     <path d="M10.5 10.5l3 3" />
                   </svg>
                   <input
-                    className="h-[30px] w-full rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none sm:w-44"
+                    className="h-[30px] w-full rounded-sm border border-border-strong bg-surface pl-7 pr-3 text-[13px] focus:border-ring focus:outline-none sm:w-44"
                     placeholder="Buscar proveedor..."
                     value={contactSearch}
                     onChange={(e) => {
@@ -329,7 +329,7 @@ export function CuentaCorrienteProveedorClient() {
                   />
                 </div>
                 <select
-                  className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+                  className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
                   value={debtStatusFilter}
                   onChange={(e) => {
                     setDebtStatusFilter(e.target.value as '' | AccountDebtStatus)
@@ -341,7 +341,7 @@ export function CuentaCorrienteProveedorClient() {
                   ))}
                 </select>
                 <span className="flex-1" />
-                <span className="text-[12px] text-zinc-500">{visibleContactRows.length} proveedor{visibleContactRows.length !== 1 ? 'es' : ''}</span>
+                <span className="text-[12px] text-fg-muted">{visibleContactRows.length} proveedor{visibleContactRows.length !== 1 ? 'es' : ''}</span>
               </>
             }
             footer={
@@ -357,10 +357,10 @@ export function CuentaCorrienteProveedorClient() {
           />
 
           <div className="space-y-4">
-            <div className="rounded border border-zinc-200 bg-white p-4">
-              <p className="text-[12px] uppercase tracking-wide text-zinc-500">Proveedor seleccionado</p>
-              <h2 className="mt-1 text-[20px] font-semibold text-zinc-900">{selectedContact?.legal_name ?? 'Seleccioná un proveedor'}</h2>
-              {selectedContact?.trade_name ? <p className="text-[13px] text-zinc-500">{selectedContact.trade_name}</p> : null}
+            <div className="rounded border border-border bg-surface p-4">
+              <p className="text-[12px] uppercase tracking-wide text-fg-muted">Proveedor seleccionado</p>
+              <h2 className="mt-1 text-[20px] font-semibold text-fg">{selectedContact?.legal_name ?? 'Seleccioná un proveedor'}</h2>
+              {selectedContact?.trade_name ? <p className="text-[13px] text-fg-muted">{selectedContact.trade_name}</p> : null}
               <div className="mt-3 flex items-center gap-2">
                 <StatusBadge value={ACCOUNT_DEBT_STATUS_LABEL[selectedSummary.debt_status]} />
               </div>
@@ -381,12 +381,12 @@ export function CuentaCorrienteProveedorClient() {
               toolbar={
                 <>
                   <div className="relative flex w-full items-center sm:w-auto">
-                    <svg className="pointer-events-none absolute left-2 text-zinc-400" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <svg className="pointer-events-none absolute left-2 text-fg-subtle" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                       <circle cx="7" cy="7" r="4.5" />
                       <path d="M10.5 10.5l3 3" />
                     </svg>
                     <input
-                      className="h-[30px] w-full rounded-sm border border-zinc-300 bg-white pl-7 pr-3 text-[13px] focus:border-blue-500 focus:outline-none sm:w-48"
+                      className="h-[30px] w-full rounded-sm border border-border-strong bg-surface pl-7 pr-3 text-[13px] focus:border-ring focus:outline-none sm:w-48"
                       placeholder="Buscar comprobante..."
                       value={lineSearch}
                       onChange={(e) => {
@@ -396,7 +396,7 @@ export function CuentaCorrienteProveedorClient() {
                     />
                   </div>
                   <select
-                    className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+                    className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
                     value={lineTypeFilter}
                     onChange={(e) => {
                       setLineTypeFilter(e.target.value as '' | 'invoice' | 'payment')
@@ -409,7 +409,7 @@ export function CuentaCorrienteProveedorClient() {
                   </select>
                   <input
                     type="date"
-                    className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+                    className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
                     value={fromDate}
                     onChange={(e) => {
                       setFromDate(e.target.value)
@@ -418,7 +418,7 @@ export function CuentaCorrienteProveedorClient() {
                   />
                   <input
                     type="date"
-                    className="h-[30px] rounded-sm border border-zinc-300 bg-white px-2 text-[13px] text-zinc-700 focus:border-blue-500 focus:outline-none"
+                    className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
                     value={toDate}
                     onChange={(e) => {
                       setToDate(e.target.value)
@@ -426,7 +426,7 @@ export function CuentaCorrienteProveedorClient() {
                     }}
                   />
                   <span className="flex-1" />
-                  <span className="text-[12px] text-zinc-500">{lineTotal} movimiento{lineTotal !== 1 ? 's' : ''}</span>
+                  <span className="text-[12px] text-fg-muted">{lineTotal} movimiento{lineTotal !== 1 ? 's' : ''}</span>
                 </>
               }
               footer={
@@ -449,9 +449,9 @@ export function CuentaCorrienteProveedorClient() {
 
 function SummaryMetric({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
   return (
-    <div className="rounded border border-zinc-200 bg-zinc-50 p-3">
-      <p className="text-[12px] text-zinc-500">{label}</p>
-      <p className={`tabular-nums text-[16px] font-semibold ${emphasis ? 'text-zinc-900' : 'text-zinc-700'}`}>
+    <div className="rounded border border-border bg-surface-muted p-3">
+      <p className="text-[12px] text-fg-muted">{label}</p>
+      <p className={`tabular-nums text-[16px] font-semibold ${emphasis ? 'text-fg' : 'text-fg-muted'}`}>
         {formatARS(value)}
       </p>
     </div>

@@ -157,26 +157,26 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
     >
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-sm border border-zinc-200 shadow-lg w-full max-w-xl flex flex-col max-h-[90vh]"
+        className="bg-surface rounded-sm border border-border shadow-lg w-full max-w-xl flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
-          <h2 className="text-sm font-semibold text-zinc-900">{isEdit ? 'Editar producto' : 'Nuevo producto'}</h2>
-          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-lg leading-none">×</button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold text-fg">{isEdit ? 'Editar producto' : 'Nuevo producto'}</h2>
+          <button type="button" onClick={onClose} className="text-fg-subtle hover:text-fg-muted text-lg leading-none">×</button>
         </div>
 
-        <div className="px-5 py-2.5 border-b border-zinc-100">
-          <div className="inline-flex rounded-sm border border-zinc-200 bg-zinc-50 p-0.5">
+        <div className="px-5 py-2.5 border-b border-border">
+          <div className="inline-flex rounded-sm border border-border bg-surface-muted p-0.5">
             <button
               type="button"
-              className={`px-2.5 h-7 text-xs font-medium rounded-sm ${tab === 'general' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
+              className={`px-2.5 h-7 text-xs font-medium rounded-sm ${tab === 'general' ? 'bg-surface text-fg shadow-sm' : 'text-fg-muted hover:text-fg'}`}
               onClick={() => setTab('general')}
             >
               General
             </button>
             <button
               type="button"
-              className={`px-2.5 h-7 text-xs font-medium rounded-sm ${tab === 'pricing' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
+              className={`px-2.5 h-7 text-xs font-medium rounded-sm ${tab === 'pricing' ? 'bg-surface text-fg shadow-sm' : 'text-fg-muted hover:text-fg'}`}
               onClick={() => setTab('pricing')}
             >
               Precios y stock
@@ -186,7 +186,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {serverError && (
-            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2">{serverError}</div>
+            <div className="text-xs text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">{serverError}</div>
           )}
 
           {tab === 'general' ? (
@@ -197,13 +197,13 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField label="Tipo" htmlFor="product_type" error={errors.product_type?.[0]}>
-                  <select id="product_type" {...fieldString('product_type')} className="h-8 w-full px-2 text-sm border border-zinc-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                  <select id="product_type" {...fieldString('product_type')} className="h-8 w-full px-2 text-sm border border-border-strong rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
                     <option value="simple">Producto</option>
                     <option value="service">Servicio</option>
                   </select>
                 </FormField>
                 <FormField label="Estado" htmlFor="product_status" error={errors.status?.[0]}>
-                  <select id="product_status" {...fieldString('status')} className="h-8 w-full px-2 text-sm border border-zinc-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                  <select id="product_status" {...fieldString('status')} className="h-8 w-full px-2 text-sm border border-border-strong rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
                     <option value="draft">Borrador</option>
                     <option value="active">Activo</option>
                     <option value="archived">Archivado</option>
@@ -216,7 +216,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                   id="product_category"
                   value={form.category_id}
                   onChange={(e) => setForm(f => ({ ...f, category_id: e.target.value }))}
-                  className="h-8 w-full px-2 text-sm border border-zinc-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-zinc-100 disabled:text-zinc-400"
+                  className="h-8 w-full px-2 text-sm border border-border-strong rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-surface-hover disabled:text-fg-subtle"
                   disabled={loadingCategories}
                 >
                   <option value="">{loadingCategories ? 'Cargando…' : 'Sin categoría'}</option>
@@ -228,7 +228,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField label="Alícuota IVA" htmlFor="product_iva_rate" error={errors.iva_rate?.[0]}>
-                  <select id="product_iva_rate" {...fieldString('iva_rate')} className="h-8 w-full px-2 text-sm border border-zinc-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                  <select id="product_iva_rate" {...fieldString('iva_rate')} className="h-8 w-full px-2 text-sm border border-border-strong rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
                     <option value="0">Exento (0%)</option>
                     <option value="10.5">10,5%</option>
                     <option value="21">21%</option>
@@ -236,7 +236,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                   </select>
                 </FormField>
                 <FormField label="Unidad de medida" htmlFor="product_unit_of_measure" error={errors.unit_of_measure?.[0]}>
-                  <select id="product_unit_of_measure" {...fieldString('unit_of_measure')} className="h-8 w-full px-2 text-sm border border-zinc-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
+                  <select id="product_unit_of_measure" {...fieldString('unit_of_measure')} className="h-8 w-full px-2 text-sm border border-border-strong rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500">
                     <option value="unidad">Unidad</option>
                     <option value="kg">Kg</option>
                     <option value="g">Gramo</option>
@@ -267,12 +267,12 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                   onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
                   rows={3}
                   className={
-                    `w-full rounded-sm border bg-white px-2.5 py-2 text-[13px] text-zinc-900 transition-colors
-                    placeholder:text-zinc-400
+                    `w-full rounded-sm border bg-surface px-2.5 py-2 text-[13px] text-fg transition-colors
+                    placeholder:text-fg-subtle
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0
                     ${errors.description?.[0]
-                      ? 'border-red-500 focus-visible:ring-red-200'
-                      : 'border-zinc-300 focus-visible:ring-blue-200 focus-visible:border-blue-500'}`
+                      ? 'border-danger focus-visible:ring-red-200'
+                      : 'border-border-strong focus-visible:ring-ring focus-visible:border-ring'}`
                   }
                   placeholder="Opcional"
                 />
@@ -285,14 +285,14 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                   onChange={(e) => setForm(f => ({ ...f, images_urls: e.target.value }))}
                   rows={3}
                   placeholder="Pegá URLs separadas por coma, punto y coma o salto de línea (máx 20)."
-                  className="w-full rounded-sm border border-zinc-300 bg-white px-2.5 py-2 text-[13px] text-zinc-900 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
+                  className="w-full rounded-sm border border-border-strong bg-surface px-2.5 py-2 text-[13px] text-fg placeholder:text-fg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
                 />
               </FormField>
             </>
           ) : (
             <>
-              <div className="border-b border-zinc-100 pb-3">
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">SKU, precios y stock</p>
+              <div className="border-b border-border pb-3">
+                <p className="text-xs font-semibold text-fg-muted uppercase tracking-wider">SKU, precios y stock</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <FormField label="SKU *" htmlFor="product_sku" error={errors.sku?.[0]} required>
@@ -309,9 +309,9 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                 </FormField>
               </div>
 
-              <div className="border-t border-zinc-100 pt-4">
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Stock</p>
-                <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
+              <div className="border-t border-border pt-4">
+                <p className="text-xs font-semibold text-fg-muted uppercase tracking-wider mb-3">Stock</p>
+                <label className="flex items-center gap-2 text-sm text-fg-muted cursor-pointer">
                   <input
                     type="checkbox"
                     checked={form.manage_stock}
@@ -340,7 +340,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
           )}
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-4 border-t border-zinc-200">
+        <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
           <Button type="button" variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
           <Button type="submit" size="sm" disabled={saving}>{saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear producto'}</Button>
         </div>

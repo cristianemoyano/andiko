@@ -54,20 +54,20 @@ function ConfirmDialog({
         <div className={cn('flex gap-3')}>
           <div className={cn(
             'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full',
-            variant === 'danger' ? 'bg-red-100' : 'bg-amber-100',
+            variant === 'danger' ? 'bg-danger-bg' : 'bg-warning-bg',
           )}>
             {variant === 'danger' ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-danger">
                 <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
               </svg>
             ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-warning">
                 <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
                 <path d="M12 9v4M12 17h.01" />
               </svg>
             )}
           </div>
-          <p className="text-[13px] text-zinc-600 leading-relaxed pt-1.5">{description}</p>
+          <p className="text-[13px] text-fg-muted leading-relaxed pt-1.5">{description}</p>
         </div>
 
         <div className="flex justify-end gap-2">

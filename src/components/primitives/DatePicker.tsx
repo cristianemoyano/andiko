@@ -8,23 +8,23 @@ import { cn } from '@/lib/utils'
 const defaultCN = getDefaultClassNames()
 
 const DAY_PICKER_CLASS_NAMES = {
-  root:            cn(defaultCN.root, 'p-2 text-[13px] text-zinc-900'),
+  root:            cn(defaultCN.root, 'p-2 text-[13px] text-fg'),
   months:          'flex gap-4',
   month:           'relative flex flex-col',
-  month_caption:   'flex items-center justify-center h-8 px-8 text-[13px] font-semibold text-zinc-800',
+  month_caption:   'flex items-center justify-center h-8 px-8 text-[13px] font-semibold text-fg',
   caption_label:   '',
   nav:             'absolute inset-0 flex items-center justify-between pointer-events-none h-8',
-  button_previous: cn(defaultCN.button_previous, 'pointer-events-auto w-7 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-500'),
-  button_next:     cn(defaultCN.button_next,     'pointer-events-auto w-7 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-500'),
+  button_previous: cn(defaultCN.button_previous, 'pointer-events-auto w-7 h-7 flex items-center justify-center rounded hover:bg-surface-hover text-fg-muted'),
+  button_next:     cn(defaultCN.button_next,     'pointer-events-auto w-7 h-7 flex items-center justify-center rounded hover:bg-surface-hover text-fg-muted'),
   month_grid:      'w-full border-collapse',
   weekdays:        'flex',
-  weekday:         'w-8 h-7 flex items-center justify-center text-[11px] font-medium text-zinc-400',
+  weekday:         'w-8 h-7 flex items-center justify-center text-[11px] font-medium text-fg-subtle',
   weeks:           'flex flex-col gap-0.5 mt-1',
   week:            'flex',
   day:             'w-8 h-8 p-0 flex items-center justify-center',
   day_button:      cn(
     'w-7 h-7 flex items-center justify-center rounded text-[12px] font-medium',
-    'hover:bg-zinc-100 transition-colors cursor-pointer',
+    'hover:bg-surface-hover transition-colors cursor-pointer',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600',
   ),
   selected:        '[&_button]:bg-brand-600 [&_button]:text-white [&_button]:hover:bg-brand-700',
@@ -90,22 +90,22 @@ export function DatePicker({
           id={id}
           type="button"
           disabled={disabled}
-          aria-invalid={error ? 'true' : undefined}
+          data-invalid={error ? 'true' : undefined}
           className={cn(
-            'flex h-8 w-full items-center gap-1.5 rounded-sm border bg-white px-2.5 text-left text-[13px] text-zinc-900 tabular-nums transition-colors',
+            'flex h-8 w-full items-center gap-1.5 rounded-sm border bg-surface px-2.5 text-left text-[13px] text-fg tabular-nums transition-colors',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
-            'disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400',
+            'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',
             error
-              ? 'border-red-500 focus-visible:ring-red-200'
-              : 'border-zinc-300 focus-visible:ring-blue-200 focus-visible:border-blue-500',
-            open && !error && 'border-blue-500 ring-2 ring-blue-200',
+              ? 'border-danger focus-visible:ring-red-200'
+              : 'border-border-strong focus-visible:ring-ring focus-visible:border-ring',
+            open && !error && 'border-ring ring-2 ring-ring',
             className,
           )}
         >
-          <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+          <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-fg-subtle" />
           {dateToDisplay(value)
             ? <span>{dateToDisplay(value)}</span>
-            : <span className="text-zinc-400">{placeholder}</span>
+            : <span className="text-fg-subtle">{placeholder}</span>
           }
         </button>
       </Popover.Trigger>
@@ -114,7 +114,7 @@ export function DatePicker({
         <Popover.Content
           align="start"
           sideOffset={4}
-          className="z-50 rounded-md border border-zinc-200 bg-white p-1 shadow-md animate-in fade-in-0 zoom-in-95"
+          className="z-50 rounded-md border border-border bg-surface p-1 shadow-md animate-in fade-in-0 zoom-in-95"
         >
           <DayPicker
             mode="single"

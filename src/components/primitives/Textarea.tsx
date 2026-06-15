@@ -11,14 +11,14 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     <textarea
       ref={ref}
       className={cn(
-        'flex min-h-[80px] w-full rounded-sm border bg-white px-2.5 py-2 text-[13px] text-zinc-900 transition-colors resize-y',
-        'placeholder:text-zinc-400',
+        'flex min-h-[80px] w-full rounded-sm border bg-surface px-2.5 py-2 text-[13px] text-fg transition-colors resize-y',
+        'placeholder:text-fg-subtle',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
-        'disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400',
-        'read-only:bg-zinc-50',
+        'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',
+        'read-only:bg-surface-muted',
         error
-          ? 'border-red-500 focus-visible:ring-red-200'
-          : 'border-zinc-300 focus-visible:ring-blue-200 focus-visible:border-blue-500',
+          ? 'border-danger focus-visible:ring-red-200'
+          : 'border-border-strong focus-visible:ring-ring focus-visible:border-ring',
         className,
       )}
       aria-invalid={error ? 'true' : undefined}

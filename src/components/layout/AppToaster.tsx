@@ -16,7 +16,7 @@ export function AppToaster() {
         classNames: {
           toast: 'text-sm',
           title: 'font-medium',
-          description: 'text-zinc-600',
+          description: 'text-fg-muted',
         },
       }}
     />

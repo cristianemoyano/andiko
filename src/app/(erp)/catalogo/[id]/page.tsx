@@ -71,15 +71,15 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         <div className="w-full max-w-6xl space-y-4">
 
           {/* Header */}
-          <div className="bg-white border border-zinc-200 rounded-sm p-5 flex items-start gap-4">
+          <div className="bg-surface border border-border rounded-sm p-5 flex items-start gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-base font-semibold text-zinc-900">{product.name}</h1>
+                <h1 className="text-base font-semibold text-fg">{product.name}</h1>
                 <Badge status={STATUS_BADGE[product.status] ?? 'neutral'}>
                   {STATUS_LABEL[product.status] ?? product.status}
                 </Badge>
               </div>
-              {product.vendor && <p className="text-xs text-zinc-500">{product.vendor}</p>}
+              {product.vendor && <p className="text-xs text-fg-muted">{product.vendor}</p>}
             </div>
           </div>
 
@@ -163,11 +163,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded-sm">
-      <div className="px-4 py-2.5 border-b border-zinc-100">
-        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">{title}</span>
+    <div className="bg-surface border border-border rounded-sm">
+      <div className="px-4 py-2.5 border-b border-border">
+        <span className="text-xs font-semibold text-fg-muted uppercase tracking-wider">{title}</span>
       </div>
-      <div className="divide-y divide-zinc-100">{children}</div>
+      <div className="divide-y divide-border">{children}</div>
     </div>
   )
 }
@@ -175,8 +175,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4 px-4 py-3">
-      <span className="text-xs text-zinc-500 w-full sm:w-40 flex-shrink-0">{label}</span>
-      <span className={`text-sm text-zinc-900 ${mono ? 'font-mono' : ''}`}>{value}</span>
+      <span className="text-xs text-fg-muted w-full sm:w-40 flex-shrink-0">{label}</span>
+      <span className={`text-sm text-fg ${mono ? 'font-mono' : ''}`}>{value}</span>
     </div>
   )
 }

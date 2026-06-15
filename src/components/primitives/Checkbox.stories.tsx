@@ -33,7 +33,7 @@ export const Indeterminate: Story = {
           checked={checked}
           onCheckedChange={setChecked}
         />
-        <p className="text-[11px] text-zinc-500">Estado: {String(checked)}</p>
+        <p className="text-[11px] text-fg-muted">Estado: {String(checked)}</p>
       </div>
     )
   },
@@ -64,7 +64,7 @@ export const LongLabel: Story = {
 export const Group: Story = {
   render: () => (
     <fieldset className="flex flex-col gap-2.5">
-      <legend className="mb-1 text-[12px] font-medium text-zinc-600">Módulos habilitados</legend>
+      <legend className="mb-1 text-[12px] font-medium text-fg-muted">Módulos habilitados</legend>
       <Checkbox label="Ventas" defaultChecked />
       <Checkbox label="Compras" defaultChecked />
       <Checkbox label="Inventario" />
