@@ -451,7 +451,7 @@ export function PanelClient() {
         {/* Bottom row */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {/* Recent invoices */}
-          <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="bg-white border border-zinc-200 rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
             <div className="px-4 py-3 border-b border-zinc-100 flex items-center">
               <span className="text-[13px] font-semibold text-zinc-900">Facturas recientes</span>
               <Link href="/ventas/facturas" className="ml-auto text-[12px] text-[#0C647A] hover:underline flex items-center gap-1">
@@ -460,6 +460,7 @@ export function PanelClient() {
               </Link>
             </div>
             {invoices.length > 0 ? (
+              <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-zinc-50">
@@ -482,6 +483,7 @@ export function PanelClient() {
                   ))}
                 </tbody>
               </table>
+              </div>
             ) : loading ? (
               <div className="p-6 text-sm text-zinc-300 text-center">Cargando…</div>
             ) : (
