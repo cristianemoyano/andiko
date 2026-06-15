@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.7.1](https://github.com/cristianemoyano/andiko/compare/v0.7.0...v0.7.1) (2026-06-15)
+
+### Bug Fixes
+
+* **core:** add overflow handling to recent invoices widget on panel
+
 ## [0.7.0](https://github.com/cristianemoyano/andiko/compare/v0.6.0...v0.7.0) (2026-06-14)
 
 ### Features
