@@ -11,6 +11,7 @@ const LINKS = [
   { href: '/compras/pagos',            label: 'Pagos' },
   { href: '/compras/cuenta-corriente', label: 'Cuenta corriente' },
   { href: '/compras/conciliacion',     label: 'Conciliación' },
+  { href: '/compras/libro-iva',        label: 'Libro IVA' },
   { href: '/compras/reportes',         label: 'Reportes' },
 ] as const
 
