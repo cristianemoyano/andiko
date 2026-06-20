@@ -42,6 +42,7 @@
     "@radix-ui/react-switch": "^1.3.0",
     "@radix-ui/react-tabs": "^1.1.14",
     "@radix-ui/react-tooltip": "^1.2.9",
+    "@ramiidv/arca-sdk": "^1.3.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "bcryptjs": "^3.0.3",
