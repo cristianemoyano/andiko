@@ -1,30 +1,27 @@
 import 'server-only'
-import { readFileSync } from 'node:fs'
 import { Arca } from '@ramiidv/arca-facturacion'
 import type { InvoiceDetail, InvoiceRequest } from '@ramiidv/arca-facturacion'
-import { env } from '@/config/env'
 import logger from '@/lib/logger'
 import { FE_RESULT } from './afip-codes'
 import type { FECAERequest } from './wsfe-payload'
 import { type WsfeClient, type SolicitarCAEResult, type AfipQRInput } from './wsfe.client'
+import type { ResolvedAfipCredentials } from './afip-credentials.service'
 
 /**
  * Real WSFE transport backed by `@ramiidv/arca-facturacion`. WSAA auth, CMS
  * signing and token caching are handled inside the SDK's `Arca` instance using
- * the certificate/key configured via env. Never imported in `stub` mode or tests.
+ * the per-organization certificate/key injected by the client factory. Never
+ * imported in `stub` mode or tests.
  */
 export class ArcaWsfeClient implements WsfeClient {
   private readonly arca: Arca
 
-  constructor() {
-    if (!env.AFIP_CUIT || !env.AFIP_CERT_PATH || !env.AFIP_KEY_PATH) {
-      throw new Error('AFIP_CERT_NOT_CONFIGURED')
-    }
+  constructor(creds: ResolvedAfipCredentials) {
     this.arca = new Arca({
-      cuit: Number(env.AFIP_CUIT),
-      cert: readFileSync(env.AFIP_CERT_PATH, 'utf-8'),
-      key: readFileSync(env.AFIP_KEY_PATH, 'utf-8'),
-      production: env.AFIP_MODE === 'produccion',
+      cuit: Number(creds.cuit),
+      cert: creds.cert,
+      key: creds.key,
+      production: creds.production,
       onEvent: (e) => logger.debug({ afipEvent: e }, 'arca sdk event'),
     })
   }

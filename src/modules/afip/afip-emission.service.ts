@@ -126,7 +126,7 @@ async function authorize(params: AuthorizeParams) {
   const puntoVenta = branch?.punto_venta ?? null
   if (!puntoVenta) throw new Error('AFIP_PUNTO_VENTA_REQUIRED')
 
-  const wsfe = params.deps.wsfe ?? (await getAfipClients()).wsfe
+  const wsfe = params.deps.wsfe ?? (await getAfipClients(ctx.orgId)).wsfe
 
   const { cbteTipo } = classifyComprobante(org.iva_condition, contact.iva_condition, kind)
   const ultimo = await wsfe.consultarUltimoAutorizado(puntoVenta, cbteTipo)

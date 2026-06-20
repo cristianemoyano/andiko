@@ -4,28 +4,35 @@ import logger from '@/lib/logger'
 import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
 import Branch from '@/modules/auth/branch.model'
 import Organization from '@/modules/auth/organization.model'
+import { getCredentialStatus, type CredentialStatus } from './afip-credentials.service'
 
 export type AfipConfigView = {
   environment: string
   certificateConfigured: boolean
+  credentials: CredentialStatus[]
   organization: { cuit: string | null; iva_condition: string | null; legal_name: string | null }
   branches: { id: string; name: string; branch_code: number; punto_venta: number | null }[]
 }
 
 /** Returns AFIP configuration status. Never exposes certificate contents/secrets. */
 export async function getAfipConfig(ctx: TenantContext): Promise<AfipConfigView> {
-  const [org, branches] = await Promise.all([
+  const [org, branches, credentials] = await Promise.all([
     Organization.findByPk(ctx.orgId),
     Branch.findAll({
       where: whereAllowedBranches(ctx, { is_active: true }),
       attributes: ['id', 'name', 'branch_code', 'punto_venta'],
       order: [['branch_code', 'ASC']],
     }),
+    getCredentialStatus(ctx),
   ])
+
+  const certificateConfigured =
+    env.AFIP_MODE === 'stub' || credentials.some((c) => c.environment === env.AFIP_MODE)
 
   return {
     environment: env.AFIP_MODE,
-    certificateConfigured: Boolean(env.AFIP_CUIT && env.AFIP_CERT_PATH && env.AFIP_KEY_PATH),
+    certificateConfigured,
+    credentials,
     organization: {
       cuit: org?.cuit ?? null,
       iva_condition: org?.iva_condition ?? null,
