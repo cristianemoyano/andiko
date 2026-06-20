@@ -11,4 +11,8 @@ export const AFIP_ERROR_MAP: Record<string, [string, number]> = {
   EMISSION_NOT_FOUND: ['Emisión no encontrada', 404],
   EMISSION_ALREADY_AUTHORIZED: ['La emisión ya fue autorizada', 409],
   BRANCH_NOT_FOUND: ['Sucursal no encontrada', 404],
+  AFIP_INVALID_CERT: ['El certificado no es un PEM X.509 válido', 422],
+  AFIP_INVALID_KEY: ['La clave privada no es un PEM válido', 422],
+  AFIP_KEY_MISMATCH: ['La clave privada no corresponde al certificado', 422],
+  AFIP_CREDENTIAL_NOT_FOUND: ['No hay credenciales AFIP configuradas para ese entorno', 404],
 }
