@@ -16,12 +16,13 @@ import { EmptyState } from '@/components/erp/EmptyState'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { CurrencyInput, formatARS } from '@/components/primitives/CurrencyInput'
 import { StatusPipeline } from '@/components/erp/StatusPipeline'
+import { AfipDocumentPanel } from '@/components/erp/AfipDocumentPanel'
 import { VentasSubNav } from '../../VentasSubNav'
 import type { Invoice, Payment, PaymentMethod } from '../../types'
 import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL } from '../../types'
 import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
-import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { notifyApiError, notifyInfo, notifySuccess } from '@/lib/notify'
 
 const PAYMENT_METHOD_OPTIONS = (Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map(
   m => ({ value: m, label: PAYMENT_METHOD_LABEL[m] })
@@ -178,6 +179,19 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
     }
   }
 
+  async function handleAuthorizeAfip() {
+    try {
+      const updated = await fetchJson<Invoice>(`/api/v1/sales/invoices/${id}/afip-cae`, { method: 'POST' })
+      if (updated.afip_status === 'authorized') notifySuccess('CAE autorizado por AFIP')
+      else if (updated.afip_status === 'contingency') notifyInfo('Sin conexión con AFIP. Quedó en cola de contingencia.')
+      else notifyInfo('AFIP rechazó el comprobante. Revisá las observaciones.')
+    } catch (e) {
+      notifyApiError(e)
+    } finally {
+      setRefresh(r => r + 1)
+    }
+  }
+
   async function handleDeletePayment() {
     if (!paymentToDelete) return
     try {
@@ -229,6 +243,8 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
   const canPay =
     (invoice.status === 'issued' || invoice.status === 'partially_paid') &&
     parseFloat(invoice.balance) > 0
+  const showAfip = invoice.status !== 'draft'
+  const canAuthorizeAfip = showAfip && invoice.status !== 'cancelled' && invoice.afip_status !== 'authorized'
 
   const balanceNum = parseFloat(invoice.balance)
 
@@ -389,6 +405,14 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
               </div>
             )}
           </div>
+
+          {showAfip && (
+            <AfipDocumentPanel
+              doc={invoice}
+              canAuthorize={canAuthorizeAfip}
+              onAuthorize={handleAuthorizeAfip}
+            />
+          )}
 
           <div className="bg-surface border border-border rounded-sm overflow-hidden">
             <div className="px-5 py-3 border-b border-border">

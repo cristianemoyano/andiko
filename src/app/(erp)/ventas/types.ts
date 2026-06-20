@@ -1,6 +1,18 @@
 import type { IvaRate, PaymentCondition } from '@/types'
+import type { AfipDocStatus, AfipObservationView } from '@/components/erp'
 
 export type { IvaRate, PaymentCondition }
+
+/** AFIP electronic-invoicing fields shared by invoices, credit notes and debit notes. */
+export interface AfipDocumentFields {
+  cae: string | null
+  cae_expiration: string | null
+  comprobante_tipo: number | null
+  punto_venta: number | null
+  cbte_numero: number | null
+  afip_status: AfipDocStatus
+  afip_observations: AfipObservationView[] | null
+}
 
 /** Sucursal (listados / detalle de ventas). */
 export interface BranchSummary {
@@ -191,7 +203,7 @@ export interface InvoiceItem {
   sort_order: number
 }
 
-export interface Invoice {
+export interface Invoice extends AfipDocumentFields {
   id: string
   branch_id: string | null
   contact_id: string | null

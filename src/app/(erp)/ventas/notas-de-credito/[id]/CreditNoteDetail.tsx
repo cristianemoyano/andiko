@@ -11,12 +11,15 @@ import { StatusBadge } from '@/components/primitives/Badge'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { SearchableSelect, type SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
+import { AfipDocumentPanel } from '@/components/erp/AfipDocumentPanel'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { VentasSubNav } from '../../VentasSubNav'
+import type { AfipDocumentFields } from '../../types'
 import { fetchJson } from '@/lib/fetch-json'
+import { notifyApiError, notifyInfo, notifySuccess } from '@/lib/notify'
 
 type CreditNoteStatus = 'draft' | 'issued' | 'cancelled'
-type CreditNote = {
+type CreditNote = AfipDocumentFields & {
   id: string
   credit_note_number: string
   status: CreditNoteStatus
@@ -204,6 +207,19 @@ export function CreditNoteDetail() {
     }
   }
 
+  async function handleAuthorizeAfip() {
+    try {
+      const updated = await fetchJson<CreditNote>(`/api/v1/sales/credit-notes/${id}/afip-cae`, { method: 'POST' })
+      if (updated.afip_status === 'authorized') notifySuccess('CAE autorizado por AFIP')
+      else if (updated.afip_status === 'contingency') notifyInfo('Sin conexión con AFIP. Quedó en cola de contingencia.')
+      else notifyInfo('AFIP rechazó el comprobante. Revisá las observaciones.')
+    } catch (e) {
+      notifyApiError(e)
+    } finally {
+      setRefresh(r => r + 1)
+    }
+  }
+
   const netDec = new Decimal(netAmount || '0')
   const taxDec = netDec.mul(new Decimal(ivaRate))
   const totalDec = netDec.plus(taxDec)
@@ -370,6 +386,15 @@ export function CreditNoteDetail() {
 
               {saveError && <p className="text-[13px] text-danger">{saveError}</p>}
             </div>
+          )}
+
+          {/* AFIP */}
+          {!editing && note.status !== 'draft' && (
+            <AfipDocumentPanel
+              doc={note}
+              canAuthorize={note.status === 'issued' && note.afip_status !== 'authorized'}
+              onAuthorize={handleAuthorizeAfip}
+            />
           )}
 
           {/* Amounts breakdown (read-only) */}
