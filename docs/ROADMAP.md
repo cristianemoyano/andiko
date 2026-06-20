@@ -337,10 +337,11 @@ detrás de un adaptador mockeable (`AFIP_MODE=stub|homologacion|produccion`).
 - [x] Libro IVA Ventas digital — servicio + endpoint (`/api/v1/afip/libro-iva-ventas`)
 - [x] Libro IVA Compras digital — servicio + endpoint (`/api/v1/afip/libro-iva-compras`)
 - [x] Punto de venta por sucursal + endpoint de configuración AFIP
+- [x] Certificados ARCA por organización — bóveda `afip_credentials` (clave privada cifrada), validación X.509 y API de carga (PEM) con estado redactado
 
 ### Pendiente (frontend)
 - [ ] Reimpresión de comprobantes con CAE + QR (RG 4291) en plantilla de impresión
-- [ ] UI: acción "Autorizar AFIP", pantallas de notas de débito, libros IVA y configuración AFIP
+- [ ] UI: acción "Autorizar AFIP", pantallas de notas de débito, libros IVA, configuración AFIP y carga de certificado por organización
 
 ---
 
