@@ -1,11 +1,13 @@
 import 'server-only'
+import QRCode from 'qrcode'
 import type { PaymentCondition } from '@/types'
-import type { PrintableBranch, PrintableCounterparty, PrintableDocument, PrintableLineItem, PrintablePaymentRow, PrintableTotals } from '@/types/printing'
+import type { PrintableAfip, PrintableBranch, PrintableCounterparty, PrintableDocument, PrintableLineItem, PrintablePaymentRow, PrintableTotals } from '@/types/printing'
 import type { TenantContext } from '@/lib/tenancy'
 import { getQuote } from '@/modules/sales/sales-quotes.service'
 import { getOrder } from '@/modules/sales/sales-orders.service'
 import { getInvoice } from '@/modules/sales/invoices.service'
 import { getDeliveryNote } from '@/modules/inventory/delivery-notes.service'
+import { buildAfipQrUrl } from '@/modules/afip/afip-qr'
 import { decString, formatDateArg } from './format-utils'
 import { getPrintHeader } from './issuer'
 import { assertPrintAccess } from './tenant-guards'
@@ -20,7 +22,7 @@ import {
 
 /** Sequelize include fields not declared on model class. */
 type BranchInc = { id: string; name: string; branch_code: number }
-type ContactInc = { legal_name: string; trade_name: string | null }
+type ContactInc = { legal_name: string; trade_name: string | null; cuit?: string | null }
 
 type SalesQuoteLoaded = {
   status: string
@@ -72,6 +74,11 @@ type SalesInvoiceLoaded = {
   discount_amount: unknown
   tax_amount: unknown
   total: unknown
+  cae: string | null
+  cae_expiration: Date | string | null
+  comprobante_tipo: number | null
+  punto_venta: number | null
+  cbte_numero: number | null
   branch?: BranchInc | null
   contact?: ContactInc | null
   items?: Parameters<typeof linesFromSalesLikeItems>[0]
@@ -253,10 +260,68 @@ export async function buildDeliveryNotePrintable(id: string, ctx: TenantContext)
   }
 }
 
+const COMPROBANTE_TIPO_LABEL: Record<number, string> = {
+  1: 'Factura A', 6: 'Factura B', 11: 'Factura C',
+  2: 'Nota de Débito A', 7: 'Nota de Débito B', 12: 'Nota de Débito C',
+  3: 'Nota de Crédito A', 8: 'Nota de Crédito B', 13: 'Nota de Crédito C',
+}
+
+function digitsOnly(value: string | null | undefined): string {
+  return (value ?? '').replace(/\D/g, '')
+}
+
+function isoDateOnly(value: Date | string | null): string | null {
+  if (!value) return null
+  if (typeof value === 'string') return value.slice(0, 10)
+  return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10)
+}
+
+/** Builds the AFIP CAE + QR block for an authorized invoice (server-side QR data-URL). */
+async function buildInvoiceAfip(invoice: SalesInvoiceLoaded, issuerCuit: string | null): Promise<PrintableAfip | null> {
+  if (!invoice.cae) return null
+
+  let qrDataUrl: string | null = null
+  const issuerDigits = digitsOnly(issuerCuit)
+  if (issuerDigits.length === 11 && invoice.punto_venta && invoice.comprobante_tipo && invoice.cbte_numero) {
+    const recDigits = digitsOnly(invoice.contact?.cuit)
+    const receiver = recDigits.length === 11
+      ? { tipoDocRec: 80, nroDocRec: Number(recDigits) }
+      : { tipoDocRec: 99, nroDocRec: 0 }
+    const url = buildAfipQrUrl({
+      fecha: isoDateOnly(invoice.issue_date) ?? isoDateOnly(invoice.created_at) ?? '',
+      cuit: Number(issuerDigits),
+      ptoVta: invoice.punto_venta,
+      tipoCmp: invoice.comprobante_tipo,
+      nroCmp: invoice.cbte_numero,
+      importe: Number(decString(invoice.total)),
+      moneda: 'PES',
+      ctz: 1,
+      tipoDocRec: receiver.tipoDocRec,
+      nroDocRec: receiver.nroDocRec,
+      codAut: Number(invoice.cae),
+    })
+    try {
+      qrDataUrl = await QRCode.toDataURL(url, { margin: 1, width: 160 })
+    } catch {
+      qrDataUrl = null
+    }
+  }
+
+  return {
+    cae: invoice.cae,
+    cae_expiration: isoDateOnly(invoice.cae_expiration),
+    comprobante_label: invoice.comprobante_tipo != null ? (COMPROBANTE_TIPO_LABEL[invoice.comprobante_tipo] ?? null) : null,
+    punto_venta: invoice.punto_venta,
+    cbte_numero: invoice.cbte_numero,
+    qr_data_url: qrDataUrl,
+  }
+}
+
 export async function buildSalesInvoicePrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
   const invoice = (await getInvoice(id, ctx)) as unknown as SalesInvoiceLoaded
   assertPrintAccess({ org_id: invoice.org_id, branch_id: invoice.branch_id }, ctx)
   const { issuer, template } = await getPrintHeader(ctx.orgId)
+  const afip = await buildInvoiceAfip(invoice, issuer.cuit)
   const pc = invoice.payment_condition as PaymentCondition
   const isDraft = invoice.status === 'draft'
   const payments: PrintablePaymentRow[] | null = (() => {
@@ -295,5 +360,6 @@ export async function buildSalesInvoicePrintable(id: string, ctx: TenantContext)
     totals: totalsFrom(invoice.subtotal, invoice.discount_amount, invoice.tax_amount, invoice.total),
     notes: invoice.notes ?? null,
     payments,
+    afip,
   }
 }

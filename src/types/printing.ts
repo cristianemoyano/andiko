@@ -84,6 +84,18 @@ export interface PrintablePaymentRow {
   reference: string | null
 }
 
+/** AFIP authorization block for an electronically-authorized comprobante. */
+export interface PrintableAfip {
+  cae: string
+  /** CAE expiration as an ISO `yyyy-mm-dd` string. */
+  cae_expiration: string | null
+  comprobante_label: string | null
+  punto_venta: number | null
+  cbte_numero: number | null
+  /** Data-URL PNG of the AFIP QR (server-generated). */
+  qr_data_url: string | null
+}
+
 /** Serialized document for print / PDF preview. */
 export interface PrintableDocument {
   domain: PrintDomain
@@ -109,6 +121,8 @@ export interface PrintableDocument {
   notes: string | null
   /** e.g. sales invoice — supplier payments on supplier invoice */
   payments: PrintablePaymentRow[] | null
+  /** AFIP authorization (CAE + QR), present on authorized electronic comprobantes. */
+  afip?: PrintableAfip | null
 }
 
 export const PRINTING_ERROR_CODES = {
