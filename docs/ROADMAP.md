@@ -339,9 +339,13 @@ detrás de un adaptador mockeable (`AFIP_MODE=stub|homologacion|produccion`).
 - [x] Punto de venta por sucursal + endpoint de configuración AFIP
 - [x] Certificados ARCA por organización — bóveda `afip_credentials` (clave privada cifrada), validación X.509 y API de carga (PEM) con estado redactado
 
-### Pendiente (frontend)
-- [ ] Reimpresión de comprobantes con CAE + QR (RG 4291) en plantilla de impresión
-- [ ] UI: acción "Autorizar AFIP", pantallas de notas de débito, libros IVA, configuración AFIP y carga de certificado por organización
+### Frontend (completado)
+- [x] Componentes de diseño `AfipStatusBadge` y `AfipDocumentPanel` (con Storybook)
+- [x] Acción "Autorizar AFIP" + panel CAE/estado en detalle de factura, nota de crédito y nota de débito
+- [x] Pantallas de notas de débito (listado, alta, detalle)
+- [x] Páginas Libro IVA Ventas (`/ventas/libro-iva`) y Compras (`/compras/libro-iva`) con filtro por período
+- [x] Pestaña de configuración AFIP: punto de venta por sucursal, carga de certificado ARCA (PEM) y cola de contingencia
+- [x] Reimpresión de comprobantes con CAE + QR (RG 4291) en plantilla de impresión
 
 ---
 
