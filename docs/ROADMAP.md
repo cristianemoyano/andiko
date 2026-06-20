@@ -450,6 +450,58 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 
 ---
 
+## Fase 8 — Integraciones de Hardware
+
+Hardware especializado para casos de uso específicos (retail, almacenes).
+
+### Balanzas Digitales (Mettler Toledo, CAS, Dibal, etc.)
+
+**Caso de uso primario:** Retail de productos a granel (carnicería, verdulería, panadería, almacén) con pesaje en POS.
+
+**Caso de uso secundario:** Control de peso en recepción de compras (vs. cantidad ordenada).
+
+**Stack:** Comunicación RS-232/USB/TCP desde Electron, variantes dinámicas por peso.
+
+#### Backend
+- [ ] Migraciones: `scale_devices` (config por sucursal), `scale_readings` (historial de pesajes)
+- [ ] Modelo Sequelize `ScaleDevice` (device_type, connection_type, connection_config JSONB, is_active, last_connected_at)
+- [ ] Modelo Sequelize `ScaleReading` (device_id, weight_grams, timestamp, opcional sale_order_item_id)
+- [ ] Service `scale-devices.service.ts`: CRUD + validación de config por tipo
+- [ ] Service `scale-readings.service.ts`: logging de pesajes, estadísticas
+- [ ] API REST: `GET/POST /api/v1/pos/scale-devices`, `PATCH/DELETE /api/v1/pos/scale-devices/:id`, `GET /api/v1/pos/scale-readings`
+- [ ] `withScaleDevice()` middleware para rutas POS que usan balanza
+
+#### POS (Electron)
+- [ ] `apps/pos/src/scales/ScaleReader.ts` — abstracción de comunicación (RS-232 serial, TCP socket)
+  - `ScaleReaderRS232` (serial-port library)
+  - `ScaleReaderTCP` (raw socket)
+  - Interfaz común `IScaleReader`
+- [ ] `apps/pos/src/hooks/useScaleWeight()` — hook para leer peso en vivo (estabilidad de lectura, timeout)
+- [ ] Componente `<ScaleWeightDisplay />` (mostrando peso actual, estatus conexión)
+- [ ] Modal de configuración: seleccionar balanza, puerto COM / IP, baudrate, timeout
+- [ ] En checkout: opción "Pesar" para productos con variante por peso (kg, 100g, etc.)
+- [ ] Lectura de peso → pre-llena cantidad en línea de venta, calcula precio dinámicamente
+- [ ] UX: botón "Leer peso" o automático al enfocar campo de cantidad
+- [ ] Historial local de pesajes (para debugging, sincroniza a cloud)
+
+#### ERP Admin
+- [ ] `/pos/balanzas` — pantalla CRUD de dispositivos por sucursal (test conexión, historial de pesajes)
+- [ ] Estado de conexión en tiempo real (last_connected_at, latencia promedio)
+- [ ] Logs de errores por dispositivo (puerto no disponible, timeout, parsing error)
+
+#### Testing
+- [ ] Mock de `ScaleReader` para tests (simular pesajes)
+- [ ] Casos edge: timeout, lectura inestable, reconexión, cambio de puerto COM
+- [ ] Integración POS: flujo completo pesaje → venta
+
+#### Principios
+- Nunca bloquea checkout si balanza no conecta (fallback a entrada manual)
+- Validar rango de peso sensato (ej. 50g–50kg) antes de aceptar lectura
+- Logs detallados para debugging en el campo
+- Soportar múltiples balanzas por sucursal (una por tipo de producto: carne, verdura, etc.)
+
+---
+
 ## Backlog / Fases futuras
 
 Ideas validadas pero sin fecha definida.
