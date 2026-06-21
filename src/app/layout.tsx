@@ -1,9 +1,10 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import { AppToaster } from '@/components/layout/AppToaster'
+import { ServiceWorkerRegister } from '@/components/layout/ServiceWorkerRegister'
 import { siteConfig, siteUrl } from '@/lib/site'
 
 import './globals.css'
@@ -26,6 +27,16 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: siteConfig.name,
+  },
+  icons: {
+    icon: '/icons/icon-192.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
   keywords: [
     'ERP',
     'pymes argentinas',
@@ -57,6 +68,18 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  // Cover the full screen (incl. notch areas) so `env(safe-area-inset-*)`
+  // resolves when running as an installed standalone PWA.
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FAFAFA' },
+    { media: '(prefers-color-scheme: dark)', color: '#18181B' },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -71,6 +94,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         {children}
         <AppToaster />
+        <ServiceWorkerRegister />
         <Analytics />
         <SpeedInsights />
       </body>
