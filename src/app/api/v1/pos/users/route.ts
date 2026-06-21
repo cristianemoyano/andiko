@@ -24,7 +24,7 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
     org_id: ctx.orgId,
     is_active: true,
     deleted_at: null,
-    role: { [Op.in]: ['operator', 'admin'] },
+    role: { [Op.in]: ['operator', 'admin', 'branch-admin'] },
   }
 
   // If device is bound to a branch, restrict to that branch or global users (branch_id null)

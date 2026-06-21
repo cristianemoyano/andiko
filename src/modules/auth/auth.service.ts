@@ -6,7 +6,7 @@ import logger from '@/lib/logger'
 export async function findUserByEmail(email: string) {
   return User.findOne({
     where: { email, is_active: true },
-    attributes: ['id', 'email', 'name', 'role', 'password_hash', 'org_id', 'branch_id'],
+    attributes: ['id', 'email', 'name', 'role', 'password_hash', 'org_id', 'branch_id', 'org_role_id'],
   })
 }
 

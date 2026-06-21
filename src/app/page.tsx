@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
+import { resolvePostAuthRedirect } from '@/lib/post-auth-redirect'
 import { AndikoLogo } from '@/components/layout/AndikoLogo'
 import { AppVersion } from '@/components/layout/AppVersion'
 import { createPageMetadata, siteConfig, siteUrl } from '@/lib/site'
@@ -179,7 +180,7 @@ function LandingJsonLd() {
 
 export default async function LandingPage() {
   const session = await auth()
-  if (session) redirect('/panel')
+  if (session) redirect(await resolvePostAuthRedirect(session))
 
   return (
     <>

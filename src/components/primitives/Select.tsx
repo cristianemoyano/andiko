@@ -84,7 +84,7 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
           position="popper"
           sideOffset={4}
           className={cn(
-            'z-50 max-h-[280px] overflow-hidden rounded-sm border border-border bg-surface shadow-md',
+            'z-[100] max-h-[280px] overflow-hidden rounded-sm border border-border bg-surface shadow-md',
             'min-w-[var(--radix-select-trigger-width)]',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',

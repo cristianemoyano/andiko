@@ -204,18 +204,20 @@ function ActivityIcon({ type }: { type: string }) {
 export function PanelClient({
   initialHiddenWidgets = [],
   initialWidgetOrder = DEFAULT_PANEL_WIDGET_ORDER,
+  lockedBranchId = null,
 }: {
   initialHiddenWidgets?: PanelWidgetId[]
   initialWidgetOrder?: PanelWidgetId[]
+  lockedBranchId?: string | null
 }) {
   return (
     <PanelWidgetProvider initialHidden={initialHiddenWidgets} initialOrder={initialWidgetOrder}>
-      <PanelClientContent />
+      <PanelClientContent lockedBranchId={lockedBranchId} />
     </PanelWidgetProvider>
   )
 }
 
-function PanelClientContent() {
+function PanelClientContent({ lockedBranchId = null }: { lockedBranchId?: string | null }) {
   const { widgetOrder, isHidden } = usePanelWidgets()
   const router = useRouter()
   const pathname = usePathname()
@@ -245,6 +247,13 @@ function PanelClientContent() {
     router.replace(`${pathname}?${params.toString()}`)
   }, [router, pathname, searchParams])
 
+  useEffect(() => {
+    if (!lockedBranchId) return
+    if (branchId !== lockedBranchId) {
+      updateParams({ branch_id: lockedBranchId })
+    }
+  }, [lockedBranchId, branchId, updateParams])
+
   // Load stock alerts once (independent of period filter)
   useEffect(() => {
     Promise.all([
@@ -262,14 +271,22 @@ function PanelClientContent() {
   useEffect(() => {
     fetchJson<{ data: { id: string; name: string; branch_code: number }[] }>('/api/v1/branches')
       .then(res => {
+        const list = res.data ?? []
+        if (lockedBranchId) {
+          const branch = list.find(b => b.id === lockedBranchId)
+          setBranches(branch
+            ? [{ value: branch.id, label: `${String(branch.branch_code).padStart(2, '0')} — ${branch.name}` }]
+            : [])
+          return
+        }
         const opts = [
           { value: 'all', label: 'Todas las sucursales' },
-          ...(res.data ?? []).map(b => ({ value: b.id, label: `${String(b.branch_code).padStart(2, '0')} — ${b.name}` })),
+          ...list.map(b => ({ value: b.id, label: `${String(b.branch_code).padStart(2, '0')} — ${b.name}` })),
         ]
         setBranches(opts)
       })
-      .catch(() => setBranches([{ value: 'all', label: 'Todas las sucursales' }]))
-  }, [])
+      .catch(() => setBranches(lockedBranchId ? [] : [{ value: 'all', label: 'Todas las sucursales' }]))
+  }, [lockedBranchId])
 
   // Load dashboard data when filters change
   useEffect(() => {
@@ -608,6 +625,7 @@ function PanelClientContent() {
         fromDate={fromDate}
         toDate={toDate}
         branches={branches}
+        branchLocked={!!lockedBranchId}
         onPeriodChange={p => updateParams({ period: p })}
         onBranchChange={id => updateParams({ branch_id: id })}
         onFromChange={from => updateParams({ from })}

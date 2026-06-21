@@ -14,7 +14,7 @@ export async function loadUserForImpersonation(id: string) {
   if (!isUuid(id)) return null
   return User.findOne({
     where: { id: id.trim(), is_active: true },
-    attributes: ['id', 'email', 'name', 'role', 'org_id', 'branch_id'],
+    attributes: ['id', 'email', 'name', 'role', 'org_id', 'branch_id', 'org_role_id'],
   })
 }
 

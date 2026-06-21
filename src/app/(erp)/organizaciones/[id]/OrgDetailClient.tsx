@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
@@ -20,6 +21,11 @@ import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-js
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 import { notifyApiError } from '@/lib/notify'
 import { ORG_MODULE_DEFS, type OrgModuleKey } from '@/modules/auth/organization-modules'
+import { getBuiltinRoleLabel } from '@/modules/auth/role-labels'
+import { orgApiPaths } from '@/lib/org-api-paths'
+import { canManageOrgUserFromList } from '@/lib/org-user-management-access'
+import { useCapabilities } from '@/components/layout/CapabilitiesContext'
+import { RolePermissionMatrix } from '@/components/erp/RolePermissionMatrix'
 
 interface OrgPayload {
   id: string
@@ -64,6 +70,11 @@ interface OrgDetailClientProps {
 
 export function OrgDetailClient({ id }: OrgDetailClientProps) {
   const router = useRouter()
+  const { data: session } = useSession()
+  const { capabilities, refreshCapabilities } = useCapabilities()
+  const ui = capabilities?.organizacion
+  const nav = capabilities?.nav
+  const api = orgApiPaths(ui?.apiNamespace ?? 'settings', id)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [refresh, setRefresh] = useState(0)
@@ -104,7 +115,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
       if (cancelled) return
       setLoading(true)
       try {
-        const data = await fetchJson<DetailResponse>(`/api/v1/sys-admin/organizations/${id}`)
+        const data = await fetchJson<DetailResponse>(api.organization)
         if (cancelled) return
         setDetail(data)
         setOrgName(data.organization.name)
@@ -132,13 +143,14 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     return () => {
       cancelled = true
     }
-  }, [id, refresh])
+  }, [id, refresh, api.organization])
 
   useEffect(() => {
+    if (!ui?.sections.users) return
     let cancelled = false
     void (async () => {
       try {
-        const j = await fetchJson<{ data: OrgUserRow[] }>(`/api/v1/sys-admin/organizations/${id}/users`)
+        const j = await fetchJson<{ data: OrgUserRow[] }>(api.users)
         if (cancelled) return
         setUsers(j.data ?? [])
       } catch {
@@ -148,13 +160,14 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     return () => {
       cancelled = true
     }
-  }, [id, refresh])
+  }, [id, refresh, api.users, ui?.sections.users])
 
   useEffect(() => {
+    if (!ui?.sections.enabledModules || !api.settings) return
     let cancelled = false
     void (async () => {
       try {
-        const settings = await fetchJson<OrgSettingsPayload>(`/api/v1/sys-admin/organizations/${id}/settings`)
+        const settings = await fetchJson<OrgSettingsPayload>(api.settings)
         if (cancelled) return
         setEnabledModules(settings.enabled_modules ?? [])
         setSettingsDefault(settings.is_default)
@@ -164,25 +177,33 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
       }
     })()
     return () => { cancelled = true }
-  }, [id, refresh])
+  }, [id, refresh, api.settings, ui?.sections.enabledModules])
 
   async function handleSaveOrg(e: React.FormEvent) {
     e.preventDefault()
+    if (!ui) return
     setOrgSaving(true)
     setOrgError(null)
     setOrgFieldErrors({})
     try {
-      await fetchJson(`/api/v1/sys-admin/organizations/${id}`, {
+      const fiscalBody = {
+        legal_name: orgLegalName.trim() || null,
+        cuit: orgCuit.trim() || null,
+        iva_condition: orgIvaCondition || null,
+        fiscal_address: orgFiscalAddress.trim() || null,
+      }
+      const body = ui.sections.orgMetaEdit
+        ? {
+            name: orgName.trim(),
+            slug: orgSlug.trim().toLowerCase(),
+            is_active: orgActive,
+            ...fiscalBody,
+          }
+        : fiscalBody
+
+      await fetchJson(api.organization, {
         method: 'PATCH',
-        body: JSON.stringify({
-          name: orgName.trim(),
-          slug: orgSlug.trim().toLowerCase(),
-          is_active: orgActive,
-          legal_name: orgLegalName.trim() || null,
-          cuit: orgCuit.trim() || null,
-          iva_condition: orgIvaCondition || null,
-          fiscal_address: orgFiscalAddress.trim() || null,
-        }),
+        body: JSON.stringify(body),
       })
       setEditOrgOpen(false)
       setRefresh(r => r + 1)
@@ -196,10 +217,11 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
   }
 
   async function handleSaveSettings() {
+    if (!api.settings) return
     setSettingsSaving(true)
     setSettingsError(null)
     try {
-      const settings = await fetchJson<OrgSettingsPayload>(`/api/v1/sys-admin/organizations/${id}/settings`, {
+      const settings = await fetchJson<OrgSettingsPayload>(api.settings, {
         method: 'PATCH',
         body: JSON.stringify({ enabled_modules: enabledModules }),
       })
@@ -221,8 +243,8 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
   async function handleDeleteOrg() {
     setConfirmDeleteOrg(false)
     try {
-      await fetchJson(`/api/v1/sys-admin/organizations/${id}`, { method: 'DELETE' })
-      router.push('/sys-admin/organizaciones')
+      await fetchJson(api.organization, { method: 'DELETE' })
+      router.push('/organizaciones')
     } catch (e) {
       notifyApiError(e)
     }
@@ -233,7 +255,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     const branchId = confirmDeleteBranch.id
     setConfirmDeleteBranch(null)
     try {
-      await fetchJson(`/api/v1/sys-admin/branches/${branchId}`, { method: 'DELETE' })
+      await fetchJson(api.branch(branchId), { method: 'DELETE' })
       setRefresh(r => r + 1)
     } catch (e) {
       notifyApiError(e)
@@ -245,18 +267,50 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     const userId = confirmDeleteUser.id
     setConfirmDeleteUser(null)
     try {
-      await fetchJson(`/api/v1/sys-admin/organizations/${id}/users/${userId}`, { method: 'DELETE' })
+      await fetchJson(api.user(userId), { method: 'DELETE' })
       setRefresh(r => r + 1)
     } catch (e) {
       notifyApiError(e)
     }
   }
 
-  const roleLabel: Record<string, string> = {
-    admin: 'Administrador',
-    operator: 'Operador',
-    readonly: 'Solo lectura',
+  const roleLabel = (row: OrgUserRow) =>
+    row.org_role_name ?? getBuiltinRoleLabel(row.role)
+
+  const actorId = session?.user?.impersonation?.userId ?? session?.user?.id ?? null
+  const bypassUserManagementRules =
+    session?.user?.realRole === 'sys-admin' && !session?.user?.impersonation
+
+  function canManageUser(row: OrgUserRow): boolean {
+    if (bypassUserManagementRules || !actorId || !session?.user) return true
+    return canManageOrgUserFromList(
+      {
+        id: actorId,
+        role: session.user.role,
+        org_role_id: session.user.orgRoleId ?? null,
+      },
+      {
+        id: row.id,
+        role: row.role,
+        org_role_id: row.org_role_id,
+      },
+    )
   }
+
+  if (!ui || !nav) {
+    return (
+      <div className="flex flex-col h-full">
+        <TopBar breadcrumbs={[{ label: 'Organización' }]} />
+        <div className="flex-1 flex items-center justify-center text-[13px] text-fg-subtle">Cargando…</div>
+      </div>
+    )
+  }
+
+  const listHref = nav.organizacionesHref === `/organizaciones/${id}` ? null : nav.organizacionesHref
+
+  const breadcrumbs = listHref
+    ? [{ label: 'Organizaciones', href: listHref }, { label: detail?.organization.name ?? '…' }]
+    : [{ label: detail?.organization.name ?? '…' }]
 
   const userColumns: Column<OrgUserRow>[] = [
     {
@@ -273,7 +327,9 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
       key: 'role',
       header: 'Rol',
       render: row => (
-        <span className="text-[13px] text-fg-muted">{roleLabel[row.role] ?? row.role}</span>
+        <span className="text-[13px] text-fg-muted">
+          {row.org_role_name ?? roleLabel(row)}
+        </span>
       ),
     },
     {
@@ -299,19 +355,30 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
       header: '',
       render: row => (
         <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() => {
-              setEditingUser(row)
-              setUserModalOpen(true)
-            }}
-          >
-            Editar
-          </Button>
-          <Button variant="ghost" size="xs" onClick={() => setConfirmDeleteUser(row)}>
-            Eliminar
-          </Button>
+          {ui.actions.editUser && actorId === row.id && !bypassUserManagementRules && (
+            <Link href="/perfil">
+              <Button variant="ghost" size="xs">
+                Perfil
+              </Button>
+            </Link>
+          )}
+          {ui.actions.editUser && canManageUser(row) && (
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => {
+                setEditingUser(row)
+                setUserModalOpen(true)
+              }}
+            >
+              Editar
+            </Button>
+          )}
+          {ui.actions.deleteUser && canManageUser(row) && (
+            <Button variant="ghost" size="xs" onClick={() => setConfirmDeleteUser(row)}>
+              Eliminar
+            </Button>
+          )}
         </div>
       ),
     },
@@ -347,12 +414,16 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
       header: '',
       render: row => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="xs" onClick={() => { setEditingBranch(row); setBranchModalOpen(true) }}>
-            Editar
-          </Button>
-          <Button variant="ghost" size="xs" onClick={() => setConfirmDeleteBranch(row)}>
-            Eliminar
-          </Button>
+          {ui.actions.editBranch && (
+            <Button variant="ghost" size="xs" onClick={() => { setEditingBranch(row); setBranchModalOpen(true) }}>
+              Editar
+            </Button>
+          )}
+          {ui.actions.deleteBranch && (
+            <Button variant="ghost" size="xs" onClick={() => setConfirmDeleteBranch(row)}>
+              Eliminar
+            </Button>
+          )}
         </div>
       ),
     },
@@ -361,7 +432,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
   if (loading) {
     return (
       <div className="flex flex-col h-full">
-        <TopBar breadcrumbs={[{ label: 'Sys-admin', href: '/sys-admin/organizaciones' }, { label: '…' }]} />
+        <TopBar breadcrumbs={breadcrumbs} />
         <div className="flex-1 flex items-center justify-center text-[13px] text-fg-subtle">Cargando…</div>
       </div>
     )
@@ -370,12 +441,14 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
   if (notFound || !detail) {
     return (
       <div className="flex flex-col h-full">
-        <TopBar breadcrumbs={[{ label: 'Sys-admin', href: '/sys-admin/organizaciones' }, { label: 'No encontrado' }]} />
+        <TopBar breadcrumbs={[{ label: 'No encontrado' }]} />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
           <p className="text-[13px] text-fg-muted">Organización no encontrada.</p>
-          <Link href="/sys-admin/organizaciones">
-            <Button variant="secondary" size="sm">Volver al listado</Button>
-          </Link>
+          {listHref && (
+            <Link href={listHref}>
+              <Button variant="secondary" size="sm">Volver al listado</Button>
+            </Link>
+          )}
         </div>
       </div>
     )
@@ -386,20 +459,22 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
   return (
     <div className="flex flex-col h-full">
       <TopBar
-        breadcrumbs={[
-          { label: 'Sys-admin', href: '/sys-admin/organizaciones' },
-          { label: 'Organizaciones', href: '/sys-admin/organizaciones' },
-          { label: org.name },
-        ]}
+        breadcrumbs={breadcrumbs}
         actions={
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteOrg(true)}>
-              Eliminar organización
-            </Button>
-            <Button size="sm" onClick={() => setEditOrgOpen(true)}>
-              Editar datos
-            </Button>
-          </div>
+          (ui.sections.deleteOrg || ui.sections.fiscalEdit || ui.sections.orgMetaEdit) ? (
+            <div className="flex gap-2">
+              {ui.sections.deleteOrg && (
+                <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteOrg(true)}>
+                  Eliminar organización
+                </Button>
+              )}
+              {(ui.sections.fiscalEdit || ui.sections.orgMetaEdit) && (
+                <Button size="sm" onClick={() => setEditOrgOpen(true)}>
+                  Editar datos
+                </Button>
+              )}
+            </div>
+          ) : undefined
         }
       />
 
@@ -414,6 +489,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
             <div className="mt-3">
               <StatusBadge value={org.is_active ? 'Activa' : 'Inactiva'} />
             </div>
+            {ui.sections.fiscal && (
             <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
               <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide sm:col-span-2">Datos fiscales</p>
               <div>
@@ -435,8 +511,10 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
                 <p className="text-[13px] text-fg">{org.fiscal_address ?? '—'}</p>
               </div>
             </div>
+            )}
           </div>
 
+          {ui.sections.enabledModules && (
           <div className="bg-surface border border-border rounded-sm p-5">
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -475,10 +553,23 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               ))}
             </div>
           </div>
+          )}
 
+          {ui.sections.rolesMatrix && (
+            <div className="bg-surface border border-border rounded-sm p-5">
+              <RolePermissionMatrix
+                orgId={id}
+                apiNamespace={ui.apiNamespace}
+                canEdit={ui.actions.saveRolesMatrix}
+              />
+            </div>
+          )}
+
+          {ui.sections.users && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-[14px] font-semibold text-fg">Usuarios</h2>
+              {ui.actions.createUser && (
               <Button
                 size="sm"
                 onClick={() => {
@@ -489,6 +580,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               >
                 + Nuevo usuario
               </Button>
+              )}
             </div>
             <DataTable
               columns={userColumns}
@@ -497,10 +589,13 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               emptyMessage="No hay usuarios en esta organización."
             />
           </div>
+          )}
 
+          {ui.sections.branches && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-[14px] font-semibold text-fg">Sucursales</h2>
+              {ui.actions.createBranch && (
               <Button
                 size="sm"
                 onClick={() => {
@@ -510,6 +605,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               >
                 + Nueva sucursal
               </Button>
+              )}
             </div>
             <DataTable
               columns={branchColumns}
@@ -518,11 +614,14 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               emptyMessage="No hay sucursales. Creá la primera."
             />
           </div>
+          )}
         </div>
       </div>
 
-      <Dialog open={editOrgOpen} onOpenChange={v => { if (!v) setEditOrgOpen(false) }} title="Editar organización" size="md">
+      <Dialog open={editOrgOpen} onOpenChange={v => { if (!v) setEditOrgOpen(false) }} title={ui.sections.orgMetaEdit ? 'Editar organización' : 'Editar datos fiscales'} size="md">
         <form onSubmit={handleSaveOrg} className="flex flex-col gap-4">
+          {ui.sections.orgMetaEdit && (
+          <>
           <FormField label="Nombre" htmlFor="edit_org_name">
             <Input
               id="edit_org_name"
@@ -542,6 +641,8 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               required
             />
           </FormField>
+          </>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Razón social legal" htmlFor="edit_org_legal_name" error={orgFieldErrors.legal_name?.[0]}>
               <Input
@@ -582,6 +683,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               />
             </FormField>
           </div>
+          {ui.sections.orgMetaEdit && (
           <label className="flex items-center gap-2 text-[13px] text-fg-muted cursor-pointer">
             <input
               type="checkbox"
@@ -591,6 +693,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
             />
             Organización activa
           </label>
+          )}
           {orgError && (
             <p role="alert" className="text-[12px] text-danger">{orgError}</p>
           )}
@@ -608,6 +711,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
       <BranchModal
         open={branchModalOpen}
         orgId={id}
+        apiNamespace={ui.apiNamespace}
         branch={editingBranch}
         onClose={() => { setBranchModalOpen(false); setEditingBranch(null) }}
         onSaved={() => setRefresh(r => r + 1)}
@@ -616,12 +720,17 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
       <OrgUserModal
         open={userModalOpen}
         orgId={id}
+        apiNamespace={ui.apiNamespace}
         branches={detail.branches}
         user={editingUser}
         onClose={() => { setUserModalOpen(false); setEditingUser(null) }}
-        onSaved={() => setRefresh(r => r + 1)}
+        onSaved={() => {
+          setRefresh(r => r + 1)
+          void refreshCapabilities()
+        }}
       />
 
+      {ui.sections.deleteOrg && (
       <ConfirmDialog
         open={confirmDeleteOrg}
         onOpenChange={setConfirmDeleteOrg}
@@ -631,6 +740,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
         variant="danger"
         onConfirm={handleDeleteOrg}
       />
+      )}
 
       <ConfirmDialog
         open={!!confirmDeleteBranch}

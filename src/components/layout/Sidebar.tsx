@@ -9,6 +9,7 @@ import { SysAdminImpersonation } from './SysAdminImpersonation'
 import { useSidebar } from './SidebarContext'
 import { NAV_MAIN, NAV_MODULES, NAV_SYSTEM, isModuleNavVisible, type NavItem } from './nav-items'
 import { type OrgModuleKey } from '@/modules/auth/organization-modules'
+import { useCapabilities } from './CapabilitiesContext'
 
 interface SidebarProps {
   userName?: string
@@ -32,6 +33,8 @@ export function Sidebar({
   const pathname = usePathname()
   const { data: session } = useSession()
   const { open, setOpen } = useSidebar()
+  const { capabilities } = useCapabilities()
+  const navCapabilities = capabilities?.nav ?? null
 
   // Re-read from client session so nav updates when impersonation starts/stops without refresh.
   const showSysAdminNavigation = session?.user
@@ -41,8 +44,11 @@ export function Sidebar({
   const displayName = session?.user?.name ?? session?.user?.email ?? userName
   const displayRole = session?.user?.role ?? userRole
 
-  const visibleModules = NAV_MODULES.filter(item => isModuleNavVisible(item.id, enabledModules))
-  const showPosSection = isModuleNavVisible('pos-dispositivos', enabledModules)
+  const permissions = capabilities?.permissions
+  const showPanel = navCapabilities?.panel === true
+  const visibleMain = NAV_MAIN.filter(item => item.id !== 'dashboard' || showPanel)
+  const visibleModules = NAV_MODULES.filter(item => isModuleNavVisible(item.id, enabledModules, permissions))
+  const showPosSection = isModuleNavVisible('pos-dispositivos', enabledModules, permissions)
 
   const initials = displayName
     ? displayName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -95,14 +101,14 @@ export function Sidebar({
                   item={{
                     id: 'sys-admin-orgs',
                     label: 'Organizaciones',
-                    href: '/sys-admin/organizaciones',
+                    href: '/organizaciones',
                     icon: (
                       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                         <path d="M3 14h10M3 10h10M5 6h6M5 2h6M2 14V6l6-4 6 4v8"/>
                       </svg>
                     ),
                   }}
-                  active={pathname.startsWith('/sys-admin/organizaciones')}
+                  active={pathname.startsWith('/organizaciones')}
                 />
                 <NavLink
                   item={{
@@ -124,7 +130,7 @@ export function Sidebar({
         )}
 
         <SectionLabel>Principal</SectionLabel>
-        {NAV_MAIN.map(item => (
+        {visibleMain.map(item => (
           <NavLink key={item.id} item={item} active={pathname === item.href} />
         ))}
 
@@ -179,7 +185,22 @@ export function Sidebar({
         )}
 
         <SectionLabel>Sistema</SectionLabel>
-        {NAV_SYSTEM.map(item => (
+        {navCapabilities?.organizaciones && navCapabilities.organizacionesHref && !showSysAdminNavigation && (
+          <NavLink
+            item={{
+              id: 'organizacion',
+              label: 'Organización',
+              href: navCapabilities.organizacionesHref,
+              icon: (
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M3 14h10M3 10h10M5 6h6M5 2h6M2 14V6l6-4 6 4v8"/>
+                </svg>
+              ),
+            }}
+            active={pathname.startsWith('/organizaciones')}
+          />
+        )}
+        {NAV_SYSTEM.filter(item => item.id !== 'configuracion' || navCapabilities?.configuracion !== false).map(item => (
           <NavLink key={item.id} item={item} active={pathname.startsWith(item.href)} />
         ))}
       </nav>

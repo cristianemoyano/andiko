@@ -9,7 +9,7 @@ const ORG_REQUIRED_RESPONSE = {
   code: 'ORG_CONTEXT_REQUIRED',
 }
 
-export const GET = withPermission('sales:read', async (_req, _ctx, session) => {
+export const GET = withPermission('settings:read', async (_req, _ctx, session) => {
   const orgId = await resolveOrgIdForMutation(session.user)
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 
@@ -24,7 +24,7 @@ export const GET = withPermission('sales:read', async (_req, _ctx, session) => {
   }
 })
 
-export const PUT = withPermission('sales:write', async (req, _ctx, session) => {
+export const PUT = withPermission('settings:write', async (req, _ctx, session) => {
   const orgId = await resolveOrgIdForMutation(session.user)
   if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
 

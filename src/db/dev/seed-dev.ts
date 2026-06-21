@@ -8,6 +8,9 @@ import { BASE_PLAN_ENABLED_MODULES } from '@/modules/auth/organization-modules'
 import Branch from '@/modules/auth/branch.model'
 import User from '@/modules/auth/user.model'
 import UserBranch from '@/modules/auth/user-branch.model'
+import OrgRole from '@/modules/auth/org-role.model'
+import { seedDefaultOrgRoles } from '@/modules/auth/org-roles-seed'
+import type { UserRole } from '@/types/roles'
 import bcrypt from 'bcryptjs'
 import SalesQuote from '@/modules/sales/sales-quote.model'
 import SalesQuoteItem from '@/modules/sales/sales-quote-item.model'
@@ -43,7 +46,29 @@ import { nextPurchaseDocNumber, calcLineItem as calcPurchaseLine, calcDocumentTo
 
 const MIN_PROD_PASSWORD_LENGTH = 16
 
-const DEV_SEED = {
+type SeedUser = {
+  email: string
+  password: string
+  name: string
+  branchIndex: number
+  allowedBranchIndexes: number[]
+  devOnly?: boolean
+} & (
+  | { role: 'admin' | 'branch-admin'; orgRoleName?: never }
+  | { orgRoleName: string; role?: never }
+)
+
+type SeedConfig = {
+  sysAdmin: { email: string; password: string; name: string }
+  tenants: Array<{
+    name: string
+    slug: string
+    branches: Array<{ name: string; address: string }>
+    users: SeedUser[]
+  }>
+}
+
+const DEV_SEED: SeedConfig = {
   sysAdmin: {
     email: 'admin@andiko.local',
     password: 'password123',
@@ -58,8 +83,58 @@ const DEV_SEED = {
         { name: 'Sucursal Norte', address: 'Ruta 9 km 12' },
       ],
       users: [
-        { email: 'admin@demo.local', password: 'demo12345', name: 'Admin Demo', role: 'admin' as const, branchIndex: 0, allowedBranchIndexes: [0, 1] },
-        { email: 'op@demo.local', password: 'demo12345', name: 'Operador Demo', role: 'operator' as const, branchIndex: 1, allowedBranchIndexes: [1] },
+        {
+          email: 'admin@demo.local',
+          password: 'demo12345',
+          name: 'Gerente Demo',
+          role: 'admin',
+          branchIndex: 0,
+          allowedBranchIndexes: [0, 1],
+        },
+        {
+          email: 'op@demo.local',
+          password: 'demo12345',
+          name: 'Vendedor Demo',
+          orgRoleName: 'Vendedor',
+          branchIndex: 1,
+          allowedBranchIndexes: [1],
+        },
+        {
+          email: 'sucursal@demo.local',
+          password: 'demo12345',
+          name: 'Encargado Sucursal Demo',
+          role: 'branch-admin',
+          branchIndex: 1,
+          allowedBranchIndexes: [1],
+          devOnly: true,
+        },
+        {
+          email: 'compras@demo.local',
+          password: 'demo12345',
+          name: 'Gerente Compras Demo',
+          orgRoleName: 'Gerente de compras',
+          branchIndex: 0,
+          allowedBranchIndexes: [0, 1],
+          devOnly: true,
+        },
+        {
+          email: 'contador@demo.local',
+          password: 'demo12345',
+          name: 'Contador Demo',
+          orgRoleName: 'Contador',
+          branchIndex: 0,
+          allowedBranchIndexes: [0, 1],
+          devOnly: true,
+        },
+        {
+          email: 'deposito@demo.local',
+          password: 'demo12345',
+          name: 'Depósito Demo',
+          orgRoleName: 'Depósito',
+          branchIndex: 0,
+          allowedBranchIndexes: [0],
+          devOnly: true,
+        },
       ],
     },
     {
@@ -67,27 +142,31 @@ const DEV_SEED = {
       slug: 'premium',
       branches: [{ name: 'Central', address: 'Mitre 100' }],
       users: [
-        { email: 'admin@premium.local', password: 'premium12345', name: 'Admin Premium', role: 'admin' as const, branchIndex: 0, allowedBranchIndexes: [0] },
+        { email: 'admin@premium.local', password: 'premium12345', name: 'Gerente Premium', role: 'admin', branchIndex: 0, allowedBranchIndexes: [0] },
       ],
     },
   ],
-} as const
+}
 
-type SeedConfig = {
-  sysAdmin: { email: string; password: string; name: string }
-  tenants: Array<{
-    name: string
-    slug: string
-    branches: Array<{ name: string; address: string }>
-    users: Array<{
-      email: string
-      password: string
-      name: string
-      role: 'admin' | 'operator'
-      branchIndex: number
-      allowedBranchIndexes: number[]
-    }>
-  }>
+function resolveSeedUserRole(
+  user: SeedUser,
+  orgRolesByName: Map<string, string>,
+): { role: UserRole; org_role_id: string | null } {
+  if ('orgRoleName' in user && user.orgRoleName) {
+    const org_role_id = orgRolesByName.get(user.orgRoleName)
+    if (!org_role_id) {
+      throw new Error(`Org role "${user.orgRoleName}" not found — run seedDefaultOrgRoles first`)
+    }
+    return { role: 'operator', org_role_id }
+  }
+  if (!('role' in user) || !user.role) {
+    throw new Error(`Seed user ${user.email} must have role or orgRoleName`)
+  }
+  return { role: user.role, org_role_id: null }
+}
+
+function isSeedGerente(user: SeedUser): boolean {
+  return 'role' in user && user.role === 'admin'
 }
 
 function requireProdPassword(envKey: string): string {
@@ -101,7 +180,7 @@ function requireProdPassword(envKey: string): string {
 }
 
 function buildSeedConfig(allowProd: boolean): SeedConfig {
-  if (!allowProd) return DEV_SEED as unknown as SeedConfig
+  if (!allowProd) return DEV_SEED
 
   const [demo, premium] = DEV_SEED.tenants
   return {
@@ -114,18 +193,17 @@ function buildSeedConfig(allowProd: boolean): SeedConfig {
         name: demo.name,
         slug: demo.slug,
         branches: demo.branches.map((b) => ({ ...b })),
-        users: [
-          {
-            ...demo.users[0],
-            password: requireProdPassword('SEED_DEMO_ADMIN_PASSWORD'),
-            allowedBranchIndexes: [...demo.users[0].allowedBranchIndexes],
-          },
-          {
-            ...demo.users[1],
-            password: requireProdPassword('SEED_DEMO_OPERATOR_PASSWORD'),
-            allowedBranchIndexes: [...demo.users[1].allowedBranchIndexes],
-          },
-        ],
+        users: demo.users
+          .filter(u => !u.devOnly)
+          .map(u => ({
+            ...u,
+            password: requireProdPassword(
+              'orgRoleName' in u && u.orgRoleName === 'Vendedor'
+                ? 'SEED_DEMO_OPERATOR_PASSWORD'
+                : 'SEED_DEMO_ADMIN_PASSWORD',
+            ),
+            allowedBranchIndexes: [...u.allowedBranchIndexes],
+          })),
       },
       {
         name: premium.name,
@@ -1031,6 +1109,15 @@ async function run() {
         )
       }
 
+      await seedDefaultOrgRoles(org.id, t)
+      const orgRoles = await OrgRole.findAll({
+        where: { org_id: org.id },
+        attributes: ['id', 'name'],
+        transaction: t,
+        paranoid: true,
+      })
+      const orgRolesByName = new Map(orgRoles.map(r => [r.name, r.id]))
+
       // Premium SA: plan base sin módulos premium (inventario, compras, contabilidad, pos)
       if (tenant.slug === 'premium') {
         await OrganizationSetting.findOrCreate({
@@ -1067,21 +1154,33 @@ async function run() {
       for (const u of tenant.users) {
         const password_hash = await hashPassword(u.password)
         const defaultBranch = branches[u.branchIndex]!
+        const { role, org_role_id } = resolveSeedUserRole(u, orgRolesByName)
         const [user, userCreated] = await User.findOrCreate({
           where: { email: u.email },
           defaults: {
             email: u.email,
             name: u.name,
             password_hash,
-            role: u.role,
+            role,
+            org_role_id,
             is_active: true,
             org_id: org.id,
             branch_id: defaultBranch.id,
           },
           transaction: t,
         })
-        if (allowProd && !userCreated) {
-          await user.update({ password_hash }, { transaction: t })
+        if (!userCreated) {
+          await user.update(
+            {
+              name: u.name,
+              role,
+              org_role_id,
+              org_id: org.id,
+              branch_id: defaultBranch.id,
+              ...(allowProd ? { password_hash } : {}),
+            },
+            { transaction: t },
+          )
         }
 
         const allowed = u.allowedBranchIndexes.map((idx) => branches[idx]!.id)
@@ -1093,8 +1192,8 @@ async function run() {
           })
         }
 
-        // Seed catalog, contacts, and inventory once per org (using the admin user as actor)
-        if (u.role === 'admin') {
+        // Seed catalog, contacts, and inventory once per org (using the gerente user as actor)
+        if (isSeedGerente(u)) {
           variantsBySku = await seedCatalog(org.id, user.id, t)
           const contacts = await seedContacts(org.id, user.id, t)
           const defaultCustomer = contacts.find(c => c.type === 'customer' || c.type === 'both') ?? null
@@ -1323,12 +1422,19 @@ async function run() {
     console.log('Prod seed completed.')
     console.log('Users created/updated. Passwords loaded from SEED_* env vars (not printed).')
     console.log(`  sys-admin: ${seed.sysAdmin.email}`)
-    console.log('  demo: admin@demo.local, op@demo.local')
-    console.log('  premium: admin@premium.local')
+    console.log('  demo: admin@demo.local (Gerente), op@demo.local (Vendedor)')
+    console.log('  premium: admin@premium.local (Gerente)')
   } else {
     console.log('Dev seed completed.')
     console.log(`Sys-admin: ${seed.sysAdmin.email} / ${seed.sysAdmin.password}`)
-    console.log('Tenant demo: admin@demo.local / demo12345, op@demo.local / demo12345')
+    console.log('Tenant demo (password demo12345 for all):')
+    console.log('  admin@demo.local — Gerente')
+    console.log('  op@demo.local — Vendedor')
+    console.log('  sucursal@demo.local — Encargado de sucursal')
+    console.log('  compras@demo.local — Gerente de compras')
+    console.log('  contador@demo.local — Contador')
+    console.log('  deposito@demo.local — Depósito')
+    console.log(`Tenant premium: admin@premium.local / ${seed.tenants[1]!.users[0]!.password}`)
   }
 }
 

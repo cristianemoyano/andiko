@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
+import { resolvePostAuthRedirect } from '@/lib/post-auth-redirect'
 import { getOnboardingStatus } from '@/modules/auth/onboarding.service'
 import { OnboardingWizardClient } from './OnboardingWizardClient'
 
@@ -15,7 +16,7 @@ export default async function OnboardingPage() {
   const status = await getOnboardingStatus(orgId)
 
   // Already completed — redirect to main ERP
-  if (status.completed) redirect('/panel')
+  if (status.completed) redirect(await resolvePostAuthRedirect(session))
 
   return (
     <OnboardingWizardClient

@@ -3,8 +3,12 @@ import { Op } from 'sequelize'
 import sequelize from '@/lib/db'
 import User from '@/modules/auth/user.model'
 import Branch from '@/modules/auth/branch.model'
+import OrgRole from '@/modules/auth/org-role.model'
 import UserBranch from '@/modules/auth/user-branch.model'
 import { hashPassword } from '@/modules/auth/auth.service'
+import { invalidateCapabilitiesIdentity } from '@/lib/capabilities-cache'
+import { orgUserManagementPeerKey } from '@/lib/org-user-management-access'
+import type { OrgUserMutationActor } from '@/lib/org-user-mutation-actor'
 import type { OrgUserCreateInput, OrgUserUpdateInput } from '@/modules/auth/org-users.schema'
 import type { UserRole } from '@/types/roles'
 
@@ -23,14 +27,82 @@ async function assertBranchesBelongToOrg(orgId: string, branchIds: string[]) {
   }
 }
 
+function assertBranchAdminSingleBranch(role: UserRole, branchIds: string[]) {
+  if (role === 'branch-admin' && branchIds.length !== 1) {
+    throw new Error('BRANCH_ADMIN_SINGLE_BRANCH')
+  }
+}
+
+async function assertOrgRoleBelongsToOrg(orgId: string, orgRoleId: string) {
+  const row = await OrgRole.findOne({ where: { id: orgRoleId, org_id: orgId }, paranoid: true })
+  if (!row) throw new Error('ORG_ROLE_NOT_FOUND')
+  return row
+}
+
+async function countActiveBuiltinAdmins(orgId: string, excludeUserId?: string) {
+  return User.count({
+    where: {
+      org_id: orgId,
+      role: 'admin',
+      org_role_id: null,
+      is_active: true,
+      ...(excludeUserId ? { id: { [Op.ne]: excludeUserId } } : {}),
+    },
+    paranoid: true,
+  })
+}
+
+async function assertActorCanMutateOrgUser(
+  orgId: string,
+  targetUserId: string,
+  actor?: OrgUserMutationActor,
+) {
+  const target = await User.findOne({
+    where: { id: targetUserId, org_id: orgId },
+    paranoid: true,
+    attributes: ['id', 'role', 'org_role_id'],
+  })
+  if (!target) throw new Error('USER_NOT_IN_ORG')
+  if ((target.role as UserRole) === 'sys-admin') throw new Error('USER_NOT_EDITABLE')
+
+  if (!actor?.userId || actor.bypassManagementRules) return target
+
+  if (actor.userId === targetUserId) throw new Error('CANNOT_EDIT_SELF')
+
+  const actorUser = await User.findOne({
+    where: { id: actor.userId, org_id: orgId },
+    paranoid: true,
+    attributes: ['id', 'role', 'org_role_id'],
+  })
+  if (!actorUser) throw new Error('ACTOR_NOT_IN_ORG')
+
+  const actorKey = orgUserManagementPeerKey(actorUser.role as UserRole, actorUser.org_role_id)
+  const targetKey = orgUserManagementPeerKey(target.role as UserRole, target.org_role_id)
+  if (actorKey !== null && actorKey === targetKey) throw new Error('CANNOT_EDIT_PEER')
+
+  return target
+}
+
 export async function listOrgUsers(orgId: string) {
   const users = await User.findAll({
     where: { org_id: orgId, role: { [Op.ne]: 'sys-admin' } },
-    attributes: ['id', 'email', 'name', 'role', 'is_active', 'branch_id', 'created_at', 'updated_at'],
+    attributes: [
+      'id', 'email', 'name', 'role', 'org_role_id', 'is_active', 'branch_id', 'created_at', 'updated_at',
+    ],
     order: [['email', 'ASC']],
   })
-  const ids = users.map((u) => u.id)
+  const ids = users.map(u => u.id)
   if (ids.length === 0) return []
+
+  const roleIds = [...new Set(users.map(u => u.org_role_id).filter((id): id is string => !!id))]
+  const roleMap = new Map<string, string>()
+  if (roleIds.length > 0) {
+    const roles = await OrgRole.findAll({
+      where: { id: { [Op.in]: roleIds } },
+      attributes: ['id', 'name'],
+    })
+    for (const r of roles) roleMap.set(r.id, r.name)
+  }
 
   const links = await UserBranch.findAll({
     where: { user_id: { [Op.in]: ids } },
@@ -43,7 +115,7 @@ export async function listOrgUsers(orgId: string) {
     map.set(l.user_id, arr)
   }
 
-  return users.map((u) => {
+  return users.map(u => {
     const fromJunction = map.get(u.id) ?? []
     const branch_ids =
       fromJunction.length > 0 ? fromJunction : u.branch_id ? [u.branch_id] : []
@@ -52,6 +124,8 @@ export async function listOrgUsers(orgId: string) {
       email: u.email,
       name: u.name,
       role: u.role as UserRole,
+      org_role_id: u.org_role_id,
+      org_role_name: u.org_role_id ? roleMap.get(u.org_role_id) ?? null : null,
       is_active: u.is_active,
       default_branch_id: u.branch_id,
       branch_ids,
@@ -62,7 +136,20 @@ export async function listOrgUsers(orgId: string) {
 }
 
 export async function createOrgUser(orgId: string, input: OrgUserCreateInput) {
-  await assertBranchesBelongToOrg(orgId, [...new Set(input.branchIds)])
+  const branchIds = [...new Set(input.branchIds)]
+  await assertBranchesBelongToOrg(orgId, branchIds)
+
+  let role: UserRole
+  let org_role_id: string | null = null
+
+  if (input.roleKind === 'custom') {
+    await assertOrgRoleBelongsToOrg(orgId, input.orgRoleId)
+    role = 'operator'
+    org_role_id = input.orgRoleId
+  } else {
+    role = input.role
+    assertBranchAdminSingleBranch(role, branchIds)
+  }
 
   const emailTaken = await User.findOne({
     where: { email: input.email.trim().toLowerCase() },
@@ -74,14 +161,15 @@ export async function createOrgUser(orgId: string, input: OrgUserCreateInput) {
   const password_hash = await hashPassword(input.password)
   const pos_pin_hash = input.posPin ? await hashPassword(input.posPin) : null
 
-  return sequelize.transaction(async (t) => {
-    const user = await User.create(
+  const user = await sequelize.transaction(async t => {
+    const created = await User.create(
       {
         email: input.email.trim().toLowerCase(),
         name: input.name.trim(),
         password_hash,
         pos_pin_hash,
-        role: input.role,
+        role,
+        org_role_id,
         org_id: orgId,
         branch_id: input.defaultBranchId,
         is_active: true,
@@ -89,33 +177,68 @@ export async function createOrgUser(orgId: string, input: OrgUserCreateInput) {
       { transaction: t },
     )
 
-    const uniqueBranchIds = [...new Set(input.branchIds)]
     await UserBranch.bulkCreate(
-      uniqueBranchIds.map((branch_id) => ({
-        user_id: user.id,
-        branch_id,
-      })),
+      branchIds.map(branch_id => ({ user_id: created.id, branch_id })),
       { transaction: t },
     )
 
-    return user
+    return created
   })
+
+  invalidateCapabilitiesIdentity(orgId, role, org_role_id)
+  return user
 }
 
-export async function updateOrgUser(orgId: string, userId: string, input: OrgUserUpdateInput) {
-  const user = await User.findOne({
-    where: { id: userId, org_id: orgId },
-    paranoid: true,
-  })
-  if (!user) throw new Error('USER_NOT_IN_ORG')
-  if ((user.role as UserRole) === 'sys-admin') {
-    throw new Error('USER_NOT_EDITABLE')
-  }
+export async function updateOrgUser(
+  orgId: string,
+  userId: string,
+  input: OrgUserUpdateInput,
+  actor?: OrgUserMutationActor,
+) {
+  const user = await assertActorCanMutateOrgUser(orgId, userId, actor)
+  await user.reload()
+
+  const previousRole = user.role as UserRole
+  const previousOrgRoleId = user.org_role_id
 
   const nextBranchIds =
     input.branchIds !== undefined ? [...new Set(input.branchIds)] : undefined
   if (nextBranchIds) {
     await assertBranchesBelongToOrg(orgId, nextBranchIds)
+  }
+
+  const effectiveRole =
+    input.roleKind === 'builtin' && input.role !== undefined
+      ? input.role
+      : (user.role as UserRole)
+
+  if (nextBranchIds) {
+    assertBranchAdminSingleBranch(effectiveRole, nextBranchIds)
+  } else if (input.roleKind === 'builtin' && input.role === 'branch-admin') {
+    const currentIds = (
+      await UserBranch.findAll({ where: { user_id: userId }, attributes: ['branch_id'] })
+    ).map(r => r.branch_id)
+    const allowed = currentIds.length > 0 ? currentIds : user.branch_id ? [user.branch_id] : []
+    assertBranchAdminSingleBranch('branch-admin', allowed)
+  }
+
+  if (input.is_active === false || input.roleKind === 'builtin') {
+    const wasBuiltinAdmin = user.role === 'admin' && !user.org_role_id
+    const willRemainAdmin =
+      input.roleKind === 'custom'
+        ? false
+        : input.roleKind === 'builtin' && input.role !== undefined
+          ? input.role === 'admin'
+          : wasBuiltinAdmin
+
+    if (wasBuiltinAdmin && !willRemainAdmin && input.is_active !== false) {
+      const others = await countActiveBuiltinAdmins(orgId, userId)
+      if (others === 0) throw new Error('LAST_ADMIN')
+    }
+    if (wasBuiltinAdmin && input.is_active === false) {
+      const others = await countActiveBuiltinAdmins(orgId, userId)
+      if (others === 0) throw new Error('LAST_ADMIN')
+    }
   }
 
   if (nextBranchIds && input.defaultBranchId !== undefined) {
@@ -124,10 +247,11 @@ export async function updateOrgUser(orgId: string, userId: string, input: OrgUse
     }
   }
 
-  return sequelize.transaction(async (t) => {
+  const updated = await sequelize.transaction(async t => {
     const patch: Partial<{
       name: string
-      role: 'admin' | 'operator' | 'readonly'
+      role: UserRole
+      org_role_id: string | null
       branch_id: string | null
       password_hash: string
       pos_pin_hash: string | null
@@ -135,10 +259,18 @@ export async function updateOrgUser(orgId: string, userId: string, input: OrgUse
     }> = {}
 
     if (input.name !== undefined) patch.name = input.name.trim()
-    if (input.role !== undefined) patch.role = input.role
     if (input.is_active !== undefined) patch.is_active = input.is_active
     if (input.password !== undefined) patch.password_hash = await hashPassword(input.password)
     if (input.posPin !== undefined) patch.pos_pin_hash = input.posPin ? await hashPassword(input.posPin) : null
+
+    if (input.roleKind === 'custom') {
+      await assertOrgRoleBelongsToOrg(orgId, input.orgRoleId)
+      patch.role = 'operator'
+      patch.org_role_id = input.orgRoleId
+    } else if (input.roleKind === 'builtin' && input.role !== undefined) {
+      patch.role = input.role
+      patch.org_role_id = null
+    }
 
     if (nextBranchIds) {
       let newDefault: string | null
@@ -150,12 +282,9 @@ export async function updateOrgUser(orgId: string, userId: string, input: OrgUse
         newDefault = nextBranchIds[0] ?? null
       }
       patch.branch_id = newDefault
-      await UserBranch.destroy({
-        where: { user_id: userId },
-        transaction: t,
-      })
+      await UserBranch.destroy({ where: { user_id: userId }, transaction: t })
       await UserBranch.bulkCreate(
-        [...new Set(nextBranchIds)].map((branch_id) => ({ user_id: userId, branch_id })),
+        nextBranchIds.map(branch_id => ({ user_id: userId, branch_id })),
         { transaction: t },
       )
     } else if (input.defaultBranchId !== undefined) {
@@ -165,7 +294,7 @@ export async function updateOrgUser(orgId: string, userId: string, input: OrgUse
           attributes: ['branch_id'],
           transaction: t,
         })
-      ).map((r) => r.branch_id)
+      ).map(r => r.branch_id)
       const allowed =
         currentIds.length > 0 ? currentIds : user.branch_id ? [user.branch_id] : []
       if (!allowed.includes(input.defaultBranchId)) {
@@ -180,20 +309,47 @@ export async function updateOrgUser(orgId: string, userId: string, input: OrgUse
 
     return user.reload({ transaction: t })
   })
-}
 
-export async function softDeleteOrgUser(orgId: string, userId: string) {
-  const user = await User.findOne({
-    where: { id: userId, org_id: orgId },
-    paranoid: true,
-  })
-  if (!user) throw new Error('USER_NOT_IN_ORG')
-  if ((user.role as UserRole) === 'sys-admin') {
-    throw new Error('USER_NOT_EDITABLE')
+  const identityChanged =
+    input.is_active === false
+    || input.roleKind === 'custom'
+    || (input.roleKind === 'builtin' && input.role !== undefined)
+
+  if (identityChanged) {
+    invalidateCapabilitiesIdentity(orgId, previousRole, previousOrgRoleId)
+    invalidateCapabilitiesIdentity(orgId, updated.role as UserRole, updated.org_role_id)
   }
 
-  return sequelize.transaction(async (t) => {
+  return updated
+}
+
+export async function softDeleteOrgUser(
+  orgId: string,
+  userId: string,
+  actor?: OrgUserMutationActor,
+) {
+  const user = await assertActorCanMutateOrgUser(orgId, userId, actor)
+  await user.reload()
+
+  if (user.role === 'admin' && !user.org_role_id) {
+    const others = await countActiveBuiltinAdmins(orgId, userId)
+    if (others === 0) throw new Error('LAST_ADMIN')
+  }
+
+  await sequelize.transaction(async t => {
     await UserBranch.destroy({ where: { user_id: userId }, transaction: t })
     await user.destroy({ transaction: t })
   })
+
+  invalidateCapabilitiesIdentity(orgId, user.role as UserRole, user.org_role_id)
+}
+
+export async function deleteBranchWithGuard(orgId: string, branchId: string) {
+  const branch = await Branch.findOne({ where: { id: branchId, org_id: orgId }, paranoid: true })
+  if (!branch) throw new Error('BRANCH_NOT_FOUND')
+
+  const activeCount = await Branch.count({ where: { org_id: orgId, is_active: true } })
+  if (branch.is_active && activeCount <= 1) throw new Error('LAST_BRANCH')
+
+  await branch.destroy()
 }

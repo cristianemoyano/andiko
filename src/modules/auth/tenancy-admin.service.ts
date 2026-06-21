@@ -5,9 +5,11 @@ import Organization, { type OrgIvaCondition } from '@/modules/auth/organization.
 import Branch from '@/modules/auth/branch.model'
 import { slugifyText } from '@/lib/slug'
 import { seedDefaultChartOfAccounts } from '@/modules/accounting/chart-seed'
+import { seedDefaultOrgRoles } from '@/modules/auth/org-roles.service'
 import type {
   OrganizationCreateInput,
   OrganizationUpdateInput,
+  OrganizationFiscalUpdateInput,
   BranchCreateInput,
   BranchUpdateInput,
 } from '@/modules/auth/tenancy-admin.schema'
@@ -74,6 +76,7 @@ export async function createOrganization(input: OrganizationCreateInput) {
       { transaction: t },
     )
     await seedDefaultChartOfAccounts(org.id, t)
+    await seedDefaultOrgRoles(org.id, t)
     return org
   })
 }
@@ -122,6 +125,62 @@ export async function updateOrganization(id: string, input: OrganizationUpdateIn
 
   await org.update(next)
   return org.reload()
+}
+
+export async function updateOrganizationFiscal(orgId: string, input: OrganizationFiscalUpdateInput) {
+  const org = await Organization.findByPk(orgId)
+  if (!org) throw new Error('ORG_NOT_FOUND')
+
+  const next: Partial<{
+    legal_name: string | null
+    cuit: string | null
+    iva_condition: OrgIvaCondition | null
+    fiscal_address: string | null
+  }> = {}
+
+  if (input.legal_name !== undefined) next.legal_name = input.legal_name?.trim() || null
+  if (input.cuit !== undefined) next.cuit = input.cuit
+  if (input.iva_condition !== undefined) next.iva_condition = input.iva_condition
+  if (input.fiscal_address !== undefined) next.fiscal_address = input.fiscal_address?.trim() || null
+
+  await org.update(next)
+  return org.reload()
+}
+
+export async function getOrganizationDetailForTenant(orgId: string) {
+  const { organization, branches } = await getOrganizationWithBranches(orgId)
+  return {
+    organization: {
+      id: organization.id,
+      name: organization.name,
+      slug: organization.slug,
+      is_active: organization.is_active,
+      legal_name: organization.legal_name,
+      cuit: organization.cuit,
+      iva_condition: organization.iva_condition,
+      fiscal_address: organization.fiscal_address,
+      created_at: organization.created_at.toISOString(),
+      updated_at: organization.updated_at.toISOString(),
+    },
+    branches: branches.map(b => ({
+      id: b.id,
+      org_id: b.org_id,
+      branch_code: b.branch_code,
+      name: b.name,
+      address: b.address,
+      is_active: b.is_active,
+    })),
+  }
+}
+
+export async function assertBranchBelongsToOrg(orgId: string, branchId: string) {
+  const branch = await Branch.findOne({ where: { id: branchId, org_id: orgId }, paranoid: true })
+  if (!branch) throw new Error('BRANCH_NOT_IN_ORG')
+  return branch
+}
+
+export async function countActiveBranches(orgId: string) {
+  return Branch.count({ where: { org_id: orgId, is_active: true } })
 }
 
 export async function deleteOrganization(id: string) {

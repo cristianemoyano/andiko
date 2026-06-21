@@ -72,7 +72,7 @@ export function OrganizacionesAdminClient() {
       key: '_actions',
       header: '',
       render: row => (
-        <Button variant="ghost" size="xs" onClick={() => router.push(`/sys-admin/organizaciones/${row.id}`)}>
+        <Button variant="ghost" size="xs" onClick={() => router.push(`/organizaciones/${row.id}`)}>
           Gestionar
         </Button>
       ),
@@ -82,7 +82,7 @@ export function OrganizacionesAdminClient() {
   return (
     <div className="flex flex-col h-full">
       <TopBar
-        breadcrumbs={[{ label: 'Sys-admin', href: '/sys-admin/organizaciones' }, { label: 'Organizaciones' }]}
+        breadcrumbs={[{ label: 'Organizaciones' }]}
         actions={
           <Button size="sm" onClick={() => setModalOpen(true)}>
             + Nueva organización

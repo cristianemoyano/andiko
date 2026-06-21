@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { fetchLandingPath } from '@/lib/landing-path-client'
 import type { OnboardingData } from '@/modules/auth/organization.model'
+import { DEFAULT_ORG_ROLE_TEMPLATES, getBuiltinRoleLabel } from '@/modules/auth/role-labels'
 
 // ─── TYPES ──────────────────────────────────────────────────────────────────
 
@@ -75,14 +77,43 @@ const INTEGRATIONS = [
   { id: 'email',         label: 'Servidor de email (SMTP)',   desc: 'Enviá facturas y presupuestos directamente por email.',            category: 'Comunicación',   recommended: false },
 ]
 
+const template = (name: string) => DEFAULT_ORG_ROLE_TEMPLATES.find(t => t.name === name)
+
 const ROLES = [
-  { id: 'admin',       label: 'Administrador', desc: 'Acceso completo a todos los módulos y configuración' },
-  { id: 'vendedor',    label: 'Vendedor',       desc: 'Puede crear presupuestos, facturas y ver clientes'   },
-  { id: 'comprador',   label: 'Comprador',      desc: 'Gestión de compras, proveedores y recepción'         },
-  { id: 'contador',    label: 'Contador',       desc: 'Acceso a contabilidad, reportes e impuestos'         },
-  { id: 'deposito',    label: 'Depósito',       desc: 'Solo inventario: movimientos de stock y remitos'     },
-  { id: 'solo_lectura',label: 'Solo lectura',   desc: 'Puede ver pero no modificar ningún registro'         },
+  {
+    id: 'admin',
+    label: getBuiltinRoleLabel('admin'),
+    desc: 'Acceso completo a todos los módulos y configuración de la empresa',
+    ownerOnly: true,
+  },
+  {
+    id: 'vendedor',
+    label: 'Vendedor',
+    desc: template('Vendedor')?.description ?? 'Presupuestos, facturas y clientes',
+  },
+  {
+    id: 'comprador',
+    label: 'Gerente de compras',
+    desc: template('Gerente de compras')?.description ?? 'Compras, proveedores y recepción',
+  },
+  {
+    id: 'contador',
+    label: 'Contador',
+    desc: template('Contador')?.description ?? 'Contabilidad, reportes e impuestos',
+  },
+  {
+    id: 'deposito',
+    label: 'Depósito',
+    desc: template('Depósito')?.description ?? 'Movimientos de stock e inventario',
+  },
+  {
+    id: 'solo_lectura',
+    label: getBuiltinRoleLabel('readonly'),
+    desc: 'Puede ver pero no modificar ningún registro',
+  },
 ]
+
+const INVITABLE_ROLES = ROLES.filter(r => !('ownerOnly' in r && r.ownerOnly))
 
 const PROVINCIAS = [
   'Buenos Aires','CABA','Córdoba','Santa Fe','Mendoza','Tucumán','Entre Ríos',
@@ -1358,7 +1389,7 @@ function StepUsers({
 
   return (
     <StepWrapper onNext={handleNext} onBack={onBack} canSkip onSkip={onSkip}>
-      <SectionTitle sub="Invitá a los miembros de tu equipo. Recibirán un email para crear su contraseña. Podés agregar más usuarios después desde Configuración → Usuarios.">
+      <SectionTitle sub="Invitá a los miembros de tu equipo. Recibirán un email para crear su contraseña. Podés agregar más usuarios después desde Organización.">
         Usuarios y roles
       </SectionTitle>
 
@@ -1389,7 +1420,7 @@ function StepUsers({
         <div className="grid gap-2 px-3 py-2 border-b border-border items-center bg-teal-50" style={{ gridTemplateColumns: '1fr 1fr 160px 32px' }}>
           <span className="text-xs font-mono text-fg-muted">{userEmail}</span>
           <span className="text-xs text-fg-muted">{userName || 'Vos'}</span>
-          <Badge color="teal">Administrador</Badge>
+          <Badge color="teal">{getBuiltinRoleLabel('admin')}</Badge>
           <span />
         </div>
         {users.map((u, idx) => (
@@ -1413,7 +1444,7 @@ function StepUsers({
               onChange={e => setUser(idx, 'rol', e.target.value)}
               className="text-xs h-7 px-2 border border-border rounded-sm outline-none focus:border-teal-500 bg-surface"
             >
-              {ROLES.map(r => (
+              {INVITABLE_ROLES.map(r => (
                 <option key={r.id} value={r.id}>{r.label}</option>
               ))}
             </select>
@@ -1665,10 +1696,10 @@ export function OnboardingWizardClient({
         body: JSON.stringify({ data, complete: true }),
       })
       localStorage.removeItem(storageKey)
-      router.push('/panel')
+      router.push(await fetchLandingPath())
     } catch {
       // Still redirect — data saved locally anyway
-      router.push('/panel')
+      router.push(await fetchLandingPath())
     } finally {
       setSaving(false)
     }
@@ -1676,7 +1707,7 @@ export function OnboardingWizardClient({
 
   const handleSaveAndExit = async () => {
     await saveProgress(data)
-    router.push('/panel')
+    router.push(await fetchLandingPath())
   }
 
   const currentId = STEPS[step]?.id

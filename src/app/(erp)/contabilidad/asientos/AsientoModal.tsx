@@ -57,6 +57,7 @@ export function AsientoModal({ open, entry, onOpenChange, onSaved }: AsientoModa
       onOpenChange={onOpenChange}
       title={isEdit ? `Editar asiento ${entry.entry_number}` : 'Nuevo asiento'}
       size="xl"
+      padded={false}
     >
       {open ? (
         <AsientoModalForm

@@ -5,15 +5,18 @@ import type { Session } from 'next-auth'
 import { SessionProvider } from 'next-auth/react'
 import { Sidebar } from './Sidebar'
 import { SidebarProvider } from './SidebarContext'
+import { CapabilitiesProvider } from './CapabilitiesContext'
+import { storyCapabilities } from './capabilities.story-fixtures'
 
 const session: Session = {
   user: {
     id: 'u1',
     email: 'op@andiko.test',
-    name: 'Operador Demo',
+    name: 'Vendedor Demo',
     role: 'operator',
     orgId: 'o1',
     branchId: 'b1',
+    orgRoleId: null,
     actingOrgId: null,
     realRole: 'operator',
     realOrgId: 'o1',
@@ -28,7 +31,7 @@ const meta: Meta<typeof Sidebar> = {
   component: Sidebar,
   tags: ['autodocs'],
   args: {
-    userName: 'Operador Demo',
+    userName: 'Vendedor Demo',
     userRole: 'operator',
     isRealSysAdmin: false,
   },
@@ -41,11 +44,13 @@ export const Default: Story = {
   decorators: [
     Story => (
       <SessionProvider session={session}>
-        <SidebarProvider>
-          <div className="flex h-screen bg-surface-muted">
-            <Story />
-          </div>
-        </SidebarProvider>
+        <CapabilitiesProvider initial={storyCapabilities}>
+          <SidebarProvider>
+            <div className="flex h-screen bg-surface-muted">
+              <Story />
+            </div>
+          </SidebarProvider>
+        </CapabilitiesProvider>
       </SessionProvider>
     ),
   ],
@@ -59,11 +64,13 @@ export const MobileDrawer: Story = {
   decorators: [
     Story => (
       <SessionProvider session={session}>
-        <SidebarProvider defaultOpen>
-          <div className="h-screen bg-surface-muted">
-            <Story />
-          </div>
-        </SidebarProvider>
+        <CapabilitiesProvider initial={storyCapabilities}>
+          <SidebarProvider defaultOpen>
+            <div className="h-screen bg-surface-muted">
+              <Story />
+            </div>
+          </SidebarProvider>
+        </CapabilitiesProvider>
       </SessionProvider>
     ),
   ],

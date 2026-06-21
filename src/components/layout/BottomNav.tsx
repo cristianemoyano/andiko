@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useSidebar } from './SidebarContext'
 import { NAV_MAIN, NAV_MODULES, isModuleNavVisible, type NavItem } from './nav-items'
 import { type OrgModuleKey } from '@/modules/auth/organization-modules'
+import { useCapabilities } from './CapabilitiesContext'
 
 /** Sections shown as primary tabs in the mobile bottom bar (in this order). */
 const PRIMARY_MODULE_IDS = ['ventas', 'catalogo']
@@ -27,11 +28,14 @@ interface BottomNavProps {
 export function BottomNav({ enabledModules }: BottomNavProps) {
   const pathname = usePathname()
   const { open, setOpen, toggle } = useSidebar()
+  const { capabilities } = useCapabilities()
+  const permissions = capabilities?.permissions
+  const showPanel = capabilities?.nav.panel === true
 
   const primary: NavItem[] = [
-    ...NAV_MAIN,
+    ...(showPanel ? NAV_MAIN : []),
     ...NAV_MODULES.filter(
-      item => PRIMARY_MODULE_IDS.includes(item.id) && isModuleNavVisible(item.id, enabledModules),
+      item => PRIMARY_MODULE_IDS.includes(item.id) && isModuleNavVisible(item.id, enabledModules, permissions),
     ),
   ]
 

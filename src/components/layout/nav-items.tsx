@@ -1,5 +1,3 @@
-import { NAV_ID_TO_MODULE, type OrgModuleKey } from '@/modules/auth/organization-modules'
-
 export interface NavItem {
   id: string
   label: string
@@ -98,9 +96,4 @@ export const NAV_SYSTEM: NavItem[] = [
   },
 ]
 
-export function isModuleNavVisible(navId: string, enabledModules?: OrgModuleKey[]): boolean {
-  if (!enabledModules) return true
-  const moduleKey = NAV_ID_TO_MODULE[navId]
-  if (!moduleKey) return true
-  return enabledModules.includes(moduleKey)
-}
+export { isModuleNavVisible } from '@/lib/nav-module-access'

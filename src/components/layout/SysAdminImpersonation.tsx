@@ -1,12 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Dialog } from '@/components/primitives/Dialog'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { useCapabilities } from './CapabilitiesContext'
 
 type UserHit = {
   id: string
@@ -104,7 +106,9 @@ function ImpersonateActionIcon({ className }: { className?: string }) {
 }
 
 export function SysAdminImpersonation() {
+  const router = useRouter()
   const { data: session, status, update } = useSession()
+  const { refreshCapabilities } = useCapabilities()
   const [modalOpen, setModalOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<UserHit[]>([])
@@ -158,6 +162,8 @@ export function SysAdminImpersonation() {
         body: JSON.stringify({ userId: user.id }),
       })
       await update({ impersonation: { userId: user.id } })
+      await refreshCapabilities()
+      router.refresh()
       setRecentUsers(pushRecentImpersonation(user))
       setModalOpen(false)
       setQuery('')
@@ -172,6 +178,8 @@ export function SysAdminImpersonation() {
   async function handleStopImpersonation() {
     setError(null)
     await update({ impersonation: null })
+    await refreshCapabilities()
+    router.refresh()
   }
 
   if (status !== 'authenticated' || !isSysAdminAccount) {

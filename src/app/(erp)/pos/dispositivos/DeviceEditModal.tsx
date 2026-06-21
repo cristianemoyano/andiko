@@ -102,7 +102,7 @@ export function DeviceEditModal({ device, onOpenChange, onSaved }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose} title="Editar dispositivo" size="sm">
-      <form onSubmit={handleSave} className="p-6 flex flex-col gap-4">
+      <form onSubmit={handleSave} className="flex flex-col gap-4">
         {serverError && (
           <p className="text-sm text-danger bg-danger-bg border border-danger rounded px-3 py-2">{serverError}</p>
         )}

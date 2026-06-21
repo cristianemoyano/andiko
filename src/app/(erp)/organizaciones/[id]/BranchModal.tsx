@@ -8,6 +8,7 @@ import { Textarea } from '@/components/primitives/Textarea'
 import { FormField } from '@/components/primitives/FormField'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
+import { orgApiPaths, type OrgApiNamespace } from '@/lib/org-api-paths'
 
 export interface BranchRow {
   id: string
@@ -21,6 +22,7 @@ export interface BranchRow {
 interface BranchModalProps {
   open: boolean
   orgId: string
+  apiNamespace: OrgApiNamespace
   branch: BranchRow | null
   onClose: () => void
   onSaved: () => void
@@ -30,12 +32,13 @@ type FieldErrors = Record<string, string[]>
 
 interface BranchModalFormProps {
   orgId: string
+  apiNamespace: OrgApiNamespace
   branch: BranchRow | null
   onClose: () => void
   onSaved: () => void
 }
 
-function BranchModalForm({ orgId, branch, onClose, onSaved }: BranchModalFormProps) {
+function BranchModalForm({ orgId, apiNamespace, branch, onClose, onSaved }: BranchModalFormProps) {
   const isEdit = branch !== null
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
@@ -49,9 +52,8 @@ function BranchModalForm({ orgId, branch, onClose, onSaved }: BranchModalFormPro
     setErrors({})
     setServerError(null)
 
-    const url = isEdit
-      ? `/api/v1/sys-admin/branches/${branch!.id}`
-      : `/api/v1/sys-admin/organizations/${orgId}/branches`
+    const api = orgApiPaths(apiNamespace, orgId)
+    const url = isEdit ? api.branch(branch!.id) : api.branches
     const method = isEdit ? 'PATCH' : 'POST'
     const body = isEdit
       ? { name: name.trim(), address: address.trim() || null }
@@ -106,7 +108,7 @@ function BranchModalForm({ orgId, branch, onClose, onSaved }: BranchModalFormPro
   )
 }
 
-export function BranchModal({ open, orgId, branch, onClose, onSaved }: BranchModalProps) {
+export function BranchModal({ open, orgId, apiNamespace, branch, onClose, onSaved }: BranchModalProps) {
   const isEdit = branch !== null
   const formKey = branch?.id ?? 'new'
 
@@ -120,7 +122,7 @@ export function BranchModal({ open, orgId, branch, onClose, onSaved }: BranchMod
       size="md"
     >
       {open ? (
-        <BranchModalForm key={formKey} orgId={orgId} branch={branch} onClose={onClose} onSaved={onSaved} />
+        <BranchModalForm key={formKey} orgId={orgId} apiNamespace={apiNamespace} branch={branch} onClose={onClose} onSaved={onSaved} />
       ) : null}
     </Dialog>
   )

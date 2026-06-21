@@ -5,13 +5,13 @@ import { afipConfigSchema } from '@/modules/afip/afip.schema'
 import { getAfipConfig, setBranchesPuntoVenta } from '@/modules/afip/afip-config.service'
 import { mapAfipErrorResponse } from '@/modules/afip/afip-http-errors'
 
-export const GET = withPermission('sales:read', async (_req, _ctx, session) => {
+export const GET = withPermission('settings:read', async (_req, _ctx, session) => {
   const ctx = await makeTenantContext(session.user)
   const config = await getAfipConfig(ctx)
   return NextResponse.json(config)
 })
 
-export const PUT = withPermission('sales:write', async (req, _ctx, session) => {
+export const PUT = withPermission('settings:write', async (req, _ctx, session) => {
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON', code: 'PARSE_ERROR' }, { status: 400 }) }
 

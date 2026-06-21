@@ -23,16 +23,6 @@ const PERMISSION_BY_TYPE: Record<EmailDocumentType, Permission> = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-async function getAllowedDocumentTypes(role: UserRole, orgId?: string): Promise<EmailDocumentType[]> {
-  const allowed: EmailDocumentType[] = []
-  for (const type of EMAIL_DOCUMENT_TYPES) {
-    if (await can(role, PERMISSION_BY_TYPE[type], orgId)) {
-      allowed.push(type)
-    }
-  }
-  return allowed
-}
-
 export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user) {
@@ -74,7 +64,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ logs })
   }
 
-  // Org-wide audit list.
+  // Org-wide audit list — settings admin only.
+  if (!(await can(role, 'settings:read', orgId, session.user.orgRoleId ?? null))) {
+    return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 })
+  }
+
   const parsed = emailLogListQuerySchema.safeParse(Object.fromEntries(searchParams))
   if (!parsed.success) {
     return NextResponse.json(
@@ -83,10 +77,9 @@ export async function GET(req: Request) {
     )
   }
 
-  const allowedDocumentTypes = await getAllowedDocumentTypes(role, orgId)
-  if (allowedDocumentTypes.length === 0) {
-    return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 })
-  }
+  const allowedDocumentTypes = EMAIL_DOCUMENT_TYPES.filter(t =>
+    parsed.data.document_type ? t === parsed.data.document_type : true,
+  )
 
   const result = await listEmailLogs(ctx.orgId, {
     ...parsed.data,

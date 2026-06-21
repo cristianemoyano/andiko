@@ -20,6 +20,7 @@ interface PanelFilterBarProps {
   fromDate: string
   toDate: string
   branches: { value: string; label: string }[]
+  branchLocked?: boolean
   onPeriodChange: (period: PanelPeriod) => void
   onBranchChange: (branchId: string) => void
   onFromChange: (from: string) => void
@@ -41,6 +42,7 @@ export function PanelFilterBar({
   fromDate,
   toDate,
   branches,
+  branchLocked = false,
   onPeriodChange,
   onBranchChange,
   onFromChange,
@@ -63,7 +65,7 @@ export function PanelFilterBar({
               />
             </div>
 
-            {branches.length > 0 && (
+            {branches.length > 0 && !branchLocked && (
               <div className="min-w-0 flex-1 sm:max-w-xs">
                 <SearchableSelect
                   options={branches}
@@ -71,6 +73,11 @@ export function PanelFilterBar({
                   onChange={v => onBranchChange(v ?? 'all')}
                   placeholder="Sucursal"
                 />
+              </div>
+            )}
+            {branchLocked && (
+              <div className="min-w-0 flex-1 sm:max-w-xs flex items-center h-8 px-2.5 text-[13px] text-fg-muted border border-border rounded-sm bg-surface-muted">
+                {branches.find(b => b.value === branchId)?.label ?? 'Mi sucursal'}
               </div>
             )}
           </div>

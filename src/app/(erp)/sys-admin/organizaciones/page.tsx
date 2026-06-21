@@ -1,8 +1,5 @@
-import type { Metadata } from 'next'
-import { OrganizacionesAdminClient } from './OrganizacionesAdminClient'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = { title: 'Organizaciones — Sys-admin' }
-
-export default function OrganizacionesAdminPage() {
-  return <OrganizacionesAdminClient />
+export default function SysAdminOrganizacionesRedirect() {
+  redirect('/organizaciones')
 }

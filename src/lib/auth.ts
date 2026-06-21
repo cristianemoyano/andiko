@@ -18,6 +18,7 @@ function clearImpersonation(token: JWT) {
   delete token.impersonateRole
   delete token.impersonateOrgId
   delete token.impersonateBranchId
+  delete token.impersonateOrgRoleId
   delete token.impersonateEmail
   delete token.impersonateName
 }
@@ -47,6 +48,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
           org_id: user.org_id,
           branch_id: user.branch_id,
+          org_role_id: user.org_role_id,
         }
       },
     }),
@@ -55,10 +57,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     authorized: authConfig.callbacks?.authorized,
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        const u = user as { role: UserRole; org_id?: string | null; branch_id?: string | null }
+        const u = user as {
+          role: UserRole
+          org_id?: string | null
+          branch_id?: string | null
+          org_role_id?: string | null
+        }
         token.role = u.role ?? 'operator'
         token.orgId = u.org_id ?? null
         token.branchId = u.branch_id ?? null
+        token.orgRoleId = u.org_role_id ?? null
         token.actingOrgId = null
         clearImpersonation(token)
       }
@@ -96,6 +104,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 token.impersonateRole = target.role as UserRole
                 token.impersonateOrgId = target.org_id ?? null
                 token.impersonateBranchId = target.branch_id ?? null
+                token.impersonateOrgRoleId = target.org_role_id ?? null
                 token.impersonateEmail = target.email
                 token.impersonateName = target.name
                 token.actingOrgId = null
@@ -127,15 +136,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: token.impersonateName as string,
           role: token.impersonateRole as UserRole,
         }
+        session.user.name = token.impersonateName as string
+        session.user.email = token.impersonateEmail as string
         session.user.role = token.impersonateRole as UserRole
         session.user.orgId = (token.impersonateOrgId ?? null) as string | null
         session.user.branchId = (token.impersonateBranchId ?? null) as string | null
+        session.user.orgRoleId = (token.impersonateOrgRoleId ?? null) as string | null
         session.user.actingOrgId = null
       } else {
         session.user.impersonation = null
         session.user.role = realRole
         session.user.orgId = (token.orgId ?? null) as string | null
         session.user.branchId = (token.branchId ?? null) as string | null
+        session.user.orgRoleId = (token.orgRoleId ?? null) as string | null
         session.user.actingOrgId =
           realRole === 'sys-admin' ? ((token.actingOrgId ?? null) as string | null) : null
       }

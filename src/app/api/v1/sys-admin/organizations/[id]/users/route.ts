@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireSysAdmin } from '@/lib/sys-admin-guard'
-import { orgUserCreateSchema } from '@/modules/auth/org-users.schema'
+import { parseOrgUserCreateInput } from '@/modules/auth/org-users.schema'
 import { createOrgUser, listOrgUsers } from '@/modules/auth/org-users.service'
 
 type P = { id: string }
@@ -26,7 +26,7 @@ export async function POST(req: Request, ctx: { params: Promise<P> }) {
     return NextResponse.json({ error: 'Invalid JSON', code: 'VALIDATION_ERROR' }, { status: 400 })
   }
 
-  const parsed = orgUserCreateSchema.safeParse(json)
+  const parsed = parseOrgUserCreateInput(json)
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() },
