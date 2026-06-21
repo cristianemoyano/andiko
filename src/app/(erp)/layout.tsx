@@ -4,10 +4,14 @@ import { auth } from '@/lib/auth'
 import { getOnboardingStatus } from '@/modules/auth/onboarding.service'
 import { getEffectiveOrganizationSettings, isModuleEnabled } from '@/modules/auth/organization-settings.service'
 import { resolveModuleForPath, type OrgModuleKey } from '@/modules/auth/organization-modules'
+import { resolveCapabilities } from '@/lib/capabilities'
+import { hasModuleReadAccess } from '@/lib/nav-module-access'
+import { resolveDefaultLandingPath } from '@/lib/panel-access'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { InstallPrompt } from '@/components/layout/InstallPrompt'
 import { Providers } from '@/components/layout/Providers'
+import { capabilitiesProviderKey } from '@/components/layout/capabilities-provider-key'
 
 export default async function ErpLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -17,7 +21,9 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') ?? headersList.get('x-invoke-path') ?? ''
 
+  const capabilities = await resolveCapabilities(session)
   let enabledModules: OrgModuleKey[] | undefined
+
   if (orgId) {
     const settings = await getEffectiveOrganizationSettings(orgId)
     enabledModules = settings.enabled_modules
@@ -32,7 +38,10 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
 
     const moduleForPath = resolveModuleForPath(pathname)
     if (moduleForPath && !(await isModuleEnabled(orgId, moduleForPath))) {
-      redirect('/panel?module_disabled=1')
+      redirect(`${resolveDefaultLandingPath(capabilities, enabledModules)}?module_disabled=1`)
+    }
+    if (moduleForPath && capabilities && !hasModuleReadAccess(moduleForPath, capabilities.permissions)) {
+      redirect(`${resolveDefaultLandingPath(capabilities, enabledModules)}?module_forbidden=1`)
     }
   }
 
@@ -42,7 +51,10 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
   const showSysAdminNavigation = isRealSysAdmin && !session.user.impersonation
 
   return (
-    <Providers>
+    <Providers
+      initialCapabilities={capabilities}
+      capabilitiesKey={capabilitiesProviderKey(capabilities, session)}
+    >
       <div className="flex h-screen overflow-hidden bg-bg">
         <Sidebar
           userName={userName}

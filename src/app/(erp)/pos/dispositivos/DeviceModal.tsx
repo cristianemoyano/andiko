@@ -95,7 +95,7 @@ export function DeviceModal({ open, onOpenChange, onCreated }: Props) {
   return (
     <Dialog open={open} onOpenChange={handleClose} title="Registrar dispositivo POS" size="md">
       {created ? (
-        <div className="p-6 flex flex-col gap-4 w-full min-w-0 overflow-hidden">
+        <div className="flex flex-col gap-4 w-full min-w-0 overflow-hidden">
           <div className="flex items-start gap-3 p-3 bg-success-bg border border-success rounded-md">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" className="mt-0.5 flex-shrink-0">
               <path d="M3 8l3.5 3.5L13 4"/>
@@ -128,7 +128,7 @@ export function DeviceModal({ open, onOpenChange, onCreated }: Props) {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {serverError && (
             <p className="text-sm text-danger bg-danger-bg border border-danger rounded px-3 py-2">{serverError}</p>
           )}

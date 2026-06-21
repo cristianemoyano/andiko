@@ -56,6 +56,17 @@ export const organizationSettingsUpdateSchema = z.object({
   enabled_features: z.record(z.string(), z.boolean()).optional(),
 })
 
+export const organizationFiscalUpdateSchema = z
+  .object({
+    legal_name: z.string().min(1).max(255).nullable().optional(),
+    cuit: cuitSchema.nullable().optional(),
+    iva_condition: z.enum(ORG_IVA_CONDITIONS).nullable().optional(),
+    fiscal_address: z.string().min(1).max(500).nullable().optional(),
+  })
+  .strict()
+
+export type OrganizationFiscalUpdateInput = z.infer<typeof organizationFiscalUpdateSchema>
+
 export type OrganizationSettingsUpdateInput = z.infer<typeof organizationSettingsUpdateSchema>
 export type OrganizationCreateInput = z.infer<typeof organizationCreateSchema>
 export type OrganizationUpdateInput = z.infer<typeof organizationUpdateSchema>

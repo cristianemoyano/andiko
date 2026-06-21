@@ -11,6 +11,7 @@ export type AuthedSession = Session & {
     role: UserRole
     orgId: string | null
     branchId: string | null
+    orgRoleId: string | null
     actingOrgId: string | null
     realRole: UserRole
   }
@@ -62,8 +63,9 @@ export function withPermission<P extends Record<string, string> = Record<string,
 
     const role  = session.user.role as UserRole
     const orgId = (session.user as AuthedSession['user']).orgId ?? undefined
+    const orgRoleId = (session.user as AuthedSession['user']).orgRoleId ?? null
 
-    if (!(await can(role, permission, orgId))) {
+    if (!(await can(role, permission, orgId, orgRoleId))) {
       return NextResponse.json(
         { error: 'Forbidden', code: 'FORBIDDEN' },
         { status: 403 },

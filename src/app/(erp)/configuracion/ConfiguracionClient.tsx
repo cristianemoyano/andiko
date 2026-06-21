@@ -8,6 +8,7 @@ import { EmailTemplatesTab } from './EmailTemplatesTab'
 import { EmailLogsTab } from './EmailLogsTab'
 import { AppearanceTab } from './AppearanceTab'
 import { AfipConfigTab } from './AfipConfigTab'
+import { useCapabilities } from '@/components/layout/CapabilitiesContext'
 
 type Section = 'impresion' | 'plantillas-email' | 'emails-enviados' | 'apariencia' | 'afip'
 
@@ -27,7 +28,33 @@ function parseSection(value: string | null): Section {
 export function ConfiguracionClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const section = parseSection(searchParams.get('section'))
+  const { capabilities } = useCapabilities()
+  const tabs = capabilities?.configuracion.tabs
+  const requested = parseSection(searchParams.get('section'))
+
+  if (!tabs) {
+    return null
+  }
+
+  const defaultSection: Section = tabs.apariencia
+    ? 'apariencia'
+    : tabs.impresion
+      ? 'impresion'
+      : tabs.plantillasEmail
+        ? 'plantillas-email'
+        : tabs.emailsEnviados
+          ? 'emails-enviados'
+          : tabs.afip
+            ? 'afip'
+            : 'apariencia'
+
+  const section = (
+    (requested === 'impresion' && tabs.impresion) ||
+    (requested === 'plantillas-email' && tabs.plantillasEmail) ||
+    (requested === 'emails-enviados' && tabs.emailsEnviados) ||
+    (requested === 'apariencia' && tabs.apariencia) ||
+    (requested === 'afip' && tabs.afip)
+  ) ? requested : defaultSection
 
   function handleSectionChange(next: string) {
     router.replace(`/configuracion?section=${next}`, { scroll: false })
@@ -40,28 +67,38 @@ export function ConfiguracionClient() {
       <div className="flex-1 overflow-y-auto p-6">
         <Tabs value={section} onValueChange={handleSectionChange}>
           <TabsList>
-            <TabsTrigger value="impresion">Impresión</TabsTrigger>
-            <TabsTrigger value="plantillas-email">Plantillas de email</TabsTrigger>
-            <TabsTrigger value="emails-enviados">Emails enviados</TabsTrigger>
-            <TabsTrigger value="apariencia">Apariencia</TabsTrigger>
-            <TabsTrigger value="afip">AFIP</TabsTrigger>
+            {tabs.impresion && <TabsTrigger value="impresion">Impresión</TabsTrigger>}
+            {tabs.plantillasEmail && <TabsTrigger value="plantillas-email">Plantillas de email</TabsTrigger>}
+            {tabs.emailsEnviados && <TabsTrigger value="emails-enviados">Emails enviados</TabsTrigger>}
+            {tabs.apariencia && <TabsTrigger value="apariencia">Apariencia</TabsTrigger>}
+            {tabs.afip && <TabsTrigger value="afip">AFIP</TabsTrigger>}
           </TabsList>
 
-          <TabsContent value="impresion">
-            <PrintTemplateTab />
-          </TabsContent>
-          <TabsContent value="plantillas-email">
-            <EmailTemplatesTab />
-          </TabsContent>
-          <TabsContent value="emails-enviados">
-            <EmailLogsTab />
-          </TabsContent>
-          <TabsContent value="apariencia">
-            <AppearanceTab />
-          </TabsContent>
-          <TabsContent value="afip">
-            <AfipConfigTab />
-          </TabsContent>
+          {tabs.impresion && (
+            <TabsContent value="impresion">
+              <PrintTemplateTab />
+            </TabsContent>
+          )}
+          {tabs.plantillasEmail && (
+            <TabsContent value="plantillas-email">
+              <EmailTemplatesTab />
+            </TabsContent>
+          )}
+          {tabs.emailsEnviados && (
+            <TabsContent value="emails-enviados">
+              <EmailLogsTab />
+            </TabsContent>
+          )}
+          {tabs.apariencia && (
+            <TabsContent value="apariencia">
+              <AppearanceTab />
+            </TabsContent>
+          )}
+          {tabs.afip && (
+            <TabsContent value="afip">
+              <AfipConfigTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

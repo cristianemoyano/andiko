@@ -5,9 +5,8 @@ import { cn } from '@/lib/utils'
 
 const panelVariants = cva(
   [
-    'fixed left-1/2 top-1/2 z-50 grid grid-rows-[auto_minmax(0,1fr)] -translate-x-1/2 -translate-y-1/2',
+    'fixed left-1/2 top-1/2 z-50 flex flex-col -translate-x-1/2 -translate-y-1/2',
     // Mobile: 1rem gutter each side + cap height so tall content scrolls instead of overflowing.
-    // md+ is unchanged: the size variant's max-w-* still caps the width.
     'w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-hidden',
     'rounded-md bg-surface shadow-2xl border border-border ring-1 ring-black/5',
     'focus:outline-none',
@@ -39,9 +38,11 @@ export interface DialogProps extends VariantProps<typeof panelVariants> {
   children: React.ReactNode
   className?: string
   hideClose?: boolean
+  /** Body padding (default true). Use false when the child manages its own layout (split footers). */
+  padded?: boolean
 }
 
-function Dialog({ open, onOpenChange, title, description, children, size, className, hideClose }: DialogProps) {
+function Dialog({ open, onOpenChange, title, description, children, size, className, hideClose, padded = true }: DialogProps) {
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
@@ -55,7 +56,7 @@ function Dialog({ open, onOpenChange, title, description, children, size, classN
           )}
         />
         <RadixDialog.Content className={cn(panelVariants({ size }), className)}>
-          <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+          <div className="flex flex-shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div>
               <RadixDialog.Title className="text-[14px] font-semibold text-fg">
                 {title}
@@ -81,7 +82,9 @@ function Dialog({ open, onOpenChange, title, description, children, size, classN
               </RadixDialog.Close>
             )}
           </div>
-          <div className="min-w-0 overflow-y-auto">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div className={cn(padded && 'px-5 py-4')}>{children}</div>
+          </div>
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>

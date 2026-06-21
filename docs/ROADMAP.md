@@ -36,7 +36,13 @@ Infraestructura base sin lógica de negocio.
 - [x] `withPermission()` wrapper para route handlers (reemplaza boilerplate de auth manual en los 6 endpoints de contactos)
 - [x] `src/lib/permissions.ts` con `can()`, `requirePermission()`, `ForbiddenError`, deduplicación con React `cache()`
 - [x] Sesión extendida: `role`, `orgId`, `branchId` en JWT y session callbacks
-- [x] Página de perfil de usuario (`/perfil`): nombre, email, rol, org, sucursal; avatar clickeable en Sidebar
+- [x] Página de perfil de usuario (`/perfil`): nombre, email, rol, org, sucursal; edición de nombre/contraseña vía `/api/v1/me/profile`
+- [x] Permiso `panel:read` en matriz de roles; acceso al panel para Gerente y Encargado de sucursal
+- [x] Capabilities-driven UI: navegación, tabs de configuración y secciones de organización según permisos efectivos
+- [x] Roles custom por org (`org_roles`) + matriz de permisos editable; rol built-in `branch-admin` (Encargado de sucursal)
+- [x] Permisos `settings:read/write` para administración de org (usuarios, sucursales, matriz) sin bypass sys-admin
+- [x] Admin de organización unificado en `/organizaciones/[id]` (namespace API `settings` para Gerente)
+- [x] Impersonación sys-admin: identidad efectiva en sesión, capabilities y perfil del usuario impersonado
 - [x] UX: componente global de error de API (banner/toast) + helper `fetchJson` para evitar duplicar manejo de errores en cada pantalla
 - [x] Dev tooling: comandos de seed/clear idempotentes creciendo con el sistema (incluye permisos, catálogo, ventas, tenancy)
 - [x] Prod DB CLI: `db:reset-prod`, `migrate:prod`, `migrate:baseline-prod`, `db:seed-prod` (local, con `.env.production.local`)

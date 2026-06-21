@@ -7,6 +7,7 @@ import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { PasswordInput } from '@/components/primitives/PasswordInput'
 import { FormField } from '@/components/primitives/FormField'
+import { fetchLandingPath } from '@/lib/landing-path-client'
 
 const ERRORS: Record<string, string> = {
   CredentialsSignin: 'Email o contraseña incorrectos.',
@@ -37,7 +38,8 @@ export function LoginForm() {
       return
     }
 
-    router.push('/panel')
+    const path = await fetchLandingPath()
+    router.push(path)
     router.refresh()
   }
 

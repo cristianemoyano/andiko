@@ -88,7 +88,7 @@ export const MobileLongContent: Story = {
           title="Nuevo contacto"
           description="El cuerpo se desplaza; el encabezado queda fijo."
         >
-          <div className="flex flex-col gap-4 px-5 py-4">
+          <div className="flex flex-col gap-4">
             {Array.from({ length: 12 }).map((_, i) => (
               <FormField key={i} label={`Campo ${i + 1}`} htmlFor={`f${i}`}>
                 <Input id={`f${i}`} placeholder={`Valor ${i + 1}`} />

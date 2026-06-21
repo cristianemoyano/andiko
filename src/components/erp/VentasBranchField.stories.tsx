@@ -41,10 +41,11 @@ const meta: Meta<typeof BranchSelectField> = {
           user: {
             id: 'u1',
             email: 'op@test.com',
-            name: 'Operador',
+            name: 'Vendedor',
             role: 'operator',
             orgId: 'o1',
             branchId: 'b1',
+            orgRoleId: null,
             actingOrgId: null,
             realRole: 'operator',
             realOrgId: 'o1',

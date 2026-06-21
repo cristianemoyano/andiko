@@ -98,7 +98,7 @@ export function MedioPagoModal({ open, onOpenChange, editing, onSaved }: Props) 
       title={editing ? 'Editar medio de pago' : 'Nuevo medio de pago'}
       size="md"
     >
-      <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {serverError && (
           <p className="text-sm text-danger bg-danger-bg border border-danger rounded px-3 py-2">{serverError}</p>
         )}

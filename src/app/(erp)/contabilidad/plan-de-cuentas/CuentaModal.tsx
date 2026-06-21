@@ -68,6 +68,7 @@ export function CuentaModal({ open, account, accounts, onOpenChange, onSaved }: 
       onOpenChange={onOpenChange}
       title={isEdit ? 'Editar cuenta' : 'Nueva cuenta'}
       size="md"
+      padded={false}
     >
       <form key={`${account?.id ?? 'new'}-${String(open)}`} onSubmit={handleSubmit} noValidate>
         <div className="px-5 py-4 flex flex-col gap-4">

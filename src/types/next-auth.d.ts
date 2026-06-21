@@ -8,6 +8,7 @@ declare module 'next-auth' {
       role: UserRole
       orgId: string | null
       branchId: string | null
+      orgRoleId: string | null
       /** sys-admin only (when not impersonating): org assumed for ERP writes if account has no org_id */
       actingOrgId: string | null
       /** Role on the signed-in account (never the impersonated role). */
@@ -19,6 +20,7 @@ declare module 'next-auth' {
         email: string
         name: string
         role: UserRole
+        orgRoleId?: string | null
       }
     }
   }
@@ -29,11 +31,13 @@ declare module 'next-auth/jwt' {
     role: UserRole
     orgId: string | null
     branchId: string | null
+    orgRoleId: string | null
     actingOrgId: string | null
     impersonateUserId?: string | null
     impersonateRole?: UserRole
     impersonateOrgId?: string | null
     impersonateBranchId?: string | null
+    impersonateOrgRoleId?: string | null
     impersonateEmail?: string
     impersonateName?: string
   }
