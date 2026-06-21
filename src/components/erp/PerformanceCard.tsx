@@ -11,8 +11,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { BRAND_CHART_COLOR } from '@/lib/brand-colors'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/primitives/Skeleton'
+import { KpiInfoIcon, KpiLabel } from './KpiInfoIcon'
 
 export type PerformanceMetric = 'total' | 'cobrado' | 'pendiente'
 
@@ -36,13 +38,33 @@ export interface PerformanceCardProps {
   footerLabel?: string
   color?: string
   className?: string
+  /** Slot for panel widget menu (three dots). */
+  headerAction?: React.ReactNode
 }
 
-const METRIC_OPTIONS: { value: PerformanceMetric; label: string }[] = [
-  { value: 'total', label: 'Total' },
-  { value: 'cobrado', label: 'Cobrado' },
-  { value: 'pendiente', label: 'Pendiente' },
+const METRIC_OPTIONS: { value: PerformanceMetric; label: string; info: string }[] = [
+  {
+    value: 'total',
+    label: 'Total',
+    info: 'Total facturado en el período. Incluye IVA. Excluye borradores y anulados.',
+  },
+  {
+    value: 'cobrado',
+    label: 'Cobrado',
+    info: 'Pagos registrados en el período, según fecha de cobro.',
+  },
+  {
+    value: 'pendiente',
+    label: 'Pendiente',
+    info: 'Saldo sin cobrar de lo facturado en el período (facturado menos cobrado en el gráfico).',
+  },
 ]
+
+const SECONDARY_STAT_INFO = {
+  comprobantes: 'Cantidad de comprobantes de venta emitidos en el período del filtro.',
+  clientes: 'Total de clientes activos en la organización (no varía con el período).',
+  cobranza: 'Porcentaje cobrado sobre lo facturado en el período seleccionado.',
+} as const
 
 const formatARS = (v: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(v)
@@ -92,8 +114,9 @@ export function PerformanceCard({
   loading = false,
   footerHref = '/ventas/reportes',
   footerLabel = 'Ver reportes de ventas',
-  color = '#0C647A',
+  color = BRAND_CHART_COLOR,
   className,
+  headerAction,
 }: PerformanceCardProps) {
   const [metric, setMetric] = useState<PerformanceMetric>('total')
   const gradientId = useId().replace(/:/g, '')
@@ -103,10 +126,12 @@ export function PerformanceCard({
   const cobranzaPct = facturado > 0 ? Math.round((cobrado / facturado) * 1000) / 10 : 0
 
   const secondaryStats = [
-    { label: 'Comprobantes', value: comprobantes.toLocaleString('es-AR') },
-    { label: 'Clientes', value: clientes.toLocaleString('es-AR') },
-    { label: 'Cobranza', value: `${cobranzaPct.toLocaleString('es-AR', { maximumFractionDigits: 1 })} %` },
+    { label: 'Comprobantes', value: comprobantes.toLocaleString('es-AR'), info: SECONDARY_STAT_INFO.comprobantes },
+    { label: 'Clientes', value: clientes.toLocaleString('es-AR'), info: SECONDARY_STAT_INFO.clientes },
+    { label: 'Cobranza', value: `${cobranzaPct.toLocaleString('es-AR', { maximumFractionDigits: 1 })} %`, info: SECONDARY_STAT_INFO.cobranza },
   ]
+
+  const activeMetric = METRIC_OPTIONS.find(m => m.value === metric)
 
   return (
     <section
@@ -122,17 +147,9 @@ export function PerformanceCard({
             <h2 className="text-base font-semibold text-fg">Rendimiento</h2>
             <p className="text-xs text-fg-muted mt-0.5 truncate">{periodLabel}</p>
           </div>
-          <button
-            type="button"
-            aria-label="Opciones de rendimiento"
-            className="shrink-0 rounded-md p-1.5 text-fg-subtle hover:text-fg hover:bg-surface-hover transition-colors"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-              <circle cx="3" cy="8" r="1.4" />
-              <circle cx="8" cy="8" r="1.4" />
-              <circle cx="13" cy="8" r="1.4" />
-            </svg>
-          </button>
+          {headerAction ? (
+            <div className="shrink-0">{headerAction}</div>
+          ) : null}
         </div>
 
         <div
@@ -163,9 +180,14 @@ export function PerformanceCard({
           {loading ? (
             <Skeleton className="h-9 w-48 max-w-full" />
           ) : (
-            <p className="font-mono text-2xl sm:text-[28px] font-semibold text-fg leading-none tracking-tight">
-              {formatARS(primaryValue)}
-            </p>
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="font-mono text-2xl sm:text-[28px] font-semibold text-fg leading-none tracking-tight truncate">
+                {formatARS(primaryValue)}
+              </p>
+              {activeMetric?.info ? (
+                <KpiInfoIcon content={activeMetric.info} ariaLabel={`Más información sobre ${activeMetric.label}`} />
+              ) : null}
+            </div>
           )}
         </div>
 
@@ -179,7 +201,7 @@ export function PerformanceCard({
                   {stat.value}
                 </p>
               )}
-              <p className="text-[11px] text-fg-muted mt-1 truncate">{stat.label}</p>
+              <KpiLabel label={stat.label} info={stat.info} labelClassName="text-[11px] text-fg-muted mt-1" />
             </div>
           ))}
         </div>
@@ -251,7 +273,7 @@ export function PerformanceCard({
       {footerHref && (
         <Link
           href={footerHref}
-          className="flex items-center justify-between px-4 py-3 border-t border-border text-sm font-medium text-brand-600 hover:bg-surface-hover transition-colors"
+          className="flex items-center justify-between px-4 py-3 border-t border-border text-sm font-medium text-brand-accent hover:bg-surface-hover transition-colors"
         >
           <span>{footerLabel}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -129,9 +129,13 @@ Vista ejecutiva del negocio. Primer pantalla post-login.
 - [x] Filtros persistidos en URL params (links compartibles, survive refresh)
 - [x] Widgets de alertas de stock en dashboard: productos vencidos, próximos a vencer (7 días), bajo stock mínimo — con links al listado filtrado
 - [x] Actividad reciente: ampliar con eventos de stock, pagos y compras (hoy solo facturas)
-- [ ] Saldo en cuenta: conectar cuando Contabilidad esté disponible
-- [x] Exportar dashboard como PDF
-- [x] PanelFilterBar: filtro de período en Select + sucursal + export PDF compacto (mobile-first)
+- [x] PerformanceCard hero: tabs Total/Cobrado/Pendiente, gráfico de área, KPIs secundarios
+- [x] Analytics estilo WooCommerce: Ingresos, Pedidos, Mejores productos (con tooltips en KPIs)
+- [x] Personalización de widgets: botón Editar → show/hide + reordenar tarjetas, persistido en `users.preferences`
+- [x] Tooltips de ayuda en KPIs del panel (desktop y analytics)
+- [x] Dark mode: contraste en Select de período y acentos brand (links, gráficos)
+- [ ] Exportar dashboard como PDF con template dedicado (removido export rápido vía print)
+- [x] PanelFilterBar: filtro de período en Select + sucursal + personalizar layout (mobile-first)
 - [x] Queries del panel optimizadas (CTEs en lugar de subqueries correlacionadas; 13→7 round-trips SQL)
 - [x] Cache in-memory 60s en endpoints del panel (`/kpis`, `/recent-invoices`, `/activity`)
 - [x] Migración: índices compuestos para reportes del panel (`issue_date`, `payment_date`, `updated_at`)

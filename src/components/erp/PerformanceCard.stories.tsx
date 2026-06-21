@@ -2,6 +2,8 @@
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { PerformanceCard } from './PerformanceCard'
+import { PanelWidgetMenu } from './PanelWidgetMenu'
+import { PanelWidgetProvider } from './PanelWidgetProvider'
 
 const SAMPLE_SERIES = [
   { label: '1 Jun', facturado: 0, cobrado: 0 },
@@ -21,6 +23,13 @@ const meta: Meta<typeof PerformanceCard> = {
     layout: 'padded',
     viewport: { defaultViewport: 'mobile1' },
   },
+  decorators: [
+    Story => (
+      <PanelWidgetProvider>
+        <Story />
+      </PanelWidgetProvider>
+    ),
+  ],
 }
 export default meta
 type Story = StoryObj<typeof PerformanceCard>
@@ -35,6 +44,7 @@ export const Default: Story = {
     comprobantes: 370,
     clientes: 855,
     lastUpdated: new Date('2026-06-21T01:25:00'),
+    headerAction: <PanelWidgetMenu widgetId="performance" />,
   },
 }
 

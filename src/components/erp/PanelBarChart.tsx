@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
+import { BRAND_CHART_COLOR } from '@/lib/brand-colors'
 
 export interface BarChartDataPoint {
   label: string
@@ -23,7 +24,7 @@ interface PanelBarChartProps {
 const formatARS = (v: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(v)
 
-export function PanelBarChart({ data, color = '#0C647A' }: PanelBarChartProps) {
+export function PanelBarChart({ data, color = BRAND_CHART_COLOR }: PanelBarChartProps) {
   const chartData = data.map(d => ({ name: d.label, value: d.value }))
   return (
     <ResponsiveContainer width="100%" height={160}>

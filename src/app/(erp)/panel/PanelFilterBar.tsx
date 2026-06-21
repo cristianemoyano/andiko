@@ -1,9 +1,8 @@
 'use client'
 
-import { Button } from '@/components/primitives/Button'
 import { Select } from '@/components/primitives/Select'
-import { Tooltip } from '@/components/primitives/Tooltip'
 import { SearchableSelect } from '@/components/erp'
+import { PanelCustomizeButton } from '@/components/erp/PanelCustomizeDialog'
 
 export type PanelPeriod = 'last_week' | 'last_month' | 'last_3months' | 'last_year' | 'custom'
 
@@ -25,7 +24,6 @@ interface PanelFilterBarProps {
   onBranchChange: (branchId: string) => void
   onFromChange: (from: string) => void
   onToChange: (to: string) => void
-  onExportPdf: () => void
 }
 
 function IconCalendar() {
@@ -33,16 +31,6 @@ function IconCalendar() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="4" width="18" height="18" rx="2" />
       <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  )
-}
-
-function IconFileExport() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <path d="M12 18v-6M9 15l3 3 3-3" />
     </svg>
   )
 }
@@ -57,48 +45,39 @@ export function PanelFilterBar({
   onBranchChange,
   onFromChange,
   onToChange,
-  onExportPdf,
 }: PanelFilterBarProps) {
   return (
     <div className="border-b border-border bg-surface px-4 md:px-6 py-3 shrink-0 print:hidden">
       <div className="flex flex-col gap-2">
-        <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_auto] sm:flex sm:items-center sm:gap-2">
-          <div className="relative min-w-0">
-            <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle">
-              <IconCalendar />
-            </span>
-            <Select
-              value={period}
-              onChange={v => onPeriodChange(v as PanelPeriod)}
-              options={PERIOD_OPTIONS}
-              className="h-8 pl-8 text-[13px]"
-            />
-          </div>
-
-          {branches.length > 0 && (
-            <div className="min-w-0 sm:flex-1 sm:max-w-xs">
-              <SearchableSelect
-                options={branches}
-                value={branchId}
-                onChange={v => onBranchChange(v ?? 'all')}
-                placeholder="Sucursal"
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+          <div className="flex flex-1 flex-col gap-2 min-[480px]:flex-row min-[480px]:items-center min-[480px]:gap-2 min-w-0">
+            <div className="relative min-w-0 flex-1">
+              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle">
+                <IconCalendar />
+              </span>
+              <Select
+                value={period}
+                onChange={v => onPeriodChange(v as PanelPeriod)}
+                options={PERIOD_OPTIONS}
+                className="h-8 pl-8 text-[13px]"
               />
             </div>
-          )}
 
-          <Tooltip content="Exportar PDF">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-8 w-8 p-0 sm:w-auto sm:px-3"
-              onClick={onExportPdf}
-              aria-label="Exportar PDF"
-            >
-              <IconFileExport />
-              <span className="hidden sm:inline">PDF</span>
-            </Button>
-          </Tooltip>
+            {branches.length > 0 && (
+              <div className="min-w-0 flex-1 sm:max-w-xs">
+                <SearchableSelect
+                  options={branches}
+                  value={branchId}
+                  onChange={v => onBranchChange(v ?? 'all')}
+                  placeholder="Sucursal"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+            <PanelCustomizeButton />
+          </div>
         </div>
 
         {period === 'custom' && (

@@ -91,7 +91,7 @@ export function InstallPrompt() {
 
   return (
     <div
-      className="md:hidden fixed inset-x-0 z-[60] px-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.5rem)]"
+      className="md:hidden fixed inset-x-0 z-[60] px-3 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.5rem)]"
       role="dialog"
       aria-label="Instalar Andiko"
     >

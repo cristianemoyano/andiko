@@ -5,7 +5,13 @@ vi.mock('@/lib/db', () => ({
 }))
 
 import sequelize from '@/lib/db'
-import { getPanelKpis, getPanelCounts, getPanelRecentInvoices, getPanelActivity } from './panel.service'
+import {
+  getPanelKpis,
+  getPanelCounts,
+  getPanelRecentInvoices,
+  getPanelActivity,
+  buildPanelAnalytics,
+} from './panel.service'
 import type { PanelFilters } from './panel.service'
 
 const ORG_ID = 'org-123'
@@ -189,6 +195,62 @@ describe('panel.service', () => {
 
       const result = await getPanelActivity(ORG_ID, BASE_FILTERS)
       expect(result[0].time).toBe('ayer')
+    })
+  })
+
+  describe('buildPanelAnalytics', () => {
+    it('computes revenue, orders and product metrics with pct_change', () => {
+      const series = [
+        { label: '1', facturado: 100, cobrado: 80, subtotal: 80, orders: 2, items_sold: 5 },
+        { label: '2', facturado: 200, cobrado: 150, subtotal: 160, orders: 3, items_sold: 8 },
+      ]
+
+      const result = buildPanelAnalytics(
+        series,
+        {
+          total_current: '300',
+          total_previous: '200',
+          subtotal_current: '240',
+          subtotal_previous: '160',
+          orders_current: '5',
+          orders_previous: '4',
+          items_current: '13',
+          items_previous: '10',
+        },
+        [{ id: 'p1', name: 'Producto A', image_url: null, net_sales: 100, quantity_sold: 7 }],
+        'Comparado con período anterior',
+      )
+
+      expect(result.revenue.total_sales.value).toBe(300)
+      expect(result.revenue.total_sales.pct_change).toBe(50)
+      expect(result.revenue.net_sales.value).toBe(240)
+      expect(result.orders.total_orders.value).toBe(5)
+      expect(result.orders.total_orders.pct_change).toBe(25)
+      expect(result.orders.avg_order_value.value).toBe(60)
+      expect(result.products.items_sold.value).toBe(13)
+      expect(result.products.top).toHaveLength(1)
+      expect(result.compare_period_label).toBe('Comparado con período anterior')
+    })
+
+    it('returns zero avg order value when no orders in period', () => {
+      const result = buildPanelAnalytics(
+        [],
+        {
+          total_current: '0',
+          total_previous: '100',
+          subtotal_current: '0',
+          subtotal_previous: '80',
+          orders_current: '0',
+          orders_previous: '2',
+          items_current: '0',
+          items_previous: '5',
+        },
+        [],
+        'Comparado con período anterior',
+      )
+
+      expect(result.orders.avg_order_value.value).toBe(0)
+      expect(result.orders.avg_order_value.pct_change).toBe(-100)
     })
   })
 })

@@ -2,13 +2,15 @@
 
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 
+import { BRAND_CHART_COLOR } from '@/lib/brand-colors'
+
 interface SparklineProps {
   data: number[]
   color?: string
   height?: number
 }
 
-export function Sparkline({ data, color = '#0C647A', height = 32 }: SparklineProps) {
+export function Sparkline({ data, color = BRAND_CHART_COLOR, height = 32 }: SparklineProps) {
   const chartData = data.map((v, i) => ({ i, v }))
   return (
     <ResponsiveContainer width={72} height={height}>

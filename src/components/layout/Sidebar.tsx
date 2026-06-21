@@ -64,7 +64,7 @@ export function Sidebar({
           'flex flex-col w-[220px] flex-shrink-0 bg-surface border-r border-border h-full',
           // Mobile: off-canvas drawer that slides in from the left.
           'fixed inset-y-0 left-0 z-[45] transition-transform duration-200',
-          'pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0',
+          'pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0',
           open ? 'translate-x-0' : '-translate-x-full',
           // Desktop (md+): static column in the flex row, always visible.
           'md:static md:z-auto md:translate-x-0'

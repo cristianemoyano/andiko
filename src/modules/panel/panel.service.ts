@@ -71,7 +71,31 @@ interface CashFlowBundleRow {
   mensual: Array<{ label: string; value: number }> | string
   anual: Array<{ label: string; value: number }> | string
 }
-interface PerformanceSeriesRow { label: string; facturado: string; cobrado: string }
+interface PerformanceSeriesRow {
+  label: string
+  facturado: string
+  cobrado: string
+  subtotal: string
+  orders: string
+  items_sold: string
+}
+interface SalesMetricsRow {
+  total_current: string
+  total_previous: string
+  subtotal_current: string
+  subtotal_previous: string
+  orders_current: string
+  orders_previous: string
+  items_current: string
+  items_previous: string
+}
+interface TopProductRow {
+  id: string
+  name: string
+  image_url: string | null
+  net_sales: string
+  quantity_sold: string
+}
 interface SparkRow { month: string; value: string }
 interface RecentInvoiceRow {
   invoice_number: string
@@ -173,6 +197,26 @@ export interface PerformanceSeriesPoint {
   label: string
   facturado: number
   cobrado: number
+  subtotal: number
+  orders: number
+  items_sold: number
+}
+
+import type { PanelAnalytics, PanelMetricWithTrend, PanelTopProduct } from './panel.types'
+export type { PanelAnalytics, PanelMetricWithTrend, PanelTopProduct } from './panel.types'
+
+function pctChange(cur: number, prev: number): number {
+  return prev === 0 ? 0 : Math.round(((cur - prev) / prev) * 100)
+}
+
+function metricWithTrend(cur: number, prev: number, spark: number[]): PanelMetricWithTrend {
+  return { value: cur, pct_change: pctChange(cur, prev), spark }
+}
+
+function formatComparePeriodLabel(from: Date, to: Date): string {
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })
+  return `Comparado con ${fmt(from)} – ${fmt(to)}`
 }
 
 function resolvePerformanceBucket(filters: PanelFilters): {
@@ -209,9 +253,23 @@ export async function getPanelPerformanceSeries(orgId: string, filters: PanelFil
     ),
     facturado AS (
       SELECT DATE_TRUNC('${truncUnit}', i.issue_date) AS bucket,
-             SUM(CAST(i.total AS NUMERIC)) AS total
+             SUM(CAST(i.total AS NUMERIC)) AS total,
+             SUM(CAST(i.subtotal AS NUMERIC)) AS subtotal,
+             COUNT(*)::int AS orders
       FROM invoices i
       WHERE i.org_id = :orgId AND i.deleted_at IS NULL
+        AND i.status NOT IN ('draft', 'cancelled')
+        AND i.issue_date >= :from AND i.issue_date <= :to
+        ${bcInv}
+      GROUP BY 1
+    ),
+    items AS (
+      SELECT DATE_TRUNC('${truncUnit}', i.issue_date) AS bucket,
+             SUM(CAST(ii.quantity AS NUMERIC)) AS qty
+      FROM invoice_items ii
+      JOIN invoices i ON i.id = ii.invoice_id
+      WHERE ii.deleted_at IS NULL
+        AND i.org_id = :orgId AND i.deleted_at IS NULL
         AND i.status NOT IN ('draft', 'cancelled')
         AND i.issue_date >= :from AND i.issue_date <= :to
         ${bcInv}
@@ -229,10 +287,14 @@ export async function getPanelPerformanceSeries(orgId: string, filters: PanelFil
     SELECT
       ${labelExpr} AS label,
       COALESCE(f.total, 0)::text AS facturado,
-      COALESCE(c.total, 0)::text AS cobrado
+      COALESCE(c.total, 0)::text AS cobrado,
+      COALESCE(f.subtotal, 0)::text AS subtotal,
+      COALESCE(f.orders, 0)::text AS orders,
+      COALESCE(it.qty, 0)::text AS items_sold
     FROM buckets b
     LEFT JOIN facturado f ON f.bucket = b.gs
     LEFT JOIN cobrado c ON c.bucket = b.gs
+    LEFT JOIN items it ON it.bucket = b.gs
     ORDER BY b.gs
   `, { replacements: { orgId, from, to }, type: QueryTypes.SELECT })
 
@@ -240,7 +302,152 @@ export async function getPanelPerformanceSeries(orgId: string, filters: PanelFil
     label: r.label,
     facturado: parseFloat(r.facturado),
     cobrado: parseFloat(r.cobrado),
+    subtotal: parseFloat(r.subtotal),
+    orders: parseFloat(r.orders),
+    items_sold: parseFloat(r.items_sold),
   }))
+}
+
+export async function getPanelSalesMetrics(orgId: string, filters: PanelFilters) {
+  const { from, to, prevFrom, prevTo } = resolveDateRange(filters)
+  const bc = branchClause('i', filters.branch_id)
+  const bcItems = branchClause('i2', filters.branch_id)
+
+  const [row] = await sequelize.query<SalesMetricsRow>(`
+    SELECT
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to THEN CAST(i.total AS NUMERIC) END), 0)::text AS total_current,
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :prevFrom AND i.issue_date < :from THEN CAST(i.total AS NUMERIC) END), 0)::text AS total_previous,
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to THEN CAST(i.subtotal AS NUMERIC) END), 0)::text AS subtotal_current,
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :prevFrom AND i.issue_date < :from THEN CAST(i.subtotal AS NUMERIC) END), 0)::text AS subtotal_previous,
+      COUNT(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to THEN 1 END)::text AS orders_current,
+      COUNT(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :prevFrom AND i.issue_date < :from THEN 1 END)::text AS orders_previous,
+      (
+        SELECT COALESCE(SUM(CAST(ii.quantity AS NUMERIC)), 0)::text
+        FROM invoice_items ii
+        JOIN invoices i2 ON i2.id = ii.invoice_id
+        WHERE ii.deleted_at IS NULL
+          AND i2.org_id = :orgId AND i2.deleted_at IS NULL
+          AND i2.status NOT IN ('draft', 'cancelled')
+          AND i2.issue_date >= :from AND i2.issue_date <= :to
+          ${bcItems}
+      ) AS items_current,
+      (
+        SELECT COALESCE(SUM(CAST(ii.quantity AS NUMERIC)), 0)::text
+        FROM invoice_items ii
+        JOIN invoices i2 ON i2.id = ii.invoice_id
+        WHERE ii.deleted_at IS NULL
+          AND i2.org_id = :orgId AND i2.deleted_at IS NULL
+          AND i2.status NOT IN ('draft', 'cancelled')
+          AND i2.issue_date >= :prevFrom AND i2.issue_date < :from
+          ${bcItems}
+      ) AS items_previous
+    FROM invoices i
+    WHERE i.org_id = :orgId AND i.deleted_at IS NULL ${bc}
+  `, { replacements: { orgId, from, to, prevFrom, prevTo }, type: QueryTypes.SELECT })
+
+  return row ?? {
+    total_current: '0',
+    total_previous: '0',
+    subtotal_current: '0',
+    subtotal_previous: '0',
+    orders_current: '0',
+    orders_previous: '0',
+    items_current: '0',
+    items_previous: '0',
+  }
+}
+
+export async function getPanelTopProducts(orgId: string, filters: PanelFilters, limit = 5): Promise<PanelTopProduct[]> {
+  const { from, to } = resolveDateRange(filters)
+  const bc = branchClause('i', filters.branch_id)
+
+  const rows = await sequelize.query<TopProductRow>(`
+    SELECT
+      COALESCE(ii.variant_id::text, ii.product_id::text, 'desc:' || LOWER(ii.description)) AS id,
+      COALESCE(MIN(p.name), MIN(ii.description)) AS name,
+      MIN(p.images->0->>'url') AS image_url,
+      COALESCE(SUM(CAST(ii.subtotal AS NUMERIC)), 0)::text AS net_sales,
+      COALESCE(SUM(CAST(ii.quantity AS NUMERIC)), 0)::text AS quantity_sold
+    FROM invoice_items ii
+    JOIN invoices i ON i.id = ii.invoice_id
+    LEFT JOIN products p ON p.id = ii.product_id AND p.deleted_at IS NULL
+    WHERE ii.deleted_at IS NULL
+      AND i.org_id = :orgId AND i.deleted_at IS NULL
+      AND i.status NOT IN ('draft', 'cancelled')
+      AND i.issue_date >= :from AND i.issue_date <= :to
+      ${bc}
+    GROUP BY COALESCE(ii.variant_id::text, ii.product_id::text, 'desc:' || LOWER(ii.description))
+    ORDER BY COALESCE(SUM(CAST(ii.quantity AS NUMERIC)), 0) DESC, name ASC
+    LIMIT :limit
+  `, { replacements: { orgId, from, to, limit }, type: QueryTypes.SELECT })
+
+  return rows.map(r => ({
+    id: r.id,
+    name: r.name,
+    image_url: r.image_url,
+    net_sales: parseFloat(r.net_sales),
+    quantity_sold: parseFloat(r.quantity_sold),
+  }))
+}
+
+export function buildPanelAnalytics(
+  series: PerformanceSeriesPoint[],
+  metrics: SalesMetricsRow,
+  topProducts: PanelTopProduct[],
+  comparePeriodLabel: string,
+): PanelAnalytics {
+  const totalCur = parseFloat(metrics.total_current)
+  const totalPrev = parseFloat(metrics.total_previous)
+  const subtotalCur = parseFloat(metrics.subtotal_current)
+  const subtotalPrev = parseFloat(metrics.subtotal_previous)
+  const ordersCur = parseInt(metrics.orders_current, 10)
+  const ordersPrev = parseInt(metrics.orders_previous, 10)
+  const itemsCur = parseFloat(metrics.items_current)
+  const itemsPrev = parseFloat(metrics.items_previous)
+  const avgCur = ordersCur > 0 ? totalCur / ordersCur : 0
+  const avgPrev = ordersPrev > 0 ? totalPrev / ordersPrev : 0
+
+  const sparks = {
+    total: series.map(p => p.facturado),
+    net: series.map(p => p.subtotal),
+    orders: series.map(p => p.orders),
+    items: series.map(p => p.items_sold),
+  }
+
+  return {
+    compare_period_label: comparePeriodLabel,
+    revenue: {
+      total_sales: metricWithTrend(totalCur, totalPrev, sparks.total),
+      net_sales: metricWithTrend(subtotalCur, subtotalPrev, sparks.net),
+    },
+    orders: {
+      total_orders: metricWithTrend(ordersCur, ordersPrev, sparks.orders),
+      avg_order_value: metricWithTrend(avgCur, avgPrev, sparks.total),
+    },
+    products: {
+      items_sold: metricWithTrend(itemsCur, itemsPrev, sparks.items),
+      top: topProducts,
+    },
+  }
+}
+
+export async function getPanelAnalytics(
+  orgId: string,
+  filters: PanelFilters,
+  performanceSeries: PerformanceSeriesPoint[],
+): Promise<PanelAnalytics> {
+  const { prevFrom, prevTo } = resolveDateRange(filters)
+  const [metrics, topProducts] = await Promise.all([
+    getPanelSalesMetrics(orgId, filters),
+    getPanelTopProducts(orgId, filters),
+  ])
+
+  return buildPanelAnalytics(
+    performanceSeries,
+    metrics,
+    topProducts,
+    formatComparePeriodLabel(prevFrom, prevTo),
+  )
 }
 
 export async function getPanelCashFlow(orgId: string, filters: PanelFilters) {
@@ -458,17 +665,28 @@ export interface PanelKpisPayload {
   cash_flow: Awaited<ReturnType<typeof getPanelCashFlow>>
   gastos: Awaited<ReturnType<typeof getPanelGastos>>
   performance_series: PerformanceSeriesPoint[]
+  analytics: PanelAnalytics
 }
 
-/** Loads all KPI/chart data for /api/v1/panel/kpis in one parallel batch (7 SQL round-trips). */
+/** Loads all KPI/chart data for /api/v1/panel/kpis in one parallel batch (~9 SQL round-trips). */
 export async function getPanelKpisPayload(orgId: string, filters: PanelFilters): Promise<PanelKpisPayload> {
-  const [kpis, counts, cash_flow, gastos, performance_series] = await Promise.all([
+  const [kpis, counts, cash_flow, gastos, performance_series, salesMetrics, topProducts] = await Promise.all([
     getPanelKpis(orgId, filters),
     getPanelCounts(orgId, filters),
     getPanelCashFlow(orgId, filters),
     getPanelGastos(orgId, filters),
     getPanelPerformanceSeries(orgId, filters),
+    getPanelSalesMetrics(orgId, filters),
+    getPanelTopProducts(orgId, filters),
   ])
 
-  return { kpis, counts, cash_flow, gastos, performance_series }
+  const { prevFrom, prevTo } = resolveDateRange(filters)
+  const analytics = buildPanelAnalytics(
+    performance_series,
+    salesMetrics,
+    topProducts,
+    formatComparePeriodLabel(prevFrom, prevTo),
+  )
+
+  return { kpis, counts, cash_flow, gastos, performance_series, analytics }
 }

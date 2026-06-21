@@ -37,9 +37,10 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-stretch h-16 bg-surface border-t border-border pb-[env(safe-area-inset-bottom)]"
+      className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-surface border-t border-border pb-[env(safe-area-inset-bottom)]"
       aria-label="Navegación principal"
     >
+      <div className="flex h-16 items-stretch">
       {primary.map(item => {
         const active = item.href === '/panel' ? pathname === item.href : pathname.startsWith(item.href)
         const label = BOTTOM_NAV_LABELS[item.id] ?? item.label
@@ -49,14 +50,14 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
             href={item.href}
             onClick={() => setOpen(false)}
             className={cn(
-              'flex flex-1 flex-col items-center justify-center gap-1 px-1 text-xs font-medium transition-colors',
+              'flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium leading-tight transition-colors',
               active ? 'text-brand-600' : 'text-fg-muted hover:text-fg',
             )}
           >
-            <span className={cn('flex-shrink-0 [&_svg]:size-5', active ? 'text-brand-600' : 'text-fg-subtle')}>
+            <span className={cn('flex shrink-0 [&_svg]:size-5', active ? 'text-brand-600' : 'text-fg-subtle')}>
               {item.icon}
             </span>
-            {label}
+            <span className="truncate max-w-full">{label}</span>
           </Link>
         )
       })}
@@ -67,11 +68,11 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
         aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
         aria-expanded={open}
         className={cn(
-          'flex flex-1 flex-col items-center justify-center gap-1 px-1 text-xs font-medium transition-colors',
+          'flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium leading-tight transition-colors',
           open ? 'text-brand-600' : 'text-fg-muted hover:text-fg',
         )}
       >
-        <span className={cn('flex-shrink-0', open ? 'text-brand-600' : 'text-fg-subtle')}>
+        <span className={cn('flex shrink-0', open ? 'text-brand-600' : 'text-fg-subtle')}>
           <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="3" cy="3" r="1.6" /><circle cx="8" cy="3" r="1.6" /><circle cx="13" cy="3" r="1.6" />
             <circle cx="3" cy="8" r="1.6" /><circle cx="8" cy="8" r="1.6" /><circle cx="13" cy="8" r="1.6" />
@@ -80,6 +81,7 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
         </span>
         Menú
       </button>
+      </div>
     </nav>
   )
 }

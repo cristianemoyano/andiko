@@ -31,6 +31,10 @@
   --color-warning:       var(--warning);
   --color-warning-bg:    var(--warning-bg);
   --color-ring:          var(--ring);          /* focus ring */
+  --color-brand-accent:        var(--brand-accent);
+  --color-brand-accent-bg:     var(--brand-accent-bg);
+  --color-brand-accent-border: var(--brand-accent-border);
+  --color-brand-chart:         var(--brand-chart);
 }
 
 :root {
@@ -50,6 +54,10 @@
   --warning: #B45309;         /* amber-700 */
   --warning-bg: #FEF3C7;      /* amber-100 */
   --ring: #BFDBFE;            /* blue-200 */
+  --brand-accent: #0C647A;        /* links, accents — brand-600 */
+  --brand-accent-bg: #EEF8FA;     /* tinted surfaces — brand-50 */
+  --brand-accent-border: #A2DCE7; /* borders — brand-200 */
+  --brand-chart: #0C647A;         /* chart strokes — brand-600 */
 }
 
 .dark {
@@ -69,6 +77,10 @@
   --warning: #FBBF24;         /* amber-400 */
   --warning-bg: #3A2E12;
   --ring: #1D4ED8;            /* blue-700 */
+  --brand-accent: #5FC0D3;        /* brand-300 — readable links on dark */
+  --brand-accent-bg: #083F52;     /* brand-800 — tinted surfaces */
+  --brand-accent-border: #2DA3BC; /* brand-400 */
+  --brand-chart: #2DA3BC;         /* brand-400 — brighter chart lines */
 }
 
 /* Andiko brand palette */
@@ -90,7 +102,7 @@
   This is needed because Tailwind v4 JIT may not detect dynamic token references
   in component files before the theme is registered.
 */
-@source inline("bg-brand-50 bg-brand-100 bg-brand-600 bg-brand-700 bg-brand-800 text-brand-600 text-brand-800 border-brand-200 hover:bg-brand-700 active:bg-brand-800 focus-visible:ring-brand-600");
+@source inline("bg-brand-50 bg-brand-100 bg-brand-600 bg-brand-700 bg-brand-800 bg-brand-900/40 text-brand-600 text-brand-800 text-brand-200 text-brand-300 border-brand-200 hover:bg-brand-700 active:bg-brand-800 focus-visible:ring-brand-600 dark:bg-brand-900/40 dark:text-brand-200 dark:text-brand-300 bg-brand-accent-bg text-brand-accent border-brand-accent-border");
 
 /* ── Base ────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
