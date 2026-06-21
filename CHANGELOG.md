@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.11.0](https://github.com/cristianemoyano/andiko/compare/v0.10.0...v0.11.0) (2026-06-21)
+
+### Features
+
+* **core:** mobile panel UX, list tables, and dashboard performance ([d05410f](https://github.com/cristianemoyano/andiko/commit/d05410f0ae12f0b7e849da6c1f4d566a43725a61))
+
 ## [0.10.0](https://github.com/cristianemoyano/andiko/compare/v0.9.0...v0.10.0) (2026-06-21)
 
 ### Features

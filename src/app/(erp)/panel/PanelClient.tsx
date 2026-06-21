@@ -4,13 +4,12 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
-import { Button } from '@/components/primitives/Button'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Skeleton } from '@/components/primitives/Skeleton'
-import { Sparkline, PanelBarChart, PanelDonutChart } from '@/components/erp'
-import { SearchableSelect } from '@/components/erp'
+import { PerformanceCard, PanelBarChart, PanelDonutChart, Sparkline } from '@/components/erp'
+import type { BarChartDataPoint, DonutSegment, PerformanceSeriesPoint } from '@/components/erp'
 import { fetchJson } from '@/lib/fetch-json'
-import type { BarChartDataPoint, DonutSegment } from '@/components/erp'
+import { PanelFilterBar, type PanelPeriod } from './PanelFilterBar'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -20,7 +19,7 @@ interface StockAlerts {
   below_minimum: number
 }
 
-type Period = 'last_week' | 'last_month' | 'last_3months' | 'last_year' | 'custom'
+type Period = PanelPeriod
 
 interface KpisData {
   kpis: {
@@ -32,6 +31,7 @@ interface KpisData {
   counts: { productos: number; clientes: number; proveedores: number; comprobantes: number }
   cash_flow: { semanal: BarChartDataPoint[]; mensual: BarChartDataPoint[]; anual: BarChartDataPoint[] }
   gastos: DonutSegment[]
+  performance_series: PerformanceSeriesPoint[]
 }
 
 interface RecentInvoice {
@@ -50,13 +50,6 @@ interface ActivityItem {
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const PERIOD_OPTIONS: { value: Period; label: string }[] = [
-  { value: 'last_week',    label: 'Última semana' },
-  { value: 'last_month',   label: 'Último mes' },
-  { value: 'last_3months', label: 'Últimos 3 meses' },
-  { value: 'last_year',    label: 'Último año' },
-]
-
 const INVOICE_STATUS_MAP: Record<string, string> = {
   draft:          'Borrador',
   issued:         'Pendiente',
@@ -69,6 +62,32 @@ const PRIMARY = '#0C647A'
 
 const ars = (v: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(v)
+
+function getPeriodLabel(period: Period, fromDate: string, toDate: string): string {
+  const now = new Date()
+  const monthYear = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+  switch (period) {
+    case 'last_week':
+      return 'Última semana'
+    case 'last_month':
+      return `Este mes — ${cap(monthYear)}`
+    case 'last_3months':
+      return 'Últimos 3 meses'
+    case 'last_year':
+      return 'Último año'
+    case 'custom':
+      if (fromDate && toDate) {
+        const from = new Date(fromDate).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
+        const to = new Date(toDate).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+        return `${from} — ${to}`
+      }
+      return 'Período personalizado'
+    default:
+      return cap(monthYear)
+  }
+}
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
@@ -181,6 +200,8 @@ export function PanelClient() {
   const [loading, setLoading] = useState(true)
   const [branches, setBranches] = useState<{ value: string; label: string }[]>([])
   const [stockAlerts, setStockAlerts] = useState<StockAlerts | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | undefined>()
+  const [performanceSeries, setPerformanceSeries] = useState<PerformanceSeriesPoint[]>([])
 
   const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -233,8 +254,10 @@ export function PanelClient() {
     ])
       .then(([kpis, inv, act]) => {
         setKpisData(kpis)
+        setPerformanceSeries(kpis.performance_series ?? [])
         setInvoices(inv.invoices ?? [])
         setActivity(act.items ?? [])
+        setLastUpdated(new Date())
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -249,79 +272,35 @@ export function PanelClient() {
     <div className="flex flex-col h-full" id="panel-dashboard">
       <TopBar breadcrumbs={[{ label: 'Panel' }]} />
 
-      {/* Filter bar */}
-      <div className="border-b border-border bg-surface px-4 md:px-6 py-2.5 flex flex-col gap-2 md:flex-row md:items-center md:gap-3 shrink-0 print:hidden">
-        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex gap-1 w-max md:w-auto flex-nowrap">
-          {PERIOD_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => updateParams({ period: opt.value })}
-              className={`text-xs px-3 py-1.5 rounded-[4px] font-medium transition-colors whitespace-nowrap shrink-0 ${
-                period === opt.value
-                  ? 'bg-[#EEF8FA] text-[#0C647A] border border-[#A2DCE7]'
-                  : 'text-fg-muted hover:bg-surface-hover border border-transparent'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-          <button
-            onClick={() => updateParams({ period: 'custom' })}
-            className={`text-xs px-3 py-1.5 rounded-[4px] font-medium transition-colors whitespace-nowrap shrink-0 ${
-              period === 'custom'
-                ? 'bg-[#EEF8FA] text-[#0C647A] border border-[#A2DCE7]'
-                : 'text-fg-muted hover:bg-surface-hover border border-transparent'
-            }`}
-          >
-            Personalizado
-          </button>
-          </div>
-        </div>
-
-        {period === 'custom' && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <input
-              type="date"
-              value={fromDate}
-              onChange={e => updateParams({ from: e.target.value })}
-              className="text-xs border border-border rounded-[4px] px-2 py-1.5 text-fg-muted focus:outline-none focus:border-[#0C647A]"
-            />
-            <span className="text-xs text-fg-subtle">→</span>
-            <input
-              type="date"
-              value={toDate}
-              onChange={e => updateParams({ to: e.target.value })}
-              className="text-xs border border-border rounded-[4px] px-2 py-1.5 text-fg-muted focus:outline-none focus:border-[#0C647A]"
-            />
-          </div>
-        )}
-
-        <div className="md:ml-auto flex items-center gap-2 flex-wrap">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="print:hidden"
-            onClick={() => window.print()}
-          >
-            Exportar PDF
-          </Button>
-          <div className="w-full sm:w-52">
-          {branches.length > 0 && (
-            <SearchableSelect
-              options={branches}
-              value={branchId}
-              onChange={v => updateParams({ branch_id: v ?? 'all' })}
-              placeholder="Sucursal"
-            />
-          )}
-          </div>
-        </div>
-      </div>
+      <PanelFilterBar
+        period={period}
+        branchId={branchId}
+        fromDate={fromDate}
+        toDate={toDate}
+        branches={branches}
+        onPeriodChange={p => updateParams({ period: p })}
+        onBranchChange={id => updateParams({ branch_id: id })}
+        onFromChange={from => updateParams({ from })}
+        onToChange={to => updateParams({ to })}
+        onExportPdf={() => window.print()}
+      />
 
       <div className="flex-1 overflow-auto p-4 md:p-6 bg-surface-muted print:bg-surface print:p-4">
-        {/* KPI cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+        <PerformanceCard
+          className="mb-4"
+          periodLabel={getPeriodLabel(period, fromDate, toDate)}
+          series={performanceSeries}
+          facturado={kpis?.facturado.value ?? 0}
+          cobrado={kpis?.cobrado.value ?? 0}
+          porCobrar={kpis?.por_cobrar.value ?? 0}
+          comprobantes={counts?.comprobantes ?? 0}
+          clientes={counts?.clientes ?? 0}
+          lastUpdated={lastUpdated}
+          loading={loading}
+        />
+
+        {/* KPI cards — desktop only; mobile uses PerformanceCard above */}
+        <div className="hidden xl:grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <KPICard
             label="Facturado"
             value={kpis ? ars(kpis.facturado.value) : <Skeleton className="h-5 w-28" />}
@@ -409,8 +388,8 @@ export function PanelClient() {
 
         {/* Charts row */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-          {/* Flujo de caja */}
-          <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
+          {/* Flujo de caja — desktop only; chart is in PerformanceCard on mobile */}
+          <div className="hidden xl:block bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
             <div className="flex items-center mb-4">
               <span className="text-[13px] font-semibold text-fg">Flujo de caja</span>
               <div className="ml-auto flex gap-1">

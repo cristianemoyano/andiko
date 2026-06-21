@@ -3,6 +3,8 @@
 import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 
+export type MobileColumnRole = 'lead' | 'prefix' | 'title' | 'subtitle' | 'badge' | 'amount' | 'hidden'
+
 export interface Column<T> {
   key: string
   header: string
@@ -10,6 +12,8 @@ export interface Column<T> {
   sortable?: boolean
   align?: 'left' | 'right'
   className?: string
+  /** Mobile list layout (WooCommerce-style). Inferred from column key when omitted. */
+  mobileRole?: MobileColumnRole
 }
 
 interface DataTableProps<T extends object> {
@@ -21,11 +25,45 @@ interface DataTableProps<T extends object> {
   footer?: React.ReactNode
   emptyMessage?: string
   className?: string
-  /** Pin the first column while the table scrolls horizontally — useful for wide tables on mobile. */
+  /** Pin the first column while the table scrolls horizontally — useful for wide tables on desktop. */
   stickyFirstColumn?: boolean
+  /** Render card list on viewports below md. Default true. */
+  mobileList?: boolean
 }
 
 type SortDir = 'asc' | 'desc' | null
+
+const LEAD_KEYS = ['created_at', 'issue_date', 'fecha', 'payment_date', 'invoice_date', 'updated_at']
+const AMOUNT_KEYS = ['total', 'amount', 'balance', 'monto', 'paid_amount']
+const BADGE_KEYS = ['status', 'estado']
+const TITLE_KEYS = ['contact', 'cliente', 'customer', 'legal_name', 'name', 'supplier', 'proveedor']
+const PREFIX_KEYS = ['number', 'numero', 'quote_number', 'order_number', 'invoice_number', 'payment_number', 'receipt_number']
+const SUBTITLE_KEYS = ['branch', 'sucursal', 'payment_condition', 'condicion', 'salesperson', 'vendedor', 'category', 'categoria']
+
+function inferMobileRole(column: Column<unknown>): MobileColumnRole {
+  if (column.mobileRole) return column.mobileRole
+
+  const key = column.key.toLowerCase()
+
+  if (LEAD_KEYS.some(k => key === k || key.endsWith(`_${k}`) || key.includes(k))) return 'lead'
+  if (AMOUNT_KEYS.some(k => key === k || key.includes(k))) return 'amount'
+  if (BADGE_KEYS.some(k => key === k || key.includes(k))) return 'badge'
+  if (PREFIX_KEYS.some(k => key.includes(k))) return 'prefix'
+  if (TITLE_KEYS.some(k => key === k || key.includes(k))) return 'title'
+  if (SUBTITLE_KEYS.some(k => key === k || key.includes(k))) return 'subtitle'
+
+  return 'hidden'
+}
+
+function renderCell<T extends object>(column: Column<T>, row: T): React.ReactNode {
+  return column.render ? column.render(row) : String((row as Record<string, unknown>)[column.key] ?? '')
+}
+
+function hasContent(content: React.ReactNode): boolean {
+  if (content === null || content === undefined || content === false) return false
+  if (typeof content === 'string') return content.length > 0
+  return true
+}
 
 /** Domain row types need not be index signatures; dynamic columns use a narrow cast internally. */
 export function DataTable<T extends object>({
@@ -38,9 +76,19 @@ export function DataTable<T extends object>({
   emptyMessage = 'Sin registros.',
   className,
   stickyFirstColumn = false,
+  mobileList = true,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>(null)
+
+  const mobileColumns = useMemo(
+    () =>
+      columns.map(col => ({
+        col,
+        role: inferMobileRole(col as Column<unknown>),
+      })),
+    [columns],
+  )
 
   function handleSort(key: string) {
     if (sortKey !== key) {
@@ -67,6 +115,14 @@ export function DataTable<T extends object>({
     })
   }, [data, sortKey, sortDir])
 
+  function handleRowClick(row: T, e: React.MouseEvent) {
+    if (!onRowClick) return
+    const target = e.target as HTMLElement | null
+    const interactive = target?.closest('button, a, input, select, textarea, [role="button"], [data-stop-row-click]')
+    if (interactive) return
+    onRowClick(row)
+  }
+
   return (
     <div className={cn('bg-surface border border-border rounded', className)}>
       {toolbar && (
@@ -75,7 +131,24 @@ export function DataTable<T extends object>({
         </div>
       )}
 
-      <div className="overflow-x-auto overscroll-x-contain [scrollbar-width:thin]">
+      {mobileList && (
+        <div className="md:hidden divide-y divide-border">
+          {sorted.length === 0 ? (
+            <div className="px-4 py-10 text-center text-sm text-fg-subtle">{emptyMessage}</div>
+          ) : (
+            sorted.map(row => (
+              <MobileListRow
+                key={keyExtractor(row)}
+                row={row}
+                mobileColumns={mobileColumns}
+                onActivate={onRowClick ? () => onRowClick(row) : undefined}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      <div className={cn('overflow-x-auto overscroll-x-contain [scrollbar-width:thin]', mobileList && 'hidden md:block')}>
         <table className="min-w-full border-collapse">
           <thead>
             <tr>
@@ -89,14 +162,12 @@ export function DataTable<T extends object>({
                     col.sortable && 'cursor-pointer hover:bg-surface-hover hover:text-fg',
                     sortKey === col.key && 'text-brand-600 bg-brand-50',
                     stickyFirstColumn && i === 0 && 'sticky left-0 z-10 bg-surface-muted',
-                    col.className
+                    col.className,
                   )}
                 >
                   <span className="inline-flex items-center gap-1">
                     {col.header}
-                    {col.sortable && (
-                      <SortIcon active={sortKey === col.key} dir={sortDir} />
-                    )}
+                    {col.sortable && <SortIcon active={sortKey === col.key} dir={sortDir} />}
                   </span>
                 </th>
               ))}
@@ -105,10 +176,7 @@ export function DataTable<T extends object>({
           <tbody>
             {sorted.length === 0 ? (
               <tr>
-                <td
-                  colSpan={columns.length}
-                  className="h-20 text-center text-sm text-fg-subtle"
-                >
+                <td colSpan={columns.length} className="h-20 text-center text-sm text-fg-subtle">
                   {emptyMessage}
                 </td>
               </tr>
@@ -116,19 +184,10 @@ export function DataTable<T extends object>({
               sorted.map(row => (
                 <tr
                   key={keyExtractor(row)}
-                  onClick={
-                    onRowClick
-                      ? (e) => {
-                          const target = e.target as HTMLElement | null
-                          const interactive = target?.closest('button, a, input, select, textarea, [role="button"], [data-stop-row-click]')
-                          if (interactive) return
-                          onRowClick(row)
-                        }
-                      : undefined
-                  }
+                  onClick={onRowClick ? e => handleRowClick(row, e) : undefined}
                   className={cn(
                     'border-b border-border last:border-0 hover:bg-surface-muted transition-colors',
-                    onRowClick && 'cursor-pointer'
+                    onRowClick && 'cursor-pointer',
                   )}
                 >
                   {columns.map((col, i) => (
@@ -138,10 +197,10 @@ export function DataTable<T extends object>({
                         'h-10 px-3 text-[13px] text-fg',
                         col.align === 'right' && 'text-right',
                         stickyFirstColumn && i === 0 && 'sticky left-0 z-10 bg-surface',
-                        col.className
+                        col.className,
                       )}
                     >
-                      {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '')}
+                      {renderCell(col, row)}
                     </td>
                   ))}
                 </tr>
@@ -156,6 +215,100 @@ export function DataTable<T extends object>({
           {footer}
         </div>
       )}
+    </div>
+  )
+}
+
+interface MobileListRowProps<T extends object> {
+  row: T
+  mobileColumns: { col: Column<T>; role: MobileColumnRole }[]
+  onActivate?: () => void
+}
+
+function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: MobileListRowProps<T>) {
+  const byRole = (role: MobileColumnRole) =>
+    mobileColumns.filter(item => item.role === role).map(item => renderCell(item.col, row))
+
+  const lead = byRole('lead')[0]
+  const prefixContent = byRole('prefix')[0]
+  const titleContent = byRole('title')[0]
+  const subtitleContents = byRole('subtitle')
+  const badge = byRole('badge')[0]
+  const amount = byRole('amount')[0]
+
+  const titleLine =
+    hasContent(prefixContent) && hasContent(titleContent) ? (
+      <>
+        <span className="font-mono text-[13px] text-fg-muted">{prefixContent}</span>{' '}
+        <span>{titleContent}</span>
+      </>
+    ) : (
+      titleContent ?? prefixContent
+    )
+
+  return (
+    <div
+      role={onActivate ? 'link' : undefined}
+      tabIndex={onActivate ? 0 : undefined}
+      onClick={onActivate}
+      onKeyDown={
+        onActivate
+          ? e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onActivate()
+              }
+            }
+          : undefined
+      }
+      className={cn(
+        'block w-full text-left px-4 py-3.5 transition-colors',
+        onActivate && 'cursor-pointer hover:bg-surface-muted active:bg-surface-muted',
+      )}
+    >
+      {(lead || amount) && (
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <span className="text-[12px] text-fg-subtle tabular-nums shrink-0">{lead}</span>
+          <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+            {amount && (
+              <span className="text-[15px] font-semibold text-fg tabular-nums truncate">{amount}</span>
+            )}
+            {onActivate && (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-fg-subtle shrink-0"
+                aria-hidden="true"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            )}
+          </div>
+        </div>
+      )}
+
+      {hasContent(titleLine) && (
+        <p className="text-[14px] font-medium text-fg leading-snug line-clamp-2">{titleLine}</p>
+      )}
+
+      {subtitleContents.length > 0 && (
+        <div className="mt-0.5 text-[12px] text-fg-muted truncate">
+          {subtitleContents.map((node, i) => (
+            <span key={i}>
+              {i > 0 ? ' · ' : null}
+              {node}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {badge && <div className="mt-2">{badge}</div>}
     </div>
   )
 }

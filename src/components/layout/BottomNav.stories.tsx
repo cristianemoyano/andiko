@@ -24,10 +24,10 @@ const meta: Meta<typeof BottomNav> = {
 export default meta
 type Story = StoryObj<typeof BottomNav>
 
-// Primary tabs (Panel · Ventas · Compras · Contactos) plus the Menú tab.
+// Primary tabs (Panel · Ventas · Productos) plus the Menú tab.
 export const Default: Story = {}
 
 // When the org only has some modules enabled, disabled tabs are hidden.
 export const LimitedModules: Story = {
-  args: { enabledModules: ['sales', 'contacts'] },
+  args: { enabledModules: ['sales', 'catalog'] },
 }

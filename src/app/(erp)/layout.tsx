@@ -51,7 +51,7 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
           showSysAdminNavigation={showSysAdminNavigation}
           enabledModules={enabledModules}
         />
-        <main className="flex-1 flex flex-col min-h-0 overflow-hidden overscroll-contain pt-[env(safe-area-inset-top)] md:pt-0 pb-14 md:pb-0">
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden overscroll-contain pt-[env(safe-area-inset-top)] md:pt-0 pb-16 md:pb-0">
           {children}
         </main>
         <BottomNav enabledModules={enabledModules} />

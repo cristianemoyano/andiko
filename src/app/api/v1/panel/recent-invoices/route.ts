@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
 import { resolveOrgIdForMutation } from '@/lib/session-org'
-import { getPanelRecentInvoices, type PanelFilters, type PanelPeriod } from '@/modules/panel/panel.service'
+import { getCachedPanelData, panelCacheKey, PANEL_CACHE_TTL_MS } from '@/modules/panel/panel-cache'
+import { getPanelRecentInvoices, parsePanelFilters } from '@/modules/panel/panel.service'
 
-const VALID_PERIODS: PanelPeriod[] = ['last_week', 'last_month', 'last_3months', 'last_year', 'custom']
+const CACHE_HEADERS = {
+  'Cache-Control': `private, max-age=${PANEL_CACHE_TTL_MS / 1000}`,
+}
 
 export const GET = withPermission('sales:read', async (req, _ctx, session) => {
   const orgId = await resolveOrgIdForMutation(session.user)
@@ -11,15 +14,9 @@ export const GET = withPermission('sales:read', async (req, _ctx, session) => {
     return NextResponse.json({ error: 'No hay organización en contexto', code: 'ORG_CONTEXT_REQUIRED' }, { status: 422 })
   }
 
-  const sp = req.nextUrl.searchParams
-  const period = (sp.get('period') ?? 'last_month') as PanelPeriod
-  const filters: PanelFilters = {
-    period: VALID_PERIODS.includes(period) ? period : 'last_month',
-    from: sp.get('from') ?? undefined,
-    to: sp.get('to') ?? undefined,
-    branch_id: sp.get('branch_id') ?? undefined,
-  }
+  const filters = parsePanelFilters(req.nextUrl.searchParams)
+  const cacheKey = panelCacheKey(orgId, 'recent-invoices', filters)
+  const invoices = await getCachedPanelData(cacheKey, () => getPanelRecentInvoices(orgId, filters))
 
-  const invoices = await getPanelRecentInvoices(orgId, filters)
-  return NextResponse.json({ invoices })
+  return NextResponse.json({ invoices }, { headers: CACHE_HEADERS })
 })

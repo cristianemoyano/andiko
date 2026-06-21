@@ -122,3 +122,18 @@ export const WithPaginationFooter: Story = {
   name: 'Con paginación en footer',
   render: () => <DataTableWithPagination />,
 }
+
+export const MobileList: Story = {
+  name: 'Lista mobile',
+  parameters: {
+    viewport: { defaultViewport: 'mobile1' },
+  },
+  render: () => (
+    <DataTable
+      columns={COLUMNS}
+      data={SAMPLE_DATA}
+      keyExtractor={r => r.id}
+      onRowClick={() => {}}
+    />
+  ),
+}

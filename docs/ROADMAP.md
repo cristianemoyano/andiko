@@ -87,12 +87,12 @@ Ningún componente se usa en producción sin su story.
 - [x] Card / Panel
 - [x] Sidebar (navegación principal, logout, estado activo)
 - [x] Tabs
-- [x] Responsive móvil (<768px): barra de navegación inferior fija con secciones principales (Panel·Ventas·Compras·Contactos) + pestaña "Menú" que abre el drawer con toda la navegación; Dialog con scroll y gutters; grillas de formulario/detalle que colapsan a una columna
+- [x] Responsive móvil (<768px): barra de navegación inferior con Panel · Ventas · Productos · Menú (4 tabs, íconos más grandes); drawer "Menú" con el resto de módulos; Dialog con scroll y gutters; grillas de formulario/detalle que colapsan a una columna
 - [x] PWA instalable: manifest + íconos de marca (192/512/maskable/apple-touch), `theme-color` y meta iOS web-app, display `standalone` (sin chrome del navegador); service worker estático que cachea solo assets inmutables de `/_next/static` (cache-first) y nunca HTML ni `/api/*` para no servir datos financieros desestabilizados; banner de instalación descartable (prompt Android + hint "Agregar a inicio" iOS); safe-area superior e inset de overscroll para modo standalone
 - [x] Skeleton primitive (placeholders animados) reemplazando el texto "Cargando…" en el Panel
 
 ### Componentes ERP-específicos
-- [x] DataTable (columnas configurables, sorting client-side, row actions)
+- [x] DataTable (columnas configurables, sorting client-side, row actions; layout lista mobile estilo WooCommerce en <768px)
 - [x] TablePagination (anterior / siguiente y página actual, para tablas con datos paginados)
 - [x] CurrencyInput (formato ARS: `$ 1.234,56`, edición en coma decimal, `Decimal.js`-safe)
 - [x] DateInput (formato DD/MM/YYYY, automask, parse/format UTC)
@@ -104,6 +104,7 @@ Ningún componente se usa en producción sin su story.
 - [x] Sparkline (Recharts LineChart sin ejes, para KPI cards)
 - [x] PanelBarChart (Recharts BarChart con estilos Andiko, tooltip ARS, toggle período)
 - [x] PanelDonutChart (Recharts PieChart con leyenda y hover)
+- [x] PerformanceCard (tarjeta hero del panel: tabs Total/Cobrado/Pendiente, KPIs secundarios, gráfico área, link a reportes)
 
 ### Principios del design system
 - Accesibilidad primero: todos los componentes deben ser navegables por teclado y compatibles con lectores de pantalla.
@@ -130,6 +131,10 @@ Vista ejecutiva del negocio. Primer pantalla post-login.
 - [x] Actividad reciente: ampliar con eventos de stock, pagos y compras (hoy solo facturas)
 - [ ] Saldo en cuenta: conectar cuando Contabilidad esté disponible
 - [x] Exportar dashboard como PDF
+- [x] PanelFilterBar: filtro de período en Select + sucursal + export PDF compacto (mobile-first)
+- [x] Queries del panel optimizadas (CTEs en lugar de subqueries correlacionadas; 13→7 round-trips SQL)
+- [x] Cache in-memory 60s en endpoints del panel (`/kpis`, `/recent-invoices`, `/activity`)
+- [x] Migración: índices compuestos para reportes del panel (`issue_date`, `payment_date`, `updated_at`)
 
 ---
 

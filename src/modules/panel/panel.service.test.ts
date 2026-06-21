@@ -18,10 +18,14 @@ describe('panel.service', () => {
     it('returns parsed numeric values for facturado and cobrado', async () => {
       const mockQuery = vi.mocked(sequelize.query)
       mockQuery
-        .mockResolvedValueOnce([{ current: '150000.00', previous: '100000.00' }] as never) // facturado
-        .mockResolvedValueOnce([{ current: '120000.00', previous: '130000.00' }] as never) // cobrado
-        .mockResolvedValueOnce([{ value: '30000.00', overdue_count: '2' }] as never)       // cxc
-        .mockResolvedValueOnce([] as never)                                                  // spark
+        .mockResolvedValueOnce([{
+          facturado_current: '150000.00',
+          facturado_previous: '100000.00',
+          cxc_value: '30000.00',
+          overdue_count: '2',
+        }] as never)
+        .mockResolvedValueOnce([{ current: '120000.00', previous: '130000.00' }] as never)
+        .mockResolvedValueOnce([] as never)
 
       const result = await getPanelKpis(ORG_ID, BASE_FILTERS)
 
@@ -37,9 +41,13 @@ describe('panel.service', () => {
     it('returns zero pct_change when previous period is zero', async () => {
       const mockQuery = vi.mocked(sequelize.query)
       mockQuery
-        .mockResolvedValueOnce([{ current: '50000.00', previous: '0' }] as never)
+        .mockResolvedValueOnce([{
+          facturado_current: '50000.00',
+          facturado_previous: '0',
+          cxc_value: '0',
+          overdue_count: '0',
+        }] as never)
         .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
-        .mockResolvedValueOnce([{ value: '0', overdue_count: '0' }] as never)
         .mockResolvedValueOnce([] as never)
 
       const result = await getPanelKpis(ORG_ID, BASE_FILTERS)
@@ -51,9 +59,13 @@ describe('panel.service', () => {
     it('returns empty spark array when no monthly data', async () => {
       const mockQuery = vi.mocked(sequelize.query)
       mockQuery
+        .mockResolvedValueOnce([{
+          facturado_current: '0',
+          facturado_previous: '0',
+          cxc_value: '0',
+          overdue_count: '0',
+        }] as never)
         .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
-        .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
-        .mockResolvedValueOnce([{ value: '0', overdue_count: '0' }] as never)
         .mockResolvedValueOnce([] as never)
 
       const result = await getPanelKpis(ORG_ID, BASE_FILTERS)
@@ -65,11 +77,12 @@ describe('panel.service', () => {
   describe('getPanelCounts', () => {
     it('returns parsed integer counts', async () => {
       const mockQuery = vi.mocked(sequelize.query)
-      mockQuery
-        .mockResolvedValueOnce([{ count: '1284' }] as never) // products
-        .mockResolvedValueOnce([{ count: '347' }] as never)  // clients
-        .mockResolvedValueOnce([{ count: '89' }] as never)   // suppliers
-        .mockResolvedValueOnce([{ count: '623' }] as never)  // comprobantes
+      mockQuery.mockResolvedValueOnce([{
+        productos: '1284',
+        clientes: '347',
+        proveedores: '89',
+        comprobantes: '623',
+      }] as never)
 
       const result = await getPanelCounts(ORG_ID, BASE_FILTERS)
 
@@ -81,11 +94,12 @@ describe('panel.service', () => {
 
     it('returns zero counts when no data', async () => {
       const mockQuery = vi.mocked(sequelize.query)
-      mockQuery
-        .mockResolvedValueOnce([{ count: '0' }] as never)
-        .mockResolvedValueOnce([{ count: '0' }] as never)
-        .mockResolvedValueOnce([{ count: '0' }] as never)
-        .mockResolvedValueOnce([{ count: '0' }] as never)
+      mockQuery.mockResolvedValueOnce([{
+        productos: '0',
+        clientes: '0',
+        proveedores: '0',
+        comprobantes: '0',
+      }] as never)
 
       const result = await getPanelCounts(ORG_ID, BASE_FILTERS)
 
