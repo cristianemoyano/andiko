@@ -1,7 +1,9 @@
-import { Given, When, Then, Before } from '@cucumber/cucumber'
+import { Given, When, Then, Before, type DataTable } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import type { World } from '../support/world'
 import { TEST_USERS } from '../support/fixtures'
+import { TEST_IDS } from '../support/test-ids'
+import { expectToast } from '../support/toast'
 
 Given('estoy autenticado como {string}', async function (this: World, role: string) {
   const user = TEST_USERS[role as keyof typeof TEST_USERS]
@@ -13,7 +15,7 @@ Given('estoy autenticado como {string}', async function (this: World, role: stri
   await this.login(user.email, user.password)
 
   // Verify we're logged in (check for dashboard or sidebar)
-  await expect(this.page.locator('[data-testid="sidebar"]')).toBeVisible({ timeout: 10000 })
+  await expect(this.page.getByTestId(TEST_IDS.sidebar)).toBeVisible({ timeout: 10000 })
 })
 
 When('navego a {string}', async function (this: World, path: string) {
@@ -24,15 +26,24 @@ When('espero {int} segundos', async function (this: World, seconds: number) {
   await this.page.waitForTimeout(seconds * 1000)
 })
 
-When('hago clic en {string}', async function (this: World, selector: string) {
-  const element = this.page.locator(selector)
-  await expect(element).toBeVisible()
-  await element.click()
+When('hago clic en {string} en el diálogo', async function (this: World, label: string) {
+  const dialog = this.page.getByTestId(TEST_IDS.confirmDialog)
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: new RegExp(label, 'i') }).click()
 })
 
-When('completo el formulario con:', async function (this: World, dataTable) {
+When('hago clic en {string}', async function (this: World, selector: string) {
+  const isCss = /^(#|\[|\.)/.test(selector)
+  const element = isCss
+    ? this.page.locator(selector)
+    : this.page.getByRole('button', { name: new RegExp(selector, 'i') })
+  await expect(element.first()).toBeVisible()
+  await element.first().click()
+})
+
+When('completo el formulario con:', async function (this: World, dataTable: DataTable) {
   const data: Record<string, string> = {}
-  dataTable.hashes().forEach((row) => {
+  dataTable.hashes().forEach((row: Record<string, string>) => {
     Object.assign(data, row)
   })
 
@@ -66,12 +77,12 @@ Then('veo el título {string}', async function (this: World, title: string) {
 })
 
 Then('veo el mensaje {string}', async function (this: World, message: string) {
-  const notif = this.page.locator('[role="status"], [role="alert"], .toast, .notification')
-  await expect(notif).toContainText(message)
+  await expectToast(this.page, message)
 })
 
 Then('veo error {string}', async function (this: World, errorText: string) {
-  const errorEl = this.page.locator('[role="alert"], .error, [class*="error"]')
+  const errorEl = this.page.locator('[role="alert"]').first()
+  await expect(errorEl).toBeVisible({ timeout: 10000 })
   await expect(errorEl).toContainText(errorText)
 })
 

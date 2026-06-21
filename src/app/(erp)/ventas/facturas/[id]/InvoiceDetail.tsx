@@ -321,7 +321,10 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
               </div>
               <div>
                 <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Saldo</p>
-                <p className={cn('tabular-nums font-semibold', balanceNum > 0 ? 'text-danger' : 'text-success')}>
+                <p
+                  data-testid="invoice-balance"
+                  className={cn('tabular-nums font-semibold', balanceNum > 0 ? 'text-danger' : 'text-success')}
+                >
                   {formatARS(invoice.balance)}
                 </p>
               </div>
@@ -435,13 +438,14 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
           />
 
           {canPay && (
-            <div className="bg-surface border border-border rounded-sm p-5">
+            <div className="bg-surface border border-border rounded-sm p-5" data-testid="payment-form">
               <h2 className="text-[13px] font-semibold text-fg mb-4">Registrar cobro</h2>
               <form onSubmit={handleRegisterPayment} className="flex flex-col gap-4 max-w-lg">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField label="Importe" htmlFor="pay_amount">
                     <CurrencyInput
                       id="pay_amount"
+                      data-testid="payment-amount-input"
                       value={paymentAmount}
                       onChange={setPaymentAmount}
                       error={!!paymentError}
@@ -454,6 +458,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                 <FormField label="Medio de pago" htmlFor="pay_method">
                   <select
                     id="pay_method"
+                    data-testid="payment-method-select"
                     value={paymentMethod}
                     onChange={e => setPaymentMethod(e.target.value as PaymentMethod)}
                     className="flex h-8 w-full max-w-xs rounded-sm border border-border-strong bg-surface px-2.5 text-[13px] text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring"
@@ -475,7 +480,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                   </p>
                 )}
                 <div>
-                  <Button type="submit" size="sm" disabled={paymentSaving}>
+                  <Button type="submit" size="sm" disabled={paymentSaving} data-testid="payment-submit-btn">
                     {paymentSaving ? 'Registrando…' : 'Registrar cobro'}
                   </Button>
                 </div>

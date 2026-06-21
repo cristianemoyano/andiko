@@ -40,6 +40,14 @@ import SupplierInvoice from '@/modules/purchases/supplier-invoice.model'
 import SupplierInvoiceItem from '@/modules/purchases/supplier-invoice-item.model'
 import SupplierPayment from '@/modules/purchases/supplier-payment.model'
 import { nextPurchaseDocNumber, calcLineItem as calcPurchaseLine, calcDocumentTotals as calcPurchaseTotals } from '@/modules/purchases/purchases.utils'
+import { DEFAULT_ENABLED_MODULES } from '@/modules/auth/organization-modules'
+import { INTEGRATION_TENANT, INTEGRATION_TEST_USERS } from './integration-seed-data'
+import {
+  seedIntegrationCatalog,
+  seedIntegrationContacts,
+  seedIntegrationFinancials,
+  seedIntegrationAccounting,
+} from './integration-seed'
 
 const MIN_PROD_PASSWORD_LENGTH = 16
 
@@ -100,8 +108,63 @@ function requireProdPassword(envKey: string): string {
   return value
 }
 
+function buildIntegrationTenant(): SeedConfig['tenants'][number] {
+  return {
+    name: INTEGRATION_TENANT.name,
+    slug: INTEGRATION_TENANT.slug,
+    branches: [{ name: INTEGRATION_TENANT.branch.name, address: INTEGRATION_TENANT.branch.address }],
+    users: [
+      {
+        email: INTEGRATION_TEST_USERS.admin.email,
+        password: INTEGRATION_TEST_USERS.admin.password,
+        name: INTEGRATION_TEST_USERS.admin.name,
+        role: INTEGRATION_TEST_USERS.admin.role,
+        branchIndex: 0,
+        allowedBranchIndexes: [0],
+      },
+      {
+        email: INTEGRATION_TEST_USERS.gerente.email,
+        password: INTEGRATION_TEST_USERS.gerente.password,
+        name: INTEGRATION_TEST_USERS.gerente.name,
+        role: INTEGRATION_TEST_USERS.gerente.role,
+        branchIndex: 0,
+        allowedBranchIndexes: [0],
+      },
+      {
+        email: INTEGRATION_TEST_USERS.vendedor.email,
+        password: INTEGRATION_TEST_USERS.vendedor.password,
+        name: INTEGRATION_TEST_USERS.vendedor.name,
+        role: INTEGRATION_TEST_USERS.vendedor.role,
+        branchIndex: 0,
+        allowedBranchIndexes: [0],
+      },
+      {
+        email: INTEGRATION_TEST_USERS.comprador.email,
+        password: INTEGRATION_TEST_USERS.comprador.password,
+        name: INTEGRATION_TEST_USERS.comprador.name,
+        role: INTEGRATION_TEST_USERS.comprador.role,
+        branchIndex: 0,
+        allowedBranchIndexes: [0],
+      },
+      {
+        email: INTEGRATION_TEST_USERS.contador.email,
+        password: INTEGRATION_TEST_USERS.contador.password,
+        name: INTEGRATION_TEST_USERS.contador.name,
+        role: INTEGRATION_TEST_USERS.contador.role,
+        branchIndex: 0,
+        allowedBranchIndexes: [0],
+      },
+    ],
+  }
+}
+
 function buildSeedConfig(allowProd: boolean): SeedConfig {
-  if (!allowProd) return DEV_SEED as unknown as SeedConfig
+  if (!allowProd) {
+    return {
+      ...(DEV_SEED as unknown as SeedConfig),
+      tenants: [...(DEV_SEED.tenants as unknown as SeedConfig['tenants']), buildIntegrationTenant()],
+    }
+  }
 
   const [demo, premium] = DEV_SEED.tenants
   return {
@@ -1044,6 +1107,23 @@ async function run() {
         })
       }
 
+      // Integration tenant: todos los módulos para E2E
+      if (tenant.slug === 'integration') {
+        const [integrationSettings] = await OrganizationSetting.findOrCreate({
+          where: { org_id: org.id },
+          defaults: {
+            org_id: org.id,
+            enabled_modules: [...DEFAULT_ENABLED_MODULES],
+            enabled_features: {},
+          },
+          transaction: t,
+        })
+        await integrationSettings.update(
+          { enabled_modules: [...DEFAULT_ENABLED_MODULES] },
+          { transaction: t },
+        )
+      }
+
       const branches: Branch[] = []
       let defaultCustomerId: string | null = null
       let variantsBySku = new Map<string, ProductVariant>()
@@ -1080,8 +1160,26 @@ async function run() {
           },
           transaction: t,
         })
-        if (allowProd && !userCreated) {
-          await user.update({ password_hash }, { transaction: t })
+        if (!userCreated) {
+          // Re-seed: keep tenant membership in sync (integration E2E users must have org_id).
+          const patch: {
+            org_id: string
+            branch_id: string
+            role: typeof u.role
+            is_active: boolean
+            password_hash?: string
+            name: string
+          } = {
+            org_id: org.id,
+            branch_id: defaultBranch.id,
+            role: u.role,
+            is_active: true,
+            name: u.name,
+          }
+          if (allowProd || process.env.NODE_ENV === 'development') {
+            patch.password_hash = password_hash
+          }
+          await user.update(patch, { transaction: t })
         }
 
         const allowed = u.allowedBranchIndexes.map((idx) => branches[idx]!.id)
@@ -1094,7 +1192,17 @@ async function run() {
         }
 
         // Seed catalog, contacts, and inventory once per org (using the admin user as actor)
-        if (u.role === 'admin') {
+        if (tenant.slug === 'integration' && u.email === INTEGRATION_TEST_USERS.admin.email) {
+          variantsBySku = await seedIntegrationCatalog(org.id, user.id, t)
+          const contacts = await seedIntegrationContacts(org.id, user.id, t)
+          const defaultCustomer = contacts.find((c) => c.legal_name === 'Cliente XYZ') ?? null
+          defaultCustomerId = defaultCustomer?.id ?? null
+          await seedInventory(org.id, branches, user.id, t)
+          await seedDefaultChartOfAccounts(org.id, t, user.id)
+          const defaultBranch = branches[0]!
+          await seedIntegrationFinancials(org.id, defaultBranch, user.id, contacts, variantsBySku, t)
+          await seedIntegrationAccounting(org.id, user.id, t)
+        } else if (u.role === 'admin') {
           variantsBySku = await seedCatalog(org.id, user.id, t)
           const contacts = await seedContacts(org.id, user.id, t)
           const defaultCustomer = contacts.find(c => c.type === 'customer' || c.type === 'both') ?? null
@@ -1329,6 +1437,10 @@ async function run() {
     console.log('Dev seed completed.')
     console.log(`Sys-admin: ${seed.sysAdmin.email} / ${seed.sysAdmin.password}`)
     console.log('Tenant demo: admin@demo.local / demo12345, op@demo.local / demo12345')
+    console.log(
+      `Tenant integration: ${INTEGRATION_TEST_USERS.admin.email} / ${INTEGRATION_TEST_USERS.admin.password}`,
+    )
+    console.log('  (also: test-gerente, test-vendedor, test-comprador, test-contador @andiko.local — same password)')
   }
 }
 

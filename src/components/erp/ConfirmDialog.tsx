@@ -49,6 +49,7 @@ function ConfirmDialog({
       size="sm"
       hideClose
       className={className}
+      contentTestId="confirm-dialog"
     >
       <div className="flex flex-col gap-4">
         <div className={cn('flex gap-3')}>
@@ -74,6 +75,7 @@ function ConfirmDialog({
           <Button
             variant="secondary"
             size="sm"
+            data-testid="confirm-dialog-cancel-btn"
             onClick={() => onOpenChange(false)}
             disabled={loading}
           >
@@ -82,6 +84,7 @@ function ConfirmDialog({
           <Button
             variant={variant === 'danger' ? 'danger' : 'primary'}
             size="sm"
+            data-testid="confirm-dialog-btn"
             onClick={handleConfirm}
             disabled={loading}
           >

@@ -42,11 +42,12 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate data-testid="login-form">
       <FormField label="Email" htmlFor="email" required>
         <Input
           id="email"
           name="email"
+          data-testid="login-email-input"
           type="email"
           autoComplete="email"
           autoFocus
@@ -60,6 +61,7 @@ export function LoginForm() {
         <PasswordInput
           id="password"
           name="password"
+          data-testid="login-password-input"
           autoComplete="current-password"
           required
           placeholder="••••••••"
@@ -68,12 +70,12 @@ export function LoginForm() {
       </FormField>
 
       {error && (
-        <p role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+        <p role="alert" data-testid="login-error" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
           {error}
         </p>
       )}
 
-      <Button type="submit" disabled={loading} size="lg" className="w-full mt-1">
+      <Button type="submit" data-testid="login-submit-btn" disabled={loading} size="lg" className="w-full mt-1">
         {loading ? 'Ingresando…' : 'Ingresar'}
       </Button>
     </form>

@@ -6,13 +6,13 @@ Característica: Gestión Financiera y Reportes
 
   Escenario: Consultar deuda pendiente por cliente
     Dado estoy autenticado como "gerente"
-    Y existem invoices pendientes:
+    Y existen facturas pendientes:
       | Cliente     | Monto | Vencimiento |
       | Cliente XYZ | 500   | 2026-07-15  |
 
     Cuando consulto el estado de "Cliente XYZ"
     Entonces veo deuda pendiente de 500
-    Y el vencimiento fue hace X días
+    Y veo vencimiento de factura "2026-07-15"
 
   Escenario: Registrar abono a deuda
     Dado estoy autenticado como "gerente"
@@ -24,11 +24,12 @@ Característica: Gestión Financiera y Reportes
 
   Escenario: Consultar cuentas por cobrar
     Dado estoy autenticado como "contador"
-    Cuando navego a reportes financieros
-    Y genero reporte de deudas pendientes
+    Y hay al menos 3 clientes con saldo pendiente
+    Cuando navego a cuentas por cobrar
+    Y filtro clientes con saldo pendiente
 
-    Entonces el reporte muestra 3 deudas pendientes
-    Y veo columnas: Cliente, Documento, Monto, Vencimiento
+    Entonces veo 3 clientes con deuda pendiente
+    Y veo columnas: "Cliente, CUIT, Estado, Facturado, Saldo, Vencido"
 
   Escenario: Deudas vencidas
     Dado estoy autenticado como "contador"
@@ -45,12 +46,13 @@ Característica: Gestión Financiera y Reportes
     Cuando genero estado de cuenta de "Cliente XYZ"
 
     Entonces el estado de cuenta contiene:
-      | documento | fecha      | concepto       | monto  |
-      | INV-001   | 2026-06-01 | Factura        | -1000  |
-      | PGO-001   | 2026-06-05 | Pago Transferencia | +500 |
+      | tipo    | debe | haber |
+      | Factura | 500  |       |
+    Y veo columnas: "Fecha, Tipo, Comprobante, Vencimiento, Debe, Haber, Saldo"
 
   Escenario: Balance de situación patrimonial
     Dado estoy autenticado como "contador"
+    Y hay situación patrimonial de integración para "2026-06"
     Cuando consulto saldo de cuenta por período "2026-06"
 
     Entonces veo activos totales de 250000

@@ -54,7 +54,7 @@ export function PaymentInfoSection({ contactId, initialPaymentInfo }: PaymentInf
     <div className="bg-surface border border-border rounded overflow-hidden">
       <div className="px-4 py-2.5 border-b border-border bg-surface-muted flex items-center justify-between">
         <span className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Datos de pago</span>
-        <Button variant="ghost" size="xs" onClick={openCreate}>+ Agregar</Button>
+        <Button variant="ghost" size="xs" onClick={openCreate} data-testid="payment-info-add-btn">+ Agregar</Button>
       </div>
 
       {items.length === 0 ? (
@@ -139,6 +139,7 @@ function PaymentInfoModal({ contactId, item, onClose, onSaved }: {
     const method = isEdit ? 'PATCH' : 'POST'
     try {
       await fetchJson(url, { method, body: JSON.stringify(body) })
+      notifySuccess(isEdit ? 'Dato de pago actualizado' : 'Dato de pago agregado')
       onSaved()
     } catch (err) {
       const fe = fieldErrorsFromApiError(err)
@@ -171,7 +172,7 @@ function PaymentInfoModal({ contactId, item, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-surface rounded shadow-xl w-full max-w-md flex flex-col">
+      <div className="relative bg-surface rounded shadow-xl w-full max-w-md flex flex-col" data-testid="payment-info-modal">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="text-[15px] font-semibold text-fg tracking-tight">
             {isEdit ? 'Editar dato de pago' : 'Nuevo dato de pago'}
@@ -189,7 +190,7 @@ function PaymentInfoModal({ contactId, item, onClose, onSaved }: {
               <Input id="bank_name" name="bank_name" defaultValue={item?.bank_name ?? ''} placeholder="Banco Nación" disabled={saving} error={!!errors.bank_name} />
             </FormField>
 
-            <FormField label="CBU" htmlFor="cbu" error={errors.cbu?.[0]}>
+            <FormField label="CBU" htmlFor="cbu" error={errors.cbu?.[0]} errorTestId="cbu-error">
               <Input id="cbu" name="cbu" defaultValue={item?.cbu ?? ''} placeholder="22 dígitos" maxLength={22} disabled={saving} error={!!errors.cbu} />
             </FormField>
 
@@ -229,7 +230,7 @@ function PaymentInfoModal({ contactId, item, onClose, onSaved }: {
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>Cancelar</Button>
-              <Button type="submit" size="sm" disabled={saving}>
+              <Button type="submit" size="sm" disabled={saving} data-testid="payment-info-save-btn">
                 {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Agregar'}
               </Button>
             </div>

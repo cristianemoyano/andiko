@@ -1,5 +1,8 @@
-import { IWorld, IWorldOptions, setDefaultTimeout } from '@cucumber/cucumber'
-import { Browser, Page, BrowserContext } from 'playwright'
+import { World as CucumberWorld, IWorldOptions, setDefaultTimeout, setWorldConstructor } from '@cucumber/cucumber'
+import { Browser, Page, BrowserContext, expect } from '@playwright/test'
+import { resolveAppPath, isAuthenticatedAppPath } from './routes'
+import { assertOrgContext } from './org-context'
+import { TEST_IDS } from './test-ids'
 
 // Increase timeout for integration tests
 setDefaultTimeout(30 * 1000)
@@ -29,6 +32,9 @@ export interface TestData {
     cost_price?: number
     sale_price?: number
   }>
+  priceListName?: string
+  createdProductName?: string
+  createdContactName?: string
   orders?: Array<{
     id?: string
     type: 'purchase' | 'sales'
@@ -44,7 +50,7 @@ export interface TestResult {
   [key: string]: unknown
 }
 
-export class World extends IWorld {
+export class World extends CucumberWorld {
   browser!: Browser
   context!: BrowserContext
   page!: Page
@@ -61,7 +67,7 @@ export class World extends IWorld {
   }
 
   async goto(path: string) {
-    await this.page.goto(`${this.baseUrl}${path}`)
+    await this.page.goto(`${this.baseUrl}${resolveAppPath(path)}`)
   }
 
   async apiCall(
@@ -75,7 +81,13 @@ export class World extends IWorld {
     )
 
     if (!response.ok()) {
-      throw new Error(`API call failed: ${method} ${endpoint} - ${response.status()}`)
+      let detail = ''
+      try {
+        detail = JSON.stringify(await response.json())
+      } catch {
+        detail = await response.text()
+      }
+      throw new Error(`API call failed: ${method} ${endpoint} - ${response.status()} ${detail}`)
     }
 
     try {
@@ -87,19 +99,33 @@ export class World extends IWorld {
 
   async login(email: string, password: string) {
     await this.goto('/login')
-    await this.page.fill('input[type="email"]', email)
-    await this.page.fill('input[type="password"]', password)
-    await this.page.click('button[type="submit"]')
+    await this.page.getByTestId(TEST_IDS.loginEmail).fill(email)
+    await this.page.getByTestId(TEST_IDS.loginPassword).fill(password)
+    await this.page.getByTestId(TEST_IDS.loginSubmit).click()
 
     // Wait for redirect to dashboard
-    await this.page.waitForURL((url) => url.pathname.includes('/erp'), { timeout: 10000 })
+    await this.page.waitForURL(
+      (url) => isAuthenticatedAppPath(url.pathname),
+      { timeout: 10000 },
+    )
+    await assertOrgContext(this)
   }
 
   async logout() {
-    // Click user menu or logout button
-    await this.page.click('[data-testid="user-menu"]')
-    await this.page.click('[data-testid="logout-btn"]')
-    await this.page.waitForURL((url) => url.pathname === '/login')
+    await this.page.getByTestId(TEST_IDS.logoutBtn).click()
+    await this.page.waitForResponse(
+      (res) => res.url().includes('/api/auth/signout'),
+      { timeout: 10000 },
+    ).catch(() => undefined)
+
+    await this.context.clearCookies()
+
+    if (new URL(this.page.url()).pathname !== '/login') {
+      await this.page.goto(`${this.baseUrl}/login`, { waitUntil: 'domcontentloaded' }).catch(() => undefined)
+    }
+
+    await this.page.waitForURL((url) => url.pathname === '/login', { timeout: 10000 })
+    await expect(this.page.getByTestId(TEST_IDS.loginEmail)).toBeVisible()
   }
 
   async fillForm(data: Record<string, string>) {
@@ -128,3 +154,5 @@ export class World extends IWorld {
     await responsePromise
   }
 }
+
+setWorldConstructor(World)

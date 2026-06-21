@@ -48,7 +48,11 @@ const ITEMS_COLUMNS: Column<PriceListItem>[] = [
   {
     key: 'sku',
     header: 'SKU',
-    render: row => <span className="font-mono text-xs">{row.variant?.sku ?? '—'}</span>,
+    render: row => (
+      <span className="font-mono text-xs" data-testid="price-list-item-sku" data-sku={row.variant?.sku ?? ''}>
+        {row.variant?.sku ?? '—'}
+      </span>
+    ),
   },
   {
     key: 'name',
@@ -130,7 +134,6 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
   const [searching, setSearching] = useState(false)
   const [results, setResults] = useState<ProductRow[]>([])
 
-  const [selectedVariantId, setSelectedVariantId] = useState<string>('')
   const [price, setPrice] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -148,6 +151,19 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
     for (const v of variants) map.set(v.sku, { id: v.id, productName: v.productName, vendor: v.vendor })
     return map
   }, [variants])
+
+  const selectedVariantId = useMemo(() => {
+    const q = skuQuery.trim().toUpperCase()
+    if (!q) return ''
+    const hit = variantBySku.get(q)
+    if (hit) return hit.id
+    for (const p of results) {
+      for (const v of p.variants ?? []) {
+        if (v.sku?.toUpperCase() === q) return v.id
+      }
+    }
+    return ''
+  }, [skuQuery, variantBySku, results])
 
   useEffect(() => {
     let mounted = true
@@ -206,7 +222,6 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
         body: JSON.stringify({ product_variant_id: selectedVariantId, price }),
       })
       setPrice('')
-      setSelectedVariantId('')
       notifySuccess('Precio agregado a la lista')
       setLoadingItems(true)
       const reloadData = await fetchJson<PriceListItem[]>(`/api/v1/catalog/price-lists/${priceList.id}/items`)
@@ -262,6 +277,7 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
             <FormField label="SKU" htmlFor="pl_sku">
               <Input
                 id="pl_sku"
+                data-testid="price-list-sku-input"
                 placeholder={searching ? 'Buscando…' : 'Ej: RES-A4-500'}
                 value={skuQuery}
                 onChange={(e) => {
@@ -269,14 +285,11 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
                   setSkuQuery(v)
                   if (!v) {
                     setResults([])
-                    setSelectedVariantId('')
                     setSearching(false)
                     searchAbortRef.current?.abort()
                     searchAbortRef.current = null
                     return
                   }
-                  const hit = variantBySku.get(v)
-                  setSelectedVariantId(hit?.id ?? '')
                 }}
                 list="pl_sku_list"
               />
@@ -293,6 +306,7 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
             <FormField label="Precio" htmlFor="pl_price" error={formError ?? undefined}>
               <Input
                 id="pl_price"
+                data-testid="price-list-price-input"
                 type="number"
                 step="0.01"
                 min="0"
@@ -304,7 +318,7 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
             </FormField>
           </div>
           <div className="sm:col-span-2 lg:col-span-3 flex justify-end">
-            <Button size="sm" type="submit" disabled={saving || !selectedVariantId || !price}>
+            <Button size="sm" type="submit" data-testid="price-list-save-price-btn" disabled={saving || !selectedVariantId || !price}>
               {saving ? 'Guardando…' : 'Guardar precio'}
             </Button>
           </div>

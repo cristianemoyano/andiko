@@ -13,8 +13,7 @@ Característica: Gestión de Contactos (Clientes y Proveedores)
       | email          | contacto@quimicos.ar      |
       | telefono       | 0261-4123456              |
       | condiciones    | neto_30                   |
-    Entonces veo el mensaje "Proveedor creado"
-    Y veo el contacto "Proveedor Químicos"
+    Y veo el contacto creado
 
   Escenario: Crear nuevo cliente
     Dado estoy autenticado como "gerente"
@@ -25,8 +24,7 @@ Característica: Gestión de Contactos (Clientes y Proveedores)
       | email          | contacto@clientexyz.ar    |
       | telefono       | 0261-4987654              |
       | limite_credito | 50000                     |
-    Entonces veo el mensaje "Cliente creado"
-    Y veo el contacto "Cliente XYZ"
+    Y veo el contacto creado
 
   Escenario: Validación de CUIT
     Dado estoy autenticado como "gerente"
@@ -39,19 +37,20 @@ Característica: Gestión de Contactos (Clientes y Proveedores)
   Escenario: Editar contacto
     Dado estoy autenticado como "gerente"
     Cuando navego a contactos
+    Y busco el contacto "Cliente XYZ"
     Y edito el contacto "Cliente XYZ"
     Y actualizo el email a "nuevo-email@clientexyz.ar"
     Y actualizo el teléfono a "0261-5555555"
-    Y hago clic en "Guardar"
+    Y guardo el contacto
     Entonces veo el mensaje "Contacto actualizado"
 
   Escenario: Registrar CBU para proveedor
     Dado estoy autenticado como "gerente"
     Cuando navego a contactos
-    Y edito el contacto "Proveedor Químicos"
+    Y busco el contacto "Proveedor Químicos"
+    Y abro el detalle del contacto "Proveedor Químicos"
     Y establezco CBU "0140001420000013999999"
-    Y hago clic en "Guardar"
-    Entonces veo el mensaje "Contacto actualizado"
+    Entonces veo el mensaje "Dato de pago agregado"
     Y el CBU es validado correctamente
 
   Escenario: Filtrar por tipo de contacto

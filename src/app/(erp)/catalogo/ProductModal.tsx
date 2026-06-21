@@ -156,6 +156,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
       onClick={e => { if (e.target === dialogRef.current) onClose() }}
     >
       <form
+        data-testid="product-modal"
         onSubmit={handleSubmit}
         className="bg-surface rounded-sm border border-border shadow-lg w-full max-w-xl flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
@@ -176,6 +177,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
             </button>
             <button
               type="button"
+              data-testid="product-pricing-tab"
               className={`px-2.5 h-7 text-xs font-medium rounded-sm ${tab === 'pricing' ? 'bg-surface text-fg shadow-sm' : 'text-fg-muted hover:text-fg'}`}
               onClick={() => setTab('pricing')}
             >
@@ -302,10 +304,10 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                   <Input id="product_barcode" placeholder="EAN / UPC" error={!!errors.barcode?.[0]} {...fieldString('barcode')} />
                 </FormField>
                 <FormField label="Precio de costo" htmlFor="product_cost_price" error={errors.cost_price?.[0]}>
-                  <Input id="product_cost_price" type="number" step="0.01" min="0" placeholder="0.00" error={!!errors.cost_price?.[0]} {...fieldString('cost_price')} />
+                  <Input id="product_cost_price" data-testid="product-cost-price-input" type="number" step="0.01" min="0" placeholder="0.00" error={!!errors.cost_price?.[0]} {...fieldString('cost_price')} />
                 </FormField>
                 <FormField label="Precio de venta base" htmlFor="product_base_price" error={errors.base_price?.[0]}>
-                  <Input id="product_base_price" type="number" step="0.01" min="0" placeholder="0.00" error={!!errors.base_price?.[0]} {...fieldString('base_price')} />
+                  <Input id="product_base_price" data-testid="product-base-price-input" type="number" step="0.01" min="0" placeholder="0.00" error={!!errors.base_price?.[0]} {...fieldString('base_price')} />
                 </FormField>
               </div>
 
@@ -342,7 +344,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
 
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
           <Button type="button" variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" size="sm" disabled={saving}>{saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear producto'}</Button>
+          <Button type="submit" size="sm" data-testid="product-save-btn" disabled={saving}>{saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear producto'}</Button>
         </div>
       </form>
     </dialog>

@@ -39,9 +39,10 @@ export interface DialogProps extends VariantProps<typeof panelVariants> {
   children: React.ReactNode
   className?: string
   hideClose?: boolean
+  contentTestId?: string
 }
 
-function Dialog({ open, onOpenChange, title, description, children, size, className, hideClose }: DialogProps) {
+function Dialog({ open, onOpenChange, title, description, children, size, className, hideClose, contentTestId }: DialogProps) {
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
@@ -54,7 +55,10 @@ function Dialog({ open, onOpenChange, title, description, children, size, classN
             'duration-200',
           )}
         />
-        <RadixDialog.Content className={cn(panelVariants({ size }), className)}>
+        <RadixDialog.Content
+          className={cn(panelVariants({ size }), className)}
+          data-testid={contentTestId}
+        >
           <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div>
               <RadixDialog.Title className="text-[14px] font-semibold text-fg">

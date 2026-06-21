@@ -105,6 +105,7 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
   return (
     <dialog
       ref={dialogRef}
+      data-testid="contact-modal"
       className="m-auto w-full max-w-lg rounded bg-surface p-0 shadow-xl backdrop:bg-black/40 open:flex open:flex-col"
       onCancel={onClose}
     >
@@ -224,7 +225,7 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
             />
           </FormField>
 
-          <FormField label="CUIT" htmlFor="cuit" error={errors.cuit?.[0]}>
+          <FormField label="CUIT" htmlFor="cuit" error={errors.cuit?.[0]} errorTestId="cuit-error">
             <Input
               id="cuit"
               name="cuit"
@@ -292,7 +293,7 @@ export function ContactModal({ open, contact, onClose, onSaved }: ContactModalPr
             <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>
               Cancelar
             </Button>
-            <Button type="submit" size="sm" disabled={saving}>
+            <Button type="submit" size="sm" data-testid="contact-save-btn" disabled={saving}>
               {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear contacto'}
             </Button>
           </div>
