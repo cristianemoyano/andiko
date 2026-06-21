@@ -6,6 +6,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
 import { StatusBadge } from '@/components/primitives/Badge'
+import { Skeleton } from '@/components/primitives/Skeleton'
 import { Sparkline, PanelBarChart, PanelDonutChart } from '@/components/erp'
 import { SearchableSelect } from '@/components/erp'
 import { fetchJson } from '@/lib/fetch-json'
@@ -79,7 +80,7 @@ function TrendBadge({ pct }: { pct: number }) {
 
 function KPICard({
   label, value, sub, spark, sparkColor,
-}: { label: string; value: string; sub: React.ReactNode; spark?: number[]; sparkColor?: string }) {
+}: { label: string; value: React.ReactNode; sub: React.ReactNode; spark?: number[]; sparkColor?: string }) {
   return (
     <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex flex-col gap-2 min-w-0">
       <div className="text-[11px] font-semibold text-fg-subtle uppercase tracking-[0.06em] truncate">{label}</div>
@@ -94,7 +95,7 @@ function KPICard({
   )
 }
 
-function CountCard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+function CountCard({ label, value, icon }: { label: string; value: React.ReactNode; icon: React.ReactNode }) {
   return (
     <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex items-center gap-3 min-w-0">
       <div className="w-9 h-9 rounded-[4px] bg-[#EEF8FA] flex items-center justify-center shrink-0 text-[#0C647A]">
@@ -323,27 +324,27 @@ export function PanelClient() {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <KPICard
             label="Facturado"
-            value={kpis ? ars(kpis.facturado.value) : '—'}
+            value={kpis ? ars(kpis.facturado.value) : <Skeleton className="h-5 w-28" />}
             spark={kpis?.facturado.spark}
             sparkColor={kpis && kpis.facturado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
-            sub={kpis ? <TrendBadge pct={kpis.facturado.pct_change} /> : <span className="text-[11px] text-fg-subtle">Cargando…</span>}
+            sub={kpis ? <TrendBadge pct={kpis.facturado.pct_change} /> : <Skeleton className="h-3 w-24" />}
           />
           <KPICard
             label="Cobrado"
-            value={kpis ? ars(kpis.cobrado.value) : '—'}
+            value={kpis ? ars(kpis.cobrado.value) : <Skeleton className="h-5 w-28" />}
             spark={kpis?.cobrado.spark}
             sparkColor={kpis && kpis.cobrado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
-            sub={kpis ? <TrendBadge pct={kpis.cobrado.pct_change} /> : <span className="text-[11px] text-fg-subtle">Cargando…</span>}
+            sub={kpis ? <TrendBadge pct={kpis.cobrado.pct_change} /> : <Skeleton className="h-3 w-24" />}
           />
           <KPICard
             label="Cuentas por cobrar"
-            value={kpis ? ars(kpis.por_cobrar.value) : '—'}
+            value={kpis ? ars(kpis.por_cobrar.value) : <Skeleton className="h-5 w-28" />}
             sub={
               kpis
                 ? kpis.por_cobrar.overdue_count > 0
                   ? <span className="text-[11px] font-medium text-warning">{kpis.por_cobrar.overdue_count} factura{kpis.por_cobrar.overdue_count > 1 ? 's' : ''} vencida{kpis.por_cobrar.overdue_count > 1 ? 's' : ''}</span>
                   : <span className="text-[11px] text-success">Al día</span>
-                : <span className="text-[11px] text-fg-subtle">Cargando…</span>
+                : <Skeleton className="h-3 w-24" />
             }
           />
           <KPICard
@@ -355,10 +356,10 @@ export function PanelClient() {
 
         {/* Count cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
-          <CountCard label="Productos activos" value={counts ? counts.productos.toLocaleString('es-AR') : '—'} icon={<IconBox />} />
-          <CountCard label="Clientes"          value={counts ? counts.clientes.toLocaleString('es-AR') : '—'} icon={<IconUsers />} />
-          <CountCard label="Proveedores"       value={counts ? counts.proveedores.toLocaleString('es-AR') : '—'} icon={<IconBuilding />} />
-          <CountCard label="Comprobantes"      value={counts ? counts.comprobantes.toLocaleString('es-AR') : '—'} icon={<IconFile />} />
+          <CountCard label="Productos activos" value={counts ? counts.productos.toLocaleString('es-AR') : <Skeleton className="h-5 w-12" />} icon={<IconBox />} />
+          <CountCard label="Clientes"          value={counts ? counts.clientes.toLocaleString('es-AR') : <Skeleton className="h-5 w-12" />} icon={<IconUsers />} />
+          <CountCard label="Proveedores"       value={counts ? counts.proveedores.toLocaleString('es-AR') : <Skeleton className="h-5 w-12" />} icon={<IconBuilding />} />
+          <CountCard label="Comprobantes"      value={counts ? counts.comprobantes.toLocaleString('es-AR') : <Skeleton className="h-5 w-12" />} icon={<IconFile />} />
         </div>
 
         {/* Stock alerts */}
@@ -431,7 +432,7 @@ export function PanelClient() {
             {cashFlow ? (
               <PanelBarChart data={cashFlow[cashView]} color={PRIMARY} />
             ) : (
-              <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Cargando…</div>
+              <Skeleton shape="block" className="h-40 w-full" />
             )}
           </div>
 
@@ -441,7 +442,7 @@ export function PanelClient() {
             {gastos.length > 0 ? (
               <PanelDonutChart segments={gastos} />
             ) : loading ? (
-              <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Cargando…</div>
+              <Skeleton shape="block" className="h-40 w-full" />
             ) : (
               <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Sin datos de compras en el período</div>
             )}
@@ -485,7 +486,11 @@ export function PanelClient() {
               </table>
               </div>
             ) : loading ? (
-              <div className="p-6 text-sm text-fg-subtle text-center">Cargando…</div>
+              <div className="flex flex-col gap-2.5 p-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-7 w-full" />
+                ))}
+              </div>
             ) : (
               <div className="p-6 text-sm text-fg-subtle text-center">Sin facturas en el período</div>
             )}
@@ -511,7 +516,17 @@ export function PanelClient() {
                 ))}
               </div>
             ) : loading ? (
-              <div className="p-6 text-sm text-fg-subtle text-center">Cargando…</div>
+              <div>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-3 px-4 py-2.5 border-b border-border last:border-0">
+                    <Skeleton shape="circle" className="h-7 w-7 shrink-0" />
+                    <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                      <Skeleton className="h-3 w-3/4" />
+                      <Skeleton className="h-2.5 w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="p-6 text-sm text-fg-subtle text-center">Sin actividad reciente</div>
             )}
