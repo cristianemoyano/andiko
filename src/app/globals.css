@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Class-based dark variant — toggled by next-themes on <html class="dark"> */
+/* Class-based dark variant — toggled by @teispace/next-themes on <html class="dark"> */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Font vars come from Next.js font system — must use inline */

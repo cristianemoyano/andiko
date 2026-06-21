@@ -53,7 +53,9 @@ const COLUMNS: Column<Contact>[] = [
     header: 'Razón social',
     sortable: true,
     render: row => (
-      <span className="font-medium text-fg">{row.legal_name}</span>
+      <span className="font-medium text-fg" data-testid="contact-row" data-contact-name={row.legal_name}>
+        {row.legal_name}
+      </span>
     ),
   },
   {
@@ -91,8 +93,11 @@ const COLUMNS: Column<Contact>[] = [
   {
     key: 'type',
     header: 'Tipo',
-    sortable: true,
-    render: row => TYPE_LABEL[row.type] ?? row.type,
+    render: row => (
+      <span data-testid="contact-type-cell" data-contact-type={row.type}>
+        {TYPE_LABEL[row.type] ?? row.type}
+      </span>
+    ),
   },
   {
     key: 'iva_condition',
@@ -166,8 +171,11 @@ export function ContactosClient() {
   }
 
   function handleSaved() {
+    const wasEdit = !!editing
     setModalOpen(false)
-    setRefresh(r => r + 1)
+    setEditing(null)
+    setRefresh((r) => r + 1)
+    notifySuccess(wasEdit ? 'Contacto actualizado' : 'Contacto creado')
   }
 
   async function handleDeleteContact() {
@@ -192,7 +200,13 @@ export function ContactosClient() {
           <Button variant="ghost" size="xs" onClick={() => router.push(`/contactos/${row.id}`)}>
             Ver
           </Button>
-          <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>
+          <Button
+            variant="ghost"
+            size="xs"
+            data-testid="edit-contact-btn"
+            data-contact-name={row.legal_name}
+            onClick={() => openEdit(row)}
+          >
             Editar
           </Button>
           <Button variant="ghost" size="xs" onClick={() => setContactToDelete(row)}>
@@ -231,7 +245,7 @@ export function ContactosClient() {
             <Button variant="secondary" size="sm" onClick={handleExport}>
               Exportar CSV
             </Button>
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" data-testid="new-contact-btn" onClick={openCreate}>
               + Nuevo contacto
             </Button>
           </div>
@@ -256,6 +270,7 @@ export function ContactosClient() {
                   <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
                 </svg>
                 <input
+                  data-testid="contact-search-input"
                   className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-52 bg-surface focus:outline-none focus:border-ring"
                   placeholder="Buscar por razón social, persona, puesto o CUIT…"
                   value={search}
@@ -264,6 +279,7 @@ export function ContactosClient() {
               </div>
 
               <select
+                data-testid="contact-type-filter"
                 className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
                 value={typeFilter}
                 onChange={e => { setTypeFilter(e.target.value as ContactType); setPage(1) }}

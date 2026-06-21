@@ -60,6 +60,7 @@ export function Sidebar({
       )}
 
       <aside
+        data-testid="sidebar"
         className={cn(
           'flex flex-col w-[220px] flex-shrink-0 bg-surface border-r border-border h-full',
           // Mobile: off-canvas drawer that slides in from the left.
@@ -196,6 +197,8 @@ export function Sidebar({
           </div>
         </Link>
         <button
+          type="button"
+          data-testid="logout-btn"
           onClick={() => signOut({ callbackUrl: '/login' })}
           title="Cerrar sesión"
           className="flex-shrink-0 text-fg-subtle hover:text-fg-muted transition-colors cursor-pointer"

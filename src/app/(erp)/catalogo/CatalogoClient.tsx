@@ -313,7 +313,14 @@ export function CatalogoClient() {
     {
       key: 'status',
       header: 'Estado',
-      render: p => <Badge status={STATUS_BADGE[p.status] ?? 'neutral'}>{STATUS_LABEL[p.status] ?? p.status}</Badge>,
+      render: p => (
+        <Badge
+          status={STATUS_BADGE[p.status] ?? 'neutral'}
+          {...(p.status === 'archived' ? { 'data-testid': 'archived-badge' } : {})}
+        >
+          {STATUS_LABEL[p.status] ?? p.status}
+        </Badge>
+      ),
     },
     {
       key: 'actions',
@@ -324,6 +331,8 @@ export function CatalogoClient() {
           <Button
             variant="ghost"
             size="xs"
+            data-testid="edit-product-btn"
+            data-product-name={p.name}
             disabled={loadingEdit}
             onClick={e => { e.stopPropagation(); void openEdit(p.id) }}
           >
@@ -331,7 +340,15 @@ export function CatalogoClient() {
           </Button>
           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
             <Button variant="ghost" size="xs" onClick={e => { e.stopPropagation(); router.push(`/catalogo/${p.id}`) }}>Ver</Button>
-            <Button variant="ghost" size="xs" onClick={e => { e.stopPropagation(); setProductToDelete(p) }}>Eliminar</Button>
+            <Button
+              variant="ghost"
+              size="xs"
+              data-testid="delete-product-btn"
+              data-product-name={p.name}
+              onClick={e => { e.stopPropagation(); setProductToDelete(p) }}
+            >
+              Eliminar
+            </Button>
           </div>
         </div>
       ),
@@ -398,7 +415,11 @@ export function CatalogoClient() {
             <Button variant="secondary" size="sm" onClick={handleExport}>
               Exportar CSV
             </Button>
-            <Button size="sm" onClick={() => { setEditing(null); setModalOpen(true) }}>
+            <Button
+              size="sm"
+              data-testid="new-product-btn"
+              onClick={() => { setEditing(null); setModalOpen(true) }}
+            >
               + Nuevo producto
             </Button>
           </div>
@@ -418,6 +439,10 @@ export function CatalogoClient() {
           groups={groups}
           parentKey={p => p.id}
           childKey={v => v.id}
+          getParentRowProps={p => ({
+            'data-testid': 'product-row',
+            'data-product-name': p.name,
+          })}
           onRowClick={p => router.push(`/catalogo/${p.id}`)}
           emptyMessage="No hay productos. Creá el primero."
           toolbar={
@@ -428,6 +453,7 @@ export function CatalogoClient() {
                 </svg>
                 <input
                   type="search"
+                  data-testid="product-search-input"
                   placeholder="Buscar por nombre o proveedor…"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1) }}
@@ -435,6 +461,7 @@ export function CatalogoClient() {
                 />
               </div>
               <select
+                data-testid="product-status-filter"
                 value={status}
                 onChange={e => { setStatus(e.target.value); setPage(1) }}
                 className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
@@ -460,7 +487,13 @@ export function CatalogoClient() {
         <ProductModal
           product={editing}
           onClose={() => setModalOpen(false)}
-          onSaved={() => { setModalOpen(false); setEditing(null); setRefresh(r => r + 1) }}
+          onSaved={() => {
+            const wasEdit = !!editing
+            setModalOpen(false)
+            setEditing(null)
+            setRefresh((r) => r + 1)
+            notifySuccess(wasEdit ? 'Producto actualizado' : 'Producto creado exitosamente')
+          }}
         />
       )}
 

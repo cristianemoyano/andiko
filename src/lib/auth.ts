@@ -115,6 +115,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     session({ session, token }) {
       if (!session.user) return session
 
+      if (token.sub) {
+        session.user.id = token.sub
+      }
+
       const realRole = token.role as UserRole
       session.user.realRole = realRole
       session.user.realOrgId = (token.orgId ?? null) as string | null
