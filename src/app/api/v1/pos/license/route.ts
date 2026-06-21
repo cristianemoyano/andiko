@@ -4,6 +4,7 @@ import { withPosDevice } from '@/lib/pos-auth'
 import PosDevice from '@/modules/pos/pos-device.model'
 import Branch from '@/modules/auth/branch.model'
 import Organization from '@/modules/auth/organization.model'
+import { getBalanzaConfig } from '@/modules/pos/pos-config.service'
 
 const querySchema = z.object({
   device_id: z.string().optional(),
@@ -35,11 +36,12 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
 
   await device.update({ license_valid_until: validUntil })
 
-  const [branch, org] = await Promise.all([
+  const [branch, org, balanza] = await Promise.all([
     ctx.branchId
       ? Branch.findOne({ where: { id: ctx.branchId }, attributes: ['name', 'branch_code'] })
       : null,
     Organization.findOne({ where: { id: ctx.orgId }, attributes: ['name'] }),
+    getBalanzaConfig(ctx.orgId),
   ])
 
   return NextResponse.json({
@@ -52,5 +54,6 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
     device_name: device.name,
     valid_until: validUntil.toISOString(),
     features: ['sales', 'catalog_sync', 'customer_sync'],
+    balanza_config: balanza,
   })
 })

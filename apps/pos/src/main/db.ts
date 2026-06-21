@@ -167,6 +167,10 @@ function runMigrations(sqlite: Database.Database) {
   try { sqlite.exec(`ALTER TABLE pos_users ADD COLUMN pos_pin_hash TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE products ADD COLUMN barcode TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE products ADD COLUMN image_url TEXT;`) } catch { /* ignore */ }
+  // Balanza (sold-by-weight) support
+  try { sqlite.exec(`ALTER TABLE products ADD COLUMN sold_by_weight INTEGER NOT NULL DEFAULT 0;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE products ADD COLUMN plu_code TEXT;`) } catch { /* ignore */ }
+  try { sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_products_plu_code ON products(plu_code);`) } catch { /* ignore */ }
   // payments column replaces payment_method — existing DBs get the column added
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN payments TEXT NOT NULL DEFAULT '[]';`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE pos_draft_sales ADD COLUMN payments TEXT DEFAULT '[]';`) } catch { /* ignore */ }

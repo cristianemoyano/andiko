@@ -35,6 +35,9 @@ export const PATCH = withPermission<P>('products:write', async (req, ctx, sessio
     if (err instanceof Error && err.message === 'PRODUCT_NOT_FOUND') {
       return NextResponse.json({ error: 'Producto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
     }
+    if (err instanceof Error && err.message === 'PLU_CODE_TAKEN') {
+      return NextResponse.json({ error: 'El código PLU ya está en uso', code: 'PLU_CODE_TAKEN' }, { status: 409 })
+    }
     if (err instanceof Error && err.message.includes('unique')) {
       return NextResponse.json({ error: 'El SKU ya existe', code: 'DUPLICATE_SKU' }, { status: 409 })
     }

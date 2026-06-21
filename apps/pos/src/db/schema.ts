@@ -9,6 +9,8 @@ export const products = sqliteTable('products', {
   iva_rate:   text('iva_rate').notNull(),
   is_active:  integer('is_active', { mode: 'boolean' }).notNull().default(true),
   image_url:  text('image_url'),
+  sold_by_weight: integer('sold_by_weight', { mode: 'boolean' }).notNull().default(false),
+  plu_code:   text('plu_code'),
   synced_at:  text('synced_at').notNull(),  // ISO timestamp from cloud
 })
 

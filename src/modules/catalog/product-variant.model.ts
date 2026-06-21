@@ -17,6 +17,10 @@ interface ProductVariantAttributes extends Timestamps, AuditFields {
   stock_quantity: number
   /** ID de fila / variación en el sistema del cliente */
   import_external_id: string | null
+  /** Se vende por peso (balanza electrónica) en el POS */
+  sold_by_weight: boolean
+  /** Código PLU para balanzas — único por organización */
+  plu_code: string | null
   weight_kg: string | null
   length_cm: string | null
   width_cm: string | null
@@ -27,7 +31,7 @@ interface ProductVariantAttributes extends Timestamps, AuditFields {
 type ProductVariantCreationAttributes = Optional<
   ProductVariantAttributes,
   'id' | 'barcode' | 'name' | 'is_default' | 'cost_price' | 'base_price' | 'manage_stock' | 'stock_quantity' |
-  'import_external_id' |
+  'import_external_id' | 'sold_by_weight' | 'plu_code' |
   'weight_kg' | 'length_cm' | 'width_cm' | 'height_cm' | 'units_per_package' |
   'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
 >
@@ -44,6 +48,8 @@ class ProductVariant extends AuditModel<ProductVariantAttributes, ProductVariant
   declare manage_stock: boolean
   declare stock_quantity: number
   declare import_external_id: string | null
+  declare sold_by_weight: boolean
+  declare plu_code: string | null
   declare weight_kg: string | null
   declare length_cm: string | null
   declare width_cm: string | null
@@ -64,6 +70,8 @@ ProductVariant.init(
     manage_stock:   { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     stock_quantity: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
     import_external_id: { type: DataTypes.STRING(64) },
+    sold_by_weight:     { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    plu_code:           { type: DataTypes.STRING(20) },
     weight_kg:          { type: DataTypes.DECIMAL(10, 3) },
     length_cm:          { type: DataTypes.DECIMAL(10, 2) },
     width_cm:           { type: DataTypes.DECIMAL(10, 2) },

@@ -11,7 +11,7 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       outDir: 'dist-electron/main',
-      rollupOptions: { external: ['better-sqlite3'] },
+      rollupOptions: { external: ['better-sqlite3', 'serialport'] },
     },
     resolve: {
       alias: { '@andiko/shared': resolve('../../packages/shared/src/index.ts') },

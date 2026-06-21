@@ -37,6 +37,7 @@ export async function validateLicense(): Promise<{ valid: boolean; reason?: stri
     device_id?: string
     device_name?: string
     valid_until?: string
+    balanza_config?: unknown
   }>(`/api/v1/pos/license?device_id=${encodeURIComponent(deviceId)}`)
 
   if (res.valid) {
@@ -47,6 +48,7 @@ export async function validateLicense(): Promise<{ valid: boolean; reason?: stri
     if (res.device_id)   saveSetting('device_id', res.device_id)
     if (res.device_name) saveSetting('device_name', res.device_name)
     if (res.valid_until) saveSetting('license_valid_until', res.valid_until)
+    if (res.balanza_config) saveSetting('balanza_config', JSON.stringify(res.balanza_config))
     saveSetting('license_last_valid_at', new Date().toISOString())
   } else {
     // Limpiar caché cuando el cloud confirma revocación
@@ -113,10 +115,14 @@ export async function syncCatalog() {
     db().insert(products).values({
       id: p.id, sku: p.sku ?? null, barcode: p.barcode ?? null, name: p.name,
       price: p.price, iva_rate: p.iva_rate, is_active: p.is_active,
-      image_url: p.image_url ?? null, synced_at: p.updated_at,
+      image_url: p.image_url ?? null,
+      sold_by_weight: p.sold_by_weight ?? false, plu_code: p.plu_code ?? null,
+      synced_at: p.updated_at,
     }).onConflictDoUpdate({ target: products.id, set: {
       sku: p.sku ?? null, barcode: p.barcode ?? null, name: p.name, price: p.price,
-      iva_rate: p.iva_rate, is_active: p.is_active, image_url: p.image_url ?? null, synced_at: p.updated_at,
+      iva_rate: p.iva_rate, is_active: p.is_active, image_url: p.image_url ?? null,
+      sold_by_weight: p.sold_by_weight ?? false, plu_code: p.plu_code ?? null,
+      synced_at: p.updated_at,
     }}).run()
   }
 

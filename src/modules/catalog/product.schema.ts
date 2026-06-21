@@ -13,7 +13,7 @@ const productImageSchema = z.object({
   position: z.number().int().min(0),
 })
 
-export const productSchema = z.object({
+const productBaseSchema = z.object({
   name:              z.string().min(1).max(255),
   category_id:       z.string().uuid().nullable().optional(),
   description:       z.string().nullable().optional(),
@@ -33,9 +33,28 @@ export const productSchema = z.object({
   base_price:        z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().optional(),
   manage_stock:      z.boolean().optional(),
   stock_quantity:    z.coerce.number().int().min(0).optional(),
+  // Balanza / venta por peso
+  sold_by_weight:    z.boolean().optional(),
+  plu_code:          z.string().trim().max(20).regex(/^\d+$/, 'El PLU debe ser numérico').nullable().optional(),
 })
 
-export const productUpdateSchema = productSchema
+/** Si se vende por peso, el PLU es obligatorio. */
+const requirePluWhenSoldByWeight = (
+  data: { sold_by_weight?: boolean; plu_code?: string | null },
+  ctx: z.RefinementCtx,
+) => {
+  if (data.sold_by_weight && !data.plu_code) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['plu_code'],
+      message: 'El código PLU es obligatorio para productos que se venden por peso',
+    })
+  }
+}
+
+export const productSchema = productBaseSchema.superRefine(requirePluWhenSoldByWeight)
+
+export const productUpdateSchema = productBaseSchema
   .omit({ sku: true })
   .extend({
     sku:            z.string().min(1).max(100).optional(),
@@ -43,6 +62,7 @@ export const productUpdateSchema = productSchema
     manage_stock:   z.boolean().optional(),
   })
   .partial()
+  .superRefine(requirePluWhenSoldByWeight)
 
 export const productQuerySchema = paginationSchema.extend({
   search:       z.string().optional(),

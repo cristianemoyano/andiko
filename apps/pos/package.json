@@ -19,6 +19,9 @@
     "drizzle-orm": "^0.44.0",
     "electron-store": "^10.0.1"
   },
+  "optionalDependencies": {
+    "serialport": "^12.0.0"
+  },
   "devDependencies": {
     "@andiko/ui": "workspace:*",
     "@electron/rebuild": "^4.0.4",

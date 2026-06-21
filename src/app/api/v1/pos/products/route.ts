@@ -41,7 +41,7 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
         as: 'variants',
         where: variantWhere,
         required: false,
-        attributes: ['id', 'sku', 'barcode', 'name', 'base_price', 'is_default'],
+        attributes: ['id', 'sku', 'barcode', 'name', 'base_price', 'is_default', 'sold_by_weight', 'plu_code'],
         include: [
           {
             model: PriceListItem,
@@ -79,6 +79,8 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
       iva_rate: p.iva_rate,
       is_active: p.status === 'active',
       image_url: imageUrl,
+      sold_by_weight: v.sold_by_weight,
+      plu_code: v.plu_code,
       updated_at: (p.updated_at as unknown as Date).toISOString(),
     }))
   })

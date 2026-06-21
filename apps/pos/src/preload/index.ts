@@ -4,6 +4,7 @@ import type { PosSale, PosSalePayment } from '@andiko/shared'
 contextBridge.exposeInMainWorld('pos', {
   products: {
     search: (query: string) => ipcRenderer.invoke('products:search', query),
+    getByPlu: (plu: string) => ipcRenderer.invoke('products:getByPlu', plu),
   },
   customers: {
     search: (query: string) => ipcRenderer.invoke('customers:search', query),
@@ -58,6 +59,11 @@ contextBridge.exposeInMainWorld('pos', {
   settings: {
     save: (kv: Record<string, string>) => ipcRenderer.invoke('settings:save', kv),
     get: () => ipcRenderer.invoke('settings:get'),
+  },
+  scale: {
+    listPorts: () => ipcRenderer.invoke('scale:listPorts'),
+    readWeight: () => ipcRenderer.invoke('scale:readWeight'),
+    status: () => ipcRenderer.invoke('scale:status'),
   },
   dev: {
     resetLocalData: () => ipcRenderer.invoke('dev:resetLocalData'),

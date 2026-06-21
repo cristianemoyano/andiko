@@ -1,3 +1,5 @@
+export * from './balanza'
+
 // Primitive types shared between ERP cloud and POS
 export type UUID = string
 
@@ -23,10 +25,14 @@ export type PosProduct = {
   sku: string | null
   barcode: string | null
   name: string
-  price: string     // NUMERIC as string to preserve precision
+  price: string     // NUMERIC as string to preserve precision; for weight items, price per kg
   iva_rate: IvaRate
   is_active: boolean
   image_url: string | null
+  /** Sold by weight (balanza) — price is per kg and qty is fractional kg. */
+  sold_by_weight: boolean
+  /** PLU/item code embedded in scale labels; matches the scanned barcode's item code. */
+  plu_code: string | null
   updated_at: string // ISO timestamp
 }
 

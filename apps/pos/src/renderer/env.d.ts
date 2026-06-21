@@ -18,6 +18,7 @@ interface CashSession {
 interface PosAPI {
   products: {
     search: (query: string) => Promise<PosProduct[]>
+    getByPlu: (plu: string) => Promise<PosProduct | null>
   }
   customers: {
     search: (query: string) => Promise<PosCustomer[]>
@@ -144,6 +145,11 @@ interface PosAPI {
   settings: {
     save: (kv: Record<string, string>) => Promise<{ ok: boolean }>
     get: () => Promise<Record<string, string>>
+  }
+  scale: {
+    listPorts: () => Promise<{ ok: boolean; ports: Array<{ path: string; manufacturer?: string }>; error?: string }>
+    readWeight: () => Promise<{ ok: boolean; weightKg?: number; error?: string }>
+    status: () => Promise<{ enabled: boolean; port: string; available: boolean }>
   }
   dev: {
     resetLocalData: () => Promise<{ ok: boolean; error?: string }>

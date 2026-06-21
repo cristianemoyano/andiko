@@ -1,10 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
-import type { PosSale, PosSaleItem, PosProduct, PosCustomer, PosPaymentMethod } from '@andiko/shared'
+import type { PosSale, PosSaleItem, PosProduct, PosCustomer, PosPaymentMethod, BalanzaBarcodeConfig } from '@andiko/shared'
+import { parseBalanzaBarcode } from '@andiko/shared'
 import { randomUUID } from '../lib/uuid'
 
 type CartItem = {
   product: PosProduct
-  qty: number
+  qty: number               // weight items: fractional kg
+  weightItem?: boolean
+  lineTotalOverride?: string | null  // set when the scanned label embedded a total price
+}
+
+/** Final amount charged for a cart line (label price for weight items, else price × qty). */
+function lineTotal(i: CartItem): number {
+  if (i.lineTotalOverride != null) return parseFloat(i.lineTotalOverride)
+  return parseFloat(i.product.price) * i.qty
 }
 
 
@@ -52,10 +61,25 @@ export function SaleScreen({
   const [priceCheckProduct, setPriceCheckProduct] = useState<PosProduct | null>(null)
   const [priceCheckError, setPriceCheckError] = useState<string | null>(null)
   const priceCheckInputRef = useRef<HTMLInputElement>(null)
+  const balanzaCfgRef = useRef<BalanzaBarcodeConfig | null>(null)
+  const [scanError, setScanError] = useState<string | null>(null)
 
   useEffect(() => {
     window.pos.products.search(search).then(setProducts)
   }, [search])
+
+  useEffect(() => {
+    // Load the org's balanza barcode config (synced from cloud via license).
+    void window.pos.settings.get().then((s) => {
+      const raw = s['balanza_config']
+      if (!raw) return
+      try {
+        balanzaCfgRef.current = JSON.parse(raw) as BalanzaBarcodeConfig
+      } catch {
+        // ignore malformed config
+      }
+    })
+  }, [])
 
   useEffect(() => {
     // Cashier comes from the active cash session — if no session is open, block checkout
@@ -89,12 +113,18 @@ export function SaleScreen({
         product: {
           id: it.product_id,
           sku: null,
+          barcode: null,
           name: it.product_name,
           price: it.unit_price,
           iva_rate: (it.iva_rate as unknown as PosProduct['iva_rate']) ?? '21',
           is_active: true,
+          image_url: null,
+          // A fractional saved qty means it was a weight line.
+          sold_by_weight: !Number.isInteger(it.qty),
+          plu_code: null,
           updated_at: now,
         },
+        weightItem: !Number.isInteger(it.qty),
         qty: it.qty,
       })),
     )
@@ -258,6 +288,34 @@ export function SaleScreen({
       if (!hasMod && e.key === 'Enter' && target === searchRef.current) {
         const raw = search.trim()
         if (!raw) return
+
+        // Balanza label? Parse the embedded PLU + weight/price and add a weight line.
+        const cfg = balanzaCfgRef.current
+        const parsed = cfg ? parseBalanzaBarcode(raw, cfg) : null
+        if (parsed) {
+          e.preventDefault()
+          setScanError(null)
+          void (async () => {
+            const product = await window.pos.products.getByPlu(parsed.pluCode)
+            if (!product) {
+              setScanError(`PLU sin producto: ${parsed.pluCode}`)
+              return
+            }
+            const pricePerKg = parseFloat(product.price)
+            let qty: number
+            let override: string | null = null
+            if (parsed.weightKg != null) {
+              qty = parseFloat(parsed.weightKg)
+            } else {
+              const priceArs = parseFloat(parsed.priceArs ?? '0')
+              qty = pricePerKg > 0 ? Math.round((priceArs / pricePerKg) * 1000) / 1000 : 0
+              override = parsed.priceArs ?? '0'
+            }
+            addToCart(product, { qty, weightItem: true, lineTotalOverride: override })
+          })()
+          return
+        }
+
         const exact = products.find((p) => (p.sku ?? '').trim() === raw) ?? products.find((p) => p.id === raw)
         if (exact) {
           e.preventDefault()
@@ -272,6 +330,7 @@ export function SaleScreen({
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [receiptSale, customerOpen, checkoutOpen, priceCheckOpen, cart.length, checkoutPayment, customer, enabledPayments])
 
   const filtered = products
@@ -296,7 +355,7 @@ export function SaleScreen({
     window.print()
   }
 
-  function addToCart(product: PosProduct) {
+  function addToCart(product: PosProduct, opts?: { qty?: number; weightItem?: boolean; lineTotalOverride?: string | null }) {
     ;(async () => {
       if (!draftSaleId) {
         const created = await window.pos.draftSales.createOrResume({
@@ -309,11 +368,52 @@ export function SaleScreen({
 
       setCart((c) => {
         const existing = c.find((i) => i.product.id === product.id)
+        if (opts?.weightItem) {
+          // Weight lines accumulate kg (and embedded price) per product — the draft
+          // store keys items by product_id, so we merge rather than duplicate.
+          const addedQty = opts.qty ?? 0
+          const addedTotal = opts.lineTotalOverride != null ? parseFloat(opts.lineTotalOverride) : null
+          if (existing) {
+            return c.map((i) => {
+              if (i.product.id !== product.id) return i
+              const nextQty = i.qty + addedQty
+              const nextOverride =
+                i.lineTotalOverride != null || addedTotal != null
+                  ? ((i.lineTotalOverride != null ? parseFloat(i.lineTotalOverride) : 0) + (addedTotal ?? 0)).toFixed(2)
+                  : null
+              return { ...i, qty: nextQty, weightItem: true, lineTotalOverride: nextOverride }
+            })
+          }
+          return [...c, { product, qty: addedQty, weightItem: true, lineTotalOverride: opts.lineTotalOverride ?? null }]
+        }
         if (existing) return c.map((i) => (i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i))
         return [...c, { product, qty: 1 }]
       })
       setSearch('')
       searchRef.current?.focus()
+    })()
+  }
+
+  // Picking a product from the grid: weight items try the connected scale, else
+  // add an editable 1.000 kg line. Unit items add normally.
+  function handleProductPick(p: PosProduct) {
+    if (!p.sold_by_weight) { addToCart(p); return }
+    void (async () => {
+      setScanError(null)
+      try {
+        const status = await window.pos.scale.status()
+        if (status.enabled && status.available) {
+          const r = await window.pos.scale.readWeight()
+          if (r.ok && r.weightKg != null) {
+            addToCart(p, { qty: r.weightKg, weightItem: true, lineTotalOverride: null })
+            return
+          }
+          setScanError(r.error ?? 'No se pudo leer la balanza')
+        }
+      } catch {
+        // ignore — fall back to manual weight entry
+      }
+      addToCart(p, { qty: 1, weightItem: true, lineTotalOverride: null })
     })()
   }
 
@@ -326,11 +426,18 @@ export function SaleScreen({
     setCart(c => c.map(i => i.product.id === productId ? { ...i, qty } : i))
   }
 
-  const total = cart.reduce((sum, i) => sum + parseFloat(i.product.price) * i.qty, 0)
+  function updateWeightQty(productId: string, kg: number) {
+    if (!(kg > 0)) return removeFromCart(productId)
+    // Manual weight edits recompute the line from price/kg, dropping any label override.
+    setCart(c => c.map(i => i.product.id === productId ? { ...i, qty: kg, lineTotalOverride: null } : i))
+  }
+
+  const total = cart.reduce((sum, i) => sum + lineTotal(i), 0)
   const taxAmount = cart.reduce((sum, i) => {
     const rate = parseFloat(i.product.iva_rate) / 100
-    const base = parseFloat(i.product.price) * i.qty / (1 + rate)
-    return sum + (parseFloat(i.product.price) * i.qty - base)
+    const gross = lineTotal(i)
+    const base = gross / (1 + rate)
+    return sum + (gross - base)
   }, 0)
   const subtotal = total - taxAmount
 
@@ -351,7 +458,7 @@ export function SaleScreen({
         product_name: i.product.name,
         qty: i.qty,
         unit_price: i.product.price,
-        total: (parseFloat(i.product.price) * i.qty).toFixed(2),
+        total: lineTotal(i).toFixed(2),
         iva_rate: i.product.iva_rate,
         sort_order: idx,
       }))
@@ -426,7 +533,7 @@ export function SaleScreen({
       product_name: i.product.name,
       qty:          i.qty,
       unit_price:   i.product.price,
-      total:        (parseFloat(i.product.price) * i.qty).toFixed(2),
+      total:        lineTotal(i).toFixed(2),
     }))
     const soldAt = new Date().toISOString()
     const payments = checkoutPayment ? [{
@@ -887,7 +994,7 @@ export function SaleScreen({
             ref={searchRef}
             autoFocus
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); if (scanError) setScanError(null) }}
             placeholder={`Buscar producto por nombre o código… (${modKey} + K)`}
             className="flex-1 h-10 px-4 text-sm border border-zinc-300 rounded-md focus:outline-none focus:border-blue-500 bg-white"
           />
@@ -906,14 +1013,21 @@ export function SaleScreen({
           </button>
         </div>
 
+        {scanError && (
+          <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+            {scanError}
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-2 content-start">
           {filtered.slice(0, 40).map(p => (
             <button
               key={p.id}
-              onClick={() => addToCart(p)}
+              onClick={() => handleProductPick(p)}
               className="text-left bg-white border border-zinc-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 transition-colors flex gap-2.5 items-start"
             >
               {p.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={p.image_url}
                   alt=""
@@ -926,6 +1040,7 @@ export function SaleScreen({
                 {p.sku && <div className="text-[11px] text-zinc-400 font-mono">{p.sku}</div>}
                 <div className="mt-1 text-sm font-semibold text-zinc-800">
                   ${parseFloat(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  {p.sold_by_weight && <span className="text-[11px] font-normal text-zinc-400"> /kg · balanza</span>}
                 </div>
               </div>
             </button>
@@ -991,24 +1106,42 @@ export function SaleScreen({
           {cart.length === 0 && (
             <div className="text-center text-sm text-zinc-400 py-10">Agregá productos al carrito</div>
           )}
-          {cart.map(({ product, qty }) => (
+          {cart.map((item) => {
+            const { product, qty } = item
+            return (
             <div key={product.id} className="px-4 py-2.5 flex items-center gap-2">
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-medium text-zinc-900 truncate">{product.name}</div>
                 <div className="text-[12px] text-zinc-500">
-                  ${parseFloat(product.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })} c/u
+                  ${parseFloat(product.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })} {item.weightItem ? '/kg' : 'c/u'}
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => updateQty(product.id, qty - 1)} className="w-6 h-6 rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 text-sm font-medium flex items-center justify-center">−</button>
-                <span className="w-6 text-center text-[13px] font-medium">{qty}</span>
-                <button onClick={() => updateQty(product.id, qty + 1)} className="w-6 h-6 rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 text-sm font-medium flex items-center justify-center">+</button>
-              </div>
+              {item.weightItem ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    value={qty.toFixed(3)}
+                    onChange={(e) => {
+                      const kg = parseFloat(e.target.value.replace(',', '.'))
+                      if (!Number.isNaN(kg)) updateWeightQty(product.id, kg)
+                    }}
+                    inputMode="decimal"
+                    className="w-16 h-6 px-1 text-right text-[12px] border border-zinc-300 rounded bg-white focus:outline-none focus:border-blue-500"
+                  />
+                  <span className="text-[11px] text-zinc-400">kg</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <button onClick={() => updateQty(product.id, qty - 1)} className="w-6 h-6 rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 text-sm font-medium flex items-center justify-center">−</button>
+                  <span className="w-6 text-center text-[13px] font-medium">{qty}</span>
+                  <button onClick={() => updateQty(product.id, qty + 1)} className="w-6 h-6 rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 text-sm font-medium flex items-center justify-center">+</button>
+                </div>
+              )}
               <div className="text-[13px] font-semibold text-zinc-900 w-16 text-right">
-                ${(parseFloat(product.price) * qty).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                ${lineTotal(item).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Totals */}

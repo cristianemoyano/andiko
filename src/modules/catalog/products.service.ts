@@ -117,11 +117,29 @@ export async function getProduct(id: UUID, ctx: TenantContext) {
   return product
 }
 
+/**
+ * Verifica que el PLU no esté usado por otra variante viva de la misma organización.
+ * El índice único parcial en la DB es el resguardo final; esto da un error claro antes.
+ */
+async function assertPluCodeAvailable(
+  pluCode: string,
+  orgId: UUID,
+  excludeVariantId: UUID | null,
+  transaction: Transaction,
+) {
+  const where: Record<string, unknown> = { org_id: orgId, plu_code: pluCode }
+  if (excludeVariantId) where.id = { [Op.ne]: excludeVariantId }
+  const existing = await ProductVariant.findOne({ where, attributes: ['id'], transaction })
+  if (existing) throw new Error('PLU_CODE_TAKEN')
+}
+
 export async function createProduct(input: ProductInput, actorId: UUID, ctx: TenantContext) {
-  const { sku, barcode, cost_price, base_price, manage_stock, stock_quantity, images, ...productData } = input
+  const { sku, barcode, cost_price, base_price, manage_stock, stock_quantity, images, sold_by_weight, plu_code, ...productData } = input
 
   return sequelize.transaction(async (t) => {
     const slug = generateSlug(productData.name)
+
+    if (plu_code) await assertPluCodeAvailable(plu_code, ctx.orgId, null, t)
 
     const product = await Product.create(
       {
@@ -146,6 +164,8 @@ export async function createProduct(input: ProductInput, actorId: UUID, ctx: Ten
         base_price:     base_price ?? null,
         manage_stock:   manage_stock ?? true,
         stock_quantity: stock_quantity ?? 0,
+        sold_by_weight: sold_by_weight ?? false,
+        plu_code:       plu_code ?? null,
         created_by:     actorId,
         updated_by:     actorId,
       },
@@ -160,7 +180,7 @@ export async function createProduct(input: ProductInput, actorId: UUID, ctx: Ten
 export async function updateProduct(id: UUID, input: ProductUpdateInput, actorId: UUID, ctx: TenantContext) {
   const product = await getProduct(id, ctx)
 
-  const { sku, barcode, cost_price, base_price, stock_quantity, manage_stock, images, ...productData } = input
+  const { sku, barcode, cost_price, base_price, stock_quantity, manage_stock, images, sold_by_weight, plu_code, ...productData } = input
 
   await sequelize.transaction(async (t) => {
     const payload: Record<string, unknown> = { ...productData, updated_by: actorId }
@@ -170,6 +190,15 @@ export async function updateProduct(id: UUID, input: ProductUpdateInput, actorId
       await product.update(payload as Parameters<typeof product.update>[0], { transaction: t })
     }
 
+    if (plu_code) {
+      const defaultVariant = await ProductVariant.findOne({
+        where: { product_id: id, is_default: true, org_id: ctx.orgId },
+        attributes: ['id'],
+        transaction: t,
+      })
+      await assertPluCodeAvailable(plu_code, ctx.orgId, defaultVariant?.id ?? null, t)
+    }
+
     const variantUpdates: Record<string, unknown> = {}
     if (sku !== undefined)            variantUpdates.sku            = formatSku(sku)
     if (barcode !== undefined)        variantUpdates.barcode        = barcode
@@ -177,6 +206,8 @@ export async function updateProduct(id: UUID, input: ProductUpdateInput, actorId
     if (base_price !== undefined)     variantUpdates.base_price     = base_price
     if (stock_quantity !== undefined) variantUpdates.stock_quantity = stock_quantity
     if (manage_stock !== undefined)   variantUpdates.manage_stock   = manage_stock
+    if (sold_by_weight !== undefined) variantUpdates.sold_by_weight = sold_by_weight
+    if (plu_code !== undefined)       variantUpdates.plu_code       = plu_code
 
     if (Object.keys(variantUpdates).length > 0) {
       await ProductVariant.update(

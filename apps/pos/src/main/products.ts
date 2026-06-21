@@ -35,4 +35,16 @@ export function registerProductsHandlers(ipc: IpcMain) {
 
     return rows as PosProduct[]
   })
+
+  ipc.handle('products:getByPlu', async (_e, plu: string): Promise<PosProduct | null> => {
+    const code = (plu ?? '').trim()
+    if (!code) return null
+    const d = db()
+    const row = d
+      .select()
+      .from(products)
+      .where(and(eq(products.is_active, true), eq(products.plu_code, code)))
+      .get()
+    return (row as PosProduct) ?? null
+  })
 }
