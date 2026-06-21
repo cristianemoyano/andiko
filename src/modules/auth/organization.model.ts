@@ -48,6 +48,8 @@ export interface OrganizationAttributes extends Timestamps {
   cuit: string | null
   iva_condition: OrgIvaCondition | null
   fiscal_address: string | null
+  gross_income: string | null
+  activity_start_date: Date | string | null
   onboarding_completed_at: Date | null
   onboarding_data: OnboardingData | null
 }
@@ -55,6 +57,7 @@ export interface OrganizationAttributes extends Timestamps {
 type OrganizationCreationAttributes = Optional<
   OrganizationAttributes,
   | 'id' | 'is_active' | 'legal_name' | 'cuit' | 'iva_condition' | 'fiscal_address'
+  | 'gross_income' | 'activity_start_date'
   | 'onboarding_completed_at' | 'onboarding_data' | 'created_at' | 'updated_at' | 'deleted_at'
 >
 
@@ -67,6 +70,8 @@ export class Organization extends Model<OrganizationAttributes, OrganizationCrea
   declare cuit: string | null
   declare iva_condition: OrgIvaCondition | null
   declare fiscal_address: string | null
+  declare gross_income: string | null
+  declare activity_start_date: Date | string | null
   declare onboarding_completed_at: Date | null
   declare onboarding_data: OnboardingData | null
   declare created_at: Date
@@ -84,6 +89,8 @@ Organization.init(
     cuit: { type: DataTypes.STRING(13), allowNull: true },
     iva_condition: { type: DataTypes.STRING(30), allowNull: true },
     fiscal_address: { type: DataTypes.STRING(500), allowNull: true },
+    gross_income: { type: DataTypes.STRING(32), allowNull: true },
+    activity_start_date: { type: DataTypes.DATEONLY, allowNull: true },
     onboarding_completed_at: { type: DataTypes.DATE, allowNull: true },
     onboarding_data: { type: DataTypes.JSONB, allowNull: true },
     created_at: { type: DataTypes.DATE, allowNull: false },

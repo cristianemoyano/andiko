@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { Op } from 'sequelize'
+import { Op, type WhereOptions } from 'sequelize'
 import { withPosDevice } from '@/lib/pos-auth'
 import Product from '@/modules/catalog/product.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
@@ -21,15 +21,33 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
   const { since } = parsed.data
   const sinceDate = since ? new Date(since) : null
 
-  const variantWhere: Record<string, unknown> = { deleted_at: null }
-  const productWhere: Record<string, unknown> = {
+  const variantWhere: WhereOptions = { deleted_at: null }
+  const baseProductWhere: WhereOptions = {
     org_id: ctx.orgId,
     status: 'active',
     deleted_at: null,
   }
 
+  let productWhere: WhereOptions = baseProductWhere
+
   if (sinceDate) {
-    productWhere['updated_at'] = { [Op.gt]: sinceDate }
+    const variantRows = await ProductVariant.findAll({
+      where: {
+        org_id: ctx.orgId,
+        deleted_at: null,
+        updated_at: { [Op.gt]: sinceDate },
+      },
+      attributes: ['product_id'],
+      raw: true,
+    })
+    const variantProductIds = [...new Set(variantRows.map((v) => v.product_id as string))]
+    productWhere = {
+      ...baseProductWhere,
+      [Op.or]: [
+        { updated_at: { [Op.gt]: sinceDate } },
+        ...(variantProductIds.length ? [{ id: { [Op.in]: variantProductIds } }] : []),
+      ],
+    }
   }
 
   const products = await Product.findAll({

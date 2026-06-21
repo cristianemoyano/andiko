@@ -15,6 +15,7 @@ export async function getPosConfig(orgId: string): Promise<Required<PosConfig>> 
   const cfg = row?.pos_config ?? {}
   return {
     balanza: cfg.balanza ?? { ...DEFAULT_BALANZA_CONFIG },
+    ticket: cfg.ticket ?? {},
   }
 }
 
@@ -47,5 +48,36 @@ export async function updateBalanzaConfig(
   }
 
   logger.info({ orgId }, 'balanza config updated')
+  return getPosConfig(orgId)
+}
+
+export async function updatePosTicketConfig(
+  orgId: string,
+  ticket: NonNullable<PosConfig['ticket']>,
+): Promise<Required<PosConfig>> {
+  const org = await Organization.findByPk(orgId)
+  if (!org) throw new Error('ORG_NOT_FOUND')
+
+  const existing = await OrganizationSetting.findOne({
+    where: { org_id: orgId },
+    attributes: ['id', 'pos_config'],
+  })
+
+  if (existing) {
+    const nextPosConfig: PosConfig = {
+      ...(existing.pos_config ?? {}),
+      ticket: { ...(existing.pos_config?.ticket ?? {}), ...ticket },
+    }
+    await existing.update({ pos_config: nextPosConfig })
+  } else {
+    await OrganizationSetting.create({
+      org_id: orgId,
+      enabled_modules: [...DEFAULT_ENABLED_MODULES],
+      enabled_features: {},
+      pos_config: { ticket },
+    })
+  }
+
+  logger.info({ orgId }, 'pos ticket config updated')
   return getPosConfig(orgId)
 }

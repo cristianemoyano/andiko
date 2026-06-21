@@ -22,9 +22,10 @@ interface PosAPI {
   }
   customers: {
     search: (query: string) => Promise<PosCustomer[]>
+    get: (id: string) => Promise<PosCustomer | null>
   }
   users: {
-    search: (query: string) => Promise<{ ok: boolean; error?: string; data: Array<{ id: string; name: string; email: string; role: string; branch_id: string | null }> }>
+    search: (query: string) => Promise<{ ok: boolean; error?: string; data: Array<{ id: string; name: string; email: string; role: string; role_label: string; branch_id: string | null }> }>
     verifyPin: (args: { user_id: string; pin: string }) => Promise<{ ok: boolean; user?: { id: string; name: string }; error?: string }>
   }
   draftSales: {
@@ -82,7 +83,19 @@ interface PosAPI {
     }> } }>
     createOrResume: (args?: { draft_sale_id?: string; cashier_user_id?: string | null; cashier_name?: string | null; customer_id?: string | null }) => Promise<{ ok: boolean; id: string }>
     update: (args: { draft_sale_id: string; cashier_user_id?: string | null; cashier_name?: string | null; customer_id?: string | null; subtotal?: string; tax_amount?: string; total?: string }) => Promise<{ ok: boolean }>
-    checkout: (args: { draft_sale_id: string; payments: PosSalePayment[]; sold_at?: string; subtotal: string; tax_amount: string; total: string }) => Promise<{ ok: boolean; sale_id?: string; error?: string }>
+    checkout: (args: { draft_sale_id: string; payments: PosSalePayment[]; sold_at?: string; subtotal: string; tax_amount: string; total: string; cashier_user_id?: string | null; cashier_name?: string | null }) => Promise<{
+      ok: boolean
+      sale_id?: string
+      ticket_number?: string
+      cloud_id?: string
+      cae?: string | null
+      cae_expiration?: string | null
+      qr_url?: string | null
+      afip_status?: string
+      fiscal_pending?: boolean
+      afip_error?: string | null
+      error?: string
+    }>
     cancel: (draftSaleId: string) => Promise<{ ok: boolean }>
   }
   draftSaleItems: {
@@ -97,10 +110,32 @@ interface PosAPI {
     get: (sessionId: string) => Promise<CashSession | null>
   }
   sales: {
-    create: (sale: PosSale) => Promise<{ id: string }>
+    create: (sale: PosSale) => Promise<{
+      id: string
+      ticket_number: string | null
+      cloud_id?: string | null
+      cae?: string | null
+      cae_expiration?: string | null
+      qr_url?: string | null
+      afip_status?: string | null
+      fiscal_pending?: boolean
+      afip_error?: string | null
+    }>
+    authorizeFiscal: (saleId: string) => Promise<{
+      ok: true
+      sale_id: string
+      ticket_number: string | null
+      cloud_id: string | null
+      cae: string | null
+      cae_expiration: string | null
+      qr_url: string | null
+      afip_status: string
+      fiscal_pending: boolean
+    }>
     listToday: () => Promise<unknown[]>
     list: (args?: { limit?: number }) => Promise<Array<{
       id: string
+      ticket_number: string | null
       customer_id: string | null
       payments: string
       subtotal: string
@@ -109,12 +144,16 @@ interface PosAPI {
       sold_at: string
       cloud_id: string | null
       synced_at: string | null
+      cae: string | null
+      afip_status: string | null
     }>>
     closingReport: (date?: string) => Promise<{ cash: number; card: number; transfer: number; total: number; count: number; date: string }>
     get: (saleId: string) => Promise<null | {
       sale: {
         id: string
+        ticket_number: string | null
         customer_id: string | null
+        cashier_name: string | null
         payments: string
         subtotal: string
         tax_amount: string
@@ -122,6 +161,10 @@ interface PosAPI {
         sold_at: string
         cloud_id: string | null
         synced_at: string | null
+        cae: string | null
+        cae_expiration: string | null
+        qr_url: string | null
+        afip_status: string | null
       }
       items: Array<{
         id: number
@@ -129,6 +172,7 @@ interface PosAPI {
         product_id: string
         product_name: string
         qty: number
+        iva_rate: string
         unit_price: string
         total: string
       }>
@@ -153,6 +197,9 @@ interface PosAPI {
   }
   dev: {
     resetLocalData: () => Promise<{ ok: boolean; error?: string }>
+  }
+  print: {
+    receipt: () => Promise<{ ok: boolean; error?: string }>
   }
 }
 

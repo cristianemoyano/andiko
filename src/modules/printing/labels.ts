@@ -89,7 +89,11 @@ const PURCHASE_PAYMENT_METHOD_LABEL: Record<string, string> = {
   other:    'Otro',
 }
 
-export function labelSalesPaymentMethod(code: string): string {
+export function labelSalesPaymentMethod(code: string, notes?: string | null, fromPos?: boolean): string {
+  if (fromPos) {
+    const posName = notes?.trim()
+    if (posName) return posName
+  }
   return SALES_PAYMENT_METHOD_LABEL[code] ?? code
 }
 

@@ -16,7 +16,7 @@ const MESSAGES: Record<string, { title: string; body: string }> = {
 const SHOW_CONFIGURE: Record<string, boolean> = {
   revoked:   true,
   no_config: true,
-  expired:   false,
+  expired:   true,
   unknown:   true,
 }
 

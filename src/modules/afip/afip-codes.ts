@@ -18,6 +18,8 @@ export const CBTE_TIPO = {
   NOTA_CREDITO_A: 3,
   NOTA_CREDITO_B: 8,
   NOTA_CREDITO_C: 13,
+  /** Tique fiscal (WSFE CbteTipo 83) */
+  TIQUE: 83,
 } as const
 
 export type CbteTipo = (typeof CBTE_TIPO)[keyof typeof CBTE_TIPO]

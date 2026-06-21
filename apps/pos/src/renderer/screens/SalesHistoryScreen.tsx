@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { PosCustomer, PosSalePayment } from '@andiko/shared'
+import { PosReceipt } from '../components/PosReceipt'
+import { usePosFiscalProfile } from '../lib/usePosFiscalProfile'
+import { printPosReceipt } from '../lib/print-receipt'
 
 type SaleRow = Awaited<ReturnType<typeof window.pos.sales.list>>[number]
 type DraftRow = Awaited<ReturnType<typeof window.pos.draftSales.list>>['data'][number]
@@ -13,17 +17,26 @@ function paymentsLabel(paymentsJson: string | null): string {
   }
 }
 
+function saleNeedsFiscal(s: SaleRow): boolean {
+  return !s.cae || s.afip_status === 'pending' || s.afip_status === 'contingency'
+}
+
 export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId: string) => void }) {
+  const fiscal = usePosFiscalProfile()
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<SaleRow[]>([])
   const [draftLoading, setDraftLoading] = useState(false)
   const [draftRows, setDraftRows] = useState<DraftRow[]>([])
   const [tab, setTab] = useState<'paid' | 'draft'>('paid')
+  const [paidFilter, setPaidFilter] = useState<'all' | 'no_cae'>('all')
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [openSaleId, setOpenSaleId] = useState<string | null>(null)
   const [openSale, setOpenSale] = useState<null | Awaited<ReturnType<typeof window.pos.sales.get>>>(null)
+  const [openSaleCustomer, setOpenSaleCustomer] = useState<PosCustomer | null>(null)
   const [openDraftId, setOpenDraftId] = useState<string | null>(null)
+  const [authorizing, setAuthorizing] = useState(false)
+  const [authorizeError, setAuthorizeError] = useState<string | null>(null)
 
   async function refresh() {
     setLoading(true)
@@ -62,32 +75,66 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
     if (!openSaleId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on deselect is a valid derived-state pattern
       setOpenSale(null)
+      setOpenSaleCustomer(null)
+      setAuthorizeError(null)
       return
     }
-     
+
     setError(null)
-    window.pos.sales.get(openSaleId).then(setOpenSale).catch(e => {
+    window.pos.sales.get(openSaleId).then(async (sale) => {
+      setOpenSale(sale)
+      if (sale?.sale.customer_id) {
+        const c = await window.pos.customers.get(sale.sale.customer_id)
+        setOpenSaleCustomer(c)
+      } else {
+        setOpenSaleCustomer(null)
+      }
+    }).catch(e => {
       setOpenSale(null)
+      setOpenSaleCustomer(null)
       setError(e instanceof Error ? e.message : String(e))
     })
   }, [openSaleId])
 
-  function handlePrint() {
-    document.body.setAttribute('data-printing', '1')
-    window.print()
-    document.body.removeAttribute('data-printing')
+  async function handlePrint() {
+    await printPosReceipt()
+  }
+
+  async function handleAuthorizeFiscal() {
+    if (!openSaleId) return
+    setAuthorizing(true)
+    setAuthorizeError(null)
+    try {
+      const result = await window.pos.sales.authorizeFiscal(openSaleId)
+      if (result.fiscal_pending) {
+        setAuthorizeError('AFIP no autorizó el comprobante. Reintentá más tarde.')
+        return
+      }
+      const sale = await window.pos.sales.get(openSaleId)
+      setOpenSale(sale)
+      await refresh()
+    } catch (e) {
+      setAuthorizeError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAuthorizing(false)
+    }
   }
 
   const filtered = useMemo(() => {
+    let list = rows
+    if (paidFilter === 'no_cae') {
+      list = list.filter(saleNeedsFiscal)
+    }
     const q = query.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter(r =>
+    if (!q) return list
+    return list.filter(r =>
       r.id.toLowerCase().includes(q) ||
       r.sold_at.toLowerCase().includes(q) ||
       paymentsLabel(r.payments).toLowerCase().includes(q) ||
-      r.total.toLowerCase().includes(q)
+      r.total.toLowerCase().includes(q) ||
+      (r.ticket_number ?? '').toLowerCase().includes(q),
     )
-  }, [rows, query])
+  }, [rows, query, paidFilter])
 
   const filteredDrafts = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -100,9 +147,11 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
     )
   }, [draftRows, query])
 
+  const openSaleNeedsFiscal = openSale?.sale ? saleNeedsFiscal(openSale.sale as SaleRow) : false
+
   return (
     <div className="h-full overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-zinc-200 bg-white flex items-center gap-3">
+      <div className="p-4 border-b border-zinc-200 bg-white flex items-center gap-3 flex-wrap">
         <div className="text-sm font-semibold text-zinc-800">Ventas</div>
         <div className="flex items-center gap-1 bg-zinc-100 rounded-lg p-1">
           <button
@@ -118,6 +167,22 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
             Borradores
           </button>
         </div>
+        {tab === 'paid' && (
+          <div className="flex items-center gap-1 bg-zinc-100 rounded-lg p-1">
+            <button
+              onClick={() => setPaidFilter('all')}
+              className={`h-8 px-3 rounded-md text-[12px] font-medium ${paidFilter === 'all' ? 'bg-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
+            >
+              Todas
+            </button>
+            <button
+              onClick={() => setPaidFilter('no_cae')}
+              className={`h-8 px-3 rounded-md text-[12px] font-medium ${paidFilter === 'no_cae' ? 'bg-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
+            >
+              Sin CAE
+            </button>
+          </div>
+        )}
         <div className="flex-1" />
         <input
           value={query}
@@ -134,7 +199,6 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
       </div>
 
       <div className="flex-1 overflow-hidden flex">
-        {/* List */}
         <div className="w-[420px] border-r border-zinc-200 bg-white overflow-y-auto">
           {error && (
             <div className="p-4 text-[12px] text-red-700 bg-red-50 border-b border-red-200">
@@ -157,7 +221,9 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[13px] font-medium text-zinc-900 truncate">{s.id}</div>
+                  <div className="text-[13px] font-medium text-zinc-900 truncate">
+                    {s.ticket_number ?? s.id.slice(0, 8).toUpperCase()}
+                  </div>
                   <div className="text-[11px] text-zinc-500">
                     {new Date(s.sold_at).toLocaleString('es-AR')} · {paymentsLabel(s.payments)}
                   </div>
@@ -166,8 +232,8 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
                   <div className="text-[13px] font-semibold text-zinc-900">
                     ${parseFloat(s.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                   </div>
-                  <div className={`text-[10px] font-medium ${s.synced_at ? 'text-green-700' : 'text-amber-700'}`}>
-                    {s.synced_at ? 'synced' : 'pendiente'}
+                  <div className={`text-[10px] font-medium ${saleNeedsFiscal(s) ? 'text-amber-700' : 'text-green-700'}`}>
+                    {saleNeedsFiscal(s) ? 'sin CAE' : 'fiscal OK'}
                   </div>
                 </div>
               </div>
@@ -209,7 +275,6 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
           ))}
         </div>
 
-        {/* Detail */}
         <div className="flex-1 overflow-y-auto p-6">
           {tab === 'paid' && !openSaleId && (
             <div className="text-[13px] text-zinc-500">Seleccioná una venta para ver el ticket y reimprimir.</div>
@@ -220,8 +285,8 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
           )}
 
           {tab === 'paid' && openSale && openSale.sale && (
-            <div className="max-w-md">
-              <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-col max-w-md max-h-full">
+              <div className="shrink-0 flex items-center justify-between mb-3 print:hidden">
                 <div className="text-sm font-semibold text-zinc-800">Ticket</div>
                 <div className="flex gap-2">
                   <button
@@ -230,6 +295,15 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
                   >
                     Cerrar
                   </button>
+                  {openSaleNeedsFiscal && (
+                    <button
+                      onClick={() => void handleAuthorizeFiscal()}
+                      disabled={authorizing}
+                      className="h-9 px-4 bg-amber-600 text-white text-[13px] font-semibold rounded-md hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                    >
+                      {authorizing ? 'Autorizando…' : 'Autorizar AFIP'}
+                    </button>
+                  )}
                   <button
                     onClick={handlePrint}
                     className="h-9 px-4 bg-blue-600 text-white text-[13px] font-semibold rounded-md hover:bg-blue-700 transition-colors"
@@ -239,45 +313,40 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
                 </div>
               </div>
 
-              <div id="pos-receipt" className="border border-zinc-200 rounded-lg p-4 bg-white">
-                <div className="text-[13px] font-semibold text-zinc-900">Andiko POS</div>
-                <div className="text-[11px] text-zinc-500">Venta: {openSale.sale.id}</div>
-                <div className="text-[11px] text-zinc-500 mt-1">
-                  {new Date(openSale.sale.sold_at).toLocaleString('es-AR')}
-                  {' · '}
-                  {paymentsLabel(openSale.sale.payments)}
+              {authorizeError && (
+                <div className="shrink-0 mb-3 print:hidden text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                  {authorizeError}
                 </div>
+              )}
 
-                <div className="mt-4 space-y-2">
-                  {openSale.items.map(it => (
-                    <div key={it.id} className="flex gap-2 text-[12px]">
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate text-zinc-800">{it.product_name}</div>
-                        <div className="text-[11px] text-zinc-500">
-                          {it.qty} × ${parseFloat(it.unit_price).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                      <div className="font-medium text-zinc-900">
-                        ${parseFloat(it.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-zinc-200 space-y-1 text-[12px]">
-                  <div className="flex justify-between text-zinc-600">
-                    <span>Subtotal</span>
-                    <span>${parseFloat(openSale.sale.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between text-zinc-600">
-                    <span>IVA</span>
-                    <span>${parseFloat(openSale.sale.tax_amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-zinc-900 text-[13px] pt-1">
-                    <span>Total</span>
-                    <span>${parseFloat(openSale.sale.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                </div>
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <PosReceipt
+                  ticketNumber={openSale.sale.ticket_number ?? openSale.sale.id.slice(0, 8).toUpperCase()}
+                  soldAt={openSale.sale.sold_at}
+                  items={openSale.items.map((it) => ({
+                    product_name: it.product_name,
+                    qty: it.qty,
+                    unit_price: it.unit_price,
+                    iva_rate: it.iva_rate,
+                    total: it.total,
+                  }))}
+                  subtotal={openSale.sale.subtotal}
+                  taxAmount={openSale.sale.tax_amount}
+                  total={openSale.sale.total}
+                  payments={JSON.parse(openSale.sale.payments ?? '[]') as PosSalePayment[]}
+                  customer={openSaleCustomer ? {
+                    legal_name: openSaleCustomer.legal_name,
+                    trade_name: openSaleCustomer.trade_name,
+                    cuit: openSaleCustomer.cuit,
+                    iva_condition: openSaleCustomer.iva_condition ?? null,
+                  } : null}
+                  fiscal={fiscal}
+                  cashierName={openSale.sale.cashier_name}
+                  cae={openSale.sale.cae}
+                  caeExpiration={openSale.sale.cae_expiration}
+                  qrUrl={openSale.sale.qr_url}
+                  fiscalPending={openSaleNeedsFiscal}
+                />
               </div>
             </div>
           )}
@@ -321,4 +390,3 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
     </div>
   )
 }
-

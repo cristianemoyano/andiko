@@ -1,6 +1,46 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 type Settings = Record<string, string>
+
+const SCALE_READ_FORMATS = [
+  {
+    id: 'auto',
+    label: 'Automático (recomendado)',
+    regex: '',
+    help: 'El POS busca un número con decimales en lo que envía la balanza. Funciona con la mayoría de modelos — probá primero con este.',
+    example: '1.250 · 0,850',
+  },
+  {
+    id: 'st_gs',
+    label: 'Toledo / ST,GS',
+    regex: '(?:ST,GS,?\\s*)(\\d+[.,]\\d{1,3})',
+    help: 'Para balanzas que envían "ST,GS" antes del peso (común en Toledo y similares).',
+    example: 'ST,GS, 1.250',
+  },
+  {
+    id: 'with_kg',
+    label: 'Con "kg" al final',
+    regex: '(\\d+[.,]\\d{1,3})\\s*kg',
+    help: 'Cuando la balanza manda el peso seguido de la unidad "kg".',
+    example: '1.250 kg',
+  },
+  {
+    id: 'custom',
+    label: 'Personalizado (avanzado)',
+    regex: null,
+    help: 'Solo si ningún formato anterior funciona. Consultá el manual de tu balanza o pedí ayuda a soporte.',
+    example: '',
+  },
+] as const
+
+type ScaleFormatId = (typeof SCALE_READ_FORMATS)[number]['id']
+
+function resolveScaleFormat(regex: string): ScaleFormatId {
+  const trimmed = regex.trim()
+  if (!trimmed) return 'auto'
+  const match = SCALE_READ_FORMATS.find(p => p.regex && p.regex === trimmed)
+  return match?.id ?? 'custom'
+}
 
 interface Props {
   onLicenseResult?: () => void
@@ -21,7 +61,9 @@ export function SettingsScreen({ onLicenseResult }: Props) {
   const [scalePort, setScalePort]       = useState('')
   const [scaleBaud, setScaleBaud]       = useState('9600')
   const [scaleRegex, setScaleRegex]     = useState('')
+  const [scaleFormat, setScaleFormat]   = useState<ScaleFormatId>('auto')
   const [scalePorts, setScalePorts]     = useState<Array<{ path: string; manufacturer?: string }>>([])
+  const [portsLoading, setPortsLoading]   = useState(false)
   const [scaleStatus, setScaleStatus]   = useState<string | null>(null)
   const [scaleSaved, setScaleSaved]     = useState(false)
 
@@ -33,9 +75,40 @@ export function SettingsScreen({ onLicenseResult }: Props) {
       setScalePort(s['scale_port'] ?? '')
       setScaleBaud(s['scale_baud'] ?? '9600')
       setScaleRegex(s['scale_weight_regex'] ?? '')
+      setScaleFormat(resolveScaleFormat(s['scale_weight_regex'] ?? ''))
       setInfo(s)
     })
+    void refreshPorts()
   }, [])
+
+  const portOptions = useMemo(() => {
+    const paths = new Set(scalePorts.map(p => p.path))
+    const opts = [...scalePorts]
+    if (scalePort && !paths.has(scalePort)) {
+      opts.unshift({ path: scalePort, manufacturer: 'Guardado' })
+    }
+    return opts
+  }, [scalePorts, scalePort])
+
+  async function refreshPorts() {
+    setPortsLoading(true)
+    const res = await window.pos.scale.listPorts()
+    if (res.ok) {
+      setScalePorts(res.ports)
+    }
+    setPortsLoading(false)
+    return res
+  }
+
+  const activeScaleFormat = SCALE_READ_FORMATS.find(f => f.id === scaleFormat) ?? SCALE_READ_FORMATS[0]
+
+  function handleScaleFormatChange(id: ScaleFormatId) {
+    setScaleFormat(id)
+    const preset = SCALE_READ_FORMATS.find(f => f.id === id)
+    if (preset && preset.regex !== null) {
+      setScaleRegex(preset.regex)
+    }
+  }
 
   async function handleSaveScale() {
     await window.pos.settings.save({
@@ -50,9 +123,8 @@ export function SettingsScreen({ onLicenseResult }: Props) {
 
   async function handleListPorts() {
     setScaleStatus('Buscando puertos…')
-    const res = await window.pos.scale.listPorts()
+    const res = await refreshPorts()
     if (res.ok) {
-      setScalePorts(res.ports)
       setScaleStatus(res.ports.length ? `✓ ${res.ports.length} puerto(s)` : 'No se detectaron puertos')
     } else {
       setScaleStatus(`Error: ${res.error}`)
@@ -235,16 +307,21 @@ export function SettingsScreen({ onLicenseResult }: Props) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-[12px] font-medium text-zinc-700 mb-1">Puerto</label>
-            <input
+            <select
               value={scalePort}
               onChange={e => setScalePort(e.target.value)}
-              placeholder="COM3 / /dev/ttyUSB0"
-              list="scale-ports"
-              className="w-full h-9 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
-            />
-            <datalist id="scale-ports">
-              {scalePorts.map(p => <option key={p.path} value={p.path}>{p.manufacturer ?? p.path}</option>)}
-            </datalist>
+              disabled={portsLoading}
+              className="w-full h-9 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
+            >
+              <option value="">
+                {portsLoading ? 'Buscando puertos…' : 'Seleccionar puerto…'}
+              </option>
+              {portOptions.map(p => (
+                <option key={p.path} value={p.path}>
+                  {p.manufacturer ? `${p.path} — ${p.manufacturer}` : p.path}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-[12px] font-medium text-zinc-700 mb-1">Baud rate</label>
@@ -259,24 +336,47 @@ export function SettingsScreen({ onLicenseResult }: Props) {
         </div>
 
         <div>
-          <label className="block text-[12px] font-medium text-zinc-700 mb-1">
-            Patrón de peso (regex) <span className="text-zinc-400 font-normal">opcional</span>
-          </label>
-          <input
-            value={scaleRegex}
-            onChange={e => setScaleRegex(e.target.value)}
-            placeholder="(\d+[.,]\d{1,3})"
-            className="w-full h-9 px-3 text-[13px] font-mono border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
-          />
-          <p className="text-[11px] text-zinc-400 mt-1">El grupo 1 captura el peso en kg. Por defecto: (\d+[.,]\d&#123;1,3&#125;)</p>
+          <label className="block text-[12px] font-medium text-zinc-700 mb-1">Formato de lectura</label>
+          <select
+            value={scaleFormat}
+            onChange={e => handleScaleFormatChange(e.target.value as ScaleFormatId)}
+            className="w-full h-9 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
+          >
+            {SCALE_READ_FORMATS.map(f => (
+              <option key={f.id} value={f.id}>{f.label}</option>
+            ))}
+          </select>
+          <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">{activeScaleFormat.help}</p>
+          {activeScaleFormat.example && (
+            <p className="text-[11px] text-zinc-400 mt-1">
+              Ejemplo de lectura: <span className="font-mono text-zinc-600">{activeScaleFormat.example}</span>
+            </p>
+          )}
+          {scaleFormat === 'custom' && (
+            <div className="mt-2 p-3 bg-zinc-50 border border-zinc-200 rounded-md space-y-1.5">
+              <label className="block text-[11px] font-medium text-zinc-600">Patrón personalizado</label>
+              <input
+                value={scaleRegex}
+                onChange={e => setScaleRegex(e.target.value)}
+                placeholder="(\d+[.,]\d{1,3})"
+                className="w-full h-9 px-3 text-[13px] font-mono border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
+              />
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Configuración avanzada: expresión que indica dónde está el peso en cada línea que envía la balanza.
+              </p>
+            </div>
+          )}
+          <p className="text-[11px] text-zinc-400 mt-2">
+            Si <span className="font-medium text-zinc-500">Probar balanza</span> no lee el peso, probá otro formato antes de cambiar el puerto o el baud rate.
+          </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <button onClick={handleSaveScale} className="h-9 px-5 bg-blue-600 text-white text-[13px] font-medium rounded-md hover:bg-blue-700 transition-colors">
             {scaleSaved ? '✓ Guardado' : 'Guardar balanza'}
           </button>
-          <button onClick={handleListPorts} className="h-9 px-5 bg-white border border-zinc-300 text-[13px] font-medium rounded-md hover:bg-zinc-50 transition-colors">
-            Detectar puertos
+          <button onClick={handleListPorts} disabled={portsLoading} className="h-9 px-5 bg-white border border-zinc-300 text-[13px] font-medium rounded-md hover:bg-zinc-50 disabled:opacity-50 transition-colors">
+            {portsLoading ? 'Buscando…' : 'Actualizar puertos'}
           </button>
           <button onClick={handleTestScale} className="h-9 px-5 bg-white border border-zinc-300 text-[13px] font-medium rounded-md hover:bg-zinc-50 transition-colors">
             Probar balanza

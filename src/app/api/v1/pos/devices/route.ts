@@ -16,7 +16,10 @@ export const GET = withPermission('contacts:read', async (req, _ctx, session) =>
     const ctx = await makeTenantContext(session.user)
     const devices = await PosDevice.findAll({
       where: { org_id: ctx.orgId, deleted_at: null },
-      attributes: ['id', 'device_id', 'name', 'branch_id', 'is_active', 'last_seen_at', 'license_valid_until', 'created_at'],
+      attributes: [
+        'id', 'device_id', 'name', 'branch_id', 'is_active',
+        'last_seen_at', 'license_valid_until', 'punto_venta', 'created_at',
+      ],
       order: [['created_at', 'DESC']],
     })
     return NextResponse.json({ data: devices, count: devices.length })

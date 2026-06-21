@@ -7,6 +7,7 @@ import { paginate, toPaginated } from '@/lib/pagination'
 import Invoice from './invoice.model'
 import InvoiceItem from './invoice-item.model'
 import Payment from './payment.model'
+import SalesOrder from './sales-order.model'
 import type { InvoiceInput, InvoiceUpdateInput, InvoiceQuery } from './invoice.schema'
 import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
@@ -68,6 +69,7 @@ export async function getInvoice(id: string, ctx: TenantContext) {
       { model: User, as: 'salesperson', attributes: ['id', 'name'] },
       { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
       { model: Payment, as: 'payments', where: { deleted_at: null }, required: false },
+      { model: SalesOrder, as: 'order', attributes: ['id', 'source'], required: false },
     ],
   })
   if (!invoice) throw new Error('INVOICE_NOT_FOUND')

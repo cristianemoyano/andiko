@@ -12,6 +12,7 @@ interface PosDevice {
   name: string | null
   license_valid_until: string | null
   is_active: boolean
+  punto_venta: number | null
 }
 
 interface Props {
@@ -25,6 +26,8 @@ export function DeviceEditModal({ device, onOpenChange, onSaved }: Props) {
   const [licenseDate, setLicenseDate] = useState('')
   const [clearLicense, setClearLicense] = useState(false)
   const [isActive, setIsActive] = useState(true)
+  const [puntoVenta, setPuntoVenta] = useState('')
+  const [clearPuntoVenta, setClearPuntoVenta] = useState(true)
   const [loading, setLoading] = useState(false)
   const [serverError, setServerError] = useState('')
   const [regenOpen, setRegenOpen] = useState(false)
@@ -37,6 +40,8 @@ export function DeviceEditModal({ device, onOpenChange, onSaved }: Props) {
       setLicenseDate(device.license_valid_until ? device.license_valid_until.slice(0, 10) : '')
       setClearLicense(!device.license_valid_until)
       setIsActive(device.is_active)
+      setPuntoVenta(device.punto_venta != null ? String(device.punto_venta) : '')
+      setClearPuntoVenta(device.punto_venta == null)
       setServerError('')
       setRegeneratedToken(null)
       setCopied(false)
@@ -58,7 +63,15 @@ export function DeviceEditModal({ device, onOpenChange, onSaved }: Props) {
       await fetchJson(`/api/v1/pos/devices/${device.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ license_valid_until, is_active: isActive }),
+        body: JSON.stringify({
+          license_valid_until,
+          is_active: isActive,
+          punto_venta: clearPuntoVenta
+            ? null
+            : puntoVenta.trim()
+              ? Number(puntoVenta.trim())
+              : undefined,
+        }),
       })
       onSaved()
       onOpenChange(false)
@@ -127,6 +140,31 @@ export function DeviceEditModal({ device, onOpenChange, onSaved }: Props) {
               className="rounded"
             />
             <span className="text-xs text-fg-muted">{isActive ? 'Activo' : 'Inactivo'}</span>
+          </label>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-medium text-fg-muted">Punto de venta fiscal</label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={clearPuntoVenta ? '' : puntoVenta}
+            onChange={e => {
+              setPuntoVenta(e.target.value.replace(/\D/g, ''))
+              setClearPuntoVenta(false)
+            }}
+            disabled={clearPuntoVenta}
+            placeholder="Ej: 3"
+            className="border border-border-strong rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-surface-muted disabled:text-fg-subtle"
+          />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={clearPuntoVenta}
+              onChange={e => setClearPuntoVenta(e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-xs text-fg-muted">Usar el PV de la sucursal (sin override)</span>
           </label>
         </div>
 

@@ -13,12 +13,15 @@ export interface PosDeviceAttributes extends Timestamps {
   last_seen_at: Date | null
   license_valid_until: Date | null
   is_active: boolean
+  /** Punto de venta AFIP asignado a esta terminal (override sobre la sucursal) */
+  punto_venta: number | null
   deleted_at: Date | null
 }
 
 type PosDeviceCreationAttributes = Optional<
   PosDeviceAttributes,
-  'id' | 'name' | 'branch_id' | 'last_seen_at' | 'license_valid_until' | 'is_active' | 'created_at' | 'updated_at' | 'deleted_at'
+  'id' | 'name' | 'branch_id' | 'last_seen_at' | 'license_valid_until' | 'is_active' | 'punto_venta'
+  | 'created_at' | 'updated_at' | 'deleted_at'
 >
 
 class PosDevice extends Model<PosDeviceAttributes, PosDeviceCreationAttributes> {
@@ -31,6 +34,7 @@ class PosDevice extends Model<PosDeviceAttributes, PosDeviceCreationAttributes> 
   declare last_seen_at: Date | null
   declare license_valid_until: Date | null
   declare is_active: boolean
+  declare punto_venta: number | null
   declare created_at: Date
   declare updated_at: Date
   declare deleted_at: Date | null
@@ -47,6 +51,7 @@ PosDevice.init(
     last_seen_at:         { type: DataTypes.DATE },
     license_valid_until:  { type: DataTypes.DATE },
     is_active:            { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    punto_venta:          { type: DataTypes.SMALLINT },
     created_at:           { type: DataTypes.DATE, allowNull: false },
     updated_at:           { type: DataTypes.DATE, allowNull: false },
     deleted_at:           { type: DataTypes.DATE },

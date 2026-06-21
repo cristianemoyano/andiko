@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('pos', {
   },
   customers: {
     search: (query: string) => ipcRenderer.invoke('customers:search', query),
+    get: (id: string) => ipcRenderer.invoke('customers:get', id),
   },
   users: {
     search: (query: string) => ipcRenderer.invoke('users:search', query),
@@ -21,7 +22,7 @@ contextBridge.exposeInMainWorld('pos', {
       ipcRenderer.invoke('draftSales:createOrResume', args),
     update: (args: { draft_sale_id: string; cashier_user_id?: string | null; cashier_name?: string | null; customer_id?: string | null; subtotal?: string; tax_amount?: string; total?: string }) =>
       ipcRenderer.invoke('draftSales:update', args),
-    checkout: (args: { draft_sale_id: string; payments: PosSalePayment[]; sold_at?: string; subtotal: string; tax_amount: string; total: string }) =>
+    checkout: (args: { draft_sale_id: string; payments: PosSalePayment[]; sold_at?: string; subtotal: string; tax_amount: string; total: string; cashier_user_id?: string | null; cashier_name?: string | null }) =>
       ipcRenderer.invoke('draftSales:checkout', args),
     cancel: (draftSaleId: string) => ipcRenderer.invoke('draftSales:cancel', draftSaleId),
   },
@@ -45,6 +46,7 @@ contextBridge.exposeInMainWorld('pos', {
     listToday: () => ipcRenderer.invoke('sales:list-today'),
     list: (args?: { limit?: number }) => ipcRenderer.invoke('sales:list', args),
     get: (saleId: string) => ipcRenderer.invoke('sales:get', saleId),
+    authorizeFiscal: (saleId: string) => ipcRenderer.invoke('sales:authorizeFiscal', saleId),
     closingReport: (date?: string) => ipcRenderer.invoke('sales:closingReport', date),
   },
   paymentMethods: {
@@ -67,5 +69,8 @@ contextBridge.exposeInMainWorld('pos', {
   },
   dev: {
     resetLocalData: () => ipcRenderer.invoke('dev:resetLocalData'),
+  },
+  print: {
+    receipt: () => ipcRenderer.invoke('print:receipt') as Promise<{ ok: boolean; error?: string }>,
   },
 })

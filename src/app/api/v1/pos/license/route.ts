@@ -4,7 +4,8 @@ import { withPosDevice } from '@/lib/pos-auth'
 import PosDevice from '@/modules/pos/pos-device.model'
 import Branch from '@/modules/auth/branch.model'
 import Organization from '@/modules/auth/organization.model'
-import { getBalanzaConfig } from '@/modules/pos/pos-config.service'
+import { getBalanzaConfig, getPosConfig } from '@/modules/pos/pos-config.service'
+import { formatDateOnly } from '@/lib/date-only'
 
 const querySchema = z.object({
   device_id: z.string().optional(),
@@ -36,13 +37,30 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
 
   await device.update({ license_valid_until: validUntil })
 
-  const [branch, org, balanza] = await Promise.all([
+  const [branch, org, balanza, posConfig] = await Promise.all([
     ctx.branchId
-      ? Branch.findOne({ where: { id: ctx.branchId }, attributes: ['name', 'branch_code'] })
+      ? Branch.findOne({
+          where: { id: ctx.branchId },
+          attributes: ['name', 'branch_code', 'address', 'punto_venta', 'establishment_code'],
+        })
       : null,
-    Organization.findOne({ where: { id: ctx.orgId }, attributes: ['name'] }),
+    Organization.findOne({
+      where: { id: ctx.orgId },
+      attributes: [
+        'name',
+        'legal_name',
+        'cuit',
+        'iva_condition',
+        'fiscal_address',
+        'gross_income',
+        'activity_start_date',
+      ],
+    }),
     getBalanzaConfig(ctx.orgId),
+    getPosConfig(ctx.orgId),
   ])
+
+  const effectivePuntoVenta = device.punto_venta ?? branch?.punto_venta ?? null
 
   return NextResponse.json({
     valid: true,
@@ -55,5 +73,30 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
     valid_until: validUntil.toISOString(),
     features: ['sales', 'catalog_sync', 'customer_sync'],
     balanza_config: balanza,
+    fiscal: org
+      ? {
+          legal_name: org.legal_name,
+          trade_name: org.name,
+          cuit: org.cuit,
+          iva_condition: org.iva_condition,
+          fiscal_address: org.fiscal_address,
+          gross_income: org.gross_income ?? posConfig.ticket?.gross_income ?? null,
+          activity_start_date: formatDateOnly(org.activity_start_date)
+            ?? (posConfig.ticket?.activity_start_date ?? null),
+          consumer_defense_line: posConfig.ticket?.consumer_defense_line ?? null,
+          comprobante_codigo: posConfig.ticket?.comprobante_codigo ?? '083',
+        }
+      : null,
+    branch_fiscal: branch
+      ? {
+          address: branch.address,
+          establishment_code: branch.establishment_code,
+          punto_venta: effectivePuntoVenta,
+          branch_punto_venta: branch.punto_venta,
+        }
+      : null,
+    device_fiscal: {
+      punto_venta: device.punto_venta,
+    },
   })
 })

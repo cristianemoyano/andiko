@@ -38,6 +38,8 @@ type OrgFiscal = {
   cuit: string | null
   iva_condition: string | null
   fiscal_address: string | null
+  gross_income: string | null
+  activity_start_date: string | null
 }
 
 function DatosFiscalesSection() {
@@ -46,6 +48,8 @@ function DatosFiscalesSection() {
   const [cuit, setCuit] = useState('')
   const [ivaCondition, setIvaCondition] = useState('')
   const [fiscalAddress, setFiscalAddress] = useState('')
+  const [grossIncome, setGrossIncome] = useState('')
+  const [activityStartDate, setActivityStartDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -67,6 +71,8 @@ function DatosFiscalesSection() {
         setCuit(org.cuit ?? '')
         setIvaCondition(org.iva_condition ?? '')
         setFiscalAddress(org.fiscal_address ?? '')
+        setGrossIncome(org.gross_income ?? '')
+        setActivityStartDate(org.activity_start_date ?? '')
       } catch (e) {
         if (!cancelled) setLoadError(getApiErrorMessage(e))
       } finally {
@@ -86,7 +92,9 @@ function DatosFiscalesSection() {
     legalName !== (saved.legal_name ?? '') ||
     cuit !== (saved.cuit ?? '') ||
     ivaCondition !== (saved.iva_condition ?? '') ||
-    fiscalAddress !== (saved.fiscal_address ?? '')
+    fiscalAddress !== (saved.fiscal_address ?? '') ||
+    grossIncome !== (saved.gross_income ?? '') ||
+    activityStartDate !== (saved.activity_start_date ?? '')
   )
 
   async function save() {
@@ -102,6 +110,8 @@ function DatosFiscalesSection() {
           cuit: cuit.trim(),
           iva_condition: ivaCondition || undefined,
           fiscal_address: fiscalAddress.trim() || null,
+          gross_income: grossIncome.trim() || null,
+          activity_start_date: activityStartDate.trim() || null,
         }),
       })
       setSaved(updated)
@@ -109,6 +119,8 @@ function DatosFiscalesSection() {
       setCuit(updated.cuit ?? '')
       setIvaCondition(updated.iva_condition ?? '')
       setFiscalAddress(updated.fiscal_address ?? '')
+      setGrossIncome(updated.gross_income ?? '')
+      setActivityStartDate(updated.activity_start_date ?? '')
       setJustSaved(true)
       notifySuccess('Datos fiscales guardados')
     } catch (e) {
@@ -183,6 +195,24 @@ function DatosFiscalesSection() {
                 placeholder="Calle, ciudad, provincia"
               />
             </FormField>
+            <FormField label="Ingresos brutos" htmlFor="afip-org-gross-income" error={errors.gross_income}>
+              <Input
+                id="afip-org-gross-income"
+                value={grossIncome}
+                onChange={e => setGrossIncome(e.target.value)}
+                error={!!errors.gross_income}
+                placeholder="Ej: 901-234567-8"
+              />
+            </FormField>
+            <FormField label="Inicio de actividades" htmlFor="afip-org-activity-start" error={errors.activity_start_date}>
+              <Input
+                id="afip-org-activity-start"
+                type="date"
+                value={activityStartDate}
+                onChange={e => setActivityStartDate(e.target.value)}
+                error={!!errors.activity_start_date}
+              />
+            </FormField>
           </div>
 
           {serverError && <p className="text-[13px] text-danger">{serverError}</p>}
@@ -199,31 +229,174 @@ function DatosFiscalesSection() {
   )
 }
 
-// ── Section 1: Puntos de venta ───────────────────────────────────────────────
+// ── Section 1b: Pie del ticket POS ───────────────────────────────────────────
+
+type PosTicketConfig = {
+  consumer_defense_line: string | null
+}
+
+function PieTicketPosSection() {
+  const [saved, setSaved] = useState<PosTicketConfig | null>(null)
+  const [consumerDefenseLine, setConsumerDefenseLine] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [serverError, setServerError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      setLoading(true)
+      setLoadError('')
+      try {
+        const data = await fetchJson<{ data: PosTicketConfig }>('/api/v1/pos/ticket-config')
+        if (cancelled) return
+        const ticket = data.data ?? { consumer_defense_line: null }
+        setSaved(ticket)
+        setConsumerDefenseLine(ticket.consumer_defense_line ?? '')
+      } catch (e) {
+        if (!cancelled) setLoadError(getApiErrorMessage(e))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!justSaved) return
+    const timer = window.setTimeout(() => setJustSaved(false), 2000)
+    return () => window.clearTimeout(timer)
+  }, [justSaved])
+
+  const dirty = saved != null && consumerDefenseLine !== (saved.consumer_defense_line ?? '')
+
+  async function save() {
+    setSaving(true)
+    setServerError('')
+    setErrors({})
+    try {
+      const updated = await fetchJson<{ data: PosTicketConfig }>('/api/v1/pos/ticket-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          consumer_defense_line: consumerDefenseLine.trim() || null,
+        }),
+      })
+      setSaved(updated.data)
+      setConsumerDefenseLine(updated.data.consumer_defense_line ?? '')
+      setJustSaved(true)
+      notifySuccess('Pie del ticket guardado')
+    } catch (e) {
+      if (isApiRequestError(e) && e.details && typeof e.details === 'object') {
+        const fieldErrors = (e.details as { fieldErrors?: Record<string, string[]> }).fieldErrors
+        if (fieldErrors) {
+          setErrors(Object.fromEntries(Object.entries(fieldErrors).map(([k, v]) => [k, v[0] ?? ''])))
+        }
+      }
+      setServerError(getApiErrorMessage(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="rounded-sm border border-border bg-surface p-4 space-y-4">
+      <div>
+        <h2 className="text-sm font-semibold text-fg">Pie del ticket POS</h2>
+        <p className="mt-0.5 text-[12px] text-fg-muted">
+          Leyenda de defensa del consumidor impresa en cada ticket. Si la dejás vacía, el POS usa el texto
+          nacional por defecto.
+        </p>
+      </div>
+
+      {loading && <p className="text-[13px] text-fg-subtle">Cargando…</p>}
+      {loadError && <p className="text-[13px] text-danger">{loadError}</p>}
+
+      {!loading && !loadError && (
+        <>
+          <FormField
+            label="Defensa del consumidor"
+            htmlFor="pos-ticket-consumer-defense"
+            error={errors.consumer_defense_line}
+          >
+            <Textarea
+              id="pos-ticket-consumer-defense"
+              value={consumerDefenseLine}
+              onChange={e => setConsumerDefenseLine(e.target.value)}
+              error={!!errors.consumer_defense_line}
+              rows={3}
+              placeholder="Ej: Defensa del Consumidor CABA — Tel. 147"
+            />
+          </FormField>
+
+          {serverError && <p className="text-[13px] text-danger">{serverError}</p>}
+
+          <div className="flex items-center gap-3">
+            <Button type="button" size="sm" disabled={saving || !dirty} onClick={save}>
+              {saving ? 'Guardando…' : 'Guardar pie del ticket'}
+            </Button>
+            {justSaved && !dirty && <span className="text-[12px] text-success">Guardado</span>}
+          </div>
+        </>
+      )}
+    </section>
+  )
+}
+
+// ── Section 2: Puntos de venta ───────────────────────────────────────────────
 
 type AfipConfig = {
   environment: string
   certificateConfigured: boolean
-  organization: { cuit: string | null; iva_condition: string | null; legal_name: string | null }
-  branches: { id: string; name: string; branch_code: number; punto_venta: number | null }[]
+  organization: {
+    cuit: string | null
+    iva_condition: string | null
+    legal_name: string | null
+    fiscal_address: string | null
+    gross_income: string | null
+    activity_start_date: string | null
+  }
+  branches: {
+    id: string
+    name: string
+    branch_code: number
+    punto_venta: number | null
+    establishment_code: string | null
+  }[]
 }
 
-type BranchPuntoVenta = { id: string; punto_venta: number | null }
+type BranchPuntoVenta = {
+  id: string
+  punto_venta: number | null
+  establishment_code: string | null
+}
+
+function draftForEstablishment(code: string | null): string {
+  return code ?? ''
+}
+
+function isFormDirty(
+  branches: AfipConfig['branches'],
+  pvDrafts: Record<string, string>,
+  estDrafts: Record<string, string>,
+): boolean {
+  return branches.some(b =>
+    (pvDrafts[b.id] ?? '') !== draftForPuntoVenta(b.punto_venta) ||
+    (estDrafts[b.id] ?? '') !== draftForEstablishment(b.establishment_code),
+  )
+}
 
 function draftForPuntoVenta(puntoVenta: number | null): string {
   return puntoVenta != null ? String(puntoVenta) : ''
 }
 
-function isFormDirty(
-  branches: AfipConfig['branches'],
-  drafts: Record<string, string>,
-): boolean {
-  return branches.some(b => (drafts[b.id] ?? '') !== draftForPuntoVenta(b.punto_venta))
-}
-
 function PuntosDeVentaSection() {
   const [config, setConfig] = useState<AfipConfig | null>(null)
-  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [pvDrafts, setPvDrafts] = useState<Record<string, string>>({})
+  const [estDrafts, setEstDrafts] = useState<Record<string, string>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -239,7 +412,8 @@ function PuntosDeVentaSection() {
         const data = await fetchJson<AfipConfig>('/api/v1/afip/config')
         if (cancelled) return
         setConfig(data)
-        setDrafts(Object.fromEntries(data.branches.map(b => [b.id, draftForPuntoVenta(b.punto_venta)])))
+        setPvDrafts(Object.fromEntries(data.branches.map(b => [b.id, draftForPuntoVenta(b.punto_venta)])))
+        setEstDrafts(Object.fromEntries(data.branches.map(b => [b.id, draftForEstablishment(b.establishment_code)])))
         setErrors({})
       } catch (e) {
         if (cancelled) return
@@ -261,20 +435,25 @@ function PuntosDeVentaSection() {
     if (!config) return
 
     const nextErrors: Record<string, string> = {}
-    const payload: { branch_id: string; punto_venta: number }[] = []
+    const payload: { branch_id: string; punto_venta: number; establishment_code: string | null }[] = []
 
     for (const b of config.branches) {
-      const raw = drafts[b.id]?.trim() ?? ''
+      const raw = pvDrafts[b.id]?.trim() ?? ''
       if (!raw) {
-        nextErrors[b.id] = 'Ingresá un punto de venta'
+        nextErrors[`pv-${b.id}`] = 'Ingresá un punto de venta'
         continue
       }
       const pv = Number(raw)
       if (!Number.isInteger(pv) || pv <= 0 || pv > 99999) {
-        nextErrors[b.id] = 'Entero entre 1 y 99999'
+        nextErrors[`pv-${b.id}`] = 'Entero entre 1 y 99999'
         continue
       }
-      payload.push({ branch_id: b.id, punto_venta: pv })
+      const estRaw = estDrafts[b.id]?.trim() ?? ''
+      payload.push({
+        branch_id: b.id,
+        punto_venta: pv,
+        establishment_code: estRaw || null,
+      })
     }
 
     setErrors(nextErrors)
@@ -288,19 +467,30 @@ function PuntosDeVentaSection() {
         body: JSON.stringify({ branches: payload }),
       })
 
-      const byId = new Map(res.branches.map(b => [b.id, b.punto_venta]))
+      const byId = new Map(res.branches.map(b => [b.id, b]))
       setConfig(prev => {
         if (!prev) return prev
         return {
           ...prev,
-          branches: prev.branches.map(b => ({
-            ...b,
-            punto_venta: byId.get(b.id) ?? b.punto_venta,
-          })),
+          branches: prev.branches.map(b => {
+            const saved = byId.get(b.id)
+            return saved
+              ? { ...b, punto_venta: saved.punto_venta, establishment_code: saved.establishment_code }
+              : b
+          }),
         }
       })
-      setDrafts(Object.fromEntries(
-        config.branches.map(b => [b.id, draftForPuntoVenta(byId.get(b.id) ?? b.punto_venta)]),
+      setPvDrafts(Object.fromEntries(
+        config.branches.map(b => {
+          const saved = byId.get(b.id)
+          return [b.id, draftForPuntoVenta(saved?.punto_venta ?? b.punto_venta)]
+        }),
+      ))
+      setEstDrafts(Object.fromEntries(
+        config.branches.map(b => {
+          const saved = byId.get(b.id)
+          return [b.id, draftForEstablishment(saved?.establishment_code ?? b.establishment_code)]
+        }),
       ))
       setSaved(true)
       notifySuccess('Puntos de venta guardados')
@@ -311,14 +501,15 @@ function PuntosDeVentaSection() {
     }
   }
 
-  const dirty = config ? isFormDirty(config.branches, drafts) : false
+  const dirty = config ? isFormDirty(config.branches, pvDrafts, estDrafts) : false
 
   return (
     <section className="rounded-sm border border-border bg-surface p-4 space-y-4">
       <div>
-        <h2 className="text-sm font-semibold text-fg">Puntos de venta</h2>
+        <h2 className="text-sm font-semibold text-fg">Puntos de venta y establecimientos</h2>
         <p className="mt-0.5 text-[12px] text-fg-muted">
-          Asigná el punto de venta AFIP habilitado para cada sucursal. Es obligatorio para emitir comprobantes electrónicos.
+          Configurá el punto de venta AFIP y el código de establecimiento por sucursal. Cada terminal POS puede
+          tener su propio PV en Dispositivos.
         </p>
       </div>
 
@@ -334,25 +525,35 @@ function PuntosDeVentaSection() {
                   <p className="text-[13px] font-medium text-fg">{b.name}</p>
                   <p className="text-[11px] text-fg-subtle">Sucursal {String(b.branch_code).padStart(2, '0')}</p>
                 </div>
-                <FormField label="Punto de venta" htmlFor={`afip-pv-${b.id}`} error={errors[b.id]}>
+                <FormField label="Punto de venta" htmlFor={`afip-pv-${b.id}`} error={errors[`pv-${b.id}`]}>
                   <Input
                     id={`afip-pv-${b.id}`}
                     type="text"
                     inputMode="numeric"
                     className="w-32"
-                    value={drafts[b.id] ?? ''}
-                    error={!!errors[b.id]}
+                    value={pvDrafts[b.id] ?? ''}
+                    error={!!errors[`pv-${b.id}`]}
                     onChange={e => {
                       const value = e.target.value.replace(/\D/g, '')
-                      setDrafts(d => ({ ...d, [b.id]: value }))
+                      setPvDrafts(d => ({ ...d, [b.id]: value }))
                       setErrors(prev => {
-                        if (!prev[b.id]) return prev
+                        const key = `pv-${b.id}`
+                        if (!prev[key]) return prev
                         const next = { ...prev }
-                        delete next[b.id]
+                        delete next[key]
                         return next
                       })
                     }}
                     placeholder="Ej: 3"
+                  />
+                </FormField>
+                <FormField label="Establecimiento" htmlFor={`afip-est-${b.id}`}>
+                  <Input
+                    id={`afip-est-${b.id}`}
+                    className="w-40"
+                    value={estDrafts[b.id] ?? ''}
+                    onChange={e => setEstDrafts(d => ({ ...d, [b.id]: e.target.value }))}
+                    placeholder="Opcional"
                   />
                 </FormField>
               </div>
@@ -632,6 +833,7 @@ export function AfipConfigTab() {
   return (
     <div className="space-y-5">
       <DatosFiscalesSection />
+      <PieTicketPosSection />
       <PuntosDeVentaSection />
       <CertificadoSection />
       <ContingencySection />

@@ -6,6 +6,7 @@ import { SalesHistoryScreen } from './screens/SalesHistoryScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { LicenseBlockScreen } from './screens/LicenseBlockScreen'
 import { CashSessionScreen } from './screens/CashSessionScreen'
+import { PosDeviceContextBar } from './components/PosDeviceContextBar'
 
 type Screen = 'sale' | 'sales' | 'cash-session' | 'settings'
 type LicenseState =
@@ -140,7 +141,9 @@ export function App() {
       )}
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden flex flex-col min-w-0">
+        <PosDeviceContextBar key={screen} />
+        <div className="flex-1 overflow-hidden min-h-0">
         {screen === 'sale'     && <SaleScreen resumeDraftId={resumeDraftId} onResumeDraftConsumed={() => setResumeDraftId(null)} />}
         {screen === 'sales'    && (
           <SalesHistoryScreen
@@ -152,6 +155,7 @@ export function App() {
         )}
         {screen === 'cash-session'  && <CashSessionScreen />}
         {screen === 'settings'      && <SettingsScreen onLicenseResult={checkLicense} />}
+        </div>
       </main>
     </div>
   )

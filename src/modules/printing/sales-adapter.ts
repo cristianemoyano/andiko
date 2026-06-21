@@ -92,7 +92,9 @@ type SalesInvoiceLoaded = {
     amount: string
     payment_method: string
     reference: string | null
+    notes?: string | null
   }>
+  order?: { id: string; source: string | null } | null
 }
 
 type DeliveryNoteLoaded = {
@@ -396,7 +398,11 @@ export async function buildSalesInvoicePrintable(id: string, ctx: TenantContext)
       payment_number: p.payment_number,
       payment_date: formatDateArg(p.payment_date) ?? '',
       amount: decString(p.amount),
-      payment_method: labelSalesPaymentMethod(p.payment_method),
+      payment_method: labelSalesPaymentMethod(
+        p.payment_method,
+        p.notes,
+        invoice.order?.source === 'pos',
+      ),
       reference: p.reference,
     }))
   })()

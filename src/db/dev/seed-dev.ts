@@ -4,12 +4,13 @@ import Contact from '@/modules/contacts/contact.model'
 import ContactAddress from '@/modules/contacts/contact-address.model'
 import Organization from '@/modules/auth/organization.model'
 import OrganizationSetting from '@/modules/auth/organization-setting.model'
-import { BASE_PLAN_ENABLED_MODULES } from '@/modules/auth/organization-modules'
+import { BASE_PLAN_ENABLED_MODULES, DEFAULT_ENABLED_MODULES } from '@/modules/auth/organization-modules'
 import Branch from '@/modules/auth/branch.model'
 import User from '@/modules/auth/user.model'
 import UserBranch from '@/modules/auth/user-branch.model'
 import OrgRole from '@/modules/auth/org-role.model'
-import { seedDefaultOrgRoles } from '@/modules/auth/org-roles-seed'
+import { seedDefaultOrgRoles, ensureOrgRoleTemplates } from '@/modules/auth/org-roles-seed'
+import { DEFAULT_ORG_ROLE_TEMPLATES } from '@/modules/auth/role-labels'
 import type { UserRole } from '@/types/roles'
 import bcrypt from 'bcryptjs'
 import SalesQuote from '@/modules/sales/sales-quote.model'
@@ -28,6 +29,7 @@ import PriceList from '@/modules/catalog/price-list.model'
 import PriceListItem from '@/modules/catalog/price-list-item.model'
 import { slugifyText } from '@/lib/slug'
 import { seedDefaultChartOfAccounts } from '@/modules/accounting/chart-seed'
+import { DEFAULT_BALANZA_CONFIG } from '@/modules/pos/balanza-barcode'
 import Account from '@/modules/accounting/account.model'
 import JournalEntry from '@/modules/accounting/journal-entry.model'
 import JournalEntryLine from '@/modules/accounting/journal-entry-line.model'
@@ -98,6 +100,15 @@ const DEV_SEED: SeedConfig = {
           orgRoleName: 'Vendedor',
           branchIndex: 1,
           allowedBranchIndexes: [1],
+        },
+        {
+          email: 'cajero@demo.local',
+          password: 'demo12345',
+          name: 'Cajero Demo',
+          orgRoleName: 'Cajero',
+          branchIndex: 1,
+          allowedBranchIndexes: [1],
+          devOnly: true,
         },
         {
           email: 'sucursal@demo.local',
@@ -429,6 +440,7 @@ async function seedCatalog(
   const categoriesSpec = [
     { name: 'Servicios', description: 'Servicios y horas', slug: 'servicios' },
     { name: 'Insumos',   description: 'Insumos y materiales', slug: 'insumos' },
+    { name: 'Fiambrería', description: 'Productos vendidos por peso en POS', slug: 'fiambreria' },
   ] as const
 
   const categories = new Map<string, ProductCategory>()
@@ -451,10 +463,12 @@ async function seedCatalog(
     price: string
     manage_stock: boolean
     stock_quantity: number
+    sold_by_weight?: boolean
+    plu_code?: string
   }
   type ProductSpec = {
     name: string
-    categorySlug: 'servicios' | 'insumos'
+    categorySlug: 'servicios' | 'insumos' | 'fiambreria'
     product_type: ProductType
     unit_of_measure: UnitOfMeasure
     iva_rate: ProductIvaRate
@@ -498,6 +512,25 @@ async function seedCatalog(
         { sku: 'MASCARILLA-CV', variantName: 'Con válvula', price: '950.00', manage_stock: true, stock_quantity: 250 },
       ],
     },
+    {
+      // Weight products for POS balanza testing (PLU matches example barcodes in balanza-barcode.test.ts)
+      name: 'Jamón cocido', categorySlug: 'fiambreria', product_type: 'simple',
+      unit_of_measure: 'kg', iva_rate: '21',
+      variants: [{
+        sku: 'JAMON-COCIDO', variantName: null, price: '8500.00',
+        manage_stock: true, stock_quantity: 50,
+        sold_by_weight: true, plu_code: '00037',
+      }],
+    },
+    {
+      name: 'Queso cremoso', categorySlug: 'fiambreria', product_type: 'simple',
+      unit_of_measure: 'kg', iva_rate: '21',
+      variants: [{
+        sku: 'QUESO-CREMOSO', variantName: null, price: '12000.00',
+        manage_stock: true, stock_quantity: 40,
+        sold_by_weight: true, plu_code: '00042',
+      }],
+    },
   ]
 
   const allVariants    = new Map<string, ProductVariant>()
@@ -531,10 +564,18 @@ async function seedCatalog(
           is_default: isDefault,
           cost_price: null, base_price: v.price,
           manage_stock: v.manage_stock, stock_quantity: v.stock_quantity,
+          sold_by_weight: v.sold_by_weight ?? false,
+          plu_code: v.plu_code ?? null,
           created_by: actorId, updated_by: actorId,
         },
         transaction: t,
       })
+      if (v.sold_by_weight || v.plu_code) {
+        await variant.update({
+          sold_by_weight: v.sold_by_weight ?? false,
+          plu_code: v.plu_code ?? null,
+        }, { transaction: t })
+      }
       allVariants.set(v.sku, variant)
       pricesBySku.set(v.sku, v.price)
     }
@@ -566,6 +607,32 @@ async function seedCatalog(
   }
 
   return allVariants
+}
+
+/** Balanza barcode config for POS testing (demo tenant). */
+async function seedPosBalanzaDemo(orgId: string, t: import('sequelize').Transaction) {
+  const [setting] = await OrganizationSetting.findOrCreate({
+    where: { org_id: orgId },
+    defaults: {
+      org_id: orgId,
+      enabled_modules: [...DEFAULT_ENABLED_MODULES],
+      enabled_features: {},
+      pos_config: {
+        balanza: { ...DEFAULT_BALANZA_CONFIG, enabled: true },
+      },
+    },
+    transaction: t,
+  })
+
+  const currentBalanza = setting.pos_config?.balanza
+  if (!currentBalanza?.enabled) {
+    await setting.update({
+      pos_config: {
+        ...(setting.pos_config ?? {}),
+        balanza: { ...DEFAULT_BALANZA_CONFIG, enabled: true },
+      },
+    }, { transaction: t })
+  }
 }
 
 // Distribution of initial stock across warehouses when there are multiple branches.
@@ -1110,6 +1177,11 @@ async function run() {
       }
 
       await seedDefaultOrgRoles(org.id, t)
+      await ensureOrgRoleTemplates(
+        org.id,
+        DEFAULT_ORG_ROLE_TEMPLATES.map(template => template.name),
+        t,
+      )
       const orgRoles = await OrgRole.findAll({
         where: { org_id: org.id },
         attributes: ['id', 'name'],
@@ -1204,6 +1276,7 @@ async function run() {
           // Purchases seed (demo tenant only)
           if (tenant.slug === 'demo') {
             const defaultBranch = branches[0]!
+            await seedPosBalanzaDemo(org.id, t)
             await seedPurchases(org.id, defaultBranch, user.id, variantsBySku, contacts, t)
             await seedAccountingEntries(org.id, defaultBranch, user.id, t)
           }
@@ -1430,6 +1503,7 @@ async function run() {
     console.log('Tenant demo (password demo12345 for all):')
     console.log('  admin@demo.local — Gerente')
     console.log('  op@demo.local — Vendedor')
+    console.log('  cajero@demo.local — Cajero')
     console.log('  sucursal@demo.local — Encargado de sucursal')
     console.log('  compras@demo.local — Gerente de compras')
     console.log('  contador@demo.local — Contador')

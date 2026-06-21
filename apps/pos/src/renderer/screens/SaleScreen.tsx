@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import type { PosSale, PosSaleItem, PosProduct, PosCustomer, PosPaymentMethod, BalanzaBarcodeConfig } from '@andiko/shared'
 import { parseBalanzaBarcode } from '@andiko/shared'
 import { randomUUID } from '../lib/uuid'
+import { PosReceipt } from '../components/PosReceipt'
+import { usePosFiscalProfile } from '../lib/usePosFiscalProfile'
+import { printPosReceipt } from '../lib/print-receipt'
 
 type CartItem = {
   product: PosProduct
@@ -16,6 +19,79 @@ function lineTotal(i: CartItem): number {
   return parseFloat(i.product.price) * i.qty
 }
 
+async function loadBalanzaConfig(): Promise<BalanzaBarcodeConfig | null> {
+  const s = await window.pos.settings.get()
+  const raw = s['balanza_config']
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as BalanzaBarcodeConfig
+  } catch {
+    return null
+  }
+}
+
+function looksLikeBalanzaCode(code: string, cfg: BalanzaBarcodeConfig): boolean {
+  return (
+    /^\d+$/.test(code) &&
+    code.length === cfg.totalLength &&
+    (!cfg.prefix || code.startsWith(cfg.prefix))
+  )
+}
+
+/** Local edit state so kg isn't reformatted on every keystroke. */
+function CartWeightInput({
+  qtyKg,
+  onCommit,
+}: {
+  qtyKg: number
+  onCommit: (kg: number) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState('')
+
+  const formatted = qtyKg.toFixed(3)
+
+  function commit() {
+    const normalized = text.trim().replace(',', '.')
+    if (!normalized) {
+      setEditing(false)
+      return
+    }
+    const kg = parseFloat(normalized)
+    if (Number.isNaN(kg) || kg <= 0) {
+      setEditing(false)
+      return
+    }
+    onCommit(kg)
+    setEditing(false)
+  }
+
+  return (
+    <input
+      value={editing ? text : formatted}
+      onFocus={(e) => {
+        setEditing(true)
+        setText(formatted.replace('.', ','))
+        e.target.select()
+      }}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          e.currentTarget.blur()
+        }
+        if (e.key === 'Escape') {
+          setEditing(false)
+          e.currentTarget.blur()
+        }
+      }}
+      inputMode="decimal"
+      className="w-[4.5rem] h-6 px-1 text-right text-[12px] border border-zinc-300 rounded bg-white focus:outline-none focus:border-blue-500"
+    />
+  )
+}
+
 
 export function SaleScreen({
   resumeDraftId,
@@ -25,12 +101,15 @@ export function SaleScreen({
   onResumeDraftConsumed: () => void
 }) {
   const modKey = /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? '⌘' : 'Ctrl'
+  const fiscal = usePosFiscalProfile()
   const [products, setProducts] = useState<PosProduct[]>([])
   const [search, setSearch]     = useState('')
   const [cart, setCart]         = useState<CartItem[]>([])
   const [saving, setSaving]     = useState(false)
   const [lastSale, setLastSale] = useState<{ total: string } | null>(null)
   const [receiptSale, setReceiptSale] = useState<PosSale | null>(null)
+  const [receiptChange, setReceiptChange] = useState<string | null>(null)
+  const [printError, setPrintError] = useState<string | null>(null)
   const [customer, setCustomer] = useState<PosCustomer | null>(null)
   const [customerOpen, setCustomerOpen] = useState(false)
   const [customerQuery, setCustomerQuery] = useState('')
@@ -49,6 +128,7 @@ export function SaleScreen({
   const [referenceCode, setReferenceCode] = useState('')
   const referenceCodeRef = useRef<HTMLInputElement>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [fiscalPendingWarning, setFiscalPendingWarning] = useState<string | null>(null)
   const cashReceivedValueRef = useRef(cashReceived)
   const checkoutPaymentValueRef = useRef(checkoutPayment)
   const cashIsValidValueRef = useRef(false)
@@ -64,21 +144,37 @@ export function SaleScreen({
   const balanzaCfgRef = useRef<BalanzaBarcodeConfig | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
 
+  async function refreshBalanzaConfig() {
+    const cfg = await loadBalanzaConfig()
+    balanzaCfgRef.current = cfg
+    return cfg
+  }
+
+  const submitSearchBarcodeRef = useRef<(raw: string) => Promise<void>>(async () => {})
+  const lastSubmittedBarcodeRef = useRef('')
+
   useEffect(() => {
+    const trimmed = search.trim()
+
+    if (!trimmed) {
+      lastSubmittedBarcodeRef.current = ''
+      window.pos.products.search('').then(setProducts)
+      return
+    }
+
+    // Long numeric input is probably a barcode — skip name search until Enter/paste.
+    if (/^\d{8,}$/.test(trimmed)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale results while typing barcode digits
+      setProducts([])
+      return
+    }
+
+    lastSubmittedBarcodeRef.current = ''
     window.pos.products.search(search).then(setProducts)
   }, [search])
 
   useEffect(() => {
-    // Load the org's balanza barcode config (synced from cloud via license).
-    void window.pos.settings.get().then((s) => {
-      const raw = s['balanza_config']
-      if (!raw) return
-      try {
-        balanzaCfgRef.current = JSON.parse(raw) as BalanzaBarcodeConfig
-      } catch {
-        // ignore malformed config
-      }
-    })
+    void refreshBalanzaConfig()
   }, [])
 
   useEffect(() => {
@@ -100,6 +196,15 @@ export function SaleScreen({
       }
     })()
   }, [])
+
+  useEffect(() => {
+    if (!draftSaleId || !cashierUserId) return
+    void window.pos.draftSales.update({
+      draft_sale_id: draftSaleId,
+      cashier_user_id: cashierUserId,
+      cashier_name: cashierName || null,
+    })
+  }, [draftSaleId, cashierUserId, cashierName])
 
   async function hydrateDraft(draftId: string) {
     const res = await window.pos.draftSales.get(draftId)
@@ -151,17 +256,6 @@ export function SaleScreen({
       }
     })()
      
-  }, [])
-
-  useEffect(() => {
-    function onAfterPrint() {
-      document.body.removeAttribute('data-printing')
-      setReceiptSale(null)
-      setLastSale(null)
-      searchRef.current?.focus()
-    }
-    window.addEventListener('afterprint', onAfterPrint)
-    return () => window.removeEventListener('afterprint', onAfterPrint)
   }, [])
 
   useEffect(() => {
@@ -286,42 +380,12 @@ export function SaleScreen({
       // Barcode scanner behavior on normal product search:
       // if focus is in the search input and Enter is received, add exact match to cart.
       if (!hasMod && e.key === 'Enter' && target === searchRef.current) {
-        const raw = search.trim()
+        const raw = searchRef.current?.value.trim() ?? ''
         if (!raw) return
-
-        // Balanza label? Parse the embedded PLU + weight/price and add a weight line.
-        const cfg = balanzaCfgRef.current
-        const parsed = cfg ? parseBalanzaBarcode(raw, cfg) : null
-        if (parsed) {
-          e.preventDefault()
-          setScanError(null)
-          void (async () => {
-            const product = await window.pos.products.getByPlu(parsed.pluCode)
-            if (!product) {
-              setScanError(`PLU sin producto: ${parsed.pluCode}`)
-              return
-            }
-            const pricePerKg = parseFloat(product.price)
-            let qty: number
-            let override: string | null = null
-            if (parsed.weightKg != null) {
-              qty = parseFloat(parsed.weightKg)
-            } else {
-              const priceArs = parseFloat(parsed.priceArs ?? '0')
-              qty = pricePerKg > 0 ? Math.round((priceArs / pricePerKg) * 1000) / 1000 : 0
-              override = parsed.priceArs ?? '0'
-            }
-            addToCart(product, { qty, weightItem: true, lineTotalOverride: override })
-          })()
-          return
-        }
-
-        const exact = products.find((p) => (p.sku ?? '').trim() === raw) ?? products.find((p) => p.id === raw)
-        if (exact) {
-          e.preventDefault()
-          addToCart(exact)
-          return
-        }
+        e.preventDefault()
+        lastSubmittedBarcodeRef.current = raw
+        void submitSearchBarcodeRef.current(raw)
+        return
       }
 
       // For non-modifier keys, keep the typing guard.
@@ -337,6 +401,8 @@ export function SaleScreen({
 
   function startNewSale() {
     setReceiptSale(null)
+    setReceiptChange(null)
+    setFiscalPendingWarning(null)
     setLastSale(null)
     setCart([])
     setSearch('')
@@ -349,10 +415,12 @@ export function SaleScreen({
     searchRef.current?.focus()
   }
 
-  function handlePrint() {
-    // Print just the receipt via CSS (see index.css @media print)
-    document.body.setAttribute('data-printing', '1')
-    window.print()
+  async function handlePrint() {
+    setPrintError(null)
+    const result = await printPosReceipt()
+    if (!result.ok) {
+      setPrintError(result.error ?? 'No se pudo imprimir')
+    }
   }
 
   function addToCart(product: PosProduct, opts?: { qty?: number; weightItem?: boolean; lineTotalOverride?: string | null }) {
@@ -389,9 +457,72 @@ export function SaleScreen({
         if (existing) return c.map((i) => (i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i))
         return [...c, { product, qty: 1 }]
       })
+      const searchHadFocus = document.activeElement === searchRef.current
       setSearch('')
-      searchRef.current?.focus()
+      if (searchHadFocus) {
+        requestAnimationFrame(() => searchRef.current?.focus())
+      }
     })()
+  }
+
+  submitSearchBarcodeRef.current = async (raw: string) => {
+    const trimmed = raw.trim()
+    if (!trimmed) return
+
+    const cfg = await refreshBalanzaConfig()
+    const parsed = cfg ? parseBalanzaBarcode(trimmed, cfg) : null
+
+    if (parsed) {
+      setScanError(null)
+      const product = await window.pos.products.getByPlu(parsed.pluCode)
+      if (!product) {
+        setScanError(
+          `PLU ${parsed.pluCode} sin producto en este POS. Verificá que el producto tenga ese PLU en el catálogo y sincronizá datos del cloud.`,
+        )
+        return
+      }
+      const pricePerKg = parseFloat(product.price)
+      let qty: number
+      let override: string | null = null
+      if (parsed.weightKg != null) {
+        qty = parseFloat(parsed.weightKg)
+      } else {
+        const priceArs = parseFloat(parsed.priceArs ?? '0')
+        qty = pricePerKg > 0 ? Math.round((priceArs / pricePerKg) * 1000) / 1000 : 0
+        override = parsed.priceArs ?? '0'
+      }
+      addToCart(product, { qty, weightItem: true, lineTotalOverride: override })
+      lastSubmittedBarcodeRef.current = ''
+      return
+    }
+
+    if (cfg && looksLikeBalanzaCode(trimmed, cfg)) {
+      if (!cfg.enabled) {
+        setScanError(
+          'Lectura de etiquetas desactivada en este POS. Guardá la config en el ERP, luego en Configuración → Validar licencia y sincronizá datos.',
+        )
+        return
+      }
+      setScanError('El código no coincide con la configuración de balanza. Revisá el formato en el ERP.')
+      return
+    }
+
+    if (!cfg && /^\d+$/.test(trimmed) && trimmed.length >= 13 && trimmed.startsWith('20')) {
+      setScanError('Configuración de balanza no sincronizada. En el POS: Configuración → Validar licencia.')
+      return
+    }
+
+    const exact = products.find((p) => (p.sku ?? '').trim() === trimmed) ?? products.find((p) => p.id === trimmed)
+    if (exact) {
+      setScanError(null)
+      addToCart(exact)
+      lastSubmittedBarcodeRef.current = ''
+      return
+    }
+
+    if (/^\d{8,}$/.test(trimmed)) {
+      setScanError('Código no encontrado. Si es etiqueta de balanza, validá la licencia y sincronizá el catálogo.')
+    }
   }
 
   // Picking a product from the grid: weight items try the connected scale, else
@@ -534,6 +665,7 @@ export function SaleScreen({
       qty:          i.qty,
       unit_price:   i.product.price,
       total:        lineTotal(i).toFixed(2),
+      iva_rate:     i.product.iva_rate,
     }))
     const soldAt = new Date().toISOString()
     const payments = checkoutPayment ? [{
@@ -541,11 +673,18 @@ export function SaleScreen({
       payment_method_name: checkoutPayment.name,
       payment_method_type: checkoutPayment.type,
       amount: total.toFixed(2),
+      tendered_amount: isCash ? cashReceivedNum.toFixed(2) : null,
       reference: !isCash && referenceCode.trim() ? referenceCode.trim() : null,
     }] : []
 
     try {
       let localId = randomUUID()
+      let ticketNumber = ''
+      let fiscalCae: string | null = null
+      let fiscalCaeExpiration: string | null = null
+      let fiscalQrUrl: string | null = null
+      let fiscalPending = false
+      let fiscalAfipError: string | null = null
       if (draftSaleId) {
         const res = await window.pos.draftSales.checkout({
           draft_sale_id: draftSaleId,
@@ -554,9 +693,17 @@ export function SaleScreen({
           subtotal: subtotal.toFixed(2),
           tax_amount: taxAmount.toFixed(2),
           total: total.toFixed(2),
+          cashier_user_id: cashierUserId || null,
+          cashier_name: cashierName || null,
         })
         if (!res.ok) throw new Error(res.error ?? 'CHECKOUT_FAILED')
         localId = res.sale_id ?? localId
+        ticketNumber = res.ticket_number ?? localId.slice(0, 8).toUpperCase()
+        fiscalCae = res.cae ?? null
+        fiscalCaeExpiration = res.cae_expiration ?? null
+        fiscalQrUrl = res.qr_url ?? null
+        fiscalPending = res.fiscal_pending ?? !fiscalCae
+        fiscalAfipError = res.afip_error ?? null
       } else {
         const sale: PosSale = {
           local_id:       localId,
@@ -571,12 +718,22 @@ export function SaleScreen({
           sold_at:        soldAt,
           items,
         }
-        await window.pos.sales.create(sale)
+        const created = await window.pos.sales.create(sale)
+        ticketNumber = created.ticket_number ?? localId.slice(0, 8).toUpperCase()
+        fiscalCae = created.cae ?? null
+        fiscalCaeExpiration = created.cae_expiration ?? null
+        fiscalQrUrl = created.qr_url ?? null
+        fiscalPending = created.fiscal_pending ?? !fiscalCae
+        fiscalAfipError = created.afip_error ?? null
       }
 
       const receipt: PosSale = {
         local_id: localId,
         device_id: 'local',
+        ticket_number: ticketNumber,
+        cae: fiscalCae,
+        cae_expiration: fiscalCaeExpiration,
+        qr_url: fiscalQrUrl,
         cashier_user_id: cashierUserId || null,
         cashier_name: cashierName || null,
         customer_id: customer?.id ?? null,
@@ -588,12 +745,22 @@ export function SaleScreen({
         items,
       }
       setLastSale({ total: total.toFixed(2) })
+      if (isCash && !Number.isNaN(cashReceivedNum) && cashReceivedNum >= total) {
+        setReceiptChange((cashReceivedNum - total).toFixed(2))
+      } else {
+        setReceiptChange(null)
+      }
       setReceiptSale(receipt)
       setCart([])
       setSearch('')
       setCheckoutOpen(false)
       setCashReceived('')
       setCheckoutError(null)
+      setFiscalPendingWarning(
+        fiscalPending
+          ? (fiscalAfipError ?? 'No se pudo autorizar en AFIP. Podés hacerlo desde Ventas.')
+          : null,
+      )
       setDraftSaleId(null)
       lastDraftProductIdsRef.current = []
       searchRef.current?.focus()
@@ -915,9 +1082,9 @@ export function SaleScreen({
 
       {/* Receipt overlay (ticket) */}
       {receiptSale && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 print:p-0">
+          <div className="flex flex-col w-full max-w-md max-h-[min(92vh,920px)] bg-white rounded-xl shadow-xl overflow-hidden print:max-h-none print:shadow-none print:rounded-none">
+            <div className="shrink-0 px-4 py-3 border-b border-zinc-200 flex items-center justify-between print:hidden">
               <div className="text-sm font-semibold text-zinc-800">Ticket</div>
               <button
                 onClick={startNewSale}
@@ -927,46 +1094,43 @@ export function SaleScreen({
               </button>
             </div>
 
-            <div className="p-4 space-y-3">
-              <div className="text-[12px] text-zinc-500">
-                {new Date(receiptSale.sold_at).toLocaleString('es-AR')}
-                {' · '}
-                {receiptSale.payments.map(p => p.payment_method_name).join(' + ')}
-              </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-4">
+              <PosReceipt
+                ticketNumber={receiptSale.ticket_number ?? receiptSale.local_id.slice(0, 8).toUpperCase()}
+                soldAt={receiptSale.sold_at}
+                items={receiptSale.items.map((it) => ({
+                  product_name: it.product_name,
+                  qty: it.qty,
+                  unit_price: it.unit_price,
+                  iva_rate: it.iva_rate ?? '21',
+                  total: it.total,
+                }))}
+                subtotal={receiptSale.subtotal}
+                taxAmount={receiptSale.tax_amount}
+                total={receiptSale.total}
+                payments={receiptSale.payments}
+                customer={customer ? {
+                  legal_name: customer.legal_name,
+                  trade_name: customer.trade_name,
+                  cuit: customer.cuit,
+                  iva_condition: customer.iva_condition ?? null,
+                } : null}
+                fiscal={fiscal}
+                cashierName={receiptSale.cashier_name ?? cashierName}
+                cae={receiptSale.cae}
+                caeExpiration={receiptSale.cae_expiration}
+                qrUrl={receiptSale.qr_url}
+                fiscalPending={!receiptSale.cae}
+                changeAmount={receiptChange}
+              />
+            </div>
 
-              <div id="pos-receipt" className="border border-zinc-200 rounded-lg p-3">
-                <div className="text-[13px] font-semibold text-zinc-900">Andiko POS</div>
-                <div className="text-[11px] text-zinc-500">Venta: {receiptSale.local_id}</div>
-                <div className="mt-3 space-y-2">
-                  {receiptSale.items.map((it, idx) => (
-                    <div key={`${it.product_id}-${idx}`} className="flex gap-2 text-[12px]">
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate text-zinc-800">{it.product_name}</div>
-                        <div className="text-[11px] text-zinc-500">
-                          {it.qty} × ${parseFloat(it.unit_price).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                      <div className="font-medium text-zinc-900">
-                        ${parseFloat(it.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                  ))}
+            <div className="shrink-0 border-t border-zinc-200 p-4 space-y-3 print:hidden">
+              {fiscalPendingWarning && (
+                <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                  Venta registrada. AFIP pendiente: {fiscalPendingWarning}
                 </div>
-                <div className="mt-3 pt-3 border-t border-zinc-200 space-y-1 text-[12px]">
-                  <div className="flex justify-between text-zinc-600">
-                    <span>Subtotal</span>
-                    <span>${parseFloat(receiptSale.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between text-zinc-600">
-                    <span>IVA</span>
-                    <span>${parseFloat(receiptSale.tax_amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-zinc-900 text-[13px] pt-1">
-                    <span>Total</span>
-                    <span>${parseFloat(receiptSale.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                </div>
-              </div>
+              )}
 
               <div className="flex gap-2">
                 <button
@@ -982,6 +1146,9 @@ export function SaleScreen({
                   Nueva venta <span className="text-[11px] text-zinc-400">{`(${modKey}+N)`}</span>
                 </button>
               </div>
+              {printError && (
+                <p className="text-[12px] text-red-600">{printError}</p>
+              )}
             </div>
           </div>
         </div>
@@ -995,6 +1162,25 @@ export function SaleScreen({
             autoFocus
             value={search}
             onChange={e => { setSearch(e.target.value); if (scanError) setScanError(null) }}
+            onPaste={(e) => {
+              const pasted = e.clipboardData.getData('text').trim()
+              if (!/^\d+$/.test(pasted)) return
+              const expectedLen = balanzaCfgRef.current?.totalLength ?? 13
+              if (pasted.length !== expectedLen) return
+              e.preventDefault()
+              setSearch(pasted)
+              lastSubmittedBarcodeRef.current = pasted
+              void submitSearchBarcodeRef.current(pasted)
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || e.metaKey || e.ctrlKey || e.altKey) return
+              const raw = searchRef.current?.value.trim() ?? ''
+              if (!raw) return
+              e.preventDefault()
+              e.stopPropagation()
+              lastSubmittedBarcodeRef.current = raw
+              void submitSearchBarcodeRef.current(raw)
+            }}
             placeholder={`Buscar producto por nombre o código… (${modKey} + K)`}
             className="flex-1 h-10 px-4 text-sm border border-zinc-300 rounded-md focus:outline-none focus:border-blue-500 bg-white"
           />
@@ -1045,8 +1231,12 @@ export function SaleScreen({
               </div>
             </button>
           ))}
-          {filtered.length === 0 && search && (
-            <div className="col-span-2 text-center text-sm text-zinc-400 py-8">Sin resultados para &quot;{search}&quot;</div>
+          {filtered.length === 0 && search && !scanError && (
+            <div className="col-span-2 text-center text-sm text-zinc-400 py-8">
+              {/^\d{8,}$/.test(search.trim())
+                ? 'Código de barras — Enter para agregar al carrito'
+                : `Sin resultados para "${search}"`}
+            </div>
           )}
         </div>
       </div>
@@ -1109,7 +1299,7 @@ export function SaleScreen({
           {cart.map((item) => {
             const { product, qty } = item
             return (
-            <div key={product.id} className="px-4 py-2.5 flex items-center gap-2">
+            <div key={product.id} className="px-4 py-2.5 flex items-center gap-2 group">
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-medium text-zinc-900 truncate">{product.name}</div>
                 <div className="text-[12px] text-zinc-500">
@@ -1118,14 +1308,9 @@ export function SaleScreen({
               </div>
               {item.weightItem ? (
                 <div className="flex items-center gap-1">
-                  <input
-                    value={qty.toFixed(3)}
-                    onChange={(e) => {
-                      const kg = parseFloat(e.target.value.replace(',', '.'))
-                      if (!Number.isNaN(kg)) updateWeightQty(product.id, kg)
-                    }}
-                    inputMode="decimal"
-                    className="w-16 h-6 px-1 text-right text-[12px] border border-zinc-300 rounded bg-white focus:outline-none focus:border-blue-500"
+                  <CartWeightInput
+                    qtyKg={qty}
+                    onCommit={(kg) => updateWeightQty(product.id, kg)}
                   />
                   <span className="text-[11px] text-zinc-400">kg</span>
                 </div>
@@ -1139,6 +1324,14 @@ export function SaleScreen({
               <div className="text-[13px] font-semibold text-zinc-900 w-16 text-right">
                 ${lineTotal(item).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
               </div>
+              <button
+                type="button"
+                onClick={() => removeFromCart(product.id)}
+                title="Quitar del carrito"
+                className="w-6 h-6 rounded text-zinc-400 hover:text-red-600 hover:bg-red-50 text-sm font-medium flex items-center justify-center shrink-0"
+              >
+                ×
+              </button>
             </div>
             )
           })}

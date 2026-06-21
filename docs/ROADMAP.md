@@ -477,8 +477,14 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] `GET /api/v1/pos/sales/sync` — pull de ventas sincronizadas (para reconciliación offline)
 - [x] Renovación de licencia desde el ERP admin (extender `license_valid_until`)
 - [x] App Electron: sincronización automática en background cuando hay conexión
-
----
+- [x] Ticket fiscal POS (80 mm): encabezado org/sucursal, Tique cód. 083, transparencia fiscal, defensa del consumidor
+- [x] `POST /api/v1/pos/sales/register` — registro de venta POS en cloud (`sales_orders`) sin CAE
+- [x] `POST /api/v1/pos/sales/authorize` — autorización AFIP (WSFE) con CAE, número fiscal y QR
+- [x] Checkout desacoplado: venta local aunque falle AFIP; reintento desde Ventas → Autorizar AFIP
+- [x] Config fiscal en ERP: IIBB, inicio actividades, PV por dispositivo, pie de ticket POS
+- [x] QR AFIP en ticket (SVG inline) + vuelto en efectivo (`tendered_amount`)
+- [x] Rol org `cajero` + elegibilidad de cajeros POS (`pos-cashier-eligibility`)
+- [x] Balanzas: PLU / venta por peso, barcode EAN-13 pesable, sync config desde license API
 
 ## Fase 8 — Integraciones de Hardware
 

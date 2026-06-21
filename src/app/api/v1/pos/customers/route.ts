@@ -28,7 +28,7 @@ export const GET = withPosDevice(async (req: NextRequest, ctx) => {
 
   const contacts = await Contact.findAll({
     where,
-    attributes: ['id', 'legal_name', 'trade_name', 'cuit', 'email', 'phone', 'updated_at'],
+    attributes: ['id', 'legal_name', 'trade_name', 'cuit', 'iva_condition', 'email', 'phone', 'updated_at'],
     limit: 5000,
   })
 

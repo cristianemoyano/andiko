@@ -55,7 +55,7 @@ User.init(
     updated_at:    { type: DataTypes.DATE, allowNull: false },
     deleted_at:    { type: DataTypes.DATE },
   },
-  { sequelize, tableName: 'users', paranoid: true, underscored: true }
+  { sequelize, tableName: 'users', paranoid: true, underscored: true, timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', deletedAt: 'deleted_at' }
 )
 
 export default User

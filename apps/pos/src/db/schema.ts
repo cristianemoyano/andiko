@@ -19,6 +19,7 @@ export const customers = sqliteTable('customers', {
   legal_name: text('legal_name').notNull(),
   trade_name: text('trade_name'),
   cuit:       text('cuit'),
+  iva_condition: text('iva_condition'),
   email:      text('email'),
   phone:      text('phone'),
   synced_at:  text('synced_at').notNull(),
@@ -29,6 +30,7 @@ export const posUsers = sqliteTable('pos_users', {
   name:       text('name').notNull(),
   email:      text('email').notNull(),
   role:       text('role').notNull(),
+  role_label: text('role_label'),
   branch_id:  text('branch_id'),
   pos_pin_hash: text('pos_pin_hash'),
   synced_at:  text('synced_at').notNull(), // ISO timestamp from cloud (user.updated_at)
@@ -36,6 +38,7 @@ export const posUsers = sqliteTable('pos_users', {
 
 export const sales = sqliteTable('sales', {
   id:             text('id').primaryKey(),  // local UUID
+  ticket_number:  text('ticket_number'),
   customer_id:    text('customer_id'),
   cashier_user_id: text('cashier_user_id'),
   cashier_name:   text('cashier_name'),
@@ -44,8 +47,12 @@ export const sales = sqliteTable('sales', {
   tax_amount:     text('tax_amount').notNull(),
   total:          text('total').notNull(),
   sold_at:        text('sold_at').notNull(),
-  cloud_id:       text('cloud_id'),         // set after sync
+  cloud_id:       text('cloud_id'),
   synced_at:      text('synced_at'),
+  cae:            text('cae'),
+  cae_expiration: text('cae_expiration'),
+  qr_url:         text('qr_url'),
+  afip_status:    text('afip_status'),
 })
 
 export const saleItems = sqliteTable('sale_items', {

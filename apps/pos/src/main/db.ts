@@ -37,6 +37,7 @@ function runMigrations(sqlite: Database.Database) {
       legal_name TEXT NOT NULL,
       trade_name TEXT,
       cuit TEXT,
+      iva_condition TEXT,
       email TEXT,
       phone TEXT,
       synced_at TEXT NOT NULL
@@ -47,6 +48,7 @@ function runMigrations(sqlite: Database.Database) {
       name TEXT NOT NULL,
       email TEXT NOT NULL,
       role TEXT NOT NULL,
+      role_label TEXT,
       branch_id TEXT,
       pos_pin_hash TEXT,
       synced_at TEXT NOT NULL
@@ -54,6 +56,7 @@ function runMigrations(sqlite: Database.Database) {
 
     CREATE TABLE IF NOT EXISTS sales (
       id TEXT PRIMARY KEY,
+      ticket_number TEXT,
       customer_id TEXT,
       cashier_user_id TEXT,
       cashier_name TEXT,
@@ -165,6 +168,7 @@ function runMigrations(sqlite: Database.Database) {
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN cashier_name TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN cashier_user_id TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE pos_users ADD COLUMN pos_pin_hash TEXT;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE pos_users ADD COLUMN role_label TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE products ADD COLUMN barcode TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE products ADD COLUMN image_url TEXT;`) } catch { /* ignore */ }
   // Balanza (sold-by-weight) support
@@ -174,6 +178,12 @@ function runMigrations(sqlite: Database.Database) {
   // payments column replaces payment_method — existing DBs get the column added
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN payments TEXT NOT NULL DEFAULT '[]';`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE pos_draft_sales ADD COLUMN payments TEXT DEFAULT '[]';`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE customers ADD COLUMN iva_condition TEXT;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE sales ADD COLUMN ticket_number TEXT;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE sales ADD COLUMN cae TEXT;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE sales ADD COLUMN cae_expiration TEXT;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE sales ADD COLUMN qr_url TEXT;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE sales ADD COLUMN afip_status TEXT;`) } catch { /* ignore */ }
 
   // Drop legacy payment_method NOT NULL column via table rebuild (SQLite doesn't support ALTER COLUMN)
   const hasPmCol = (sqlite.prepare(`PRAGMA table_info(sales)`).all() as Array<{name: string}>)

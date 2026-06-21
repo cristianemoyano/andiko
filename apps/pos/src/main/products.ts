@@ -37,14 +37,19 @@ export function registerProductsHandlers(ipc: IpcMain) {
   })
 
   ipc.handle('products:getByPlu', async (_e, plu: string): Promise<PosProduct | null> => {
-    const code = (plu ?? '').trim()
-    if (!code) return null
+    const trimmed = (plu ?? '').trim()
+    if (!trimmed) return null
+    const stripped = trimmed.replace(/^0+/, '') || '0'
+    const candidates = [...new Set([trimmed, stripped, stripped.padStart(5, '0')])]
     const d = db()
-    const row = d
-      .select()
-      .from(products)
-      .where(and(eq(products.is_active, true), eq(products.plu_code, code)))
-      .get()
-    return (row as PosProduct) ?? null
+    for (const code of candidates) {
+      const row = d
+        .select()
+        .from(products)
+        .where(and(eq(products.is_active, true), eq(products.plu_code, code)))
+        .get()
+      if (row) return row as PosProduct
+    }
+    return null
   })
 }

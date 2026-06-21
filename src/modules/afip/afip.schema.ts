@@ -11,6 +11,8 @@ export const afipOrgFiscalSchema = z.object({
     .refine(validateCuit, 'CUIT inválido (dígito verificador)'),
   iva_condition: z.enum(ORG_IVA_CONDITIONS),
   fiscal_address: z.string().max(500).nullable().optional(),
+  gross_income: z.string().max(32).nullable().optional(),
+  activity_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato: AAAA-MM-DD').nullable().optional(),
 })
 export type AfipOrgFiscalInput = z.infer<typeof afipOrgFiscalSchema>
 
@@ -25,6 +27,7 @@ export type LibroIvaQuery = z.infer<typeof libroIvaQuerySchema>
 export const afipConfigBranchSchema = z.object({
   branch_id: z.string().uuid(),
   punto_venta: z.number().int().positive().max(99999),
+  establishment_code: z.string().max(64).nullable().optional(),
 })
 
 export const afipConfigSchema = z.object({
