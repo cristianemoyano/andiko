@@ -134,6 +134,44 @@ export function PrintShell({ document: doc, children, className }: PrintShellPro
 
       <div className="mt-8">{children}</div>
 
+      {doc.afip?.cae ? (
+        <section className="mt-8 flex items-start gap-4 rounded-md border border-border p-4 print:border-border-strong">
+          {doc.afip.qr_data_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- runtime AFIP QR (data-URL), no build-time optimization possible
+            <img src={doc.afip.qr_data_url} alt="Código QR AFIP" className="h-28 w-28 flex-shrink-0" />
+          ) : null}
+          <div className="text-sm">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Comprobante autorizado por AFIP</h3>
+            <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
+              {doc.afip.comprobante_label ? (
+                <div className="flex gap-1.5">
+                  <dt className="text-fg-muted">Comprobante:</dt>
+                  <dd className="font-medium">{doc.afip.comprobante_label}</dd>
+                </div>
+              ) : null}
+              {doc.afip.punto_venta != null && doc.afip.cbte_numero != null ? (
+                <div className="flex gap-1.5">
+                  <dt className="text-fg-muted">Número:</dt>
+                  <dd className="font-mono font-medium">
+                    {String(doc.afip.punto_venta).padStart(4, '0')}-{String(doc.afip.cbte_numero).padStart(8, '0')}
+                  </dd>
+                </div>
+              ) : null}
+              <div className="flex gap-1.5">
+                <dt className="text-fg-muted">CAE:</dt>
+                <dd className="font-mono font-medium">{doc.afip.cae}</dd>
+              </div>
+              {doc.afip.cae_expiration ? (
+                <div className="flex gap-1.5">
+                  <dt className="text-fg-muted">Vto. CAE:</dt>
+                  <dd className="font-medium">{doc.afip.cae_expiration}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+        </section>
+      ) : null}
+
       {showNotes ? (
         <footer className="mt-10 border-t border-border pt-4 text-sm text-fg-muted print:border-border-strong">
           <h3 className="text-xs font-semibold uppercase text-fg-muted">Notas</h3>

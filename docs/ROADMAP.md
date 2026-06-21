@@ -324,15 +324,28 @@ Ciclo de compras: orden → recepción → factura proveedor → pago.
 Integración con AFIP para emisión de comprobantes electrónicos.
 Se construye sobre el módulo de Ventas ya estable.
 
-- [ ] Integración con AFIP vía WSFE (Web Service Facturación Electrónica)
-- [ ] Autenticación con certificado digital (WSAA)
-- [ ] Emisión de Facturas A, B, C electrónicas
-- [ ] Notas de crédito y débito electrónicas
-- [ ] Obtención y almacenamiento de CAE
-- [ ] Reimpresión de comprobantes con CAE
-- [ ] Manejo de contingencias (modo offline con posterior sincronización)
-- [ ] Libro IVA Ventas digital
-- [ ] Libro IVA Compras digital
+Backend completo y testeado; transporte WSAA/WSFE vía `@ramiidv/arca-facturacion`
+detrás de un adaptador mockeable (`AFIP_MODE=stub|homologacion|produccion`).
+
+### Backend (completado)
+- [x] Integración con AFIP vía WSFE — adaptador `WsfeClient` (stub + real `@ramiidv/arca-facturacion`)
+- [x] Autenticación con certificado digital (WSAA) — firma local en el SDK, selección por `AFIP_MODE`
+- [x] Emisión de Facturas A, B, C electrónicas — clasificación por condición IVA emisor/receptor
+- [x] Notas de crédito y débito electrónicas — modelo `debit_notes` + servicio + `CbtesAsoc`
+- [x] Obtención y almacenamiento de CAE — `cae`, `cae_expiration`, `punto_venta`, `cbte_numero`, `afip_status`
+- [x] Manejo de contingencias — cola `afip_emissions` con reintento/sincronización idempotente
+- [x] Libro IVA Ventas digital — servicio + endpoint (`/api/v1/afip/libro-iva-ventas`)
+- [x] Libro IVA Compras digital — servicio + endpoint (`/api/v1/afip/libro-iva-compras`)
+- [x] Punto de venta por sucursal + endpoint de configuración AFIP
+- [x] Certificados ARCA por organización — bóveda `afip_credentials` (clave privada cifrada), validación X.509 y API de carga (PEM) con estado redactado
+
+### Frontend (completado)
+- [x] Componentes de diseño `AfipStatusBadge` y `AfipDocumentPanel` (con Storybook)
+- [x] Acción "Autorizar AFIP" + panel CAE/estado en detalle de factura, nota de crédito y nota de débito
+- [x] Pantallas de notas de débito (listado, alta, detalle)
+- [x] Páginas Libro IVA Ventas (`/ventas/libro-iva`) y Compras (`/compras/libro-iva`) con filtro por período
+- [x] Pestaña de configuración AFIP: punto de venta por sucursal, carga de certificado ARCA (PEM) y cola de contingencia
+- [x] Reimpresión de comprobantes con CAE + QR (RG 4291) en plantilla de impresión
 
 ---
 

@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: resolveAppVersion(),
   },
   // sequelize + umzug are not in Next's default external list; pg/pino are auto-externalized.
-  serverExternalPackages: ['sequelize', 'pg-hstore', 'umzug'],
+  serverExternalPackages: ['sequelize', 'pg-hstore', 'umzug', '@ramiidv/arca-facturacion', 'qrcode'],
   outputFileTracingIncludes: {
     '/api/admin/migrate': ['./src/db/migrations/**/*'],
   },

@@ -6,6 +6,11 @@ const envSchema = z.object({
   AUTH_SECRET: z.string().min(1),
   AUTH_URL: z.string().url().default('http://localhost:3000'),
   MIGRATION_SECRET: z.string().min(32).optional(),
+
+  // AFIP / ARCA electronic invoicing. `stub` needs no credentials; in
+  // `homologacion`/`produccion` the certificate + key are stored per-organization
+  // (see afip-credentials.service). This only selects the target environment.
+  AFIP_MODE: z.enum(['stub', 'homologacion', 'produccion']).default('stub'),
 })
 
 const parsed = envSchema.safeParse(process.env)

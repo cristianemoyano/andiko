@@ -10,11 +10,13 @@ export interface BranchAttributes extends Timestamps {
   name: string
   address: string | null
   is_active: boolean
+  /** Punto de venta AFIP habilitado para esta sucursal (numeración fiscal electrónica) */
+  punto_venta: number | null
 }
 
 type BranchCreationAttributes = Optional<
   BranchAttributes,
-  'id' | 'branch_code' | 'address' | 'is_active' | 'created_at' | 'updated_at' | 'deleted_at'
+  'id' | 'branch_code' | 'address' | 'is_active' | 'punto_venta' | 'created_at' | 'updated_at' | 'deleted_at'
 >
 
 export class Branch extends Model<BranchAttributes, BranchCreationAttributes> {
@@ -24,6 +26,7 @@ export class Branch extends Model<BranchAttributes, BranchCreationAttributes> {
   declare name: string
   declare address: string | null
   declare is_active: boolean
+  declare punto_venta: number | null
   declare created_at: Date
   declare updated_at: Date
   declare deleted_at: Date | null
@@ -37,6 +40,7 @@ Branch.init(
     name:         { type: DataTypes.STRING(255), allowNull: false },
     address:   { type: DataTypes.STRING(500) },
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    punto_venta: { type: DataTypes.SMALLINT },
     created_at: { type: DataTypes.DATE, allowNull: false },
     updated_at: { type: DataTypes.DATE, allowNull: false },
     deleted_at: { type: DataTypes.DATE },
