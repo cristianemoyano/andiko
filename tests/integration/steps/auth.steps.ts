@@ -1,29 +1,35 @@
 import { When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import type { World } from '../support/world'
+import { isAuthenticatedAppPath } from '../support/routes'
+import { TEST_IDS } from '../support/test-ids'
 
 When('voy a la página de login', async function (this: World) {
   await this.goto('/login')
-  await expect(this.page.locator('input[type="email"]')).toBeVisible()
+  await expect(this.page.getByTestId(TEST_IDS.loginEmail)).toBeVisible()
 })
 
 When('ingreso las credenciales {string} y {string}', async function (this: World, email: string, password: string) {
-  await this.page.fill('input[type="email"]', email)
-  await this.page.fill('input[type="password"]', password)
+  await this.page.getByTestId(TEST_IDS.loginEmail).fill(email)
+  await this.page.getByTestId(TEST_IDS.loginPassword).fill(password)
 })
 
 When('hago clic en login', async function (this: World) {
-  await this.page.click('button[type="submit"]')
+  await this.page.getByTestId(TEST_IDS.loginSubmit).click()
 })
 
 Then('soy redireccionado al dashboard', async function (this: World) {
-  await this.page.waitForURL((url) => url.pathname.includes('/erp'), { timeout: 10000 })
-  await expect(this.page.locator('[data-testid="sidebar"]')).toBeVisible()
+  await this.page.waitForURL(
+    (url) => isAuthenticatedAppPath(url.pathname),
+    { timeout: 10000 },
+  )
+  await expect(this.page.getByTestId(TEST_IDS.sidebar)).toBeVisible()
+  const contactsProbe = await this.page.request.get(`${this.apiUrl}/contacts?limit=1`)
+  expect(contactsProbe.ok(), 'sesión sin organización (revisá pnpm db:seed-dev)').toBeTruthy()
 })
 
 Then('veo el error de autenticación {string}', async function (this: World, errorMessage: string) {
-  const error = this.page.locator('[role="alert"], .error-message')
-  await expect(error).toContainText(errorMessage)
+  await expect(this.page.getByTestId(TEST_IDS.loginError)).toContainText(errorMessage)
 })
 
 Then('permanezco en la página de login', async function (this: World) {
@@ -31,17 +37,11 @@ Then('permanezco en la página de login', async function (this: World) {
 })
 
 When('hago logout', async function (this: World) {
-  // Click on user menu (usually in header)
-  const userMenu = this.page.locator('[data-testid="user-menu"], button:has-text("Account")')
-  await userMenu.click()
-
-  // Find and click logout
-  const logoutBtn = this.page.locator('[data-testid="logout-btn"], button:has-text("Logout")')
-  await logoutBtn.click()
+  await this.logout()
 })
 
 Then('soy redireccionado a login', async function (this: World) {
-  await this.page.waitForURL('/login', { timeout: 5000 })
+  await this.page.waitForURL((url) => url.pathname === '/login', { timeout: 10000 })
 })
 
 When('intento acceder a {string} sin autenticación', async function (this: World, path: string) {
@@ -53,15 +53,12 @@ Then('soy redireccionado a login automáticamente', async function (this: World)
 })
 
 When('dejo la sesión inactiva por {int} minutos', async function (this: World, minutes: number) {
-  // Note: This would require actual session timeout logic
-  // For now, we can simulate by waiting
   await this.page.waitForTimeout(minutes * 60 * 1000)
 })
 
 Then('la sesión expira automáticamente', async function (this: World) {
-  // Try to perform an action and verify redirect to login
   try {
-    await this.page.click('[data-testid="sidebar"]')
+    await this.page.getByTestId(TEST_IDS.sidebar).click()
   } catch {
     // Expected to fail
   }

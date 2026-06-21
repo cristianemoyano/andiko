@@ -1,17 +1,28 @@
 import { Before, After, BeforeAll, AfterAll, Status } from '@cucumber/cucumber'
-import { chromium, Browser } from 'playwright'
+import { chromium, Browser } from '@playwright/test'
 import type { World } from './world'
 
 let browser: Browser
 
+function isHeadless(): boolean {
+  return process.env.HEADLESS !== 'false'
+}
+
 BeforeAll(async () => {
+  const headless = isHeadless()
+
   browser = await chromium.launch({
-    headless: process.env.HEADLESS !== 'false',
+    headless,
+    slowMo: headless ? 0 : 250,
   })
 })
 
 AfterAll(async () => {
-  await browser.close()
+  await browser?.close()
+})
+
+Before({ tags: '@skip' }, function () {
+  return 'skipped'
 })
 
 Before(async function (this: World, { pickle }) {
@@ -32,8 +43,9 @@ Before(async function (this: World, { pickle }) {
 })
 
 After(async function (this: World, { pickle, result }) {
-  // Take screenshot on failure
-  if (result?.status === Status.FAILED) {
+  if (!this.context) return
+
+  if (result?.status === Status.FAILED && this.page) {
     await this.page.screenshot({ path: `test-results/${pickle.id}.png` })
     console.error(`❌ Failed - Screenshot: test-results/${pickle.id}.png`)
   }

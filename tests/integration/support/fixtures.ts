@@ -1,99 +1,64 @@
-// Test user credentials (these would need to be created via migrations or fixtures)
+import {
+  INTEGRATION_CUSTOMERS,
+  INTEGRATION_PRODUCTS,
+  INTEGRATION_SUPPLIERS,
+  INTEGRATION_TEST_PASSWORD,
+  INTEGRATION_TEST_USERS,
+} from '@/db/dev/integration-seed-data'
+
 export const TEST_USERS = {
   admin: {
-    email: 'test-admin@andiko.local',
-    password: 'Test123456!',
+    email: INTEGRATION_TEST_USERS.admin.email,
+    password: INTEGRATION_TEST_USERS.admin.password,
     role: 'admin',
   },
   gerente: {
-    email: 'test-gerente@andiko.local',
-    password: 'Test123456!',
+    email: INTEGRATION_TEST_USERS.gerente.email,
+    password: INTEGRATION_TEST_USERS.gerente.password,
     role: 'manager',
   },
   vendedor: {
-    email: 'test-vendedor@andiko.local',
-    password: 'Test123456!',
+    email: INTEGRATION_TEST_USERS.vendedor.email,
+    password: INTEGRATION_TEST_USERS.vendedor.password,
     role: 'sales',
   },
   comprador: {
-    email: 'test-comprador@andiko.local',
-    password: 'Test123456!',
+    email: INTEGRATION_TEST_USERS.comprador.email,
+    password: INTEGRATION_TEST_USERS.comprador.password,
     role: 'purchasing',
+  },
+  contador: {
+    email: INTEGRATION_TEST_USERS.contador.email,
+    password: INTEGRATION_TEST_USERS.contador.password,
+    role: 'accounting',
   },
 }
 
-export const TEST_SUPPLIERS = [
-  {
-    name: 'Proveedor Químicos',
-    cuit: '20123456789',
-    email: 'contacto@quimicos.ar',
-    type: 'supplier',
-    paymentTerms: 'net_30',
-  },
-  {
-    name: 'Importadora de Resinas',
-    cuit: '20987654321',
-    email: 'ventas@importadora.ar',
-    type: 'supplier',
-    paymentTerms: 'net_15',
-  },
-]
+export const TEST_SUPPLIERS = INTEGRATION_SUPPLIERS.map((supplier) => ({
+  name: supplier.legal_name,
+  cuit: supplier.cuit,
+  email: supplier.email,
+  type: 'supplier' as const,
+  paymentTerms: supplier.legal_name === 'Proveedor Químicos' ? 'net_30' : 'net_15',
+}))
 
-export const TEST_CUSTOMERS = [
-  {
-    name: 'Cliente XYZ',
-    cuit: '20555666777',
-    email: 'contacto@clientexyz.ar',
-    type: 'customer',
-    creditLimit: 50000,
-  },
-  {
-    name: 'Distribuidora ABC',
-    cuit: '20888999000',
-    email: 'pedidos@distribuidora.ar',
-    type: 'customer',
-    creditLimit: 100000,
-  },
-]
+export const TEST_CUSTOMERS = INTEGRATION_CUSTOMERS.map((customer) => ({
+  name: customer.legal_name,
+  cuit: customer.cuit,
+  email: customer.email,
+  type: 'customer' as const,
+  creditLimit: customer.legal_name === 'Cliente XYZ' ? 50000 : 100000,
+}))
 
-export const TEST_PRODUCTS = [
-  {
-    code: 'RES-001',
-    name: 'Resina Epóxica',
-    category: 'Materias Primas',
-    costPrice: 150.5,
-    salePrice: 250.0,
-    unit: 'kg',
-    stock: 0, // Initially empty, will be filled via purchase
-  },
-  {
-    code: 'CAT-001',
-    name: 'Catalizador',
-    category: 'Materias Primas',
-    costPrice: 75.25,
-    salePrice: 125.0,
-    unit: 'ltr',
-    stock: 0,
-  },
-  {
-    code: 'MDF-001',
-    name: 'Tablero MDF 18mm',
-    category: 'Materiales',
-    costPrice: 45.0,
-    salePrice: 85.0,
-    unit: 'plc',
-    stock: 0,
-  },
-  {
-    code: 'PINTURA-001',
-    name: 'Pintura Poliuretánica',
-    category: 'Insumos',
-    costPrice: 120.0,
-    salePrice: 200.0,
-    unit: 'ltr',
-    stock: 0,
-  },
-]
+export const TEST_PRODUCTS = INTEGRATION_PRODUCTS.map((product) => ({
+  code: product.sku,
+  name: product.name,
+  category: product.category,
+  cost_price: Number(product.costPrice),
+  sale_price: Number(product.salePrice),
+  unit: product.unit,
+  stock: product.stock,
+}))
 
 export const TEST_PURCHASE_ORDER = {
   supplier: 'Proveedor Químicos',
@@ -109,7 +74,7 @@ export const TEST_PURCHASE_ORDER = {
       unitPrice: 75.25,
     },
   ],
-  expectedTotal: 1752.75,
+  expectedTotal: 2276.31,
 }
 
 export const TEST_SALES_ORDER = {
@@ -128,6 +93,9 @@ export const TEST_SALES_ORDER = {
   ],
 }
 
+/** @internal re-export for steps that need the shared password */
+export const TEST_PASSWORD = INTEGRATION_TEST_PASSWORD
+
 /**
  * Generate a unique identifier for test runs
  * Useful for creating isolated data sets
@@ -141,20 +109,16 @@ export function generateTestId(prefix: string): string {
  * Handles both "1.234,56" and "1,234.56" formats
  */
 export function parseCurrency(value: string): number {
-  // Remove any spaces
-  value = value.trim()
+  const cleaned = value.trim().replace(/[^\d,.-]/g, '')
 
-  // Detect format based on last separator
-  const lastComma = value.lastIndexOf(',')
-  const lastDot = value.lastIndexOf('.')
+  const lastComma = cleaned.lastIndexOf(',')
+  const lastDot = cleaned.lastIndexOf('.')
 
   if (lastComma > lastDot) {
-    // European format: 1.234,56 → 1234.56
-    return parseFloat(value.replace(/\./g, '').replace(',', '.'))
-  } else {
-    // US format: 1,234.56 → 1234.56
-    return parseFloat(value.replace(/,/g, ''))
+    return parseFloat(cleaned.replace(/\./g, '').replace(',', '.'))
   }
+
+  return parseFloat(cleaned.replace(/,/g, ''))
 }
 
 /**

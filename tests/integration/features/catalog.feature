@@ -15,33 +15,37 @@ Característica: Catálogo de Productos
       | precio_costo    | 150.50               |
       | precio_venta    | 250.00               |
     Entonces veo el mensaje "Producto creado exitosamente"
-    Y veo el producto "Resina Epóxica" en la lista
+    Y veo el producto creado en la lista
 
   Escenario: Buscar producto por nombre
     Dado estoy autenticado como "gerente"
+    Y el producto de prueba "Catalizador" está disponible
     Y existen productos en catálogo
     Cuando navego a "/erp/catalog/products"
-    Y busco el producto "Resina Epóxica"
-    Entonces veo el producto "Resina Epóxica" en la lista
+    Y busco el producto "Catalizador"
+    Entonces veo el producto "Catalizador" en la lista
 
   Escenario: Editar producto
     Dado estoy autenticado como "gerente"
+    Y el producto de prueba "Catalizador" está disponible
     Cuando navego a "/erp/catalog/products"
-    Y edito el producto "Resina Epóxica"
+    Y edito el producto "Catalizador"
     Y establezco el precio de venta en "280.00"
-    Y hago clic en "Guardar"
+    Y guardo el producto
     Entonces veo el mensaje "Producto actualizado"
 
   Escenario: Archivar producto
     Dado estoy autenticado como "gerente"
+    Y el producto de prueba "Catalizador" está disponible
     Cuando navego a "/erp/catalog/products"
-    Y archivar el producto "Resina Epóxica"
-    Y hago clic en "Confirmar" en el diálogo
-    Entonces el producto "Resina Epóxica" está archivado
-    Y no veo el producto "Resina Epóxica" en la lista (excepto en vista archivados)
+    Y archivar el producto "Catalizador"
+    Entonces veo el mensaje "Producto actualizado"
+    Y el producto "Catalizador" está archivado
+    Y no veo el producto "Catalizador" en la lista activa
 
   Escenario: Filtrar productos por categoría
     Dado estoy autenticado como "gerente"
+    Y el producto de prueba "Catalizador" está disponible
     Cuando navego a "/erp/catalog/products"
     Y filtro productos por categoría "Materias Primas"
     Entonces veo solo productos de la categoría "Materias Primas"
@@ -50,7 +54,8 @@ Característica: Catálogo de Productos
     Dado estoy autenticado como "gerente"
     Cuando establezco una lista de precios "Mayoristas" con:
       | producto | precio |
-      | RES-001  | 220.00 |
       | CAT-001  | 100.00 |
-    Entonces veo el mensaje "Lista de precios creada"
+      | MDF-001  | 85.00  |
+    Entonces la tabla contiene "CAT-001"
+    Y la tabla contiene "MDF-001"
     Y la lista de precios "Mayoristas" existe

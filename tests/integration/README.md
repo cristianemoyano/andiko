@@ -33,10 +33,14 @@ tests/integration/
 ### Desarrollo local
 
 ```bash
-# Levantar la app en terminal 1
+# 1. Base de datos con datos de integración (tenant "integration")
+pnpm migrate
+pnpm db:seed-dev
+
+# 2. Levantar la app en terminal 1
 pnpm dev
 
-# Ejecutar tests en terminal 2
+# 3. Ejecutar tests en terminal 2
 pnpm test:integration
 
 # O con modo watch (se recargan al editar .feature o .steps.ts)
@@ -58,6 +62,20 @@ pnpm test:integration:ci
 ```
 
 Corre 4 tests en paralelo, genera reportes HTML/JSON/XML.
+
+### Credenciales de test (tenant `integration`)
+
+Creadas por `pnpm db:seed-dev` — fuente única en `src/db/dev/integration-seed-data.ts`:
+
+| Rol en Gherkin | Email | Password |
+|----------------|-------|----------|
+| `admin` | test-admin@andiko.local | Test123456! |
+| `gerente` | test-gerente@andiko.local | Test123456! |
+| `vendedor` | test-vendedor@andiko.local | Test123456! |
+| `comprador` | test-comprador@andiko.local | Test123456! |
+| `contador` | test-contador@andiko.local | Test123456! |
+
+También se siembran contactos (Cliente XYZ, Proveedor Químicos), productos (RES-001, Producto A/B, etc.) y una factura pendiente de $500 para escenarios financieros.
 
 ## Reportes
 

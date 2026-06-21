@@ -15,16 +15,17 @@ Característica: Ciclo Completo de Compras
       | Resina      | 10       | 150.50          |
       | Catalizador | 5        | 75.25           |
 
-    Entonces veo el mensaje "Orden de compra creada"
-    Y la orden tiene estado "Pendiente"
-    Y el total es 1752.75
+    Entonces la orden tiene estado "Borrador"
+    Y el total es 2276.31
 
-    Cuando registro la recepción de la orden
+    Cuando envío la orden al proveedor
+    Y registro la recepción de la orden
     Entonces el stock aumenta: Resina=10, Catalizador=5
-    Y la orden cambia a "Recibida"
+    Y la orden cambia a "Recibido"
 
-    Cuando registro un pago de 1752.75 a "Proveedor Químicos"
-    Entonces la orden cambia a "Pagada"
+    Cuando registro la factura del proveedor por la orden
+    Y registro un pago del total de la factura a "Proveedor Químicos"
+    Entonces la factura del proveedor está "Pagada"
     Y el saldo del proveedor es 0.00
 
   Escenario: Búsqueda de orden de compra
@@ -36,8 +37,8 @@ Característica: Ciclo Completo de Compras
   Escenario: Filtrar órdenes por estado
     Dado estoy autenticado como "comprador"
     Cuando navego a compras
-    Y aplico un filtro de estado "Pendiente"
-    Entonces veo solo órdenes con estado "Pendiente"
+    Y aplico un filtro de estado "Enviado"
+    Entonces veo solo órdenes con estado "Enviado"
 
   Escenario: Recepción parcial
     Dado estoy autenticado como "comprador"

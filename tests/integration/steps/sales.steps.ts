@@ -2,6 +2,8 @@ import { Given, When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import type { World } from '../support/world'
 import { parseCurrency } from '../support/fixtures'
+import { assertProductStockInOrg } from '../support/org-context'
+import { TEST_IDS } from '../support/test-ids'
 
 Given('existen productos con stock: {string}={int}, {string}={int}', async function (
   this: World,
@@ -10,10 +12,16 @@ Given('existen productos con stock: {string}={int}, {string}={int}', async funct
   product2: string,
   stock2: number,
 ) {
-  // This would typically be seeded via database
+  if (!this.testData.user) {
+    throw new Error(
+      'Este paso requiere sesión con org (usá "estoy autenticado como ..." antes).',
+    )
+  }
+  await assertProductStockInOrg(this, product1, stock1)
+  await assertProductStockInOrg(this, product2, stock2)
   this.testData.products = [
-    { code: product1, name: product1, stock: stock1, category: 'General', costPrice: 100, salePrice: 150 },
-    { code: product2, name: product2, stock: stock2, category: 'General', costPrice: 50, salePrice: 100 },
+    { code: product1, name: product1, stock: stock1, category: 'General', cost_price: 100, sale_price: 150 },
+    { code: product2, name: product2, stock: stock2, category: 'General', cost_price: 50, sale_price: 100 },
   ]
 })
 
@@ -74,7 +82,7 @@ When('creo un presupuesto para {string} válido por {int} días con:', async fun
   await this.page.click('button:has-text("Crear Presupuesto")')
 
   // Capture quote number
-  const quoteNumber = await this.page.locator('[data-testid="quote-number"]').textContent()
+  const quoteNumber = await this.page.getByTestId(TEST_IDS.quoteNumber).textContent()
   this.lastResult.quoteId = quoteNumber
 
   this.testData.orders = [
@@ -88,13 +96,13 @@ When('creo un presupuesto para {string} válido por {int} días con:', async fun
 })
 
 Then('el presupuesto tiene estado {string}', async function (this: World, status: string) {
-  const statusBadge = this.page.locator('[data-testid="quote-status"]')
+  const statusBadge = this.page.getByTestId(TEST_IDS.quoteStatus)
   await expect(statusBadge).toContainText(status)
 })
 
 Then('el total es (.*)', async function (this: World, totalExpression: string) {
   // For now, just verify that a total exists
-  const totalElement = this.page.locator('[data-testid="quote-total"]')
+  const totalElement = this.page.getByTestId(TEST_IDS.quoteTotal)
   await expect(totalElement).toBeVisible()
 
   // If a specific value is provided, verify it
@@ -123,11 +131,11 @@ Then('se genera factura con estado {string}', async function (this: World, statu
   // Verify we're on the invoice detail page
   await expect(this.page).toHaveURL(/\/sales\/invoices/)
 
-  const statusBadge = this.page.locator('[data-testid="invoice-status"]')
+  const statusBadge = this.page.getByTestId(TEST_IDS.invoiceStatus)
   await expect(statusBadge).toContainText(status)
 
   // Capture invoice number
-  const invoiceNumber = await this.page.locator('[data-testid="invoice-number"]').textContent()
+  const invoiceNumber = await this.page.getByTestId(TEST_IDS.invoiceNumber).textContent()
   this.lastResult.invoiceId = invoiceNumber
 })
 
@@ -189,7 +197,7 @@ When('registro un pago parcial de {string} sobre la factura', async function (th
 
 Then('el saldo pendiente es (.*)', async function (this: World, balance: string) {
   // Verify balance on invoice detail
-  const balanceElement = this.page.locator('[data-testid="invoice-balance"]')
+  const balanceElement = this.page.getByTestId(TEST_IDS.invoiceBalance)
 
   if (balance === 'YYY') {
     // Just verify balance exists and is > 0
@@ -235,8 +243,8 @@ When('busco la factura {string}', async function (this: World, invoiceNumber: st
 
 Then('veo la factura en la lista', async function (this: World) {
   const table = this.page.locator('table')
-  const invoiceNumber = this.lastResult.invoiceId
-  await expect(table).toContainText(invoiceNumber || 'INV')
+  const invoiceNumber = String(this.lastResult.invoiceId ?? 'INV')
+  await expect(table).toContainText(invoiceNumber)
 })
 
 When('filtro facturas por estado {string}', async function (this: World, status: string) {

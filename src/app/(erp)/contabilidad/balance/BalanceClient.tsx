@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { Input } from '@/components/primitives/Input'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { summarizeBalanceSheet } from '@/modules/accounting/balance-sheet-summary'
 import { ContabilidadSubNav } from '../ContabilidadSubNav'
 import type { BranchOption } from '../types'
 
@@ -65,6 +66,11 @@ export function BalanceClient() {
     return () => { mounted = false }
   }, [from, to, branchId])
 
+  const balanceSheet = useMemo(
+    () => (data ? summarizeBalanceSheet(data.rows) : null),
+    [data],
+  )
+
   return (
     <div className="flex flex-col h-full">
       <TopBar breadcrumbs={[{ label: 'Contabilidad', href: '/contabilidad/asientos' }, { label: 'Balance de sumas y saldos' }]} />
@@ -74,11 +80,23 @@ export function BalanceClient() {
         <div className="flex items-end gap-3 mb-4">
           <div className="flex flex-col gap-1">
             <label className="text-[12px] font-medium text-fg-muted">Desde</label>
-            <Input type="date" value={from} onChange={e => setFrom(e.target.value)} className="w-40" />
+            <Input
+              type="date"
+              data-testid="trial-balance-from"
+              value={from}
+              onChange={e => setFrom(e.target.value)}
+              className="w-40"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[12px] font-medium text-fg-muted">Hasta</label>
-            <Input type="date" value={to} onChange={e => setTo(e.target.value)} className="w-40" />
+            <Input
+              type="date"
+              data-testid="trial-balance-to"
+              value={to}
+              onChange={e => setTo(e.target.value)}
+              className="w-40"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[12px] font-medium text-fg-muted">Sucursal</label>
@@ -98,6 +116,29 @@ export function BalanceClient() {
 
         {serverError && (
           <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">{serverError}</div>
+        )}
+
+        {balanceSheet && data && data.rows.length > 0 && (
+          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded border border-border bg-surface-muted p-3">
+              <p className="text-[12px] text-fg-muted">Activos totales</p>
+              <p data-testid="total-assets" className="tabular-nums text-[16px] font-semibold text-fg">
+                {formatARS(balanceSheet.total_assets)}
+              </p>
+            </div>
+            <div className="rounded border border-border bg-surface-muted p-3">
+              <p className="text-[12px] text-fg-muted">Pasivos totales</p>
+              <p data-testid="total-liabilities" className="tabular-nums text-[16px] font-semibold text-fg">
+                {formatARS(balanceSheet.total_liabilities)}
+              </p>
+            </div>
+            <div className="rounded border border-border bg-surface-muted p-3">
+              <p className="text-[12px] text-fg-muted">Patrimonio neto</p>
+              <p data-testid="net-equity" className="tabular-nums text-[16px] font-semibold text-fg">
+                {formatARS(balanceSheet.net_equity)}
+              </p>
+            </div>
+          </div>
         )}
 
         <div className="border border-border rounded-sm overflow-hidden">

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { SessionProvider } from 'next-auth/react'
-import { ThemeProvider } from 'next-themes'
+import { ThemeProvider } from '@teispace/next-themes'
 import { SidebarProvider } from './SidebarContext'
 import { CapabilitiesProvider } from './CapabilitiesContext'
 import type { UiCapabilities } from '@/types/capabilities'

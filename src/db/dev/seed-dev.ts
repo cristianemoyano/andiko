@@ -58,6 +58,14 @@ import {
   seedBillerSummaryLine,
   SEED_PLAN_BY_ORG_SLUG,
 } from '@/db/dev/seed-billing-plans'
+import { DEFAULT_ENABLED_MODULES } from '@/modules/auth/organization-modules'
+import { INTEGRATION_TENANT, INTEGRATION_TEST_USERS } from './integration-seed-data'
+import {
+  seedIntegrationCatalog,
+  seedIntegrationContacts,
+  seedIntegrationFinancials,
+  seedIntegrationAccounting,
+} from './integration-seed'
 
 const MIN_PROD_PASSWORD_LENGTH = 16
 
@@ -203,8 +211,63 @@ function requireProdPassword(envKey: string): string {
   return value
 }
 
+function buildIntegrationTenant(): SeedConfig['tenants'][number] {
+  return {
+    name: INTEGRATION_TENANT.name,
+    slug: INTEGRATION_TENANT.slug,
+    branches: [{ name: INTEGRATION_TENANT.branch.name, address: INTEGRATION_TENANT.branch.address }],
+    users: [
+      {
+        email: INTEGRATION_TEST_USERS.admin.email,
+        password: INTEGRATION_TEST_USERS.admin.password,
+        name: INTEGRATION_TEST_USERS.admin.name,
+        role: INTEGRATION_TEST_USERS.admin.role,
+        branchIndex: 0,
+        allowedBranchIndexes: [0],
+      },
+      {
+        email: INTEGRATION_TEST_USERS.gerente.email,
+        password: INTEGRATION_TEST_USERS.gerente.password,
+        name: INTEGRATION_TEST_USERS.gerente.name,
+        role: INTEGRATION_TEST_USERS.gerente.role,
+        branchIndex: 0,
+        allowedBranchIndexes: [0],
+      },
+      {
+        email: INTEGRATION_TEST_USERS.vendedor.email,
+        password: INTEGRATION_TEST_USERS.vendedor.password,
+        name: INTEGRATION_TEST_USERS.vendedor.name,
+        role: INTEGRATION_TEST_USERS.vendedor.role,
+        branchIndex: 0,
+        allowedBranchIndexes: [0],
+      },
+      {
+        email: INTEGRATION_TEST_USERS.comprador.email,
+        password: INTEGRATION_TEST_USERS.comprador.password,
+        name: INTEGRATION_TEST_USERS.comprador.name,
+        role: INTEGRATION_TEST_USERS.comprador.role,
+        branchIndex: 0,
+        allowedBranchIndexes: [0],
+      },
+      {
+        email: INTEGRATION_TEST_USERS.contador.email,
+        password: INTEGRATION_TEST_USERS.contador.password,
+        name: INTEGRATION_TEST_USERS.contador.name,
+        role: INTEGRATION_TEST_USERS.contador.role,
+        branchIndex: 0,
+        allowedBranchIndexes: [0],
+      },
+    ],
+  }
+}
+
 function buildSeedConfig(allowProd: boolean): SeedConfig {
-  if (!allowProd) return DEV_SEED
+  if (!allowProd) {
+    return {
+      ...(DEV_SEED as unknown as SeedConfig),
+      tenants: [...(DEV_SEED.tenants as unknown as SeedConfig['tenants']), buildIntegrationTenant()],
+    }
+  }
 
   const [demo, premium] = DEV_SEED.tenants
   return {
@@ -1360,6 +1423,22 @@ async function run() {
         })
       }
 
+      if (tenant.slug === 'integration') {
+        const [integrationSettings] = await OrganizationSetting.findOrCreate({
+          where: { org_id: org.id },
+          defaults: {
+            org_id: org.id,
+            enabled_modules: [...DEFAULT_ENABLED_MODULES],
+            enabled_features: {},
+          },
+          transaction: t,
+        })
+        await integrationSettings.update(
+          { enabled_modules: [...DEFAULT_ENABLED_MODULES] },
+          { transaction: t },
+        )
+      }
+
       const planCode = SEED_PLAN_BY_ORG_SLUG[tenant.slug]
       if (planCode) {
         const seats = tenant.slug === 'demo' ? 8 : 3
@@ -1415,7 +1494,8 @@ async function run() {
               org_role_id,
               org_id: org.id,
               branch_id: defaultBranch.id,
-              ...(allowProd ? { password_hash } : {}),
+              is_active: true,
+              ...(allowProd || tenant.slug === 'integration' ? { password_hash } : {}),
             },
             { transaction: t },
           )
@@ -1430,8 +1510,17 @@ async function run() {
           })
         }
 
-        // Seed catalog, contacts, and inventory once per org (using the gerente user as actor)
-        if (isSeedGerente(u)) {
+        if (tenant.slug === 'integration' && u.email === INTEGRATION_TEST_USERS.admin.email) {
+          variantsBySku = await seedIntegrationCatalog(org.id, user.id, t)
+          const contacts = await seedIntegrationContacts(org.id, user.id, t)
+          const defaultCustomer = contacts.find((c) => c.legal_name === 'Cliente XYZ') ?? null
+          defaultCustomerId = defaultCustomer?.id ?? null
+          await seedInventory(org.id, branches, user.id, t)
+          await seedDefaultChartOfAccounts(org.id, t, user.id)
+          const defaultBranch = branches[0]!
+          await seedIntegrationFinancials(org.id, defaultBranch, user.id, contacts, variantsBySku, t)
+          await seedIntegrationAccounting(org.id, user.id, t)
+        } else if (isSeedGerente(u)) {
           variantsBySku = await seedCatalog(org.id, user.id, t)
           const contacts = await seedContacts(org.id, user.id, t)
           const defaultCustomer = contacts.find(c => c.type === 'customer' || c.type === 'both') ?? null
@@ -1683,6 +1772,10 @@ async function run() {
     console.log('  contador@demo.local — Contador')
     console.log('  deposito@demo.local — Depósito')
     console.log(`Tenant premium: admin@premium.local / ${seed.tenants[1]!.users[0]!.password}`)
+    console.log(
+      `Tenant integration: ${INTEGRATION_TEST_USERS.admin.email} / ${INTEGRATION_TEST_USERS.admin.password}`,
+    )
+    console.log('  (also: test-gerente, test-vendedor, test-comprador, test-contador @andiko.local — same password)')
   }
 }
 

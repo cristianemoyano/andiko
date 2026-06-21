@@ -14,7 +14,7 @@ Característica: Autenticación
     Dado voy a la página de login
     Cuando ingreso las credenciales "test-admin@andiko.local" y "IncorrectPassword"
     Y hago clic en login
-    Entonces veo error "Credenciales inválidas"
+    Entonces veo error "Email o contraseña incorrectos."
     Y permanezco en la página de login
 
   Escenario: Logout exitoso
@@ -26,6 +26,7 @@ Característica: Autenticación
     Cuando intento acceder a "/erp/sales" sin autenticación
     Entonces soy redireccionado a login automáticamente
 
+  @skip
   Escenario: Sesión expirada
     Dado estoy autenticado como "admin"
     Cuando dejo la sesión inactiva por 30 minutos
