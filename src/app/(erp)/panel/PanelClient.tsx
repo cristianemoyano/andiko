@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Fragment, useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Skeleton } from '@/components/primitives/Skeleton'
-import { PerformanceCard, PanelBarChart, PanelDonutChart, Sparkline } from '@/components/erp'
+import { PerformanceCard, PanelBarChart, PanelDonutChart, Sparkline, KpiLabel, PanelWidgetProvider, PanelWidgetMenu, PanelWidgetSlot, usePanelWidgets, PanelAnalyticsCompareLabel, PanelAnalyticsRevenueSection, PanelAnalyticsOrdersSection, PanelAnalyticsProductsSection } from '@/components/erp'
 import type { BarChartDataPoint, DonutSegment, PerformanceSeriesPoint } from '@/components/erp'
+import type { PanelAnalytics as PanelAnalyticsData } from '@/modules/panel/panel.types'
+import type { PanelWidgetId } from '@/modules/panel/panel-widget.types'
+import { DEFAULT_PANEL_WIDGET_ORDER } from '@/modules/panel/panel-widget.types'
 import { fetchJson } from '@/lib/fetch-json'
 import { PanelFilterBar, type PanelPeriod } from './PanelFilterBar'
 
@@ -32,6 +35,7 @@ interface KpisData {
   cash_flow: { semanal: BarChartDataPoint[]; mensual: BarChartDataPoint[]; anual: BarChartDataPoint[] }
   gastos: DonutSegment[]
   performance_series: PerformanceSeriesPoint[]
+  analytics: PanelAnalyticsData
 }
 
 interface RecentInvoice {
@@ -58,7 +62,17 @@ const INVOICE_STATUS_MAP: Record<string, string> = {
   cancelled:      'Anulado',
 }
 
-const PRIMARY = '#0C647A'
+import { BRAND_CHART_COLOR } from '@/lib/brand-colors'
+
+const DESKTOP_KPI_INFO = {
+  facturado:
+    'Total facturado en el período seleccionado. Incluye IVA. Excluye borradores y anulados.',
+  cobrado:
+    'Pagos registrados en el período, según fecha de cobro (no fecha de emisión de la factura).',
+  por_cobrar:
+    'Saldo pendiente de cobro en facturas emitidas o parcialmente pagadas. Incluye vencidas y al día.',
+  saldo_cuenta: 'Saldo bancario/contable. Disponible cuando esté activo el módulo de contabilidad.',
+} as const
 
 const ars = (v: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(v)
@@ -98,15 +112,19 @@ function TrendBadge({ pct }: { pct: number }) {
 }
 
 function KPICard({
-  label, value, sub, spark, sparkColor,
-}: { label: string; value: React.ReactNode; sub: React.ReactNode; spark?: number[]; sparkColor?: string }) {
+  label, info, value, sub, spark, sparkColor,
+}: { label: string; info?: string; value: React.ReactNode; sub: React.ReactNode; spark?: number[]; sparkColor?: string }) {
   return (
     <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex flex-col gap-2 min-w-0">
-      <div className="text-[11px] font-semibold text-fg-subtle uppercase tracking-[0.06em] truncate">{label}</div>
+      <KpiLabel
+        label={label}
+        info={info}
+        labelClassName="text-[11px] font-semibold text-fg-subtle uppercase tracking-[0.06em]"
+      />
       <div className="flex items-end justify-between gap-2 min-w-0">
         <div className="font-mono text-lg sm:text-[22px] font-medium text-fg leading-none truncate">{value}</div>
         {spark && spark.length > 1 && (
-          <Sparkline data={spark} color={sparkColor ?? PRIMARY} />
+          <Sparkline data={spark} color={sparkColor ?? BRAND_CHART_COLOR} />
         )}
       </div>
       <div className="min-w-0">{sub}</div>
@@ -117,7 +135,7 @@ function KPICard({
 function CountCard({ label, value, icon }: { label: string; value: React.ReactNode; icon: React.ReactNode }) {
   return (
     <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex items-center gap-3 min-w-0">
-      <div className="w-9 h-9 rounded-[4px] bg-[#EEF8FA] flex items-center justify-center shrink-0 text-[#0C647A]">
+      <div className="w-9 h-9 rounded-[4px] bg-brand-accent-bg flex items-center justify-center shrink-0 text-brand-accent">
         {icon}
       </div>
       <div className="min-w-0">
@@ -152,7 +170,7 @@ const IconFile = () => (
 )
 
 function ActivityIcon({ type }: { type: string }) {
-  const stroke = '#0C647A'
+  const stroke = 'currentColor'
   if (type === 'payment') {
     return (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -183,7 +201,22 @@ function ActivityIcon({ type }: { type: string }) {
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
-export function PanelClient() {
+export function PanelClient({
+  initialHiddenWidgets = [],
+  initialWidgetOrder = DEFAULT_PANEL_WIDGET_ORDER,
+}: {
+  initialHiddenWidgets?: PanelWidgetId[]
+  initialWidgetOrder?: PanelWidgetId[]
+}) {
+  return (
+    <PanelWidgetProvider initialHidden={initialHiddenWidgets} initialOrder={initialWidgetOrder}>
+      <PanelClientContent />
+    </PanelWidgetProvider>
+  )
+}
+
+function PanelClientContent() {
+  const { widgetOrder, isHidden } = usePanelWidgets()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -266,29 +299,20 @@ export function PanelClient() {
   const kpis = kpisData?.kpis
   const counts = kpisData?.counts
   const cashFlow = kpisData?.cash_flow
-  const gastos = kpisData?.gastos ?? []
+  const gastos = useMemo(() => kpisData?.gastos ?? [], [kpisData?.gastos])
 
-  return (
-    <div className="flex flex-col h-full" id="panel-dashboard">
-      <TopBar breadcrumbs={[{ label: 'Panel' }]} />
+  const periodLabel = getPeriodLabel(period, fromDate, toDate)
+  const comparePeriodLabel = kpisData?.analytics?.compare_period_label ?? ''
+  const analytics = kpisData?.analytics ?? null
 
-      <PanelFilterBar
-        period={period}
-        branchId={branchId}
-        fromDate={fromDate}
-        toDate={toDate}
-        branches={branches}
-        onPeriodChange={p => updateParams({ period: p })}
-        onBranchChange={id => updateParams({ branch_id: id })}
-        onFromChange={from => updateParams({ from })}
-        onToChange={to => updateParams({ to })}
-        onExportPdf={() => window.print()}
-      />
+  const hasStockAlerts = stockAlerts !== null
+    && (stockAlerts.expired > 0 || stockAlerts.expiring_soon > 0 || stockAlerts.below_minimum > 0)
 
-      <div className="flex-1 overflow-auto p-4 md:p-6 bg-surface-muted print:bg-surface print:p-4">
+  const widgetNodes = useMemo<Record<PanelWidgetId, React.ReactNode>>(() => ({
+    performance: (
+      <PanelWidgetSlot widgetId="performance">
         <PerformanceCard
-          className="mb-4"
-          periodLabel={getPeriodLabel(period, fromDate, toDate)}
+          periodLabel={periodLabel}
           series={performanceSeries}
           facturado={kpis?.facturado.value ?? 0}
           cobrado={kpis?.cobrado.value ?? 0}
@@ -297,150 +321,188 @@ export function PanelClient() {
           clientes={counts?.clientes ?? 0}
           lastUpdated={lastUpdated}
           loading={loading}
+          headerAction={<PanelWidgetMenu widgetId="performance" />}
         />
-
-        {/* KPI cards — desktop only; mobile uses PerformanceCard above */}
-        <div className="hidden xl:grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
-          <KPICard
-            label="Facturado"
-            value={kpis ? ars(kpis.facturado.value) : <Skeleton className="h-5 w-28" />}
-            spark={kpis?.facturado.spark}
-            sparkColor={kpis && kpis.facturado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
-            sub={kpis ? <TrendBadge pct={kpis.facturado.pct_change} /> : <Skeleton className="h-3 w-24" />}
-          />
-          <KPICard
-            label="Cobrado"
-            value={kpis ? ars(kpis.cobrado.value) : <Skeleton className="h-5 w-28" />}
-            spark={kpis?.cobrado.spark}
-            sparkColor={kpis && kpis.cobrado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
-            sub={kpis ? <TrendBadge pct={kpis.cobrado.pct_change} /> : <Skeleton className="h-3 w-24" />}
-          />
-          <KPICard
-            label="Cuentas por cobrar"
-            value={kpis ? ars(kpis.por_cobrar.value) : <Skeleton className="h-5 w-28" />}
-            sub={
-              kpis
-                ? kpis.por_cobrar.overdue_count > 0
-                  ? <span className="text-[11px] font-medium text-warning">{kpis.por_cobrar.overdue_count} factura{kpis.por_cobrar.overdue_count > 1 ? 's' : ''} vencida{kpis.por_cobrar.overdue_count > 1 ? 's' : ''}</span>
-                  : <span className="text-[11px] text-success">Al día</span>
-                : <Skeleton className="h-3 w-24" />
-            }
-          />
-          <KPICard
-            label="Saldo en cuenta"
-            value="—"
-            sub={<span className="text-[11px] text-fg-subtle line-clamp-2">Módulo contabilidad pendiente</span>}
-          />
+      </PanelWidgetSlot>
+    ),
+    analytics_revenue: <PanelAnalyticsRevenueSection analytics={analytics} loading={loading} />,
+    analytics_orders: <PanelAnalyticsOrdersSection analytics={analytics} loading={loading} />,
+    analytics_products: (
+      <PanelAnalyticsProductsSection
+        periodLabel={periodLabel}
+        analytics={analytics}
+        lastUpdated={lastUpdated}
+        loading={loading}
+      />
+    ),
+    kpi_cards: (
+      <PanelWidgetSlot widgetId="kpi_cards">
+        <div className="hidden xl:block">
+          <div className="flex justify-end mb-1">
+            <PanelWidgetMenu widgetId="kpi_cards" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <KPICard
+              label="Facturado"
+              info={DESKTOP_KPI_INFO.facturado}
+              value={kpis ? ars(kpis.facturado.value) : <Skeleton className="h-5 w-28" />}
+              spark={kpis?.facturado.spark}
+              sparkColor={kpis && kpis.facturado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
+              sub={kpis ? <TrendBadge pct={kpis.facturado.pct_change} /> : <Skeleton className="h-3 w-24" />}
+            />
+            <KPICard
+              label="Cobrado"
+              info={DESKTOP_KPI_INFO.cobrado}
+              value={kpis ? ars(kpis.cobrado.value) : <Skeleton className="h-5 w-28" />}
+              spark={kpis?.cobrado.spark}
+              sparkColor={kpis && kpis.cobrado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
+              sub={kpis ? <TrendBadge pct={kpis.cobrado.pct_change} /> : <Skeleton className="h-3 w-24" />}
+            />
+            <KPICard
+              label="Cuentas por cobrar"
+              info={DESKTOP_KPI_INFO.por_cobrar}
+              value={kpis ? ars(kpis.por_cobrar.value) : <Skeleton className="h-5 w-28" />}
+              sub={
+                kpis
+                  ? kpis.por_cobrar.overdue_count > 0
+                    ? <span className="text-[11px] font-medium text-warning">{kpis.por_cobrar.overdue_count} factura{kpis.por_cobrar.overdue_count > 1 ? 's' : ''} vencida{kpis.por_cobrar.overdue_count > 1 ? 's' : ''}</span>
+                    : <span className="text-[11px] text-success">Al día</span>
+                  : <Skeleton className="h-3 w-24" />
+              }
+            />
+            <KPICard
+              label="Saldo en cuenta"
+              info={DESKTOP_KPI_INFO.saldo_cuenta}
+              value="—"
+              sub={<span className="text-[11px] text-fg-subtle line-clamp-2">Módulo contabilidad pendiente</span>}
+            />
+          </div>
         </div>
-
-        {/* Count cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+      </PanelWidgetSlot>
+    ),
+    counts: (
+      <PanelWidgetSlot widgetId="counts">
+        <div className="flex justify-end mb-1">
+          <PanelWidgetMenu widgetId="counts" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <CountCard label="Productos activos" value={counts ? counts.productos.toLocaleString('es-AR') : <Skeleton className="h-5 w-12" />} icon={<IconBox />} />
           <CountCard label="Clientes"          value={counts ? counts.clientes.toLocaleString('es-AR') : <Skeleton className="h-5 w-12" />} icon={<IconUsers />} />
           <CountCard label="Proveedores"       value={counts ? counts.proveedores.toLocaleString('es-AR') : <Skeleton className="h-5 w-12" />} icon={<IconBuilding />} />
           <CountCard label="Comprobantes"      value={counts ? counts.comprobantes.toLocaleString('es-AR') : <Skeleton className="h-5 w-12" />} icon={<IconFile />} />
         </div>
-
-        {/* Stock alerts */}
-        {stockAlerts && (stockAlerts.expired > 0 || stockAlerts.expiring_soon > 0 || stockAlerts.below_minimum > 0) && (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
-            {stockAlerts.expired > 0 && (
-              <Link href="/inventario/stock?expired=true" className="bg-danger-bg border border-danger rounded-[4px] p-4 flex items-center gap-3 hover:bg-danger-bg transition-colors">
-                <div className="w-9 h-9 rounded-[4px] bg-danger-bg flex items-center justify-center shrink-0 text-danger">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                </div>
-                <div>
-                  <div className="font-mono text-xl font-medium text-danger leading-none">{stockAlerts.expired}</div>
-                  <div className="text-[11px] text-danger mt-0.5">Producto{stockAlerts.expired > 1 ? 's' : ''} vencido{stockAlerts.expired > 1 ? 's' : ''}</div>
-                </div>
-              </Link>
-            )}
-            {stockAlerts.expiring_soon > 0 && (
-              <Link href="/inventario/stock?expiring_within_days=7" className="bg-warning-bg border border-warning rounded-[4px] p-4 flex items-center gap-3 hover:bg-warning-bg transition-colors">
-                <div className="w-9 h-9 rounded-[4px] bg-warning-bg flex items-center justify-center shrink-0 text-warning">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                  </svg>
-                </div>
-                <div>
-                  <div className="font-mono text-xl font-medium text-warning leading-none">{stockAlerts.expiring_soon}</div>
-                  <div className="text-[11px] text-warning mt-0.5">Vence{stockAlerts.expiring_soon > 1 ? 'n' : ''} en 7 días</div>
-                </div>
-              </Link>
-            )}
-            {stockAlerts.below_minimum > 0 && (
-              <Link href="/inventario/stock?below_minimum=true" className="bg-orange-50 border border-orange-200 rounded-[4px] p-4 flex items-center gap-3 hover:bg-orange-100 transition-colors">
-                <div className="w-9 h-9 rounded-[4px] bg-orange-100 flex items-center justify-center shrink-0 text-orange-600">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
-                  </svg>
-                </div>
-                <div>
-                  <div className="font-mono text-xl font-medium text-orange-700 leading-none">{stockAlerts.below_minimum}</div>
-                  <div className="text-[11px] text-orange-600 mt-0.5">Bajo stock mínimo</div>
-                </div>
-              </Link>
-            )}
-          </div>
-        )}
-
-        {/* Charts row */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-          {/* Flujo de caja — desktop only; chart is in PerformanceCard on mobile */}
-          <div className="hidden xl:block bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
-            <div className="flex items-center mb-4">
-              <span className="text-[13px] font-semibold text-fg">Flujo de caja</span>
-              <div className="ml-auto flex gap-1">
-                {(['semanal', 'mensual', 'anual'] as const).map(v => (
-                  <button
-                    key={v}
-                    onClick={() => setCashView(v)}
-                    className={`text-[11px] px-2.5 py-1 rounded-[4px] font-medium capitalize transition-colors ${
-                      cashView === v
-                        ? 'bg-[#EEF8FA] text-[#0C647A] border border-[#A2DCE7]'
-                        : 'text-fg-muted hover:bg-surface-hover border border-transparent'
-                    }`}
-                  >
-                    {v.charAt(0).toUpperCase() + v.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {cashFlow ? (
-              <PanelBarChart data={cashFlow[cashView]} color={PRIMARY} />
-            ) : (
-              <Skeleton shape="block" className="h-40 w-full" />
-            )}
-          </div>
-
-          {/* Gastos por categoría */}
-          <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
-            <div className="text-[13px] font-semibold text-fg mb-4">Gastos por proveedor</div>
-            {gastos.length > 0 ? (
-              <PanelDonutChart segments={gastos} />
-            ) : loading ? (
-              <Skeleton shape="block" className="h-40 w-full" />
-            ) : (
-              <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Sin datos de compras en el período</div>
-            )}
-          </div>
+      </PanelWidgetSlot>
+    ),
+    stock_alerts: hasStockAlerts ? (
+      <PanelWidgetSlot widgetId="stock_alerts">
+        <div className="flex justify-end mb-1">
+          <PanelWidgetMenu widgetId="stock_alerts" />
         </div>
-
-        {/* Bottom row */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          {/* Recent invoices */}
-          <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center">
-              <span className="text-[13px] font-semibold text-fg">Facturas recientes</span>
-              <Link href="/ventas/facturas" className="ml-auto text-[12px] text-[#0C647A] hover:underline flex items-center gap-1">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          {stockAlerts!.expired > 0 && (
+            <Link href="/inventario/stock?expired=true" className="bg-danger-bg border border-danger rounded-[4px] p-4 flex items-center gap-3 hover:bg-danger-bg transition-colors">
+              <div className="w-9 h-9 rounded-[4px] bg-danger-bg flex items-center justify-center shrink-0 text-danger">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div>
+                <div className="font-mono text-xl font-medium text-danger leading-none">{stockAlerts!.expired}</div>
+                <div className="text-[11px] text-danger mt-0.5">Producto{stockAlerts!.expired > 1 ? 's' : ''} vencido{stockAlerts!.expired > 1 ? 's' : ''}</div>
+              </div>
+            </Link>
+          )}
+          {stockAlerts!.expiring_soon > 0 && (
+            <Link href="/inventario/stock?expiring_within_days=7" className="bg-warning-bg border border-warning rounded-[4px] p-4 flex items-center gap-3 hover:bg-warning-bg transition-colors">
+              <div className="w-9 h-9 rounded-[4px] bg-warning-bg flex items-center justify-center shrink-0 text-warning">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </div>
+              <div>
+                <div className="font-mono text-xl font-medium text-warning leading-none">{stockAlerts!.expiring_soon}</div>
+                <div className="text-[11px] text-warning mt-0.5">Vence{stockAlerts!.expiring_soon > 1 ? 'n' : ''} en 7 días</div>
+              </div>
+            </Link>
+          )}
+          {stockAlerts!.below_minimum > 0 && (
+            <Link href="/inventario/stock?below_minimum=true" className="bg-orange-50 border border-orange-200 rounded-[4px] p-4 flex items-center gap-3 hover:bg-orange-100 transition-colors">
+              <div className="w-9 h-9 rounded-[4px] bg-orange-100 flex items-center justify-center shrink-0 text-orange-600">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
+                </svg>
+              </div>
+              <div>
+                <div className="font-mono text-xl font-medium text-orange-700 leading-none">{stockAlerts!.below_minimum}</div>
+                <div className="text-[11px] text-orange-600 mt-0.5">Bajo stock mínimo</div>
+              </div>
+            </Link>
+          )}
+        </div>
+      </PanelWidgetSlot>
+    ) : null,
+    cash_flow: (
+      <PanelWidgetSlot widgetId="cash_flow">
+        <div className="hidden xl:block bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
+          <div className="flex items-center mb-4 gap-2">
+            <span className="text-[13px] font-semibold text-fg">Flujo de caja</span>
+            <div className="ml-auto flex items-center gap-1">
+              {(['semanal', 'mensual', 'anual'] as const).map(v => (
+                <button
+                  key={v}
+                  onClick={() => setCashView(v)}
+                  className={`text-[11px] px-2.5 py-1 rounded-[4px] font-medium capitalize transition-colors ${
+                    cashView === v
+                      ? 'bg-brand-accent-bg text-brand-accent border border-brand-accent-border'
+                      : 'text-fg-muted hover:bg-surface-hover border border-transparent'
+                  }`}
+                >
+                  {v.charAt(0).toUpperCase() + v.slice(1)}
+                </button>
+              ))}
+              <PanelWidgetMenu widgetId="cash_flow" />
+            </div>
+          </div>
+          {cashFlow ? (
+            <PanelBarChart data={cashFlow[cashView]} color={BRAND_CHART_COLOR} />
+          ) : (
+            <Skeleton shape="block" className="h-40 w-full" />
+          )}
+        </div>
+      </PanelWidgetSlot>
+    ),
+    gastos: (
+      <PanelWidgetSlot widgetId="gastos">
+        <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <span className="text-[13px] font-semibold text-fg">Gastos por proveedor</span>
+            <PanelWidgetMenu widgetId="gastos" />
+          </div>
+          {gastos.length > 0 ? (
+            <PanelDonutChart segments={gastos} />
+          ) : loading ? (
+            <Skeleton shape="block" className="h-40 w-full" />
+          ) : (
+            <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Sin datos de compras en el período</div>
+          )}
+        </div>
+      </PanelWidgetSlot>
+    ),
+    recent_invoices: (
+      <PanelWidgetSlot widgetId="recent_invoices">
+        <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+          <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+            <span className="text-[13px] font-semibold text-fg">Facturas recientes</span>
+            <div className="ml-auto flex items-center gap-2">
+              <Link href="/ventas/facturas" className="text-[12px] text-brand-accent hover:underline flex items-center gap-1">
                 Ver todas
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </Link>
+              <PanelWidgetMenu widgetId="recent_invoices" />
             </div>
-            {invoices.length > 0 ? (
-              <div className="overflow-x-auto">
+          </div>
+          {invoices.length > 0 ? (
+            <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-surface-muted">
@@ -463,54 +525,113 @@ export function PanelClient() {
                   ))}
                 </tbody>
               </table>
-              </div>
-            ) : loading ? (
-              <div className="flex flex-col gap-2.5 p-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-7 w-full" />
-                ))}
-              </div>
-            ) : (
-              <div className="p-6 text-sm text-fg-subtle text-center">Sin facturas en el período</div>
-            )}
-          </div>
-
-          {/* Activity feed */}
-          <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-            <div className="px-4 py-3 border-b border-border">
-              <span className="text-[13px] font-semibold text-fg">Actividad reciente</span>
             </div>
-            {activity.length > 0 ? (
-              <div>
-                {activity.map((item, i) => (
-                  <div key={i} className="flex items-start gap-3 px-4 py-2.5 border-b border-border last:border-0">
-                    <div className="w-7 h-7 rounded-full bg-[#D0EEF3] flex items-center justify-center shrink-0 mt-0.5">
-                      <ActivityIcon type={item.type} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[12px] text-fg leading-snug">{item.text}</div>
-                      <div className="text-[11px] text-fg-subtle mt-0.5">{item.time}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : loading ? (
-              <div>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-start gap-3 px-4 py-2.5 border-b border-border last:border-0">
-                    <Skeleton shape="circle" className="h-7 w-7 shrink-0" />
-                    <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                      <Skeleton className="h-3 w-3/4" />
-                      <Skeleton className="h-2.5 w-16" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-6 text-sm text-fg-subtle text-center">Sin actividad reciente</div>
-            )}
-          </div>
+          ) : loading ? (
+            <div className="flex flex-col gap-2.5 p-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-7 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 text-sm text-fg-subtle text-center">Sin facturas en el período</div>
+          )}
         </div>
+      </PanelWidgetSlot>
+    ),
+    activity: (
+      <PanelWidgetSlot widgetId="activity">
+        <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+            <span className="text-[13px] font-semibold text-fg">Actividad reciente</span>
+            <PanelWidgetMenu widgetId="activity" />
+          </div>
+          {activity.length > 0 ? (
+            <div>
+              {activity.map((item, i) => (
+                <div key={i} className="flex items-start gap-3 px-4 py-2.5 border-b border-border last:border-0">
+                  <div className="w-7 h-7 rounded-full bg-brand-accent-bg text-brand-accent flex items-center justify-center shrink-0 mt-0.5">
+                    <ActivityIcon type={item.type} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] text-fg leading-snug">{item.text}</div>
+                    <div className="text-[11px] text-fg-subtle mt-0.5">{item.time}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : loading ? (
+            <div>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-start gap-3 px-4 py-2.5 border-b border-border last:border-0">
+                  <Skeleton shape="circle" className="h-7 w-7 shrink-0" />
+                  <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="h-2.5 w-16" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 text-sm text-fg-subtle text-center">Sin actividad reciente</div>
+          )}
+        </div>
+      </PanelWidgetSlot>
+    ),
+  }), [
+    periodLabel,
+    performanceSeries,
+    kpis,
+    counts,
+    lastUpdated,
+    loading,
+    analytics,
+    stockAlerts,
+    hasStockAlerts,
+    cashFlow,
+    cashView,
+    gastos,
+    invoices,
+    activity,
+  ])
+
+  const firstVisibleAnalyticsId = widgetOrder.find(
+    id => id.startsWith('analytics_') && !isHidden(id),
+  )
+
+  return (
+    <div className="flex flex-col h-full" id="panel-dashboard">
+      <TopBar breadcrumbs={[{ label: 'Panel' }]} />
+
+      <PanelFilterBar
+        period={period}
+        branchId={branchId}
+        fromDate={fromDate}
+        toDate={toDate}
+        branches={branches}
+        onPeriodChange={p => updateParams({ period: p })}
+        onBranchChange={id => updateParams({ branch_id: id })}
+        onFromChange={from => updateParams({ from })}
+        onToChange={to => updateParams({ to })}
+      />
+
+      <div className="flex-1 overflow-auto p-4 md:p-6 bg-surface-muted print:bg-surface print:p-4">
+        {widgetOrder.map(id => {
+          const node = widgetNodes[id]
+          if (!node) return null
+
+          const showCompare = id === firstVisibleAnalyticsId && comparePeriodLabel
+
+          return (
+            <Fragment key={id}>
+              {showCompare ? (
+                <div className="mb-4">
+                  <PanelAnalyticsCompareLabel label={comparePeriodLabel} />
+                </div>
+              ) : null}
+              <div className="mb-4">{node}</div>
+            </Fragment>
+          )
+        })}
       </div>
     </div>
   )

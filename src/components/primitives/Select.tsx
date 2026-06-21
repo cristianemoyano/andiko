@@ -106,12 +106,14 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
                 className={cn(
                   'relative flex w-full cursor-pointer select-none items-center rounded-[3px] py-1.5 pl-2.5 pr-8 text-[13px] text-fg-muted outline-none transition-colors',
                   'data-[highlighted]:bg-surface-hover data-[highlighted]:text-fg',
-                  'data-[state=checked]:font-medium data-[state=checked]:text-brand-800',
+                  'data-[state=checked]:bg-brand-50 data-[state=checked]:font-medium data-[state=checked]:text-brand-800',
+                  'dark:data-[state=checked]:bg-brand-900/40 dark:data-[state=checked]:text-brand-200',
+                  'data-[highlighted]:data-[state=checked]:text-fg dark:data-[highlighted]:data-[state=checked]:text-brand-100',
                   'data-[disabled]:pointer-events-none data-[disabled]:text-fg-subtle',
                 )}
               >
                 <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
-                <RadixSelect.ItemIndicator className="absolute right-2 flex items-center text-brand-600">
+                <RadixSelect.ItemIndicator className="absolute right-2 flex items-center text-brand-600 dark:text-brand-300">
                   <svg
                     width="12"
                     height="12"

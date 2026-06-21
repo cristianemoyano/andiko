@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.12.0](https://github.com/cristianemoyano/andiko/compare/v0.11.0...v0.12.0) (2026-06-21)
+
+### Features
+
+* **core:** panel analytics, widget customization, and dark mode polish ([892bcbc](https://github.com/cristianemoyano/andiko/commit/892bcbcea3b96ebdf8ec933ae659a0959ca4c9fa))
+
 ## [0.11.0](https://github.com/cristianemoyano/andiko/compare/v0.10.0...v0.11.0) (2026-06-21)
 
 ### Features
