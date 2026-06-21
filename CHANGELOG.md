@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.13.0](https://github.com/cristianemoyano/andiko/compare/v0.12.0...v0.13.0) (2026-06-21)
+
+### Features
+
+* **core:** org roles, capabilities UI, and panel access control ([f57bff6](https://github.com/cristianemoyano/andiko/commit/f57bff63927c6d2b94b1370ef9554be1e775132d))
+
 ## [0.12.0](https://github.com/cristianemoyano/andiko/compare/v0.11.0...v0.12.0) (2026-06-21)
 
 ### Features
