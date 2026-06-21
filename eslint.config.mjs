@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Hand-written service worker — runs in a webworker context (not DOM),
+    // served as a static asset from /public.
+    "public/sw.js",
   ]),
   ...storybook.configs["flat/recommended"]
 ]);
