@@ -19,6 +19,8 @@ export interface BranchSummary {
   id: string
   name: string
   branch_code: number
+  /** Punto de venta AFIP — incluido en detalle de comprobantes fiscales. */
+  punto_venta?: number | null
 }
 
 export const PAYMENT_CONDITION_LABEL: Record<PaymentCondition, string> = {

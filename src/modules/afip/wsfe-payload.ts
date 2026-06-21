@@ -22,7 +22,7 @@ export type AfipAssociatedComprobante = {
 
 export type AfipDocumentInput = {
   kind: ComprobanteKind
-  issueDate: Date
+  issueDate: Date | string
   items: AfipLineItem[]
   /** Required for credit/debit notes: the comprobante they reference. */
   associated?: AfipAssociatedComprobante | null
@@ -97,12 +97,14 @@ export function buildFECAERequest(params: BuildFECAEParams): FECAERequest {
   }
 }
 
-/** Formats a Date as AFIP's `yyyymmdd` string (UTC-safe). */
-export function formatAfipDate(date: Date): string {
-  const y = date.getUTCFullYear()
-  const m = String(date.getUTCMonth() + 1).padStart(2, '0')
-  const d = String(date.getUTCDate()).padStart(2, '0')
-  return `${y}${m}${d}`
+/** Formats a date as AFIP's `yyyymmdd` string (UTC-safe). Accepts Date or ISO/date-only strings from Sequelize. */
+export function formatAfipDate(date: Date | string): string {
+  const d = date instanceof Date ? date : new Date(date)
+  if (Number.isNaN(d.getTime())) throw new Error('INVALID_AFIP_DATE')
+  const y = d.getUTCFullYear()
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  return `${y}${m}${day}`
 }
 
 /** Converts an AFIP `yyyymmdd` string to an ISO `yyyy-mm-dd` date string. */

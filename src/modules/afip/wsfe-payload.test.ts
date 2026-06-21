@@ -82,4 +82,9 @@ describe('AFIP date helpers', () => {
     expect(formatAfipDate(new Date(Date.UTC(2026, 5, 9)))).toBe('20260609')
     expect(parseAfipDate('20260609')).toBe('2026-06-09')
   })
+
+  it('formats ISO date strings from Sequelize', () => {
+    expect(formatAfipDate('2026-05-09')).toBe('20260509')
+    expect(formatAfipDate('2026-05-09T00:00:00.000Z')).toBe('20260509')
+  })
 })

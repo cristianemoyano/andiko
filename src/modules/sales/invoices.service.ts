@@ -11,7 +11,7 @@ import type { InvoiceInput, InvoiceUpdateInput, InvoiceQuery } from './invoice.s
 import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
 import User from '@/modules/auth/user.model'
-import { ensureSalesBranchAssociations } from './sales-branch-associations'
+import { ensureSalesBranchAssociations, BRANCH_AFIP_ATTRIBUTES } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
 import type { IvaRate } from '@/types'
@@ -48,7 +48,7 @@ export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
       'notes', 'created_at',
     ],
     include: [
-      { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
       { model: User, as: 'salesperson', attributes: ['id', 'name'] },
     ],
@@ -63,7 +63,7 @@ export async function getInvoice(id: string, ctx: TenantContext) {
   const invoice = await Invoice.findOne({
     where: whereAllowedBranches(ctx, { id }),
     include: [
-      { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'cuit'], required: false },
       { model: User, as: 'salesperson', attributes: ['id', 'name'] },
       { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
@@ -267,7 +267,7 @@ async function getInvoiceInTransaction(id: string, t: import('sequelize').Transa
 
   return Invoice.findByPk(id, {
     include: [
-      { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
+      { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
       { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],

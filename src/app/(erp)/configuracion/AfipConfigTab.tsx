@@ -8,7 +8,7 @@ import { Select } from '@/components/primitives/Select'
 import { FormField } from '@/components/primitives/FormField'
 import { Badge } from '@/components/primitives/Badge'
 import { DataTable, ConfirmDialog, type Column } from '@/components/erp'
-import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
 
 type Environment = 'homologacion' | 'produccion'
@@ -23,6 +23,182 @@ const ENVIRONMENT_OPTIONS = [
   { value: 'produccion', label: 'Producción' },
 ]
 
+const ORG_IVA_OPTIONS = [
+  { value: 'responsable_inscripto', label: 'Responsable inscripto' },
+  { value: 'monotributista', label: 'Monotributista' },
+  { value: 'exento', label: 'Exento' },
+  { value: 'consumidor_final', label: 'Consumidor final' },
+  { value: 'no_responsable', label: 'No responsable' },
+]
+
+// ── Section 0: Datos fiscales de la empresa (emisor) ─────────────────────────
+
+type OrgFiscal = {
+  legal_name: string | null
+  cuit: string | null
+  iva_condition: string | null
+  fiscal_address: string | null
+}
+
+function DatosFiscalesSection() {
+  const [saved, setSaved] = useState<OrgFiscal | null>(null)
+  const [legalName, setLegalName] = useState('')
+  const [cuit, setCuit] = useState('')
+  const [ivaCondition, setIvaCondition] = useState('')
+  const [fiscalAddress, setFiscalAddress] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [serverError, setServerError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      setLoading(true)
+      setLoadError('')
+      try {
+        const data = await fetchJson<{ organization: OrgFiscal }>('/api/v1/afip/config')
+        if (cancelled) return
+        const org = data.organization
+        setSaved(org)
+        setLegalName(org.legal_name ?? '')
+        setCuit(org.cuit ?? '')
+        setIvaCondition(org.iva_condition ?? '')
+        setFiscalAddress(org.fiscal_address ?? '')
+      } catch (e) {
+        if (!cancelled) setLoadError(getApiErrorMessage(e))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!justSaved) return
+    const timer = window.setTimeout(() => setJustSaved(false), 2000)
+    return () => window.clearTimeout(timer)
+  }, [justSaved])
+
+  const dirty = saved != null && (
+    legalName !== (saved.legal_name ?? '') ||
+    cuit !== (saved.cuit ?? '') ||
+    ivaCondition !== (saved.iva_condition ?? '') ||
+    fiscalAddress !== (saved.fiscal_address ?? '')
+  )
+
+  async function save() {
+    setSaving(true)
+    setServerError('')
+    setErrors({})
+    try {
+      const updated = await fetchJson<OrgFiscal>('/api/v1/afip/fiscal', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          legal_name: legalName.trim(),
+          cuit: cuit.trim(),
+          iva_condition: ivaCondition || undefined,
+          fiscal_address: fiscalAddress.trim() || null,
+        }),
+      })
+      setSaved(updated)
+      setLegalName(updated.legal_name ?? '')
+      setCuit(updated.cuit ?? '')
+      setIvaCondition(updated.iva_condition ?? '')
+      setFiscalAddress(updated.fiscal_address ?? '')
+      setJustSaved(true)
+      notifySuccess('Datos fiscales guardados')
+    } catch (e) {
+      if (isApiRequestError(e) && e.details && typeof e.details === 'object') {
+        const fieldErrors = (e.details as { fieldErrors?: Record<string, string[]> }).fieldErrors
+        if (fieldErrors) {
+          setErrors(Object.fromEntries(Object.entries(fieldErrors).map(([k, v]) => [k, v[0] ?? ''])))
+        }
+      }
+      setServerError(getApiErrorMessage(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const missingForAfip = !loading && saved && (!saved.iva_condition || !saved.cuit || !saved.legal_name)
+
+  return (
+    <section className="rounded-sm border border-border bg-surface p-4 space-y-4">
+      <div>
+        <h2 className="text-sm font-semibold text-fg">Datos fiscales de tu empresa</h2>
+        <p className="mt-0.5 text-[12px] text-fg-muted">
+          Son los datos del emisor de las facturas (tu organización). La condición IVA del cliente no aplica acá.
+        </p>
+      </div>
+
+      {missingForAfip && (
+        <div className="rounded-sm border border-warning bg-warning-bg px-3 py-2 text-[12px] text-warning">
+          Completá razón social, CUIT y condición IVA para poder autorizar comprobantes en AFIP.
+        </div>
+      )}
+
+      {loading && <p className="text-[13px] text-fg-subtle">Cargando…</p>}
+      {loadError && <p className="text-[13px] text-danger">{loadError}</p>}
+
+      {!loading && !loadError && (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField label="Razón social" htmlFor="afip-org-legal-name" error={errors.legal_name}>
+              <Input
+                id="afip-org-legal-name"
+                value={legalName}
+                onChange={e => setLegalName(e.target.value)}
+                error={!!errors.legal_name}
+                placeholder="Ej: Mi Empresa S.A."
+              />
+            </FormField>
+            <FormField label="CUIT" htmlFor="afip-org-cuit" error={errors.cuit}>
+              <Input
+                id="afip-org-cuit"
+                value={cuit}
+                onChange={e => setCuit(e.target.value)}
+                error={!!errors.cuit}
+                placeholder="30-12345678-9"
+                className="font-mono"
+              />
+            </FormField>
+            <FormField label="Condición IVA (emisor)" htmlFor="afip-org-iva" error={errors.iva_condition}>
+              <Select
+                value={ivaCondition}
+                onChange={setIvaCondition}
+                options={ORG_IVA_OPTIONS}
+                placeholder="Seleccioná…"
+              />
+            </FormField>
+            <FormField label="Domicilio fiscal" htmlFor="afip-org-address" error={errors.fiscal_address}>
+              <Input
+                id="afip-org-address"
+                value={fiscalAddress}
+                onChange={e => setFiscalAddress(e.target.value)}
+                error={!!errors.fiscal_address}
+                placeholder="Calle, ciudad, provincia"
+              />
+            </FormField>
+          </div>
+
+          {serverError && <p className="text-[13px] text-danger">{serverError}</p>}
+
+          <div className="flex items-center gap-3">
+            <Button type="button" size="sm" disabled={saving || !dirty} onClick={save}>
+              {saving ? 'Guardando…' : 'Guardar datos fiscales'}
+            </Button>
+            {justSaved && !dirty && <span className="text-[12px] text-success">Guardado</span>}
+          </div>
+        </>
+      )}
+    </section>
+  )
+}
+
 // ── Section 1: Puntos de venta ───────────────────────────────────────────────
 
 type AfipConfig = {
@@ -32,46 +208,110 @@ type AfipConfig = {
   branches: { id: string; name: string; branch_code: number; punto_venta: number | null }[]
 }
 
+type BranchPuntoVenta = { id: string; punto_venta: number | null }
+
+function draftForPuntoVenta(puntoVenta: number | null): string {
+  return puntoVenta != null ? String(puntoVenta) : ''
+}
+
+function isFormDirty(
+  branches: AfipConfig['branches'],
+  drafts: Record<string, string>,
+): boolean {
+  return branches.some(b => (drafts[b.id] ?? '') !== draftForPuntoVenta(b.punto_venta))
+}
+
 function PuntosDeVentaSection() {
   const [config, setConfig] = useState<AfipConfig | null>(null)
-  const [refresh, setRefresh] = useState(0)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
-  const [savingId, setSavingId] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    fetchJson<AfipConfig>('/api/v1/afip/config')
-      .then(data => {
+    void (async () => {
+      setLoading(true)
+      setLoadError('')
+      try {
+        const data = await fetchJson<AfipConfig>('/api/v1/afip/config')
         if (cancelled) return
         setConfig(data)
-        setDrafts(Object.fromEntries(data.branches.map(b => [b.id, b.punto_venta != null ? String(b.punto_venta) : ''])))
-      })
-      .catch(e => { if (!cancelled) notifyApiError(e) })
+        setDrafts(Object.fromEntries(data.branches.map(b => [b.id, draftForPuntoVenta(b.punto_venta)])))
+        setErrors({})
+      } catch (e) {
+        if (cancelled) return
+        setLoadError(getApiErrorMessage(e))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
     return () => { cancelled = true }
-  }, [refresh])
+  }, [])
 
-  async function save(branchId: string) {
-    const raw = drafts[branchId]
-    const pv = Number(raw)
-    if (!raw || Number.isNaN(pv) || pv <= 0) {
-      notifyApiError(new Error('Ingresá un punto de venta válido (mayor a 0).'))
-      return
+  useEffect(() => {
+    if (!saved) return
+    const timer = window.setTimeout(() => setSaved(false), 2000)
+    return () => window.clearTimeout(timer)
+  }, [saved])
+
+  async function saveAll() {
+    if (!config) return
+
+    const nextErrors: Record<string, string> = {}
+    const payload: { branch_id: string; punto_venta: number }[] = []
+
+    for (const b of config.branches) {
+      const raw = drafts[b.id]?.trim() ?? ''
+      if (!raw) {
+        nextErrors[b.id] = 'Ingresá un punto de venta'
+        continue
+      }
+      const pv = Number(raw)
+      if (!Number.isInteger(pv) || pv <= 0 || pv > 99999) {
+        nextErrors[b.id] = 'Entero entre 1 y 99999'
+        continue
+      }
+      payload.push({ branch_id: b.id, punto_venta: pv })
     }
-    setSavingId(branchId)
+
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) return
+
+    setSaving(true)
     try {
-      await fetchJson('/api/v1/afip/config', {
+      const res = await fetchJson<{ branches: BranchPuntoVenta[] }>('/api/v1/afip/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ branch_id: branchId, punto_venta: pv }),
+        body: JSON.stringify({ branches: payload }),
       })
-      notifySuccess('Punto de venta actualizado')
-      setRefresh(r => r + 1)
+
+      const byId = new Map(res.branches.map(b => [b.id, b.punto_venta]))
+      setConfig(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          branches: prev.branches.map(b => ({
+            ...b,
+            punto_venta: byId.get(b.id) ?? b.punto_venta,
+          })),
+        }
+      })
+      setDrafts(Object.fromEntries(
+        config.branches.map(b => [b.id, draftForPuntoVenta(byId.get(b.id) ?? b.punto_venta)]),
+      ))
+      setSaved(true)
+      notifySuccess('Puntos de venta guardados')
     } catch (e) {
       notifyApiError(e)
     } finally {
-      setSavingId(null)
+      setSaving(false)
     }
   }
+
+  const dirty = config ? isFormDirty(config.branches, drafts) : false
 
   return (
     <section className="rounded-sm border border-border bg-surface p-4 space-y-4">
@@ -82,31 +322,55 @@ function PuntosDeVentaSection() {
         </p>
       </div>
 
-      {config && (
-        <div className="space-y-2">
-          {config.branches.map(b => (
-            <div key={b.id} className="flex flex-wrap items-end gap-3 border-b border-border pb-2 last:border-0">
-              <div className="min-w-[180px]">
-                <p className="text-[13px] font-medium text-fg">{b.name}</p>
-                <p className="text-[11px] text-fg-subtle">Sucursal {String(b.branch_code).padStart(2, '0')}</p>
+      {loading && <p className="text-[13px] text-fg-subtle">Cargando sucursales…</p>}
+      {loadError && <p className="text-[13px] text-danger">{loadError}</p>}
+
+      {config && !loading && (
+        <>
+          <div className="space-y-2">
+            {config.branches.map(b => (
+              <div key={b.id} className="flex flex-wrap items-end gap-3 border-b border-border pb-2 last:border-0">
+                <div className="min-w-[180px] flex-1">
+                  <p className="text-[13px] font-medium text-fg">{b.name}</p>
+                  <p className="text-[11px] text-fg-subtle">Sucursal {String(b.branch_code).padStart(2, '0')}</p>
+                </div>
+                <FormField label="Punto de venta" htmlFor={`afip-pv-${b.id}`} error={errors[b.id]}>
+                  <Input
+                    id={`afip-pv-${b.id}`}
+                    type="text"
+                    inputMode="numeric"
+                    className="w-32"
+                    value={drafts[b.id] ?? ''}
+                    error={!!errors[b.id]}
+                    onChange={e => {
+                      const value = e.target.value.replace(/\D/g, '')
+                      setDrafts(d => ({ ...d, [b.id]: value }))
+                      setErrors(prev => {
+                        if (!prev[b.id]) return prev
+                        const next = { ...prev }
+                        delete next[b.id]
+                        return next
+                      })
+                    }}
+                    placeholder="Ej: 3"
+                  />
+                </FormField>
               </div>
-              <FormField label="Punto de venta">
-                <Input
-                  type="number"
-                  min="1"
-                  className="w-32"
-                  value={drafts[b.id] ?? ''}
-                  onChange={e => setDrafts(d => ({ ...d, [b.id]: e.target.value }))}
-                  placeholder="Ej: 3"
-                />
-              </FormField>
-              <Button size="sm" variant="secondary" disabled={savingId === b.id} onClick={() => save(b.id)}>
-                {savingId === b.id ? 'Guardando…' : 'Guardar'}
+            ))}
+            {config.branches.length === 0 && <p className="text-[13px] text-fg-subtle">No hay sucursales activas.</p>}
+          </div>
+
+          {config.branches.length > 0 && (
+            <div className="flex items-center gap-3 pt-1">
+              <Button type="button" size="sm" disabled={saving || !dirty} onClick={saveAll}>
+                {saving ? 'Guardando…' : 'Guardar puntos de venta'}
               </Button>
+              {saved && !dirty && (
+                <span className="text-[12px] text-success">Guardado</span>
+              )}
             </div>
-          ))}
-          {config.branches.length === 0 && <p className="text-[13px] text-fg-subtle">No hay sucursales activas.</p>}
-        </div>
+          )}
+        </>
       )}
     </section>
   )
@@ -367,6 +631,7 @@ function ContingencySection() {
 export function AfipConfigTab() {
   return (
     <div className="space-y-5">
+      <DatosFiscalesSection />
       <PuntosDeVentaSection />
       <CertificadoSection />
       <ContingencySection />

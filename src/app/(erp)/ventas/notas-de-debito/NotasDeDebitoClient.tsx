@@ -257,7 +257,7 @@ export function NotasDeDebitoClient() {
                 </svg>
                 <input
                   className="h-[30px] w-full sm:w-52 rounded-sm border border-border-strong bg-surface pl-7 pr-3 text-[13px] focus:border-ring focus:outline-none"
-                  placeholder="Buscar número o motivo..."
+                  placeholder="Buscar número, cliente o factura..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1) }}
                 />

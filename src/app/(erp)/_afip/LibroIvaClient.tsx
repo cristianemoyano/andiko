@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { DataTable, type Column, COMPROBANTE_TIPO_LABEL } from '@/components/erp'
-import { DateInput } from '@/components/primitives/DateInput'
-import { FormField } from '@/components/primitives/FormField'
+import { DatePicker } from '@/components/primitives/DatePicker'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { fetchJson } from '@/lib/fetch-json'
 import { notifyApiError } from '@/lib/notify'
@@ -59,14 +58,20 @@ export interface LibroIvaClientProps {
   showCae: boolean
 }
 
+function parseISODate(raw: string | null): Date | null {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null
+  const d = new Date(`${raw}T00:00:00.000Z`)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 export function LibroIvaClient({ endpoint, breadcrumbs, subnav, counterpartyHeader, showCae }: LibroIvaClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   const initialFrom = searchParams.get('from')
   const initialTo = searchParams.get('to')
-  const [from, setFrom] = useState<Date | null>(initialFrom ? new Date(initialFrom) : startOfMonth())
-  const [to, setTo] = useState<Date | null>(initialTo ? new Date(initialTo) : new Date())
+  const [from, setFrom] = useState<Date | null>(() => parseISODate(initialFrom) ?? startOfMonth())
+  const [to, setTo] = useState<Date | null>(() => parseISODate(initialTo) ?? new Date())
 
   const [result, setResult] = useState<LibroResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -115,33 +120,38 @@ export function LibroIvaClient({ endpoint, breadcrumbs, subnav, counterpartyHead
       <TopBar breadcrumbs={breadcrumbs} />
       {subnav}
 
-      <div className="flex-1 overflow-auto p-5 space-y-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <FormField label="Desde">
-            <DateInput value={from} onChange={setFrom} />
-          </FormField>
-          <FormField label="Hasta">
-            <DateInput value={to} onChange={setTo} />
-          </FormField>
-          {totals && (
-            <span className="ml-auto text-[12px] text-fg-muted self-center">
-              {totals.count} comprobante{totals.count !== 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
-
+      <div className="flex-1 overflow-auto p-5">
         <DataTable
           columns={columns}
           data={loading ? null : (result?.rows ?? [])}
           keyExtractor={(r) => `${r.kind}-${r.number}`}
-          emptyMessage="No hay comprobantes en el período."
+          emptyMessage={loading ? 'Cargando comprobantes…' : 'No hay comprobantes en el período.'}
+          stickyFirstColumn
+          toolbar={
+            <>
+              <label className="flex items-center gap-1.5 text-[12px] text-fg-muted">
+                Desde
+                <DatePicker value={from} onChange={setFrom} className="w-[7.5rem]" />
+              </label>
+              <label className="flex items-center gap-1.5 text-[12px] text-fg-muted">
+                Hasta
+                <DatePicker value={to} onChange={setTo} className="w-[7.5rem]" />
+              </label>
+              <span className="flex-1" />
+              <span className="text-[12px] text-fg-muted">
+                {loading
+                  ? 'Cargando…'
+                  : `${totals?.count ?? 0} comprobante${(totals?.count ?? 0) !== 1 ? 's' : ''}`}
+              </span>
+            </>
+          }
           footer={
             totals ? (
-              <div className="flex flex-wrap justify-end gap-6 px-4 py-2 text-[13px]">
-                <span className="text-fg-muted">Neto: <span className="tabular-nums font-medium text-fg">{formatARS(totals.neto)}</span></span>
-                <span className="text-fg-muted">IVA: <span className="tabular-nums font-medium text-fg">{formatARS(totals.iva)}</span></span>
-                <span className="text-fg-muted">Total: <span className="tabular-nums font-semibold text-fg">{formatARS(totals.total)}</span></span>
-              </div>
+              <>
+                <span>Neto: <span className="tabular-nums font-medium text-fg">{formatARS(totals.neto)}</span></span>
+                <span>IVA: <span className="tabular-nums font-medium text-fg">{formatARS(totals.iva)}</span></span>
+                <span>Total: <span className="tabular-nums font-semibold text-fg">{formatARS(totals.total)}</span></span>
+              </>
             ) : undefined
           }
         />

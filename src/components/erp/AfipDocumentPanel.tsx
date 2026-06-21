@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { Card, CardHeader, CardContent } from '@/components/layout/Card'
 import { Button } from '@/components/primitives/Button'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -33,8 +34,16 @@ export interface AfipDocumentData {
   afip_observations: AfipObservationView[] | null
 }
 
+export interface AfipBranchContext {
+  name: string
+  branch_code: number
+  punto_venta?: number | null
+}
+
 export interface AfipDocumentPanelProps {
   doc: AfipDocumentData
+  /** Branch that issued the document — used to validate AFIP punto de venta before authorize. */
+  branch?: AfipBranchContext | null
   /** When true, shows the "Autorizar AFIP" action. */
   canAuthorize: boolean
   /** Performs the authorize request (owned by the page; panel stays presentational). */
@@ -52,14 +61,26 @@ function formatComprobanteNumber(pv: number | null, nro: number | null): string 
   return `${String(pv).padStart(4, '0')}-${String(nro).padStart(8, '0')}`
 }
 
+function formatBranchLabel(branch: AfipBranchContext): string {
+  return `${branch.name} (Sucursal ${String(branch.branch_code).padStart(2, '0')})`
+}
+
+function missingPuntoVentaMessage(branch: AfipBranchContext | null | undefined): string | null {
+  if (!branch) return 'El comprobante no tiene sucursal asignada.'
+  if (branch.punto_venta == null) return `Falta configurar el punto de venta AFIP para ${formatBranchLabel(branch)}.`
+  return null
+}
+
 /**
  * Presentational AFIP panel for a fiscal document: shows transmission status,
  * CAE / vencimiento / comprobante details and observations, and an authorize
  * action when allowed. All network calls are delegated to `onAuthorize`.
  */
-export function AfipDocumentPanel({ doc, canAuthorize, onAuthorize }: AfipDocumentPanelProps) {
+export function AfipDocumentPanel({ doc, branch, canAuthorize, onAuthorize }: AfipDocumentPanelProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const comprobanteNumber = formatComprobanteNumber(doc.punto_venta, doc.cbte_numero)
+  const puntoVentaBlock = canAuthorize ? missingPuntoVentaMessage(branch) : null
+  const showAuthorize = canAuthorize && !puntoVentaBlock
 
   return (
     <Card>
@@ -107,7 +128,22 @@ export function AfipDocumentPanel({ doc, canAuthorize, onAuthorize }: AfipDocume
           </div>
         )}
 
-        {canAuthorize && (
+        {puntoVentaBlock && (
+          <div className="rounded-sm border border-warning bg-warning-bg px-3 py-2 text-[12px]">
+            <p className="font-medium text-warning">{puntoVentaBlock}</p>
+            {branch && (
+              <p className="mt-1 text-fg-muted">
+                Configuralo en{' '}
+                <Link href="/configuracion?section=afip" className="font-medium text-brand-600 underline underline-offset-2">
+                  Configuración → AFIP
+                </Link>{' '}
+                (sección Puntos de venta) antes de autorizar.
+              </p>
+            )}
+          </div>
+        )}
+
+        {showAuthorize && (
           <div>
             <Button size="sm" onClick={() => setConfirmOpen(true)}>
               Autorizar AFIP

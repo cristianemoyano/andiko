@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import Decimal from 'decimal.js'
 import { TopBar } from '@/components/layout/TopBar'
 import { Button } from '@/components/primitives/Button'
@@ -14,7 +15,7 @@ import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { AfipDocumentPanel } from '@/components/erp/AfipDocumentPanel'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { VentasSubNav } from '../../VentasSubNav'
-import type { AfipDocumentFields } from '../../types'
+import type { AfipDocumentFields, BranchSummary } from '../../types'
 import { fetchJson } from '@/lib/fetch-json'
 import { notifyApiError, notifyInfo, notifySuccess } from '@/lib/notify'
 
@@ -38,6 +39,7 @@ type CreditNote = AfipDocumentFields & {
   invoice_id: string | null
   contact: { id: string; legal_name: string; trade_name: string | null } | null
   invoice: { id: string; invoice_number: string } | null
+  branch?: BranchSummary | null
   created_at: string
 }
 
@@ -245,6 +247,13 @@ export function CreditNoteDetail() {
         ]}
         actions={
           <div className="flex gap-2">
+            {!editing && (
+              <Button asChild size="sm" variant="ghost">
+                <Link href={`/ventas/notas-de-credito/${id}/print`} target="_blank" rel="noopener noreferrer">
+                  Imprimir
+                </Link>
+              </Button>
+            )}
             {isDraft && !editing && <Button size="sm" variant="secondary" onClick={startEditing}>Editar</Button>}
             {editing && <Button size="sm" variant="secondary" onClick={() => setEditing(false)}>Cancelar edición</Button>}
             {editing && <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</Button>}
@@ -392,6 +401,7 @@ export function CreditNoteDetail() {
           {!editing && note.status !== 'draft' && (
             <AfipDocumentPanel
               doc={note}
+              branch={note.branch ?? null}
               canAuthorize={note.status === 'issued' && note.afip_status !== 'authorized'}
               onAuthorize={handleAuthorizeAfip}
             />

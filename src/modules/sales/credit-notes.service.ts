@@ -8,6 +8,8 @@ import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
 import CreditNote from './credit-note.model'
 import Invoice from './invoice.model'
 import Contact from '@/modules/contacts/contact.model'
+import Branch from '@/modules/auth/branch.model'
+import { ensureSalesBranchAssociations, BRANCH_AFIP_ATTRIBUTES } from './sales-branch-associations'
 import { nextDocumentNumber } from './sales.utils'
 import type { CreditNoteQuery, CreateCreditNoteInput, UpdateCreditNoteInput } from './credit-note.schema'
 
@@ -20,21 +22,25 @@ export async function listCreditNotes(query: CreditNoteQuery, ctx: TenantContext
   if (query.contact_id) where.contact_id = query.contact_id
   if (query.invoice_id) where.invoice_id = query.invoice_id
   if (query.search) {
+    const term = `%${query.search}%`
     where[Op.or as unknown as string] = [
-      { credit_note_number: { [Op.iLike]: `%${query.search}%` } },
-      { reason: { [Op.iLike]: `%${query.search}%` } },
+      { credit_note_number: { [Op.iLike]: term } },
+      { '$contact.legal_name$': { [Op.iLike]: term } },
+      { '$contact.trade_name$': { [Op.iLike]: term } },
+      { '$invoice.invoice_number$': { [Op.iLike]: term } },
     ]
   }
 
   const { rows, count } = await CreditNote.findAndCountAll({
     where,
+    subQuery: query.search ? false : undefined,
     attributes: [
       'id', 'branch_id', 'contact_id', 'invoice_id', 'credit_note_number', 'status',
       'issue_date', 'currency', 'subtotal', 'discount_amount', 'tax_amount', 'total',
       'applied_amount', 'remaining', 'reason', 'notes', 'created_at', 'updated_at',
     ],
     include: [
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'cuit'], required: false },
       { model: Invoice, as: 'invoice', attributes: ['id', 'invoice_number'], required: false },
     ],
     order: [['created_at', 'DESC']],
@@ -46,10 +52,13 @@ export async function listCreditNotes(query: CreditNoteQuery, ctx: TenantContext
 }
 
 export async function getCreditNote(id: string, ctx: TenantContext) {
+  ensureSalesBranchAssociations()
+
   const note = await CreditNote.findOne({
     where: whereAllowedBranches(ctx, { id }),
     include: [
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'cuit'], required: false },
       { model: Invoice, as: 'invoice', attributes: ['id', 'invoice_number', 'status', 'total', 'balance'], required: false },
     ],
   })

@@ -6,12 +6,16 @@ import type { TenantContext } from '@/lib/tenancy'
 import { getQuote } from '@/modules/sales/sales-quotes.service'
 import { getOrder } from '@/modules/sales/sales-orders.service'
 import { getInvoice } from '@/modules/sales/invoices.service'
+import { getCreditNote } from '@/modules/sales/credit-notes.service'
+import { getDebitNote } from '@/modules/sales/debit-notes.service'
 import { getDeliveryNote } from '@/modules/inventory/delivery-notes.service'
 import { buildAfipQrUrl } from '@/modules/afip/afip-qr'
 import { decString, formatDateArg } from './format-utils'
 import { getPrintHeader } from './issuer'
 import { assertPrintAccess } from './tenant-guards'
 import {
+  CREDIT_NOTE_STATUS_LABEL,
+  DEBIT_NOTE_STATUS_LABEL,
   DELIVERY_NOTE_STATUS_LABEL,
   INVOICE_STATUS_LABEL,
   ORDER_STATUS_LABEL,
@@ -104,6 +108,54 @@ type DeliveryNoteLoaded = {
   branch?: BranchInc | null
   contact?: ContactInc | null
   items?: Array<{ description: string; quantity: unknown }>
+}
+
+type SalesCreditNoteLoaded = {
+  status: string
+  org_id: string | null
+  branch_id: string | null
+  credit_note_number: string
+  currency: string
+  notes: string | null
+  reason: string | null
+  created_at: Date
+  issue_date: Date | string | null
+  subtotal: unknown
+  discount_amount: unknown
+  tax_amount: unknown
+  total: unknown
+  cae: string | null
+  cae_expiration: Date | string | null
+  comprobante_tipo: number | null
+  punto_venta: number | null
+  cbte_numero: number | null
+  branch?: BranchInc | null
+  contact?: ContactInc | null
+  invoice?: { invoice_number: string } | null
+}
+
+type SalesDebitNoteLoaded = {
+  status: string
+  org_id: string | null
+  branch_id: string | null
+  debit_note_number: string
+  currency: string
+  notes: string | null
+  reason: string | null
+  created_at: Date
+  issue_date: Date | string | null
+  subtotal: unknown
+  discount_amount: unknown
+  tax_amount: unknown
+  total: unknown
+  cae: string | null
+  cae_expiration: Date | string | null
+  comprobante_tipo: number | null
+  punto_venta: number | null
+  cbte_numero: number | null
+  branch?: BranchInc | null
+  contact?: ContactInc | null
+  invoice?: { invoice_number: string } | null
 }
 
 function branchFromModel(b: { id: string; name: string; branch_code: number } | null | undefined): PrintableBranch | null {
@@ -276,29 +328,42 @@ function isoDateOnly(value: Date | string | null): string | null {
   return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10)
 }
 
-/** Builds the AFIP CAE + QR block for an authorized invoice (server-side QR data-URL). */
-async function buildInvoiceAfip(invoice: SalesInvoiceLoaded, issuerCuit: string | null): Promise<PrintableAfip | null> {
-  if (!invoice.cae) return null
+/** Builds the AFIP CAE + QR block for an authorized comprobante (server-side QR data-URL). */
+async function buildAuthorizedAfip(
+  doc: {
+    cae: string | null
+    cae_expiration: Date | string | null
+    comprobante_tipo: number | null
+    punto_venta: number | null
+    cbte_numero: number | null
+    issue_date: Date | string | null
+    created_at: Date
+    total: unknown
+    contact?: ContactInc | null
+  },
+  issuerCuit: string | null,
+): Promise<PrintableAfip | null> {
+  if (!doc.cae) return null
 
   let qrDataUrl: string | null = null
   const issuerDigits = digitsOnly(issuerCuit)
-  if (issuerDigits.length === 11 && invoice.punto_venta && invoice.comprobante_tipo && invoice.cbte_numero) {
-    const recDigits = digitsOnly(invoice.contact?.cuit)
+  if (issuerDigits.length === 11 && doc.punto_venta && doc.comprobante_tipo && doc.cbte_numero) {
+    const recDigits = digitsOnly(doc.contact?.cuit)
     const receiver = recDigits.length === 11
       ? { tipoDocRec: 80, nroDocRec: Number(recDigits) }
       : { tipoDocRec: 99, nroDocRec: 0 }
     const url = buildAfipQrUrl({
-      fecha: isoDateOnly(invoice.issue_date) ?? isoDateOnly(invoice.created_at) ?? '',
+      fecha: isoDateOnly(doc.issue_date) ?? isoDateOnly(doc.created_at) ?? '',
       cuit: Number(issuerDigits),
-      ptoVta: invoice.punto_venta,
-      tipoCmp: invoice.comprobante_tipo,
-      nroCmp: invoice.cbte_numero,
-      importe: Number(decString(invoice.total)),
+      ptoVta: doc.punto_venta,
+      tipoCmp: doc.comprobante_tipo,
+      nroCmp: doc.cbte_numero,
+      importe: Number(decString(doc.total)),
       moneda: 'PES',
       ctz: 1,
       tipoDocRec: receiver.tipoDocRec,
       nroDocRec: receiver.nroDocRec,
-      codAut: Number(invoice.cae),
+      codAut: Number(doc.cae),
     })
     try {
       qrDataUrl = await QRCode.toDataURL(url, { margin: 1, width: 160 })
@@ -308,11 +373,11 @@ async function buildInvoiceAfip(invoice: SalesInvoiceLoaded, issuerCuit: string 
   }
 
   return {
-    cae: invoice.cae,
-    cae_expiration: isoDateOnly(invoice.cae_expiration),
-    comprobante_label: invoice.comprobante_tipo != null ? (COMPROBANTE_TIPO_LABEL[invoice.comprobante_tipo] ?? null) : null,
-    punto_venta: invoice.punto_venta,
-    cbte_numero: invoice.cbte_numero,
+    cae: doc.cae,
+    cae_expiration: isoDateOnly(doc.cae_expiration),
+    comprobante_label: doc.comprobante_tipo != null ? (COMPROBANTE_TIPO_LABEL[doc.comprobante_tipo] ?? null) : null,
+    punto_venta: doc.punto_venta,
+    cbte_numero: doc.cbte_numero,
     qr_data_url: qrDataUrl,
   }
 }
@@ -321,7 +386,7 @@ export async function buildSalesInvoicePrintable(id: string, ctx: TenantContext)
   const invoice = (await getInvoice(id, ctx)) as unknown as SalesInvoiceLoaded
   assertPrintAccess({ org_id: invoice.org_id, branch_id: invoice.branch_id }, ctx)
   const { issuer, template } = await getPrintHeader(ctx.orgId)
-  const afip = await buildInvoiceAfip(invoice, issuer.cuit)
+  const afip = await buildAuthorizedAfip(invoice, issuer.cuit)
   const pc = invoice.payment_condition as PaymentCondition
   const isDraft = invoice.status === 'draft'
   const payments: PrintablePaymentRow[] | null = (() => {
@@ -360,6 +425,88 @@ export async function buildSalesInvoicePrintable(id: string, ctx: TenantContext)
     totals: totalsFrom(invoice.subtotal, invoice.discount_amount, invoice.tax_amount, invoice.total),
     notes: invoice.notes ?? null,
     payments,
+    afip,
+  }
+}
+
+export async function buildSalesCreditNotePrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
+  const note = (await getCreditNote(id, ctx)) as unknown as SalesCreditNoteLoaded
+  assertPrintAccess({ org_id: note.org_id, branch_id: note.branch_id }, ctx)
+  const { issuer, template } = await getPrintHeader(ctx.orgId)
+  const afip = await buildAuthorizedAfip(note, issuer.cuit)
+  const isDraft = note.status === 'draft'
+  const meta_dates: PrintableDocument['meta_dates'] = [
+    { label: 'Emisión', value: formatDateArg(note.created_at) },
+    { label: 'Fecha emisión', value: formatDateArg(note.issue_date) },
+  ]
+  if (note.invoice?.invoice_number) {
+    meta_dates.push({ label: 'Factura asociada', value: note.invoice.invoice_number })
+  }
+  if (note.reason) {
+    meta_dates.push({ label: 'Motivo', value: note.reason })
+  }
+  return {
+    domain: 'sales',
+    kind: 'sales_credit_note',
+    isDraft,
+    issuer,
+    template,
+    title: 'Nota de crédito',
+    document_number: note.credit_note_number,
+    status_code: note.status,
+    status_label: CREDIT_NOTE_STATUS_LABEL[note.status] ?? note.status,
+    currency: note.currency,
+    payment_condition: null,
+    payment_condition_label: null,
+    counterparty_role: 'customer',
+    counterparty: counterpartyFromContact(note.contact),
+    branch: branchFromModel(note.branch),
+    meta_dates,
+    lines: [],
+    totals: totalsFrom(note.subtotal, note.discount_amount, note.tax_amount, note.total),
+    notes: note.notes ?? null,
+    payments: null,
+    afip,
+  }
+}
+
+export async function buildSalesDebitNotePrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
+  const note = (await getDebitNote(id, ctx)) as unknown as SalesDebitNoteLoaded
+  assertPrintAccess({ org_id: note.org_id, branch_id: note.branch_id }, ctx)
+  const { issuer, template } = await getPrintHeader(ctx.orgId)
+  const afip = await buildAuthorizedAfip(note, issuer.cuit)
+  const isDraft = note.status === 'draft'
+  const meta_dates: PrintableDocument['meta_dates'] = [
+    { label: 'Emisión', value: formatDateArg(note.created_at) },
+    { label: 'Fecha emisión', value: formatDateArg(note.issue_date) },
+  ]
+  if (note.invoice?.invoice_number) {
+    meta_dates.push({ label: 'Factura asociada', value: note.invoice.invoice_number })
+  }
+  if (note.reason) {
+    meta_dates.push({ label: 'Motivo', value: note.reason })
+  }
+  return {
+    domain: 'sales',
+    kind: 'sales_debit_note',
+    isDraft,
+    issuer,
+    template,
+    title: 'Nota de débito',
+    document_number: note.debit_note_number,
+    status_code: note.status,
+    status_label: DEBIT_NOTE_STATUS_LABEL[note.status] ?? note.status,
+    currency: note.currency,
+    payment_condition: null,
+    payment_condition_label: null,
+    counterparty_role: 'customer',
+    counterparty: counterpartyFromContact(note.contact),
+    branch: branchFromModel(note.branch),
+    meta_dates,
+    lines: [],
+    totals: totalsFrom(note.subtotal, note.discount_amount, note.tax_amount, note.total),
+    notes: note.notes ?? null,
+    payments: null,
     afip,
   }
 }

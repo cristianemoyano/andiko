@@ -7,6 +7,8 @@ export type PrintableDocumentKind =
   | 'sales_quote'
   | 'sales_order'
   | 'sales_invoice'
+  | 'sales_credit_note'
+  | 'sales_debit_note'
   | 'delivery_note'
   | 'purchase_order'
   | 'purchase_receipt'

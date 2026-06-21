@@ -409,6 +409,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
           {showAfip && (
             <AfipDocumentPanel
               doc={invoice}
+              branch={invoice.branch ?? null}
               canAuthorize={canAuthorizeAfip}
               onAuthorize={handleAuthorizeAfip}
             />

@@ -32,6 +32,18 @@ export const INVOICE_STATUS_LABEL: Record<string, string> = {
   cancelled:      'Anulada',
 }
 
+export const CREDIT_NOTE_STATUS_LABEL: Record<string, string> = {
+  draft:     'Borrador',
+  issued:    'Emitida',
+  cancelled: 'Anulada',
+}
+
+export const DEBIT_NOTE_STATUS_LABEL: Record<string, string> = {
+  draft:     'Borrador',
+  issued:    'Emitida',
+  cancelled: 'Anulada',
+}
+
 export const DELIVERY_NOTE_STATUS_LABEL: Record<string, string> = {
   draft:     'Borrador',
   issued:    'Emitido',

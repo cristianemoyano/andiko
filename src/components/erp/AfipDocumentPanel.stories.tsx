@@ -11,10 +11,28 @@ type Story = StoryObj<typeof AfipDocumentPanel>
 
 const noop = async () => {}
 
+export const MissingPuntoVenta: Story = {
+  args: {
+    canAuthorize: true,
+    onAuthorize: noop,
+    branch: { name: 'Sucursal Norte', branch_code: 2, punto_venta: null },
+    doc: {
+      afip_status: 'not_sent',
+      cae: null,
+      cae_expiration: null,
+      comprobante_tipo: null,
+      punto_venta: null,
+      cbte_numero: null,
+      afip_observations: null,
+    },
+  },
+}
+
 export const NotSentAuthorizable: Story = {
   args: {
     canAuthorize: true,
     onAuthorize: noop,
+    branch: { name: 'Casa Central', branch_code: 1, punto_venta: 3 },
     doc: {
       afip_status: 'not_sent',
       cae: null,
