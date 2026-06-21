@@ -2,6 +2,7 @@ import 'server-only'
 
 import { Organization, type OnboardingData } from './organization.model'
 import logger from '@/lib/logger'
+import { fiscalFieldsFromOnboarding } from '@/modules/afip/afip-config.service'
 
 export async function getOnboardingStatus(orgId: string): Promise<{
   completed: boolean
@@ -27,10 +28,12 @@ export async function completeOnboarding(
   orgId: string,
   data: OnboardingData,
 ): Promise<void> {
+  const fiscal = fiscalFieldsFromOnboarding(data)
   await Organization.update(
     {
       onboarding_completed_at: new Date(),
       onboarding_data: data,
+      ...fiscal,
     },
     { where: { id: orgId } },
   )

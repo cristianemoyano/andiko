@@ -2,6 +2,7 @@ import { DataTypes, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields } from '@/types'
+import type { AfipDocStatus, AfipObservation } from '@/modules/afip/afip-codes'
 import Invoice from './invoice.model'
 import Contact from '@/modules/contacts/contact.model'
 
@@ -25,6 +26,14 @@ export interface CreditNoteAttributes extends Timestamps, AuditFields {
   remaining: string
   reason: string | null
   notes: string | null
+  // AFIP electronic invoicing
+  cae: string | null
+  cae_expiration: Date | null
+  comprobante_tipo: number | null
+  punto_venta: number | null
+  cbte_numero: number | null
+  afip_status: AfipDocStatus
+  afip_observations: AfipObservation[] | null
 }
 
 type CreditNoteCreationAttributes = Optional<
@@ -32,6 +41,7 @@ type CreditNoteCreationAttributes = Optional<
   | 'id' | 'branch_id' | 'contact_id' | 'invoice_id' | 'status' | 'issue_date' | 'currency'
   | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total' | 'applied_amount' | 'remaining'
   | 'reason' | 'notes'
+  | 'cae' | 'cae_expiration' | 'comprobante_tipo' | 'punto_venta' | 'cbte_numero' | 'afip_status' | 'afip_observations'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -52,6 +62,13 @@ class CreditNote extends AuditModel<CreditNoteAttributes, CreditNoteCreationAttr
   declare remaining: string
   declare reason: string | null
   declare notes: string | null
+  declare cae: string | null
+  declare cae_expiration: Date | null
+  declare comprobante_tipo: number | null
+  declare punto_venta: number | null
+  declare cbte_numero: number | null
+  declare afip_status: AfipDocStatus
+  declare afip_observations: AfipObservation[] | null
 }
 
 CreditNote.init(
@@ -72,6 +89,13 @@ CreditNote.init(
     remaining:          { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
     reason:             { type: DataTypes.TEXT },
     notes:              { type: DataTypes.TEXT },
+    cae:                { type: DataTypes.STRING(14) },
+    cae_expiration:     { type: DataTypes.DATEONLY },
+    comprobante_tipo:   { type: DataTypes.SMALLINT },
+    punto_venta:        { type: DataTypes.SMALLINT },
+    cbte_numero:        { type: DataTypes.INTEGER },
+    afip_status:        { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'not_sent' },
+    afip_observations:  { type: DataTypes.JSONB },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'credit_notes', paranoid: true, underscored: true },

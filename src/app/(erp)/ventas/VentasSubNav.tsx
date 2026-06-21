@@ -9,6 +9,8 @@ const LINKS = [
   { href: '/ventas/pedidos', label: 'Pedidos' },
   { href: '/ventas/facturas', label: 'Facturas' },
   { href: '/ventas/notas-de-credito', label: 'Notas de crédito' },
+  { href: '/ventas/notas-de-debito', label: 'Notas de débito' },
+  { href: '/ventas/libro-iva', label: 'Libro IVA' },
   { href: '/ventas/cuenta-corriente', label: 'Cuenta corriente' },
   { href: '/ventas/reportes', label: 'Reportes' },
 ] as const

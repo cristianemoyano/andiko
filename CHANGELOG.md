@@ -1,3 +1,27 @@
+# Changelog
+
+## [0.9.0](https://github.com/cristianemoyano/andiko/compare/v0.7.0...v0.9.0) (2026-06-21)
+
+### Features
+
+* **core:** add AFIP configuration tab (punto de venta, certificate, contingency) ([53bef41](https://github.com/cristianemoyano/andiko/commit/53bef41744b7eac739574f54887b8658629e0ccf))
+* **core:** add AFIP credentials API (paste PEM, redacted status) ([a2dfa4e](https://github.com/cristianemoyano/andiko/commit/a2dfa4e1e63bc0bf82ea58b35a0a77c65fe40db2))
+* **core:** add AFIP env config and API routes ([b113dd4](https://github.com/cristianemoyano/andiko/commit/b113dd41cdc7d20c3e4c5f6228fbf04930ec667f))
+* **core:** add AfipStatusBadge and AfipDocumentPanel design-system components ([1980da3](https://github.com/cristianemoyano/andiko/commit/1980da3926a0161663e5fa69c90bfc872182a449))
+* **core:** add light/dark/system theme support ([41d3fc7](https://github.com/cristianemoyano/andiko/commit/41d3fc70122bcbb3e7fbedc18f20f03ac2b61d30))
+* **core:** ignore arca certs ([a75df46](https://github.com/cristianemoyano/andiko/commit/a75df465ff652f2d9ea26957f0b94ad5ccb5a72f))
+* **sales:** add AFIP credentials service with encrypted key vault ([7b3856e](https://github.com/cristianemoyano/andiko/commit/7b3856e297e87bd636f842bfa00901680f2b8a23))
+* **sales:** add AFIP domain logic (classifier, IVA aggregation, payload) ([dd9983e](https://github.com/cristianemoyano/andiko/commit/dd9983ef7138ab31f4079b69c433e86e22a7dc2b))
+* **sales:** add AFIP emission, contingency, libro IVA and debit-note services ([9d09ecd](https://github.com/cristianemoyano/andiko/commit/9d09ecd58afa67c6c221cd8868723ee6fd450a66))
+* **sales:** add AFIP fields, debit-note/auth-token/emission models and migrations ([42b3a93](https://github.com/cristianemoyano/andiko/commit/42b3a930ade3ed9a875b5f72c4d755ab869bdde4))
+* **sales:** add Libro IVA Ventas and Compras pages ([3baedcc](https://github.com/cristianemoyano/andiko/commit/3baedccd2dc37adea7501e981c3d4e66b5000e46))
+* **sales:** add notas de débito frontend (list, create, detail) ([311ebcd](https://github.com/cristianemoyano/andiko/commit/311ebcdccca4097021bce8398e1f248c8861f353))
+* **sales:** add per-org afip_credentials model and migration ([09167d8](https://github.com/cristianemoyano/andiko/commit/09167d8a25b37f2bd75f967a7eca52a1a5417984))
+* **sales:** add WSAA/WSFE transport adapters via @ramiidv/arca-facturacion ([fabcbb7](https://github.com/cristianemoyano/andiko/commit/fabcbb7a94c0e83d38c03f4f7725cf3db9f705ee))
+* **sales:** afip config, emission fixes, and nc/nd printing ([1ffd187](https://github.com/cristianemoyano/andiko/commit/1ffd18717f7a66d7706bb8d5a94f6650eb7b1b7e))
+* **sales:** print invoice CAE + QR server-side (reimpresión) ([1925d1c](https://github.com/cristianemoyano/andiko/commit/1925d1cd38a71d30d4ba91cca1b8d600db41c67f))
+* **sales:** wire AFIP authorize panel into invoice and credit-note detail ([f3d8275](https://github.com/cristianemoyano/andiko/commit/f3d827571e98fccf2dbe1eaa519e3086cc3b8ba7))
+
 # [0.8.0](https://127.0.0.1/43429/git/cristianemoyano/compare/v0.7.0...v0.8.0) (2026-06-15)
 
 
@@ -5,7 +29,7 @@
 
 * **core:** add light/dark/system theme support ([41d3fc7](https://127.0.0.1/43429/git/cristianemoyano/commits/41d3fc70122bcbb3e7fbedc18f20f03ac2b61d30))
 
-# Changelog
+
 
 ## [0.7.1](https://github.com/cristianemoyano/andiko/compare/v0.7.0...v0.7.1) (2026-06-15)
 

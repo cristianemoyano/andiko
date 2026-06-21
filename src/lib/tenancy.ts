@@ -102,3 +102,23 @@ export function whereAllowedBranches(
   return { ...where, org_id: ctx.orgId, branch_id: { [Op.in]: ctx.allowedBranchIds } }
 }
 
+/** Same branch scoping as `whereAllowedBranches`, but for queries on the `branches` table (PK is `id`). */
+export function whereAllowedBranchRecords(
+  ctx: TenantContext,
+  where: Record<string, unknown> = {},
+) {
+  const { id: explicitId, ...rest } = where
+  const scoped: Record<string, unknown> = { ...rest, org_id: ctx.orgId }
+
+  if (typeof explicitId === 'string') {
+    if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(explicitId)) {
+      throw new TenancyError(TENANCY_ERROR_CODES.BRANCH_NOT_ALLOWED)
+    }
+    scoped.id = explicitId
+    return scoped
+  }
+
+  if (ctx.allowedBranchIds.length === 0) return scoped
+  return { ...scoped, id: { [Op.in]: ctx.allowedBranchIds } }
+}
+

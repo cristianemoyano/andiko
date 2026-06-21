@@ -7,18 +7,20 @@ import { PrintTemplateTab } from './PrintTemplateTab'
 import { EmailTemplatesTab } from './EmailTemplatesTab'
 import { EmailLogsTab } from './EmailLogsTab'
 import { AppearanceTab } from './AppearanceTab'
+import { AfipConfigTab } from './AfipConfigTab'
 
-type Section = 'impresion' | 'plantillas-email' | 'emails-enviados' | 'apariencia'
+type Section = 'impresion' | 'plantillas-email' | 'emails-enviados' | 'apariencia' | 'afip'
 
 const SECTION_LABEL: Record<Section, string> = {
   impresion: 'Plantilla de impresión',
   'plantillas-email': 'Plantillas de email',
   'emails-enviados': 'Emails enviados',
   apariencia: 'Apariencia',
+  afip: 'AFIP',
 }
 
 function parseSection(value: string | null): Section {
-  if (value === 'plantillas-email' || value === 'emails-enviados' || value === 'apariencia') return value
+  if (value === 'plantillas-email' || value === 'emails-enviados' || value === 'apariencia' || value === 'afip') return value
   return 'impresion'
 }
 
@@ -42,6 +44,7 @@ export function ConfiguracionClient() {
             <TabsTrigger value="plantillas-email">Plantillas de email</TabsTrigger>
             <TabsTrigger value="emails-enviados">Emails enviados</TabsTrigger>
             <TabsTrigger value="apariencia">Apariencia</TabsTrigger>
+            <TabsTrigger value="afip">AFIP</TabsTrigger>
           </TabsList>
 
           <TabsContent value="impresion">
@@ -55,6 +58,9 @@ export function ConfiguracionClient() {
           </TabsContent>
           <TabsContent value="apariencia">
             <AppearanceTab />
+          </TabsContent>
+          <TabsContent value="afip">
+            <AfipConfigTab />
           </TabsContent>
         </Tabs>
       </div>

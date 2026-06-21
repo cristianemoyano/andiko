@@ -324,15 +324,28 @@ Ciclo de compras: orden → recepción → factura proveedor → pago.
 Integración con AFIP para emisión de comprobantes electrónicos.
 Se construye sobre el módulo de Ventas ya estable.
 
-- [ ] Integración con AFIP vía WSFE (Web Service Facturación Electrónica)
-- [ ] Autenticación con certificado digital (WSAA)
-- [ ] Emisión de Facturas A, B, C electrónicas
-- [ ] Notas de crédito y débito electrónicas
-- [ ] Obtención y almacenamiento de CAE
-- [ ] Reimpresión de comprobantes con CAE
-- [ ] Manejo de contingencias (modo offline con posterior sincronización)
-- [ ] Libro IVA Ventas digital
-- [ ] Libro IVA Compras digital
+Backend completo y testeado; transporte WSAA/WSFE vía `@ramiidv/arca-facturacion`
+detrás de un adaptador mockeable (`AFIP_MODE=stub|homologacion|produccion`).
+
+### Backend (completado)
+- [x] Integración con AFIP vía WSFE — adaptador `WsfeClient` (stub + real `@ramiidv/arca-facturacion`)
+- [x] Autenticación con certificado digital (WSAA) — firma local en el SDK, selección por `AFIP_MODE`
+- [x] Emisión de Facturas A, B, C electrónicas — clasificación por condición IVA emisor/receptor
+- [x] Notas de crédito y débito electrónicas — modelo `debit_notes` + servicio + `CbtesAsoc`
+- [x] Obtención y almacenamiento de CAE — `cae`, `cae_expiration`, `punto_venta`, `cbte_numero`, `afip_status`
+- [x] Manejo de contingencias — cola `afip_emissions` con reintento/sincronización idempotente
+- [x] Libro IVA Ventas digital — servicio + endpoint (`/api/v1/afip/libro-iva-ventas`)
+- [x] Libro IVA Compras digital — servicio + endpoint (`/api/v1/afip/libro-iva-compras`)
+- [x] Punto de venta por sucursal + endpoint de configuración AFIP
+- [x] Certificados ARCA por organización — bóveda `afip_credentials` (clave privada cifrada), validación X.509 y API de carga (PEM) con estado redactado
+
+### Frontend (completado)
+- [x] Componentes de diseño `AfipStatusBadge` y `AfipDocumentPanel` (con Storybook)
+- [x] Acción "Autorizar AFIP" + panel CAE/estado en detalle de factura, nota de crédito y nota de débito
+- [x] Pantallas de notas de débito (listado, alta, detalle)
+- [x] Páginas Libro IVA Ventas (`/ventas/libro-iva`) y Compras (`/compras/libro-iva`) con filtro por período
+- [x] Pestaña de configuración AFIP: punto de venta por sucursal, carga de certificado ARCA (PEM) y cola de contingencia
+- [x] Reimpresión de comprobantes con CAE + QR (RG 4291) en plantilla de impresión
 
 ---
 
@@ -447,6 +460,58 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] `GET /api/v1/pos/sales/sync` — pull de ventas sincronizadas (para reconciliación offline)
 - [x] Renovación de licencia desde el ERP admin (extender `license_valid_until`)
 - [x] App Electron: sincronización automática en background cuando hay conexión
+
+---
+
+## Fase 8 — Integraciones de Hardware
+
+Hardware especializado para casos de uso específicos (retail, almacenes).
+
+### Balanzas Digitales (Mettler Toledo, CAS, Dibal, etc.)
+
+**Caso de uso primario:** Retail de productos a granel (carnicería, verdulería, panadería, almacén) con pesaje en POS.
+
+**Caso de uso secundario:** Control de peso en recepción de compras (vs. cantidad ordenada).
+
+**Stack:** Comunicación RS-232/USB/TCP desde Electron, variantes dinámicas por peso.
+
+#### Backend
+- [ ] Migraciones: `scale_devices` (config por sucursal), `scale_readings` (historial de pesajes)
+- [ ] Modelo Sequelize `ScaleDevice` (device_type, connection_type, connection_config JSONB, is_active, last_connected_at)
+- [ ] Modelo Sequelize `ScaleReading` (device_id, weight_grams, timestamp, opcional sale_order_item_id)
+- [ ] Service `scale-devices.service.ts`: CRUD + validación de config por tipo
+- [ ] Service `scale-readings.service.ts`: logging de pesajes, estadísticas
+- [ ] API REST: `GET/POST /api/v1/pos/scale-devices`, `PATCH/DELETE /api/v1/pos/scale-devices/:id`, `GET /api/v1/pos/scale-readings`
+- [ ] `withScaleDevice()` middleware para rutas POS que usan balanza
+
+#### POS (Electron)
+- [ ] `apps/pos/src/scales/ScaleReader.ts` — abstracción de comunicación (RS-232 serial, TCP socket)
+  - `ScaleReaderRS232` (serial-port library)
+  - `ScaleReaderTCP` (raw socket)
+  - Interfaz común `IScaleReader`
+- [ ] `apps/pos/src/hooks/useScaleWeight()` — hook para leer peso en vivo (estabilidad de lectura, timeout)
+- [ ] Componente `<ScaleWeightDisplay />` (mostrando peso actual, estatus conexión)
+- [ ] Modal de configuración: seleccionar balanza, puerto COM / IP, baudrate, timeout
+- [ ] En checkout: opción "Pesar" para productos con variante por peso (kg, 100g, etc.)
+- [ ] Lectura de peso → pre-llena cantidad en línea de venta, calcula precio dinámicamente
+- [ ] UX: botón "Leer peso" o automático al enfocar campo de cantidad
+- [ ] Historial local de pesajes (para debugging, sincroniza a cloud)
+
+#### ERP Admin
+- [ ] `/pos/balanzas` — pantalla CRUD de dispositivos por sucursal (test conexión, historial de pesajes)
+- [ ] Estado de conexión en tiempo real (last_connected_at, latencia promedio)
+- [ ] Logs de errores por dispositivo (puerto no disponible, timeout, parsing error)
+
+#### Testing
+- [ ] Mock de `ScaleReader` para tests (simular pesajes)
+- [ ] Casos edge: timeout, lectura inestable, reconexión, cambio de puerto COM
+- [ ] Integración POS: flujo completo pesaje → venta
+
+#### Principios
+- Nunca bloquea checkout si balanza no conecta (fallback a entrada manual)
+- Validar rango de peso sensato (ej. 50g–50kg) antes de aceptar lectura
+- Logs detallados para debugging en el campo
+- Soportar múltiples balanzas por sucursal (una por tipo de producto: carne, verdura, etc.)
 
 ---
 

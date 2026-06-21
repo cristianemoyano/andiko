@@ -2,6 +2,7 @@ import { DataTypes, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, PaymentCondition } from '@/types'
+import type { AfipDocStatus, AfipObservation } from '@/modules/afip/afip-codes'
 import SalesQuote from './sales-quote.model'
 import SalesOrder from './sales-order.model'
 import User from '@/modules/auth/user.model'
@@ -31,6 +32,14 @@ export interface InvoiceAttributes extends Timestamps, AuditFields {
   balance: string
   notes: string | null
   internal_notes: string | null
+  // AFIP electronic invoicing
+  cae: string | null
+  cae_expiration: Date | null
+  comprobante_tipo: number | null
+  punto_venta: number | null
+  cbte_numero: number | null
+  afip_status: AfipDocStatus
+  afip_observations: AfipObservation[] | null
 }
 
 type InvoiceCreationAttributes = Optional<
@@ -38,6 +47,7 @@ type InvoiceCreationAttributes = Optional<
   | 'id' | 'branch_id' | 'contact_id' | 'quote_id' | 'price_list_id' | 'salesperson_id' | 'status' | 'issue_date' | 'due_date'
   | 'payment_condition' | 'currency' | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total'
   | 'paid_amount' | 'balance' | 'notes' | 'internal_notes'
+  | 'cae' | 'cae_expiration' | 'comprobante_tipo' | 'punto_venta' | 'cbte_numero' | 'afip_status' | 'afip_observations'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -63,6 +73,13 @@ class Invoice extends AuditModel<InvoiceAttributes, InvoiceCreationAttributes> {
   declare balance: string
   declare notes: string | null
   declare internal_notes: string | null
+  declare cae: string | null
+  declare cae_expiration: Date | null
+  declare comprobante_tipo: number | null
+  declare punto_venta: number | null
+  declare cbte_numero: number | null
+  declare afip_status: AfipDocStatus
+  declare afip_observations: AfipObservation[] | null
 }
 
 Invoice.init(
@@ -88,6 +105,13 @@ Invoice.init(
     balance:           { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
     notes:             { type: DataTypes.TEXT },
     internal_notes:    { type: DataTypes.TEXT },
+    cae:               { type: DataTypes.STRING(14) },
+    cae_expiration:    { type: DataTypes.DATEONLY },
+    comprobante_tipo:  { type: DataTypes.SMALLINT },
+    punto_venta:       { type: DataTypes.SMALLINT },
+    cbte_numero:       { type: DataTypes.INTEGER },
+    afip_status:       { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'not_sent' },
+    afip_observations: { type: DataTypes.JSONB },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'invoices', paranoid: true, underscored: true }
