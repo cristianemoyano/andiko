@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.0](https://github.com/cristianemoyano/andiko/compare/v0.9.0...v0.10.0) (2026-06-21)
+
+### Features
+
+* **core:** add PWA support and native mobile loading states ([ceb1d55](https://github.com/cristianemoyano/andiko/commit/ceb1d55c66ff025cdef2cc7d4cb212fa82eda31e))
+
 ## [0.9.0](https://github.com/cristianemoyano/andiko/compare/v0.7.0...v0.9.0) (2026-06-21)
 
 ### Features
