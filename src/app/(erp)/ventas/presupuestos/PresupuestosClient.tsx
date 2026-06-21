@@ -145,7 +145,7 @@ export function PresupuestosClient() {
       />
       <VentasSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <div className="flex-1 p-3 md:p-5 overflow-auto">
         {listError && (
           <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {listError}
