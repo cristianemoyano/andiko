@@ -88,6 +88,8 @@ Ningún componente se usa en producción sin su story.
 - [x] Sidebar (navegación principal, logout, estado activo)
 - [x] Tabs
 - [x] Responsive móvil (<768px): barra de navegación inferior fija con secciones principales (Panel·Ventas·Compras·Contactos) + pestaña "Menú" que abre el drawer con toda la navegación; Dialog con scroll y gutters; grillas de formulario/detalle que colapsan a una columna
+- [x] PWA instalable: manifest + íconos de marca (192/512/maskable/apple-touch), `theme-color` y meta iOS web-app, display `standalone` (sin chrome del navegador); service worker estático que cachea solo assets inmutables de `/_next/static` (cache-first) y nunca HTML ni `/api/*` para no servir datos financieros desestabilizados; banner de instalación descartable (prompt Android + hint "Agregar a inicio" iOS); safe-area superior e inset de overscroll para modo standalone
+- [x] Skeleton primitive (placeholders animados) reemplazando el texto "Cargando…" en el Panel
 
 ### Componentes ERP-específicos
 - [x] DataTable (columnas configurables, sorting client-side, row actions)
