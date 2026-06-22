@@ -129,8 +129,8 @@ jobs:
             - **macOS**: descargá el `.dmg`, abrilo y arrastrá la app a Aplicaciones
             - **Windows**: descargá el `.exe` y seguí el instalador
 
-            ### Actualizaciones automáticas
-            La app se actualiza sola cuando hay una nueva versión disponible.
+            ### Actualizaciones
+            Descargá la nueva versión desde GitHub Releases cuando haya una actualización disponible.
           files: artifacts/*
           draft: false
           prerelease: false
