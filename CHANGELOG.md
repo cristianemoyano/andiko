@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.17.0](https://github.com/cristianemoyano/andiko/compare/v0.16.0...v0.17.0) (2026-06-22)
+
+### Features
+
+* **auth:** complete onboarding wizard and org user profile names ([1d90a23](https://github.com/cristianemoyano/andiko/commit/1d90a2363f88248089904f002aa36f438c444687))
+
 ## [0.16.0](https://github.com/cristianemoyano/andiko/compare/v0.15.0...v0.16.0) (2026-06-22)
 
 ### Features
