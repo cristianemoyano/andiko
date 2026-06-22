@@ -2,10 +2,12 @@
 const electron = require("electron");
 electron.contextBridge.exposeInMainWorld("pos", {
   products: {
-    search: (query) => electron.ipcRenderer.invoke("products:search", query)
+    search: (query) => electron.ipcRenderer.invoke("products:search", query),
+    getByPlu: (plu) => electron.ipcRenderer.invoke("products:getByPlu", plu)
   },
   customers: {
-    search: (query) => electron.ipcRenderer.invoke("customers:search", query)
+    search: (query) => electron.ipcRenderer.invoke("customers:search", query),
+    get: (id) => electron.ipcRenderer.invoke("customers:get", id)
   },
   users: {
     search: (query) => electron.ipcRenderer.invoke("users:search", query),
@@ -36,6 +38,7 @@ electron.contextBridge.exposeInMainWorld("pos", {
     listToday: () => electron.ipcRenderer.invoke("sales:list-today"),
     list: (args) => electron.ipcRenderer.invoke("sales:list", args),
     get: (saleId) => electron.ipcRenderer.invoke("sales:get", saleId),
+    authorizeFiscal: (saleId) => electron.ipcRenderer.invoke("sales:authorizeFiscal", saleId),
     closingReport: (date) => electron.ipcRenderer.invoke("sales:closingReport", date)
   },
   paymentMethods: {
@@ -51,7 +54,15 @@ electron.contextBridge.exposeInMainWorld("pos", {
     save: (kv) => electron.ipcRenderer.invoke("settings:save", kv),
     get: () => electron.ipcRenderer.invoke("settings:get")
   },
+  scale: {
+    listPorts: () => electron.ipcRenderer.invoke("scale:listPorts"),
+    readWeight: () => electron.ipcRenderer.invoke("scale:readWeight"),
+    status: () => electron.ipcRenderer.invoke("scale:status")
+  },
   dev: {
     resetLocalData: () => electron.ipcRenderer.invoke("dev:resetLocalData")
+  },
+  print: {
+    receipt: () => electron.ipcRenderer.invoke("print:receipt")
   }
 });

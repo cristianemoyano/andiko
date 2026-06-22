@@ -3,7 +3,9 @@ import type { PosSale, PosSaleItem, PosProduct, PosCustomer, PosPaymentMethod, B
 import { parseBalanzaBarcode } from '@andiko/shared'
 import { randomUUID } from '../lib/uuid'
 import { PosReceipt } from '../components/PosReceipt'
+import { PosTicketBrandPanel } from '../components/PosTicketBrandPanel'
 import { usePosFiscalProfile } from '../lib/usePosFiscalProfile'
+import { usePosCashier } from '../lib/usePosCashier'
 import { printPosReceipt } from '../lib/print-receipt'
 
 type CartItem = {
@@ -11,6 +13,20 @@ type CartItem = {
   qty: number               // weight items: fractional kg
   weightItem?: boolean
   lineTotalOverride?: string | null  // set when the scanned label embedded a total price
+}
+
+/** Keyboard shortcut badge — neutral styling, readable without competing with actions. */
+function ShortcutBadge({ modKey, keyLabel }: { modKey: string; keyLabel: string }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md border border-zinc-300 bg-zinc-100 px-2 py-1"
+      aria-label={`Atajo: ${modKey} + ${keyLabel}`}
+    >
+      <kbd className="min-w-[1.25rem] text-center text-base font-medium text-zinc-600 font-mono leading-none">{modKey}</kbd>
+      <span className="text-xs text-zinc-400">+</span>
+      <kbd className="min-w-[1rem] text-center text-base font-semibold text-zinc-700 font-mono leading-none">{keyLabel}</kbd>
+    </span>
+  )
 }
 
 /** Final amount charged for a cart line (label price for weight items, else price × qty). */
@@ -87,7 +103,7 @@ function CartWeightInput({
         }
       }}
       inputMode="decimal"
-      className="w-[4.5rem] h-6 px-1 text-right text-[12px] border border-zinc-300 rounded bg-white focus:outline-none focus:border-blue-500"
+      className="w-[4.5rem] h-6 px-1 text-right text-[14px] border border-zinc-300 rounded bg-white focus:outline-none focus:border-brand-600"
     />
   )
 }
@@ -117,8 +133,7 @@ export function SaleScreen({
   const [customerError, setCustomerError] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const customerInputRef = useRef<HTMLInputElement>(null)
-  const [cashierName, setCashierName] = useState('')
-  const [cashierUserId, setCashierUserId] = useState('')
+  const { cashierName, cashierUserId } = usePosCashier()
   const [noCashierError, setNoCashierError] = useState(false)
   const [enabledPayments, setEnabledPayments] = useState<PosPaymentMethod[]>([])
   const [checkoutOpen, setCheckoutOpen] = useState(false)
@@ -158,13 +173,12 @@ export function SaleScreen({
 
     if (!trimmed) {
       lastSubmittedBarcodeRef.current = ''
-      window.pos.products.search('').then(setProducts)
-      return
     }
 
     // Long numeric input is probably a barcode — skip name search until Enter/paste.
-    if (/^\d{8,}$/.test(trimmed)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale results while typing barcode digits
+    const shouldSearch = trimmed.length >= 2 && !/^\d{8,}$/.test(trimmed)
+    if (!shouldSearch) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale results while typing barcodes or short queries
       setProducts([])
       return
     }
@@ -178,16 +192,7 @@ export function SaleScreen({
   }, [])
 
   useEffect(() => {
-    // Cashier comes from the active cash session — if no session is open, block checkout
     void (async () => {
-      const session = await window.pos.cashSessions.getCurrent()
-      if (session) {
-        setCashierName(session.cashier_name ?? '')
-        setCashierUserId(session.cashier_user_id ?? '')
-      } else {
-        setCashierName('')
-        setCashierUserId('')
-      }
       try {
         const pms = await window.pos.paymentMethods.list()
         setEnabledPayments(pms)
@@ -397,7 +402,9 @@ export function SaleScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [receiptSale, customerOpen, checkoutOpen, priceCheckOpen, cart.length, checkoutPayment, customer, enabledPayments])
 
-  const filtered = products
+  const searchTrimmed = search.trim()
+  const isBarcodeInput = /^\d{8,}$/.test(searchTrimmed)
+  const showSearchResults = searchTrimmed.length >= 2 && !isBarcodeInput && products.length > 0
 
   function startNewSale() {
     setReceiptSale(null)
@@ -512,7 +519,12 @@ export function SaleScreen({
       return
     }
 
-    const exact = products.find((p) => (p.sku ?? '').trim() === trimmed) ?? products.find((p) => p.id === trimmed)
+    const rows = await window.pos.products.search(trimmed)
+    const exact =
+      rows.find((p) => (p.barcode ?? '').trim() === trimmed) ??
+      rows.find((p) => (p.sku ?? '').trim() === trimmed) ??
+      rows.find((p) => p.id === trimmed) ??
+      null
     if (exact) {
       setScanError(null)
       addToCart(exact)
@@ -571,6 +583,7 @@ export function SaleScreen({
     return sum + (gross - base)
   }, 0)
   const subtotal = total - taxAmount
+  const cartProductCount = cart.reduce((sum, i) => sum + (i.weightItem ? 1 : i.qty), 0)
 
   const cashReceivedNum = parseFloat((cashReceived || '').replace(',', '.'))
   const isCash = checkoutPayment?.type === 'cash'
@@ -794,17 +807,17 @@ export function SaleScreen({
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-xl shadow-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
-              <div className="text-sm font-semibold text-zinc-800">Ver precio</div>
+              <div className="text-base font-semibold text-zinc-800">Ver precio</div>
               <button
                 onClick={() => { setPriceCheckOpen(false); setPriceCheckProduct(null); setPriceCheckError(null); searchRef.current?.focus() }}
-                className="text-[12px] font-medium text-zinc-600 hover:text-zinc-900"
+                className="text-[14px] font-medium text-zinc-600 hover:text-zinc-900"
               >
                 Cerrar
               </button>
             </div>
             <div className="p-4 space-y-3">
-              <div className="text-[12px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-md px-3 py-2">
-                Escaneá el código de barras. No se agrega al carrito. <span className="text-zinc-400">({modKey} + I)</span>
+              <div className="text-[14px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-md px-3 py-2">
+                Escaneá el código de barras. No se agrega al ticket. <span className="text-zinc-400">({modKey} + I)</span>
               </div>
 
               <input
@@ -838,11 +851,11 @@ export function SaleScreen({
                   setPriceCheckProduct(exact)
                 }}
                 placeholder="Pasar barcode / SKU…"
-                className="w-full h-10 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
+                className="w-full h-10 px-3 text-[15px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-brand-600"
               />
 
               {priceCheckError && (
-                <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                <div className="text-[14px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
                   {priceCheckError}
                 </div>
               )}
@@ -850,12 +863,12 @@ export function SaleScreen({
               {priceCheckProduct && (
                 <div className="border border-zinc-200 rounded-lg p-4 bg-white space-y-2">
                   <div className="text-[14px] font-semibold text-zinc-900">{priceCheckProduct.name}</div>
-                  <div className="text-[12px] text-zinc-500">
+                  <div className="text-[14px] text-zinc-500">
                     {priceCheckProduct.sku ? <>Código: <span className="font-mono">{priceCheckProduct.sku}</span></> : 'Sin SKU'}
                     {' · '}IVA {priceCheckProduct.iva_rate}%
                   </div>
                   <div className="pt-2 border-t border-zinc-100 flex items-center justify-between">
-                    <span className="text-[12px] text-zinc-600">Precio</span>
+                    <span className="text-[14px] text-zinc-600">Precio</span>
                     <span className="text-[18px] font-bold text-zinc-900">
                       ${parseFloat(priceCheckProduct.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </span>
@@ -864,7 +877,7 @@ export function SaleScreen({
               )}
 
               {!priceCheckProduct && (
-                <div className="text-[12px] text-zinc-500">
+                <div className="text-[14px] text-zinc-500">
                   Tip: si hay varios resultados, el Enter solo funciona cuando el código coincide exacto.
                 </div>
               )}
@@ -878,20 +891,20 @@ export function SaleScreen({
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm flex flex-col gap-4">
             <div>
-              <h3 className="text-[15px] font-semibold text-zinc-900">¿Cancelar la venta?</h3>
-              <p className="text-[13px] text-zinc-500 mt-1">Se eliminarán los {cart.length} producto{cart.length !== 1 ? 's' : ''} del carrito.</p>
+              <h3 className="text-[17px] font-semibold text-zinc-900">¿Cancelar la venta?</h3>
+              <p className="text-[15px] text-zinc-500 mt-1">Se eliminarán los {cart.length} producto{cart.length !== 1 ? 's' : ''} del ticket.</p>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setCancelConfirm(false)}
-                className="flex-1 h-10 bg-white border border-zinc-300 text-[13px] font-medium rounded-lg hover:bg-zinc-50 transition-colors"
+                className="flex-1 h-10 bg-white border border-zinc-300 text-[15px] font-medium rounded-lg hover:bg-zinc-50 transition-colors"
                 autoFocus
               >
                 Volver
               </button>
               <button
                 onClick={executeCancelDraft}
-                className="flex-1 h-10 bg-red-600 text-white text-[13px] font-medium rounded-lg hover:bg-red-700 transition-colors"
+                className="flex-1 h-10 bg-red-600 text-white text-[15px] font-medium rounded-lg hover:bg-red-700 transition-colors"
               >
                 Cancelar venta
               </button>
@@ -905,24 +918,41 @@ export function SaleScreen({
         <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-white rounded-xl shadow-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
-              <div className="text-sm font-semibold text-zinc-800">Cobrar</div>
+              <div className="text-base font-semibold text-zinc-800">Cobrar</div>
               <button
                 onClick={() => { setCheckoutOpen(false); setCashReceived('') }}
-                className="text-[12px] font-medium text-zinc-600 hover:text-zinc-900"
+                className="text-[14px] font-medium text-zinc-600 hover:text-zinc-900"
               >
                 Cerrar
               </button>
             </div>
-            <div className="p-4 space-y-3">
-              <div className="flex items-center justify-between text-[13px]">
-                <span className="text-zinc-600">Total</span>
-                <span className="font-semibold text-zinc-900">
-                  ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                </span>
+            <div className="p-4 space-y-4">
+              <div className="rounded-xl bg-zinc-100 border border-zinc-300 px-5 py-5">
+                <div className="space-y-3 text-[17px]">
+                  <div className="flex justify-between text-zinc-700">
+                    <span className="font-medium">Subtotal (sin IVA)</span>
+                    <span className="font-semibold text-zinc-900 tabular-nums">${subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-700">
+                    <span className="font-medium">IVA</span>
+                    <span className="font-semibold text-zinc-900 tabular-nums">${taxAmount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-zinc-300 text-center">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Total a cobrar</div>
+                  {cart.length > 0 && (
+                    <div className="text-xs text-zinc-500 tabular-nums mt-1">
+                      {cartProductCount} {cartProductCount === 1 ? 'producto' : 'productos'}
+                    </div>
+                  )}
+                  <div className="mt-2 text-5xl font-extrabold text-zinc-950 tabular-nums tracking-tight leading-none">
+                    ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
               </div>
 
               {enabledPayments.length === 0 && (
-                <div className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                <div className="text-[14px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                   No hay medios de pago configurados. Sincronizá el POS desde Configuración.
                 </div>
               )}
@@ -931,14 +961,14 @@ export function SaleScreen({
                   <button
                     key={m.id}
                     onClick={() => { setCheckoutPayment(m); setReferenceCode(''); if (m.type === 'cash') setTimeout(() => cashReceivedRef.current?.focus(), 0); else setTimeout(() => referenceCodeRef.current?.focus(), 0) }}
-                    className={`h-9 rounded-md text-[12px] font-medium border transition-colors ${
+                    className={`h-9 rounded-md text-[14px] font-medium border transition-colors ${
                       checkoutPayment?.id === m.id
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-zinc-700 border-zinc-300 hover:border-blue-400'
+                        ? 'bg-brand-600 text-white border-brand-600'
+                        : 'bg-white text-zinc-700 border-zinc-300 hover:border-brand-400'
                     }`}
                   >
                     {m.name}{' '}
-                    <span className={`${checkoutPayment?.id === m.id ? 'text-blue-100' : 'text-zinc-400'}`}>
+                    <span className={`${checkoutPayment?.id === m.id ? 'text-brand-100' : 'text-zinc-400'}`}>
                       {`(F${idx + 1})`}
                     </span>
                   </button>
@@ -947,7 +977,7 @@ export function SaleScreen({
 
               {!isCash && checkoutPayment && (
                 <div>
-                  <label className="block text-[12px] font-medium text-zinc-700 mb-1">
+                  <label className="block text-[14px] font-medium text-zinc-700 mb-1">
                     Código de operación <span className="text-zinc-400 font-normal">(opcional)</span>
                   </label>
                   <input
@@ -955,7 +985,7 @@ export function SaleScreen({
                     value={referenceCode}
                     onChange={(e) => setReferenceCode(e.target.value)}
                     placeholder="Ej: 123456789"
-                    className="w-full h-10 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
+                    className="w-full h-10 px-3 text-[15px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-brand-600"
                   />
                 </div>
               )}
@@ -963,25 +993,25 @@ export function SaleScreen({
               {isCash && (
                 <div className="space-y-2">
                   <div>
-                    <label className="block text-[12px] font-medium text-zinc-700 mb-1">Efectivo recibido</label>
+                    <label className="block text-[14px] font-medium text-zinc-700 mb-1">Efectivo recibido</label>
                     <input
                       ref={cashReceivedRef}
                       value={cashReceived}
                       onChange={(e) => { setCashReceived(e.target.value); setCheckoutError(null) }}
                       placeholder="0,00"
                       inputMode="decimal"
-                      className="w-full h-10 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
+                      className="w-full h-10 px-3 text-[15px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-brand-600"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between text-[13px]">
+                  <div className="flex items-center justify-between text-[15px]">
                     <span className="text-zinc-600">Vuelto</span>
                     <span className={`font-semibold ${cashIsValid ? 'text-zinc-900' : 'text-red-700'}`}>
                       ${Math.max(0, change).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                   {!cashIsValid && (
-                    <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                    <div className="text-[14px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
                       El efectivo recibido debe ser mayor o igual al total.
                     </div>
                   )}
@@ -989,7 +1019,7 @@ export function SaleScreen({
               )}
 
               {checkoutError && (
-                <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                <div className="text-[14px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
                   {checkoutError}
                 </div>
               )}
@@ -997,7 +1027,7 @@ export function SaleScreen({
               <button
                 onClick={handleConfirm}
                 disabled={saving || cart.length === 0 || !cashIsValid}
-                className="w-full h-11 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="w-full h-11 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {saving ? 'Cobrando…' : `Cobrar y emitir ticket (${modKey} + Enter)`}
               </button>
@@ -1010,13 +1040,16 @@ export function SaleScreen({
       {customerOpen && (
         <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-xl shadow-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
-              <div className="text-sm font-semibold text-zinc-800">Cliente</div>
+            <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="text-base font-semibold text-zinc-800">Cliente</div>
+                <ShortcutBadge modKey={modKey} keyLabel="U" />
+              </div>
               <button
                 onClick={() => setCustomerOpen(false)}
-                className="text-[12px] font-medium text-zinc-600 hover:text-zinc-900"
+                className="text-[14px] font-medium text-zinc-600 hover:text-zinc-900 shrink-0"
               >
-                Cerrar
+                Cerrar <span className="text-zinc-400">(Esc)</span>
               </button>
             </div>
             <div className="p-4 space-y-3">
@@ -1036,11 +1069,11 @@ export function SaleScreen({
                   }
                 }}
                 placeholder="Buscar por nombre o CUIT…"
-                className="w-full h-10 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
+                className="w-full h-10 px-3 text-[15px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-brand-600"
               />
 
               {customerError && (
-                <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                <div className="text-[14px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
                   Error buscando clientes: {customerError}
                 </div>
               )}
@@ -1050,8 +1083,8 @@ export function SaleScreen({
                   onClick={() => { setCustomer(null); setCustomerOpen(false); searchRef.current?.focus() }}
                   className="w-full text-left px-3 py-2 hover:bg-zinc-50 transition-colors"
                 >
-                  <div className="text-[13px] font-medium text-zinc-900">Consumidor final</div>
-                  <div className="text-[11px] text-zinc-500">Sin asignar cliente</div>
+                  <div className="text-[15px] font-medium text-zinc-900">Consumidor final</div>
+                  <div className="text-[13px] text-zinc-500">Sin asignar cliente</div>
                 </button>
 
                 {customerRows.map(c => (
@@ -1060,17 +1093,17 @@ export function SaleScreen({
                     onClick={() => { setCustomer(c); setCustomerOpen(false); searchRef.current?.focus() }}
                     className="w-full text-left px-3 py-2 hover:bg-zinc-50 transition-colors"
                   >
-                    <div className="text-[13px] font-medium text-zinc-900 truncate">
+                    <div className="text-[15px] font-medium text-zinc-900 truncate">
                       {c.trade_name ?? c.legal_name}
                     </div>
-                    <div className="text-[11px] text-zinc-500 truncate">
+                    <div className="text-[13px] text-zinc-500 truncate">
                       {c.legal_name}{c.cuit ? ` · CUIT ${c.cuit}` : ''}
                     </div>
                   </button>
                 ))}
 
                 {customerRows.length === 0 && customerQuery.trim() && (
-                  <div className="px-3 py-6 text-center text-[12px] text-zinc-500">
+                  <div className="px-3 py-6 text-center text-[14px] text-zinc-500">
                     Sin resultados para “{customerQuery.trim()}”.
                   </div>
                 )}
@@ -1085,10 +1118,10 @@ export function SaleScreen({
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 print:p-0">
           <div className="flex flex-col w-full max-w-md max-h-[min(92vh,920px)] bg-white rounded-xl shadow-xl overflow-hidden print:max-h-none print:shadow-none print:rounded-none">
             <div className="shrink-0 px-4 py-3 border-b border-zinc-200 flex items-center justify-between print:hidden">
-              <div className="text-sm font-semibold text-zinc-800">Ticket</div>
+              <div className="text-base font-semibold text-zinc-800">Ticket</div>
               <button
                 onClick={startNewSale}
-                className="text-[12px] font-medium text-zinc-600 hover:text-zinc-900"
+                className="text-[14px] font-medium text-zinc-600 hover:text-zinc-900"
               >
                 Nueva venta
               </button>
@@ -1127,7 +1160,7 @@ export function SaleScreen({
 
             <div className="shrink-0 border-t border-zinc-200 p-4 space-y-3 print:hidden">
               {fiscalPendingWarning && (
-                <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                <div className="text-[14px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
                   Venta registrada. AFIP pendiente: {fiscalPendingWarning}
                 </div>
               )}
@@ -1135,28 +1168,28 @@ export function SaleScreen({
               <div className="flex gap-2">
                 <button
                   onClick={handlePrint}
-                  className="flex-1 h-10 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 h-10 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 transition-colors"
                 >
-                  Imprimir <span className="text-[11px] text-blue-100">{`(${modKey}+P)`}</span>
+                  Imprimir <span className="text-[13px] text-brand-100">{`(${modKey}+P)`}</span>
                 </button>
                 <button
                   onClick={startNewSale}
                   className="flex-1 h-10 bg-white text-zinc-700 font-semibold rounded-lg border border-zinc-300 hover:border-zinc-400 transition-colors"
                 >
-                  Nueva venta <span className="text-[11px] text-zinc-400">{`(${modKey}+N)`}</span>
+                  Nueva venta <span className="text-[13px] text-zinc-400">{`(${modKey}+N)`}</span>
                 </button>
               </div>
               {printError && (
-                <p className="text-[12px] text-red-600">{printError}</p>
+                <p className="text-[14px] text-red-600">{printError}</p>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Left: product search */}
-      <div className="flex flex-col flex-1 p-4 gap-3 overflow-hidden">
-        <div className="flex items-center gap-2">
+      {/* Center: search + ticket */}
+      <div className="flex flex-col flex-1 p-4 gap-3 overflow-hidden bg-zinc-50">
+        <div className="flex items-center gap-2 shrink-0">
           <input
             ref={searchRef}
             autoFocus
@@ -1181,8 +1214,8 @@ export function SaleScreen({
               lastSubmittedBarcodeRef.current = raw
               void submitSearchBarcodeRef.current(raw)
             }}
-            placeholder={`Buscar producto por nombre o código… (${modKey} + K)`}
-            className="flex-1 h-10 px-4 text-sm border border-zinc-300 rounded-md focus:outline-none focus:border-blue-500 bg-white"
+            placeholder={`Escaneá o buscá producto… (${modKey} + K)`}
+            className="flex-1 h-11 px-4 text-base border border-zinc-300 rounded-md focus:outline-none focus:border-brand-600 bg-white"
           />
           <button
             onClick={() => {
@@ -1193,184 +1226,242 @@ export function SaleScreen({
               setPriceCheckRows([])
               setTimeout(() => priceCheckInputRef.current?.focus(), 0)
             }}
-            className="h-10 px-3 text-[13px] font-medium bg-white border border-zinc-300 rounded-md hover:bg-zinc-50 transition-colors"
+            className="h-11 px-3 text-[15px] font-medium bg-white border border-zinc-300 rounded-md hover:bg-zinc-50 transition-colors"
           >
-            Ver precio <span className="text-[11px] text-zinc-400">{`(${modKey}+I)`}</span>
+            Ver precio <span className="text-[13px] text-zinc-400">{`(${modKey}+I)`}</span>
           </button>
         </div>
 
         {scanError && (
-          <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+          <div className="shrink-0 text-[14px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
             {scanError}
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-2 content-start">
-          {filtered.slice(0, 40).map(p => (
-            <button
-              key={p.id}
-              onClick={() => handleProductPick(p)}
-              className="text-left bg-white border border-zinc-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 transition-colors flex gap-2.5 items-start"
-            >
-              {p.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={p.image_url}
-                  alt=""
-                  className="w-12 h-12 rounded object-cover shrink-0 bg-zinc-100"
-                  loading="lazy"
-                />
-              ) : null}
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-medium text-zinc-900 truncate">{p.name}</div>
-                {p.sku && <div className="text-[11px] text-zinc-400 font-mono">{p.sku}</div>}
-                <div className="mt-1 text-sm font-semibold text-zinc-800">
-                  ${parseFloat(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                  {p.sold_by_weight && <span className="text-[11px] font-normal text-zinc-400"> /kg · balanza</span>}
+        {isBarcodeInput && !scanError && (
+          <div className="shrink-0 text-[14px] text-zinc-600 bg-white border border-zinc-200 rounded-md px-3 py-2">
+            Código de barras — <span className="font-medium">Enter</span> para agregar al ticket
+          </div>
+        )}
+
+        {showSearchResults && (
+          <div className="shrink-0 rounded-lg border border-zinc-200 bg-white shadow-sm max-h-56 overflow-y-auto divide-y divide-zinc-100">
+            {products.map(p => (
+              <button
+                key={p.id}
+                onClick={() => handleProductPick(p)}
+                className="w-full text-left px-4 py-2.5 hover:bg-brand-50 transition-colors flex gap-3 items-center"
+              >
+                {p.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.image_url}
+                    alt=""
+                    className="w-10 h-10 rounded object-cover shrink-0 bg-zinc-100"
+                    loading="lazy"
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <div className="text-base font-medium text-zinc-900 truncate">{p.name}</div>
+                  {p.sku && <div className="text-[13px] text-zinc-400 font-mono">{p.sku}</div>}
                 </div>
+                <div className="text-lg font-semibold text-zinc-800 tabular-nums shrink-0">
+                  ${parseFloat(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  {p.sold_by_weight && <span className="text-[13px] font-normal text-zinc-400"> /kg</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {searchTrimmed.length >= 2 && !isBarcodeInput && products.length === 0 && !scanError && (
+          <div className="shrink-0 text-center text-base text-zinc-400 py-3 bg-white border border-zinc-200 rounded-lg">
+            Sin resultados para &ldquo;{search}&rdquo;
+          </div>
+        )}
+
+        {/* Ticket */}
+        <div className="flex-1 overflow-y-auto rounded-xl border border-zinc-200 bg-white flex flex-col min-h-0">
+          {cart.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-12">
+              <div className="w-14 h-14 rounded-full bg-zinc-100 flex items-center justify-center mb-4 text-zinc-400">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 01-8 0" />
+                </svg>
               </div>
-            </button>
-          ))}
-          {filtered.length === 0 && search && !scanError && (
-            <div className="col-span-2 text-center text-sm text-zinc-400 py-8">
-              {/^\d{8,}$/.test(search.trim())
-                ? 'Código de barras — Enter para agregar al carrito'
-                : `Sin resultados para "${search}"`}
+              <p className="text-lg font-medium text-zinc-600">Ticket vacío</p>
+              <p className="mt-1 text-base text-zinc-400 max-w-sm">
+                Escaneá un código de barras o buscá un producto para empezar la venta
+              </p>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-4 py-2.5 border-b border-zinc-100 text-[12px] font-semibold uppercase tracking-wide text-zinc-400 shrink-0">
+                <span>Producto</span>
+                <span className="w-28 text-center">Cantidad</span>
+                <span className="w-24 text-right">Total</span>
+                <span className="w-7" aria-hidden />
+              </div>
+              <div className="divide-y divide-zinc-100">
+                {cart.map((item) => {
+                  const { product, qty } = item
+                  return (
+                    <div key={product.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 items-center px-4 py-3">
+                      <div className="min-w-0">
+                        <div className="text-lg font-medium text-zinc-900 truncate">{product.name}</div>
+                        <div className="text-[15px] text-zinc-500 tabular-nums">
+                          ${parseFloat(product.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                          {item.weightItem ? ' /kg' : ' c/u'}
+                        </div>
+                      </div>
+                      {item.weightItem ? (
+                        <div className="w-28 flex items-center justify-center gap-1">
+                          <CartWeightInput
+                            qtyKg={qty}
+                            onCommit={(kg) => updateWeightQty(product.id, kg)}
+                          />
+                          <span className="text-[13px] text-zinc-400">kg</span>
+                        </div>
+                      ) : (
+                        <div className="w-28 flex items-center justify-center gap-1.5">
+                          <button onClick={() => updateQty(product.id, qty - 1)} className="w-8 h-8 rounded-md bg-zinc-100 text-zinc-700 hover:bg-zinc-200 text-lg font-medium flex items-center justify-center">−</button>
+                          <span className="w-8 text-center text-lg font-semibold tabular-nums">{qty}</span>
+                          <button onClick={() => updateQty(product.id, qty + 1)} className="w-8 h-8 rounded-md bg-zinc-100 text-zinc-700 hover:bg-zinc-200 text-lg font-medium flex items-center justify-center">+</button>
+                        </div>
+                      )}
+                      <div className="w-24 text-right text-lg font-semibold text-zinc-900 tabular-nums">
+                        ${lineTotal(item).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(product.id)}
+                        title="Quitar del ticket"
+                        className="w-7 h-7 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 text-lg font-medium flex items-center justify-center shrink-0"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>
 
-      {/* Right: cart + checkout */}
-      <div className="flex flex-col w-80 border-l border-zinc-200 bg-white">
-        <div className="px-4 py-3 border-b border-zinc-100 text-sm font-semibold text-zinc-700">Carrito</div>
-
-        {/* Cashier — read-only, set from Turno de caja */}
-        <div className="px-4 py-2.5 border-b border-zinc-100">
-          <div className="text-[11px] text-zinc-500">Cajero/a en turno</div>
-          <div className="text-[13px] font-medium text-zinc-900 truncate">
-            {cashierName || <span className="text-zinc-400 italic">Sin turno abierto</span>}
-          </div>
-          {noCashierError && (
-            <div className="mt-1 text-[11px] text-amber-700">
-              Abrí un turno de caja antes de cobrar
-            </div>
-          )}
-        </div>
-
-        {/* Customer */}
+      {/* Right: customer + checkout */}
+      <div className="flex flex-col w-[28rem] shrink-0 border-l border-zinc-200 bg-white">
         <div className="px-4 py-3 border-b border-zinc-100">
-          <button
-            onClick={async () => {
-              setCustomerOpen(true)
-              setCustomerError(null)
-              try {
-                const rows = await window.pos.customers.search('')
-                setCustomerRows(rows)
-              } catch (err) {
-                setCustomerRows([])
-                setCustomerError(err instanceof Error ? err.message : String(err))
-              }
-              setTimeout(() => customerInputRef.current?.focus(), 0)
-            }}
-            className="w-full text-left"
-          >
-            <div className="text-[11px] text-zinc-500">Cliente</div>
-            <div className="text-[13px] font-medium text-zinc-900 truncate">
-              {customer ? (customer.trade_name ?? customer.legal_name) : 'Consumidor final'}{' '}
-              <span className="text-[11px] font-medium text-zinc-400">({modKey} + U)</span>
-            </div>
-            {customer?.cuit && <div className="text-[11px] text-zinc-500">CUIT {customer.cuit}</div>}
-          </button>
-          {customer && (
-            <button
-              onClick={() => setCustomer(null)}
-              className="mt-2 text-[12px] font-medium text-zinc-600 hover:text-zinc-900"
-            >
-              Quitar cliente
-            </button>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-y-auto divide-y divide-zinc-100">
-          {cart.length === 0 && (
-            <div className="text-center text-sm text-zinc-400 py-10">Agregá productos al carrito</div>
-          )}
-          {cart.map((item) => {
-            const { product, qty } = item
-            return (
-            <div key={product.id} className="px-4 py-2.5 flex items-center gap-2 group">
-              <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-medium text-zinc-900 truncate">{product.name}</div>
-                <div className="text-[12px] text-zinc-500">
-                  ${parseFloat(product.price).toLocaleString('es-AR', { minimumFractionDigits: 2 })} {item.weightItem ? '/kg' : 'c/u'}
-                </div>
-              </div>
-              {item.weightItem ? (
-                <div className="flex items-center gap-1">
-                  <CartWeightInput
-                    qtyKg={qty}
-                    onCommit={(kg) => updateWeightQty(product.id, kg)}
-                  />
-                  <span className="text-[11px] text-zinc-400">kg</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <button onClick={() => updateQty(product.id, qty - 1)} className="w-6 h-6 rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 text-sm font-medium flex items-center justify-center">−</button>
-                  <span className="w-6 text-center text-[13px] font-medium">{qty}</span>
-                  <button onClick={() => updateQty(product.id, qty + 1)} className="w-6 h-6 rounded bg-zinc-100 text-zinc-700 hover:bg-zinc-200 text-sm font-medium flex items-center justify-center">+</button>
-                </div>
-              )}
-              <div className="text-[13px] font-semibold text-zinc-900 w-16 text-right">
-                ${lineTotal(item).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-              </div>
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 overflow-hidden">
+            <div className="flex items-stretch">
               <button
                 type="button"
-                onClick={() => removeFromCart(product.id)}
-                title="Quitar del carrito"
-                className="w-6 h-6 rounded text-zinc-400 hover:text-red-600 hover:bg-red-50 text-sm font-medium flex items-center justify-center shrink-0"
+                title={`Buscar cliente (${modKey} + U)`}
+                onClick={async () => {
+                  setCustomerOpen(true)
+                  setCustomerError(null)
+                  try {
+                    const rows = await window.pos.customers.search('')
+                    setCustomerRows(rows)
+                  } catch (err) {
+                    setCustomerRows([])
+                    setCustomerError(err instanceof Error ? err.message : String(err))
+                  }
+                  setTimeout(() => customerInputRef.current?.focus(), 0)
+                }}
+                className="flex-1 flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white transition-colors min-w-0"
               >
-                ×
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[15px] font-semibold ${
+                    customer ? 'bg-zinc-200 text-zinc-700' : 'bg-white border border-zinc-200 text-zinc-400'
+                  }`}
+                  aria-hidden
+                >
+                  {customer ? (customer.trade_name ?? customer.legal_name).charAt(0).toUpperCase() : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-semibold uppercase tracking-wide text-zinc-400">Cliente</div>
+                  <div className="text-base font-medium text-zinc-900 truncate">
+                    {customer ? (customer.trade_name ?? customer.legal_name) : 'Consumidor final'}
+                  </div>
+                  {customer?.cuit ? (
+                    <div className="text-[13px] text-zinc-500 truncate">CUIT {customer.cuit}</div>
+                  ) : (
+                    <div className="text-[13px] text-zinc-500">Atajo para buscar cliente</div>
+                  )}
+                </div>
+                <ShortcutBadge modKey={modKey} keyLabel="U" />
               </button>
+              {customer && (
+                <button
+                  type="button"
+                  onClick={() => setCustomer(null)}
+                  title="Quitar cliente"
+                  className="shrink-0 px-2.5 border-l border-zinc-200 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
             </div>
-            )
-          })}
+          </div>
         </div>
 
+        <PosTicketBrandPanel />
+
         {/* Totals */}
-        <div className="border-t border-zinc-200 px-4 py-3 space-y-1 text-[13px]">
-          <div className="flex justify-between text-zinc-500">
-            <span>Subtotal (sin IVA)</span>
-            <span>${subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+        <div className="border-t border-zinc-200 bg-zinc-100 px-4 py-4">
+          <div className="space-y-3 text-[17px]">
+            <div className="flex justify-between text-zinc-700">
+              <span className="font-medium">Subtotal (sin IVA)</span>
+              <span className="font-semibold text-zinc-900 tabular-nums">${subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between text-zinc-700">
+              <span className="font-medium">IVA</span>
+              <span className="font-semibold text-zinc-900 tabular-nums">${taxAmount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            </div>
           </div>
-          <div className="flex justify-between text-zinc-500">
-            <span>IVA</span>
-            <span>${taxAmount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-          </div>
-          <div className="flex justify-between font-semibold text-base text-zinc-900 pt-1 border-t border-zinc-100">
-            <span>Total</span>
-            <span>${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+          <div className="mt-4 pt-4 border-t border-zinc-300">
+            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1">Total a cobrar</div>
+            {cart.length > 0 && (
+              <div className="text-xs text-zinc-500 tabular-nums mb-2">
+                {cartProductCount} {cartProductCount === 1 ? 'producto' : 'productos'}
+              </div>
+            )}
+            <div className="text-4xl font-extrabold text-zinc-950 tabular-nums tracking-tight leading-none text-right">
+              ${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            </div>
           </div>
         </div>
 
         {lastSale && (
-          <div className="mx-4 mb-2 px-3 py-2 bg-green-50 border border-green-200 rounded text-[12px] text-green-800">
+          <div className="mx-4 mb-2 px-3 py-2 bg-green-50 border border-green-200 rounded text-[14px] text-green-800">
             ✓ Venta registrada: ${parseFloat(lastSale.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
           </div>
         )}
 
         <div className="px-4 pb-4 space-y-2">
+          {noCashierError && (
+            <p className="text-[13px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
+              Abrí un turno de caja antes de cobrar
+            </p>
+          )}
           <button
             onClick={openCheckout}
             disabled={cart.length === 0 || saving || !cashierUserId}
-            className="w-full h-11 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="w-full h-11 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {saving ? 'Registrando…' : `Cobrar (${modKey} + Enter)`}
           </button>
           {cart.length > 0 && (
             <button
               onClick={handleCancelDraft}
-              className="w-full h-8 text-[12px] font-medium rounded-md transition-colors bg-white border border-zinc-300 text-zinc-500 hover:border-red-300 hover:text-red-600"
+              className="w-full h-8 text-[14px] font-medium rounded-md transition-colors bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300"
             >
               {`Cancelar venta (${modKey} + ⌫)`}
             </button>

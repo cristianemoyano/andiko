@@ -58,14 +58,24 @@ export const POST = withPosDevice(async (req: NextRequest, ctx) => {
       })
 
       if (!created) {
-        await record.update({
-          closed_at:               s.closed_at ? new Date(s.closed_at) : record.closed_at,
-          closing_amount_declared: s.closing_amount_declared ?? record.closing_amount_declared,
-          closing_amount_expected: s.closing_amount_expected ?? record.closing_amount_expected,
-          difference:              s.difference ?? record.difference,
-          status:                  s.status,
-          synced_at:               new Date(),
-        })
+        const alreadyClosed = record.status === 'closed'
+        const incomingClose = s.status === 'closed'
+
+        // Never downgrade closed → open (stale POS sync after open was pushed but close was not)
+        const updates: Parameters<typeof record.update>[0] = {
+          synced_at: new Date(),
+        }
+        if (incomingClose || !alreadyClosed) {
+          updates.status = s.status
+        }
+        if (incomingClose) {
+          updates.closed_at = s.closed_at ? new Date(s.closed_at) : record.closed_at
+          updates.closing_amount_declared = s.closing_amount_declared ?? record.closing_amount_declared
+          updates.closing_amount_expected = s.closing_amount_expected ?? record.closing_amount_expected
+          updates.difference = s.difference ?? record.difference
+        }
+
+        await record.update(updates)
       }
 
       results.push({ local_id: s.local_id, cloud_id: record.id, error: null })

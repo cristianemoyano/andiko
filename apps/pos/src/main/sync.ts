@@ -1,7 +1,7 @@
 import type { IpcMain } from 'electron'
 import { db } from './db'
 import { products, customers, posUsers, posPaymentMethods, sales, saleItems, syncQueue, settings, cashSessions } from '../db/schema'
-import { eq, inArray, isNull, like, or, sql } from 'drizzle-orm'
+import { eq, inArray, isNull, like, or, and, sql } from 'drizzle-orm'
 import type { PosProduct, PosCustomer, PosPaymentMethod, PosSalePayment } from '@andiko/shared'
 import bcrypt from 'bcryptjs'
 
@@ -454,9 +454,18 @@ export async function runBackgroundSync(): Promise<void> {
 }
 
 export async function syncPendingCashSessions() {
-  // Sync: never synced OR closed but no cloud_id (closed after last sync)
+  // Pending: never synced, missing cloud_id, or closed after last sync (open was synced but close was not)
   const toSync = db().select().from(cashSessions)
-    .where(sql`${cashSessions.synced_at} IS NULL OR ${cashSessions.cloud_id} IS NULL`)
+    .where(
+      or(
+        isNull(cashSessions.synced_at),
+        isNull(cashSessions.cloud_id),
+        and(
+          eq(cashSessions.status, 'closed'),
+          sql`${cashSessions.closed_at} IS NOT NULL AND ${cashSessions.synced_at} < ${cashSessions.closed_at}`,
+        ),
+      ),
+    )
     .all()
 
   if (toSync.length === 0) return
