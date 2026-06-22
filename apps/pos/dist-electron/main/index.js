@@ -1,4 +1,26 @@
 "use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 const electron = require("electron");
 const path = require("path");
 const Database = require("better-sqlite3");
@@ -16,6 +38,8 @@ const products = sqliteCore.sqliteTable("products", {
   iva_rate: sqliteCore.text("iva_rate").notNull(),
   is_active: sqliteCore.integer("is_active", { mode: "boolean" }).notNull().default(true),
   image_url: sqliteCore.text("image_url"),
+  sold_by_weight: sqliteCore.integer("sold_by_weight", { mode: "boolean" }).notNull().default(false),
+  plu_code: sqliteCore.text("plu_code"),
   synced_at: sqliteCore.text("synced_at").notNull()
   // ISO timestamp from cloud
 });
@@ -24,6 +48,7 @@ const customers = sqliteCore.sqliteTable("customers", {
   legal_name: sqliteCore.text("legal_name").notNull(),
   trade_name: sqliteCore.text("trade_name"),
   cuit: sqliteCore.text("cuit"),
+  iva_condition: sqliteCore.text("iva_condition"),
   email: sqliteCore.text("email"),
   phone: sqliteCore.text("phone"),
   synced_at: sqliteCore.text("synced_at").notNull()
@@ -33,6 +58,7 @@ const posUsers = sqliteCore.sqliteTable("pos_users", {
   name: sqliteCore.text("name").notNull(),
   email: sqliteCore.text("email").notNull(),
   role: sqliteCore.text("role").notNull(),
+  role_label: sqliteCore.text("role_label"),
   branch_id: sqliteCore.text("branch_id"),
   pos_pin_hash: sqliteCore.text("pos_pin_hash"),
   synced_at: sqliteCore.text("synced_at").notNull()
@@ -41,6 +67,7 @@ const posUsers = sqliteCore.sqliteTable("pos_users", {
 const sales = sqliteCore.sqliteTable("sales", {
   id: sqliteCore.text("id").primaryKey(),
   // local UUID
+  ticket_number: sqliteCore.text("ticket_number"),
   customer_id: sqliteCore.text("customer_id"),
   cashier_user_id: sqliteCore.text("cashier_user_id"),
   cashier_name: sqliteCore.text("cashier_name"),
@@ -51,8 +78,11 @@ const sales = sqliteCore.sqliteTable("sales", {
   total: sqliteCore.text("total").notNull(),
   sold_at: sqliteCore.text("sold_at").notNull(),
   cloud_id: sqliteCore.text("cloud_id"),
-  // set after sync
-  synced_at: sqliteCore.text("synced_at")
+  synced_at: sqliteCore.text("synced_at"),
+  cae: sqliteCore.text("cae"),
+  cae_expiration: sqliteCore.text("cae_expiration"),
+  qr_url: sqliteCore.text("qr_url"),
+  afip_status: sqliteCore.text("afip_status")
 });
 const saleItems = sqliteCore.sqliteTable("sale_items", {
   id: sqliteCore.integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
@@ -180,6 +210,7 @@ function runMigrations(sqlite) {
       legal_name TEXT NOT NULL,
       trade_name TEXT,
       cuit TEXT,
+      iva_condition TEXT,
       email TEXT,
       phone TEXT,
       synced_at TEXT NOT NULL
@@ -190,6 +221,7 @@ function runMigrations(sqlite) {
       name TEXT NOT NULL,
       email TEXT NOT NULL,
       role TEXT NOT NULL,
+      role_label TEXT,
       branch_id TEXT,
       pos_pin_hash TEXT,
       synced_at TEXT NOT NULL
@@ -197,6 +229,7 @@ function runMigrations(sqlite) {
 
     CREATE TABLE IF NOT EXISTS sales (
       id TEXT PRIMARY KEY,
+      ticket_number TEXT,
       customer_id TEXT,
       cashier_user_id TEXT,
       cashier_name TEXT,
@@ -318,6 +351,10 @@ function runMigrations(sqlite) {
   } catch {
   }
   try {
+    sqlite.exec(`ALTER TABLE pos_users ADD COLUMN role_label TEXT;`);
+  } catch {
+  }
+  try {
     sqlite.exec(`ALTER TABLE products ADD COLUMN barcode TEXT;`);
   } catch {
   }
@@ -326,11 +363,47 @@ function runMigrations(sqlite) {
   } catch {
   }
   try {
+    sqlite.exec(`ALTER TABLE products ADD COLUMN sold_by_weight INTEGER NOT NULL DEFAULT 0;`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE products ADD COLUMN plu_code TEXT;`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_products_plu_code ON products(plu_code);`);
+  } catch {
+  }
+  try {
     sqlite.exec(`ALTER TABLE sales ADD COLUMN payments TEXT NOT NULL DEFAULT '[]';`);
   } catch {
   }
   try {
     sqlite.exec(`ALTER TABLE pos_draft_sales ADD COLUMN payments TEXT DEFAULT '[]';`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE customers ADD COLUMN iva_condition TEXT;`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE sales ADD COLUMN ticket_number TEXT;`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE sales ADD COLUMN cae TEXT;`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE sales ADD COLUMN cae_expiration TEXT;`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE sales ADD COLUMN qr_url TEXT;`);
+  } catch {
+  }
+  try {
+    sqlite.exec(`ALTER TABLE sales ADD COLUMN afip_status TEXT;`);
   } catch {
   }
   const hasPmCol = sqlite.prepare(`PRAGMA table_info(sales)`).all().some((c) => c.name === "payment_method");
@@ -2087,7 +2160,61 @@ const bcrypt = {
 };
 const SYNC_INTERVAL_MS = 30 * 60 * 1e3;
 const SALES_SYNC_INTERVAL_MS = 60 * 1e3;
-function getSettings() {
+const BUILTIN_ROLE_LABELS = {
+  admin: "Gerente",
+  "branch-admin": "Encargado de sucursal",
+  operator: "Operativo",
+  readonly: "Solo lectura",
+  "sys-admin": "Sys-admin"
+};
+function displayRoleLabel(role, roleLabel) {
+  const trimmed = roleLabel?.trim();
+  if (trimmed) return trimmed;
+  return BUILTIN_ROLE_LABELS[role] ?? role;
+}
+function upsertPosUsersFromCloud(userList) {
+  const syncedUserIds = /* @__PURE__ */ new Set();
+  for (const u of userList) {
+    syncedUserIds.add(u.id);
+    const roleLabel = displayRoleLabel(u.role, u.role_label);
+    db().insert(posUsers).values({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      role_label: roleLabel,
+      branch_id: u.branch_id ?? null,
+      pos_pin_hash: u.pos_pin_hash ?? null,
+      synced_at: u.updated_at
+    }).onConflictDoUpdate({ target: posUsers.id, set: {
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      role_label: roleLabel,
+      branch_id: u.branch_id ?? null,
+      pos_pin_hash: u.pos_pin_hash ?? null,
+      synced_at: u.updated_at
+    } }).run();
+  }
+  const localUsers = db().select({ id: posUsers.id }).from(posUsers).all();
+  for (const row of localUsers) {
+    if (!syncedUserIds.has(row.id)) {
+      db().delete(posUsers).where(drizzleOrm.eq(posUsers.id, row.id)).run();
+    }
+  }
+  return syncedUserIds;
+}
+async function refreshPosUsersFromCloud() {
+  const { data: userList } = await fetchCloud(
+    `/api/v1/pos/users?limit=100`,
+    { method: "GET" }
+  );
+  upsertPosUsersFromCloud(userList);
+  const s = getSettings$1();
+  const nextUsersSince = userList.length > 0 ? userList.map((u) => u.updated_at).reduce((max, cur) => cur > max ? cur : max, "1970-01-01T00:00:00.000Z") : s["users_synced_at"] ?? "1970-01-01T00:00:00.000Z";
+  db().insert(settings).values({ key: "users_synced_at", value: nextUsersSince }).onConflictDoUpdate({ target: settings.key, set: { value: nextUsersSince } }).run();
+}
+function getSettings$1() {
   const rows = db().select().from(settings).all();
   return Object.fromEntries(rows.map((r) => [r.key, r.value]));
 }
@@ -2095,7 +2222,7 @@ function saveSetting(key, value) {
   db().insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } }).run();
 }
 async function validateLicense() {
-  const s = getSettings();
+  const s = getSettings$1();
   const deviceId = s["device_id"] ?? "";
   const res = await fetchCloud(`/api/v1/pos/license?device_id=${encodeURIComponent(deviceId)}`);
   if (res.valid) {
@@ -2106,16 +2233,66 @@ async function validateLicense() {
     if (res.device_id) saveSetting("device_id", res.device_id);
     if (res.device_name) saveSetting("device_name", res.device_name);
     if (res.valid_until) saveSetting("license_valid_until", res.valid_until);
+    if (res.balanza_config !== void 0) {
+      saveSetting("balanza_config", JSON.stringify(res.balanza_config));
+    }
+    if (res.fiscal) {
+      saveSetting("org_legal_name", res.fiscal.legal_name ?? "");
+      saveSetting("org_cuit", res.fiscal.cuit ?? "");
+      saveSetting("org_iva_condition", res.fiscal.iva_condition ?? "");
+      saveSetting("org_fiscal_address", res.fiscal.fiscal_address ?? "");
+      saveSetting("org_gross_income", res.fiscal.gross_income ?? "");
+      saveSetting("org_activity_start", res.fiscal.activity_start_date ?? "");
+      saveSetting("org_consumer_defense", res.fiscal.consumer_defense_line ?? "");
+      saveSetting("org_comprobante_codigo", res.fiscal.comprobante_codigo ?? "083");
+    }
+    if (res.branch_fiscal) {
+      saveSetting("branch_address", res.branch_fiscal.address ?? "");
+      saveSetting("branch_establishment", res.branch_fiscal.establishment_code ?? "");
+      saveSetting(
+        "branch_punto_venta",
+        res.branch_fiscal.punto_venta != null ? String(res.branch_fiscal.punto_venta) : ""
+      );
+      saveSetting(
+        "branch_punto_venta_default",
+        res.branch_fiscal.branch_punto_venta != null ? String(res.branch_fiscal.branch_punto_venta) : ""
+      );
+    }
+    if (res.device_fiscal) {
+      saveSetting(
+        "device_punto_venta",
+        res.device_fiscal.punto_venta != null ? String(res.device_fiscal.punto_venta) : ""
+      );
+    }
     saveSetting("license_last_valid_at", (/* @__PURE__ */ new Date()).toISOString());
   } else {
-    for (const key of ["branch_name", "org_name", "device_name", "license_valid_until", "license_last_valid_at"]) {
+    for (const key of [
+      "branch_name",
+      "org_name",
+      "device_name",
+      "license_valid_until",
+      "license_last_valid_at",
+      "org_legal_name",
+      "org_cuit",
+      "org_iva_condition",
+      "org_fiscal_address",
+      "org_gross_income",
+      "org_activity_start",
+      "org_consumer_defense",
+      "org_comprobante_codigo",
+      "branch_address",
+      "branch_establishment",
+      "branch_punto_venta",
+      "branch_punto_venta_default",
+      "device_punto_venta"
+    ]) {
       db().delete(settings).where(drizzleOrm.eq(settings.key, key)).run();
     }
   }
   return { valid: res.valid, reason: res.reason };
 }
 async function fetchCloud(path2, config, timeoutMs = 1e4) {
-  const s = getSettings();
+  const s = getSettings$1();
   const base = s["cloud_url"] ?? "";
   const token = s["api_token"] ?? "";
   if (!base) throw new Error("URL del servidor no configurada");
@@ -2141,8 +2318,22 @@ async function verifyUserPin(args) {
     1e4
   );
 }
+async function registerPosSaleInCloud(payload) {
+  return fetchCloud(
+    "/api/v1/pos/sales/register",
+    { method: "POST", body: JSON.stringify(payload) },
+    3e4
+  );
+}
+async function authorizePosSaleInCloud(payload) {
+  return fetchCloud(
+    "/api/v1/pos/sales/authorize",
+    { method: "POST", body: JSON.stringify(payload) },
+    6e4
+  );
+}
 async function syncCatalog() {
-  const s = getSettings();
+  const s = getSettings$1();
   const since = s["catalog_synced_at"] ?? "1970-01-01T00:00:00.000Z";
   const branchId = s["branch_id"] ?? "";
   const { data: productList } = await fetchCloud(
@@ -2158,6 +2349,8 @@ async function syncCatalog() {
       iva_rate: p.iva_rate,
       is_active: p.is_active,
       image_url: p.image_url ?? null,
+      sold_by_weight: p.sold_by_weight ?? false,
+      plu_code: p.plu_code ?? null,
       synced_at: p.updated_at
     }).onConflictDoUpdate({ target: products.id, set: {
       sku: p.sku ?? null,
@@ -2167,6 +2360,8 @@ async function syncCatalog() {
       iva_rate: p.iva_rate,
       is_active: p.is_active,
       image_url: p.image_url ?? null,
+      sold_by_weight: p.sold_by_weight ?? false,
+      plu_code: p.plu_code ?? null,
       synced_at: p.updated_at
     } }).run();
   }
@@ -2179,6 +2374,7 @@ async function syncCatalog() {
       legal_name: c.legal_name,
       trade_name: c.trade_name ?? null,
       cuit: c.cuit ?? null,
+      iva_condition: c.iva_condition ?? null,
       email: c.email ?? null,
       phone: c.phone ?? null,
       synced_at: c.updated_at
@@ -2186,36 +2382,13 @@ async function syncCatalog() {
       legal_name: c.legal_name,
       trade_name: c.trade_name ?? null,
       cuit: c.cuit ?? null,
+      iva_condition: c.iva_condition ?? null,
       email: c.email ?? null,
       phone: c.phone ?? null,
       synced_at: c.updated_at
     } }).run();
   }
-  const usersSince = s["users_synced_at"] ?? "1970-01-01T00:00:00.000Z";
-  const { data: userList } = await fetchCloud(
-    `/api/v1/pos/users?since=${encodeURIComponent(usersSince)}&limit=50`,
-    { method: "GET" }
-  );
-  for (const u of userList) {
-    db().insert(posUsers).values({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      branch_id: u.branch_id ?? null,
-      pos_pin_hash: u.pos_pin_hash ?? null,
-      synced_at: u.updated_at
-    }).onConflictDoUpdate({ target: posUsers.id, set: {
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      branch_id: u.branch_id ?? null,
-      pos_pin_hash: u.pos_pin_hash ?? null,
-      synced_at: u.updated_at
-    } }).run();
-  }
-  const nextUsersSince = userList.length > 0 ? userList.map((u) => u.updated_at).reduce((max, cur) => cur > max ? cur : max, usersSince) : usersSince;
-  db().insert(settings).values({ key: "users_synced_at", value: nextUsersSince }).onConflictDoUpdate({ target: settings.key, set: { value: nextUsersSince } }).run();
+  await refreshPosUsersFromCloud();
   if (!branchId) throw new Error("Validá la licencia primero para obtener la sucursal asignada");
   const { data: paymentMethodList } = await fetchCloud(
     `/api/v1/pos/payment-methods?branch_id=${branchId}`
@@ -2234,6 +2407,7 @@ async function syncCatalog() {
   db().insert(settings).values({ key: "catalog_synced_at", value: (/* @__PURE__ */ new Date()).toISOString() }).onConflictDoUpdate({ target: settings.key, set: { value: (/* @__PURE__ */ new Date()).toISOString() } }).run();
 }
 async function syncPendingSales() {
+  await reconcileSyncedSales();
   const pending = db().select().from(syncQueue).all();
   if (pending.length === 0) return { synced: 0, failed: [] };
   const saleIds = pending.map((q) => q.sale_id);
@@ -2282,8 +2456,56 @@ async function syncPendingSales() {
   }
   return { synced, failed };
 }
+async function reconcileSyncedSales() {
+  const unsynced = db().select().from(sales).where(drizzleOrm.sql`${sales.cloud_id} IS NULL`).all();
+  if (unsynced.length === 0) return { reconciled: 0 };
+  const since = unsynced.map((s) => s.sold_at).reduce((min, cur) => cur < min ? cur : min, unsynced[0].sold_at);
+  try {
+    const result = await fetchCloud(
+      `/api/v1/pos/sales/sync?since=${encodeURIComponent(since)}&limit=500`,
+      { method: "GET" }
+    );
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    let reconciled = 0;
+    for (const row of result.data) {
+      const local = db().select().from(sales).where(drizzleOrm.eq(sales.id, row.pos_sale_id)).get();
+      if (local && !local.cloud_id) {
+        db().update(sales).set({ cloud_id: row.cloud_id, synced_at: now }).where(drizzleOrm.eq(sales.id, row.pos_sale_id)).run();
+        const q = db().select().from(syncQueue).where(drizzleOrm.eq(syncQueue.sale_id, row.pos_sale_id)).get();
+        if (q) db().delete(syncQueue).where(drizzleOrm.eq(syncQueue.id, q.id)).run();
+        reconciled++;
+      }
+    }
+    return { reconciled };
+  } catch {
+    return { reconciled: 0 };
+  }
+}
+async function runBackgroundSync() {
+  try {
+    await reconcileSyncedSales();
+  } catch {
+  }
+  try {
+    await syncPendingSales();
+  } catch {
+  }
+  try {
+    await syncPendingCashSessions();
+  } catch {
+  }
+}
 async function syncPendingCashSessions() {
-  const toSync = db().select().from(cashSessions).where(drizzleOrm.sql`${cashSessions.synced_at} IS NULL OR ${cashSessions.cloud_id} IS NULL`).all();
+  const toSync = db().select().from(cashSessions).where(
+    drizzleOrm.or(
+      drizzleOrm.isNull(cashSessions.synced_at),
+      drizzleOrm.isNull(cashSessions.cloud_id),
+      drizzleOrm.and(
+        drizzleOrm.eq(cashSessions.status, "closed"),
+        drizzleOrm.sql`${cashSessions.closed_at} IS NOT NULL AND ${cashSessions.synced_at} < ${cashSessions.closed_at}`
+      )
+    )
+  ).all();
   if (toSync.length === 0) return;
   const payload = toSync.map((s) => ({
     local_id: s.id,
@@ -2316,7 +2538,7 @@ async function syncPendingCashSessions() {
 }
 const GRACE_PERIOD_DAYS = 7;
 async function checkLicenseOnStartup() {
-  const s = getSettings();
+  const s = getSettings$1();
   const cloudUrl = s["cloud_url"] ?? "";
   const apiToken = s["api_token"] ?? "";
   if (!cloudUrl || !apiToken) {
@@ -2362,6 +2584,11 @@ function registerSyncHandlers(ipc) {
     const errors = [];
     let salesResult = { synced: 0, failed: [] };
     try {
+      await reconcileSyncedSales();
+    } catch (e) {
+      errors.push(`reconciliación: ${String(e)}`);
+    }
+    try {
       salesResult = await syncPendingSales();
     } catch (e) {
       errors.push(`ventas: ${String(e)}`);
@@ -2384,11 +2611,18 @@ function registerSyncHandlers(ipc) {
     }
     return { ok: true };
   });
-  ipc.handle("settings:get", async () => getSettings());
+  ipc.handle("settings:get", async () => getSettings$1());
   ipc.handle("paymentMethods:list", async () => {
     return db().select().from(posPaymentMethods).orderBy(posPaymentMethods.sort_order).all();
   });
   ipc.handle("users:search", async (_e, query) => {
+    const missingRoleLabel = db().select({ id: posUsers.id }).from(posUsers).where(drizzleOrm.or(drizzleOrm.isNull(posUsers.role_label), drizzleOrm.eq(posUsers.role_label, ""))).all();
+    if (missingRoleLabel.length > 0) {
+      try {
+        await refreshPosUsersFromCloud();
+      } catch {
+      }
+    }
     const q = (query ?? "").trim();
     const term = `%${q}%`;
     const d = db();
@@ -2396,10 +2630,20 @@ function registerSyncHandlers(ipc) {
       drizzleOrm.or(
         drizzleOrm.like(posUsers.name, term),
         drizzleOrm.like(posUsers.email, term),
-        drizzleOrm.like(drizzleOrm.sql`coalesce(${posUsers.role}, '')`, term)
+        drizzleOrm.like(drizzleOrm.sql`coalesce(${posUsers.role_label}, '')`, term)
       )
-    ).limit(20).all() : d.select().from(posUsers).limit(20).all();
-    return { ok: true, data: rows };
+    ).orderBy(posUsers.name).limit(50).all() : d.select().from(posUsers).orderBy(posUsers.name).limit(50).all();
+    return {
+      ok: true,
+      data: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        role: row.role,
+        role_label: displayRoleLabel(row.role, row.role_label),
+        branch_id: row.branch_id
+      }))
+    };
   });
   ipc.handle("users:verifyPin", async (_e, args) => {
     try {
@@ -2437,51 +2681,239 @@ function registerSyncHandlers(ipc) {
   }, SYNC_INTERVAL_MS);
   setInterval(async () => {
     try {
-      await syncPendingSales();
-    } catch {
-    }
-    try {
-      await syncPendingCashSessions();
+      await runBackgroundSync();
     } catch {
     }
   }, SALES_SYNC_INTERVAL_MS);
 }
+function parseCloudError(err) {
+  if (!(err instanceof Error)) return String(err);
+  const msg = err.message;
+  const jsonStart = msg.indexOf("{");
+  if (jsonStart >= 0) {
+    try {
+      const body = JSON.parse(msg.slice(jsonStart));
+      if (body.error) return body.error;
+      if (body.code) return body.code;
+    } catch {
+    }
+  }
+  return msg;
+}
+function fiscalFromCloud(fiscal) {
+  return {
+    ticket_number: fiscal.ticket_number,
+    cloud_id: fiscal.cloud_id,
+    cae: fiscal.cae,
+    cae_expiration: fiscal.cae_expiration,
+    qr_url: fiscal.qr_url,
+    afip_status: fiscal.afip_status,
+    fiscal_pending: fiscal.afip_status !== "authorized" || !fiscal.cae,
+    afip_error: null
+  };
+}
+function applyFiscalUpdate(saleId, fiscal, syncedAt) {
+  db().update(sales).set({
+    ticket_number: fiscal.ticket_number,
+    cloud_id: fiscal.cloud_id,
+    synced_at: syncedAt,
+    cae: fiscal.cae,
+    cae_expiration: fiscal.cae_expiration,
+    qr_url: fiscal.qr_url,
+    afip_status: fiscal.afip_status
+  }).where(drizzleOrm.eq(sales.id, saleId)).run();
+}
+function buildAuthorizePayloadFromLocalSale(saleId) {
+  const sale = db().select().from(sales).where(drizzleOrm.eq(sales.id, saleId)).get();
+  if (!sale) throw new Error("SALE_NOT_FOUND");
+  const items = db().select().from(saleItems).where(drizzleOrm.eq(saleItems.sale_id, saleId)).all();
+  const payments = JSON.parse(sale.payments ?? "[]");
+  return {
+    pos_sale_id: saleId,
+    customer_id: sale.customer_id ?? void 0,
+    cashier_user_id: sale.cashier_user_id ?? void 0,
+    cashier_name: sale.cashier_name ?? void 0,
+    payments,
+    sold_at: sale.sold_at,
+    items: items.map((item) => ({
+      description: item.product_name,
+      qty: item.qty,
+      unit_price: item.unit_price,
+      iva_rate: item.iva_rate ?? "21"
+    }))
+  };
+}
+async function completePosCheckout(args) {
+  const d = db();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  d.insert(sales).values({
+    id: args.saleId,
+    ticket_number: null,
+    customer_id: args.localRow.customer_id,
+    cashier_user_id: args.localRow.cashier_user_id,
+    cashier_name: args.localRow.cashier_name,
+    payments: args.localRow.payments,
+    subtotal: args.localRow.subtotal,
+    tax_amount: args.localRow.tax_amount,
+    total: args.localRow.total,
+    sold_at: args.localRow.sold_at,
+    cloud_id: null,
+    synced_at: null,
+    cae: null,
+    cae_expiration: null,
+    qr_url: null,
+    afip_status: "pending"
+  }).run();
+  for (const item of args.items) {
+    const p = d.select({ iva_rate: products.iva_rate }).from(products).where(drizzleOrm.eq(products.id, item.product_id)).get();
+    d.insert(saleItems).values({
+      sale_id: args.saleId,
+      product_id: item.product_id,
+      product_name: item.product_name,
+      qty: item.qty,
+      iva_rate: p?.iva_rate ?? item.iva_rate ?? "21",
+      unit_price: item.unit_price,
+      total: item.total
+    }).run();
+  }
+  let cloudId = null;
+  let registerError = null;
+  try {
+    const reg = await registerPosSaleInCloud(args.payload);
+    cloudId = reg.cloud_id;
+    d.update(sales).set({ cloud_id: reg.cloud_id, synced_at: now }).where(drizzleOrm.eq(sales.id, args.saleId)).run();
+  } catch (err) {
+    registerError = parseCloudError(err);
+    const existing = d.select().from(syncQueue).where(drizzleOrm.eq(syncQueue.sale_id, args.saleId)).get();
+    if (!existing) {
+      d.insert(syncQueue).values({ sale_id: args.saleId, attempts: 0, last_error: registerError }).run();
+    }
+  }
+  try {
+    const fiscal = await authorizePosSaleInCloud(args.payload);
+    applyFiscalUpdate(args.saleId, fiscal, now);
+    const pending = d.select().from(syncQueue).where(drizzleOrm.eq(syncQueue.sale_id, args.saleId)).get();
+    if (pending) d.delete(syncQueue).where(drizzleOrm.eq(syncQueue.id, pending.id)).run();
+    return { sale_id: args.saleId, ...fiscalFromCloud(fiscal) };
+  } catch (err) {
+    const afipError = parseCloudError(err);
+    d.update(sales).set({ afip_status: "pending" }).where(drizzleOrm.eq(sales.id, args.saleId)).run();
+    return {
+      sale_id: args.saleId,
+      ticket_number: null,
+      cloud_id: cloudId,
+      cae: null,
+      cae_expiration: null,
+      qr_url: null,
+      afip_status: "pending",
+      fiscal_pending: true,
+      afip_error: registerError ?? afipError
+    };
+  }
+}
+async function authorizeFiscalForLocalSale(saleId) {
+  const sale = db().select().from(sales).where(drizzleOrm.eq(sales.id, saleId)).get();
+  if (!sale) throw new Error("SALE_NOT_FOUND");
+  if (sale.cae && sale.afip_status === "authorized") {
+    return {
+      sale_id: saleId,
+      ticket_number: sale.ticket_number,
+      cloud_id: sale.cloud_id,
+      cae: sale.cae,
+      cae_expiration: sale.cae_expiration,
+      qr_url: sale.qr_url,
+      afip_status: sale.afip_status ?? "authorized",
+      fiscal_pending: false,
+      afip_error: null
+    };
+  }
+  const payload = buildAuthorizePayloadFromLocalSale(saleId);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  if (!sale.cloud_id) {
+    try {
+      const reg = await registerPosSaleInCloud(payload);
+      db().update(sales).set({ cloud_id: reg.cloud_id, synced_at: now }).where(drizzleOrm.eq(sales.id, saleId)).run();
+    } catch (err) {
+      throw new Error(parseCloudError(err));
+    }
+  }
+  try {
+    const fiscal = await authorizePosSaleInCloud(payload);
+    applyFiscalUpdate(saleId, fiscal, now);
+    const pending = db().select().from(syncQueue).where(drizzleOrm.eq(syncQueue.sale_id, saleId)).get();
+    if (pending) db().delete(syncQueue).where(drizzleOrm.eq(syncQueue.id, pending.id)).run();
+    return { sale_id: saleId, ...fiscalFromCloud(fiscal) };
+  } catch (err) {
+    throw new Error(parseCloudError(err));
+  }
+}
+function buildAuthorizePayload(id, payload, soldAt) {
+  return {
+    pos_sale_id: id,
+    customer_id: payload.customer_id ?? void 0,
+    cashier_user_id: payload.cashier_user_id ?? void 0,
+    cashier_name: payload.cashier_name ?? void 0,
+    payments: payload.payments,
+    sold_at: soldAt,
+    items: payload.items.map((i) => ({
+      description: i.product_name,
+      qty: i.qty,
+      unit_price: i.unit_price,
+      iva_rate: i.iva_rate ?? "21"
+    }))
+  };
+}
 function registerSalesHandlers(ipc) {
   ipc.handle("sales:create", async (_e, payload) => {
-    const d = db();
-    const now = (/* @__PURE__ */ new Date()).toISOString();
     const id = payload.local_id || nodeCrypto.randomUUID();
-    const s = d.select().from(settings).all();
-    const settingsMap = Object.fromEntries(s.map((r) => [r.key, r.value]));
-    d.insert(sales).values({
-      id,
-      customer_id: payload.customer_id ?? null,
-      cashier_user_id: payload.cashier_user_id ?? settingsMap["cashier_user_id"] ?? null,
-      cashier_name: payload.cashier_name ?? settingsMap["cashier_name"] ?? null,
-      payments: JSON.stringify(payload.payments),
-      subtotal: payload.subtotal,
-      tax_amount: payload.tax_amount,
-      total: payload.total,
-      sold_at: payload.sold_at || now
-    }).run();
-    for (const item of payload.items) {
-      const p = d.select({ iva_rate: products.iva_rate }).from(products).where(drizzleOrm.eq(products.id, item.product_id)).get();
-      d.insert(saleItems).values({
-        sale_id: id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        qty: item.qty,
-        iva_rate: p?.iva_rate ?? "21",
-        unit_price: item.unit_price,
-        total: item.total
-      }).run();
-    }
-    d.insert(syncQueue).values({
-      sale_id: id,
-      attempts: 0,
-      created_at: now
-    }).run();
-    return { id };
+    const soldAt = payload.sold_at || (/* @__PURE__ */ new Date()).toISOString();
+    const result = await completePosCheckout({
+      saleId: id,
+      payload: buildAuthorizePayload(id, payload, soldAt),
+      localRow: {
+        customer_id: payload.customer_id ?? null,
+        cashier_user_id: payload.cashier_user_id ?? null,
+        cashier_name: payload.cashier_name ?? null,
+        payments: JSON.stringify(payload.payments),
+        subtotal: payload.subtotal,
+        tax_amount: payload.tax_amount,
+        total: payload.total,
+        sold_at: soldAt
+      },
+      items: payload.items.map((i) => ({
+        product_id: i.product_id,
+        product_name: i.product_name,
+        qty: i.qty,
+        unit_price: i.unit_price,
+        total: i.total,
+        iva_rate: i.iva_rate
+      }))
+    });
+    return {
+      id: result.sale_id,
+      ticket_number: result.ticket_number,
+      cloud_id: result.cloud_id,
+      cae: result.cae,
+      cae_expiration: result.cae_expiration,
+      qr_url: result.qr_url,
+      afip_status: result.afip_status,
+      fiscal_pending: result.fiscal_pending,
+      afip_error: result.afip_error
+    };
+  });
+  ipc.handle("sales:authorizeFiscal", async (_e, saleId) => {
+    const result = await authorizeFiscalForLocalSale(saleId);
+    return {
+      ok: true,
+      sale_id: result.sale_id,
+      ticket_number: result.ticket_number,
+      cloud_id: result.cloud_id,
+      cae: result.cae,
+      cae_expiration: result.cae_expiration,
+      qr_url: result.qr_url,
+      afip_status: result.afip_status,
+      fiscal_pending: result.fiscal_pending
+    };
   });
   ipc.handle("sales:list-today", async () => {
     const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
@@ -2495,7 +2927,11 @@ function registerSalesHandlers(ipc) {
     const s = db().select().from(sales).where(drizzleOrm.eq(sales.id, saleId)).get();
     if (!s) return null;
     const items = db().select().from(saleItems).where(drizzleOrm.eq(saleItems.sale_id, saleId)).all();
-    return { sale: s, items };
+    let customer = null;
+    if (s.customer_id) {
+      customer = db().select().from(customers).where(drizzleOrm.eq(customers.id, s.customer_id)).get() ?? null;
+    }
+    return { sale: s, items, customer };
   });
   ipc.handle("sales:closingReport", async (_e, date) => {
     const day = date ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
@@ -2532,8 +2968,24 @@ function registerProductsHandlers(ipc) {
     ).limit(40).all() : d.select().from(products).where(drizzleOrm.eq(products.is_active, true)).limit(40).all();
     return rows;
   });
+  ipc.handle("products:getByPlu", async (_e, plu) => {
+    const trimmed = (plu ?? "").trim();
+    if (!trimmed) return null;
+    const stripped = trimmed.replace(/^0+/, "") || "0";
+    const candidates = [.../* @__PURE__ */ new Set([trimmed, stripped, stripped.padStart(5, "0")])];
+    const d = db();
+    for (const code of candidates) {
+      const row = d.select().from(products).where(drizzleOrm.and(drizzleOrm.eq(products.is_active, true), drizzleOrm.eq(products.plu_code, code))).get();
+      if (row) return row;
+    }
+    return null;
+  });
 }
 function registerCustomersHandlers(ipc) {
+  ipc.handle("customers:get", async (_e, id) => {
+    const row = db().select().from(customers).where(drizzleOrm.eq(customers.id, id)).get();
+    return row ?? null;
+  });
   ipc.handle("customers:search", async (_e, query) => {
     const d = db();
     const q = query.trim();
@@ -2574,7 +3026,11 @@ function registerDraftSalesHandlers(ipc) {
       if (args?.draft_sale_id) {
         const existing = d.select().from(posDraftSales).where(drizzleOrm.eq(posDraftSales.id, args.draft_sale_id)).get();
         if (existing) {
-          d.update(posDraftSales).set({ last_opened_at: now, updated_at: now }).where(drizzleOrm.eq(posDraftSales.id, args.draft_sale_id)).run();
+          const patch = { last_opened_at: now, updated_at: now };
+          if (args.cashier_user_id) patch.cashier_user_id = args.cashier_user_id;
+          if (args.cashier_name) patch.cashier_name = args.cashier_name;
+          if (args.customer_id !== void 0) patch.customer_id = args.customer_id;
+          d.update(posDraftSales).set(patch).where(drizzleOrm.eq(posDraftSales.id, args.draft_sale_id)).run();
           return { ok: true, id: args.draft_sale_id };
         }
       }
@@ -2657,33 +3113,46 @@ function registerDraftSalesHandlers(ipc) {
       if (!draft) return { ok: false, error: "DRAFT_NOT_FOUND" };
       const items = d.select().from(posDraftSaleItems).where(drizzleOrm.eq(posDraftSaleItems.draft_sale_id, args.draft_sale_id)).all();
       if (items.length === 0) return { ok: false, error: "EMPTY_DRAFT" };
-      const s = d.select().from(settings).all();
-      const settingsMap = Object.fromEntries(s.map((r) => [r.key, r.value]));
       const paymentsJson = JSON.stringify(args.payments);
       const saleId = nodeCrypto.randomUUID();
-      d.insert(sales).values({
-        id: saleId,
-        customer_id: draft.customer_id ?? null,
-        cashier_user_id: draft.cashier_user_id ?? settingsMap["cashier_user_id"] ?? null,
-        cashier_name: draft.cashier_name ?? settingsMap["cashier_name"] ?? null,
-        payments: paymentsJson,
-        subtotal: args.subtotal,
-        tax_amount: args.tax_amount,
-        total: args.total,
-        sold_at: args.sold_at ?? now
-      }).run();
-      for (const item of items) {
-        d.insert(saleItems).values({
-          sale_id: saleId,
+      const soldAt = args.sold_at ?? now;
+      const cashierUserId = args.cashier_user_id ?? draft.cashier_user_id ?? null;
+      const cashierName = args.cashier_name ?? draft.cashier_name ?? null;
+      const result = await completePosCheckout({
+        saleId,
+        payload: {
+          pos_sale_id: saleId,
+          customer_id: draft.customer_id ?? void 0,
+          cashier_user_id: cashierUserId ?? void 0,
+          cashier_name: cashierName ?? void 0,
+          payments: args.payments,
+          sold_at: soldAt,
+          items: items.map((item) => ({
+            description: item.product_name,
+            qty: item.qty,
+            unit_price: item.unit_price,
+            iva_rate: item.iva_rate ?? "21"
+          }))
+        },
+        localRow: {
+          customer_id: draft.customer_id ?? null,
+          cashier_user_id: cashierUserId,
+          cashier_name: cashierName,
+          payments: paymentsJson,
+          subtotal: args.subtotal,
+          tax_amount: args.tax_amount,
+          total: args.total,
+          sold_at: soldAt
+        },
+        items: items.map((item) => ({
           product_id: item.product_id,
           product_name: item.product_name,
           qty: item.qty,
-          iva_rate: item.iva_rate ?? "21",
           unit_price: item.unit_price,
-          total: item.total
-        }).run();
-      }
-      d.insert(syncQueue).values({ sale_id: saleId, attempts: 0, created_at: now }).run();
+          total: item.total,
+          iva_rate: item.iva_rate ?? "21"
+        }))
+      });
       d.update(posDraftSales).set({
         status: "paid",
         payments: paymentsJson,
@@ -2692,7 +3161,18 @@ function registerDraftSalesHandlers(ipc) {
         total: args.total,
         updated_at: now
       }).where(drizzleOrm.eq(posDraftSales.id, args.draft_sale_id)).run();
-      return { ok: true, sale_id: saleId };
+      return {
+        ok: true,
+        sale_id: saleId,
+        ticket_number: result.ticket_number ?? void 0,
+        cloud_id: result.cloud_id ?? void 0,
+        cae: result.cae,
+        cae_expiration: result.cae_expiration,
+        qr_url: result.qr_url,
+        afip_status: result.afip_status,
+        fiscal_pending: result.fiscal_pending,
+        afip_error: result.afip_error
+      };
     }
   );
   ipc.handle("draftSales:cancel", async (_e, draft_sale_id) => {
@@ -2741,9 +3221,12 @@ function registerCashSessionHandlers(ipc) {
       closed_at: now,
       closing_amount_declared: declared,
       closing_amount_expected: expected,
-      difference
+      difference,
+      synced_at: null
     }).where(drizzleOrm.eq(cashSessions.id, args.session_id)).run();
     const updated = db().select().from(cashSessions).where(drizzleOrm.eq(cashSessions.id, args.session_id)).get();
+    void syncPendingCashSessions().catch(() => {
+    });
     return { ok: true, session: updated };
   });
   ipc.handle("cashSessions:list", async (_e, args) => {
@@ -2752,6 +3235,121 @@ function registerCashSessionHandlers(ipc) {
   });
   ipc.handle("cashSessions:get", async (_e, sessionId) => {
     return db().select().from(cashSessions).where(drizzleOrm.eq(cashSessions.id, sessionId)).get() ?? null;
+  });
+}
+const DEFAULT_WEIGHT_REGEX = "(\\d+[.,]\\d{1,3})";
+function getSettings() {
+  const rows = db().select().from(settings).all();
+  return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+}
+async function loadSerialPort() {
+  try {
+    return await import("serialport");
+  } catch {
+    return null;
+  }
+}
+function parseWeight(line, regexSrc) {
+  let re;
+  try {
+    re = new RegExp(regexSrc);
+  } catch {
+    return null;
+  }
+  const m = re.exec(line);
+  if (!m || !m[1]) return null;
+  const kg = parseFloat(m[1].replace(",", "."));
+  return Number.isFinite(kg) && kg > 0 ? kg : null;
+}
+async function readWeight(timeoutMs = 4e3) {
+  const s = getSettings();
+  if (s["scale_enabled"] !== "1") return { ok: false, error: "La balanza conectada está deshabilitada" };
+  const path2 = s["scale_port"] ?? "";
+  if (!path2) return { ok: false, error: "No hay puerto de balanza configurado" };
+  const baudRate = parseInt(s["scale_baud"] ?? "9600", 10) || 9600;
+  const regexSrc = s["scale_weight_regex"] || DEFAULT_WEIGHT_REGEX;
+  const mod = await loadSerialPort();
+  if (!mod) return { ok: false, error: "Soporte de balanza no instalado (serialport)" };
+  return new Promise((resolve) => {
+    let settled = false;
+    let buffer = "";
+    let port;
+    const finish = (r) => {
+      if (settled) return;
+      settled = true;
+      try {
+        port?.close();
+      } catch {
+      }
+      resolve(r);
+    };
+    try {
+      port = new mod.SerialPort({ path: path2, baudRate });
+    } catch (e) {
+      return resolve({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    }
+    const timer = setTimeout(() => finish({ ok: false, error: "Sin lectura estable de la balanza" }), timeoutMs);
+    port.on("error", (err) => {
+      clearTimeout(timer);
+      finish({ ok: false, error: err.message });
+    });
+    port.on("data", (chunk) => {
+      buffer += chunk.toString("ascii");
+      const lines = buffer.split(/[\r\n]+/);
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const kg = parseWeight(line, regexSrc);
+        if (kg != null) {
+          clearTimeout(timer);
+          finish({ ok: true, weightKg: kg });
+          return;
+        }
+      }
+    });
+  });
+}
+function registerScaleHandlers(ipc) {
+  ipc.handle("scale:listPorts", async () => {
+    const mod = await loadSerialPort();
+    if (!mod) return { ok: false, ports: [], error: "Soporte de balanza no instalado (serialport)" };
+    try {
+      const ports = await mod.SerialPort.list();
+      return { ok: true, ports: ports.map((p) => ({ path: p.path, manufacturer: p.manufacturer })) };
+    } catch (e) {
+      return { ok: false, ports: [], error: e instanceof Error ? e.message : String(e) };
+    }
+  });
+  ipc.handle("scale:readWeight", async () => readWeight());
+  ipc.handle("scale:status", async () => {
+    const s = getSettings();
+    const mod = await loadSerialPort();
+    return { enabled: s["scale_enabled"] === "1", port: s["scale_port"] ?? "", available: mod != null };
+  });
+}
+const RECEIPT_PRINT_OPTIONS = {
+  silent: false,
+  printBackground: true,
+  margins: { marginType: "none" }
+  // Paper size comes from CSS @page in the renderer. Custom micron pageSize breaks
+  // the macOS print sheet when no thermal driver is selected.
+};
+function registerPrintHandlers(ipc) {
+  ipc.handle("print:receipt", async (event) => {
+    const win = electron.BrowserWindow.fromWebContents(event.sender);
+    if (!win) return { ok: false, error: "Ventana no disponible" };
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+      win.webContents.print(RECEIPT_PRINT_OPTIONS, (success, failureReason) => {
+        if (success) finish({ ok: true });
+        else finish({ ok: false, error: failureReason || "Impresión cancelada" });
+      });
+      setTimeout(() => finish({ ok: false, error: "Tiempo de espera agotado" }), 12e4);
+    });
   });
 }
 let mainWindow = null;
@@ -2793,6 +3391,8 @@ electron.app.whenReady().then(async () => {
   registerDraftSalesHandlers(electron.ipcMain);
   registerCashSessionHandlers(electron.ipcMain);
   registerSyncHandlers(electron.ipcMain);
+  registerScaleHandlers(electron.ipcMain);
+  registerPrintHandlers(electron.ipcMain);
   createWindow();
 });
 electron.app.on("window-all-closed", () => {

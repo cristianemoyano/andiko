@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.16.0](https://github.com/cristianemoyano/andiko/compare/v0.15.0...v0.16.0) (2026-06-22)
+
+### Features
+
+* **core:** revamp POS UX with org branding and ticket-first sale flow ([dc3d139](https://github.com/cristianemoyano/andiko/commit/dc3d139803467785ac3d0ef784b75447dd819453))
+
+### Bug Fixes
+
+* **core:** sync closed cash sessions to cloud reliably ([8fcd1d1](https://github.com/cristianemoyano/andiko/commit/8fcd1d1f0189db6d69af1c244c44e4f33046c065))
+
 ## [0.15.0](https://github.com/cristianemoyano/andiko/compare/v0.14.0...v0.15.0) (2026-06-22)
 
 ### Features
