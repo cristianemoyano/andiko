@@ -9,9 +9,9 @@ export function orgApiPaths(apiNamespace: OrgApiNamespace, orgId: string) {
       branches: `/api/v1/sys-admin/organizations/${orgId}/branches`,
       branch: (branchId: string) => `/api/v1/sys-admin/branches/${branchId}`,
       settings: `/api/v1/sys-admin/organizations/${orgId}/settings`,
-      rolesMatrix: `/api/v1/settings/roles/matrix`,
-      roles: `/api/v1/settings/roles`,
-      role: (roleId: string) => `/api/v1/settings/roles/${roleId}`,
+      rolesMatrix: `/api/v1/sys-admin/organizations/${orgId}/roles/matrix`,
+      roles: `/api/v1/sys-admin/organizations/${orgId}/roles`,
+      role: (roleId: string) => `/api/v1/sys-admin/organizations/${orgId}/roles/${roleId}`,
     } as const
   }
 

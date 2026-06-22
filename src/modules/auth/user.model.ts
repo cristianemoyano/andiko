@@ -7,6 +7,8 @@ interface UserAttributes extends Timestamps {
   email: string
   password_hash: string
   name: string
+  first_name: string
+  last_name: string
   role: UserRole
   is_active: boolean
   org_id: UUID | null
@@ -18,7 +20,7 @@ interface UserAttributes extends Timestamps {
 
 type UserCreationAttributes = Optional<
   UserAttributes,
-  'id' | 'role' | 'is_active' | 'org_id' | 'branch_id' | 'org_role_id' | 'preferences' | 'created_at' | 'updated_at' | 'deleted_at' | 'pos_pin_hash'
+  'id' | 'role' | 'is_active' | 'org_id' | 'branch_id' | 'org_role_id' | 'preferences' | 'last_name' | 'created_at' | 'updated_at' | 'deleted_at' | 'pos_pin_hash'
 >
 
 class User extends Model<UserAttributes, UserCreationAttributes> {
@@ -26,6 +28,8 @@ class User extends Model<UserAttributes, UserCreationAttributes> {
   declare email: string
   declare password_hash: string
   declare name: string
+  declare first_name: string
+  declare last_name: string
   declare role: UserRole
   declare is_active: boolean
   declare org_id: UUID | null
@@ -44,6 +48,8 @@ User.init(
     email:         { type: DataTypes.STRING(255), allowNull: false, unique: true },
     password_hash: { type: DataTypes.STRING(255), allowNull: false },
     name:          { type: DataTypes.STRING(255), allowNull: false },
+    first_name:    { type: DataTypes.STRING(100), allowNull: false },
+    last_name:     { type: DataTypes.STRING(100), allowNull: false, defaultValue: '' },
     role:          { type: DataTypes.ENUM('sys-admin', 'admin', 'operator', 'readonly', 'branch-admin'), allowNull: false, defaultValue: 'operator' },
     is_active:     { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     org_id:        { type: DataTypes.UUID },

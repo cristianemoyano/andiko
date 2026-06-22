@@ -2,18 +2,21 @@ import { z } from 'zod'
 
 export const profileUpdateSchema = z
   .object({
+    firstName: z.string().trim().min(1, 'El nombre es obligatorio').max(100).optional(),
+    lastName: z.string().trim().max(100).optional(),
+    /** @deprecated use firstName + lastName */
     name: z.string().trim().min(1).max(255).optional(),
     password: z.string().min(8).max(128).optional(),
     currentPassword: z.string().min(8).max(128).optional(),
   })
   .superRefine((data, ctx) => {
-    const hasName = data.name !== undefined
+    const hasName = data.firstName !== undefined || data.lastName !== undefined || data.name !== undefined
     const hasPassword = data.password !== undefined
     if (!hasName && !hasPassword) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Indicá al menos un campo para actualizar',
-        path: ['name'],
+        path: ['firstName'],
       })
     }
   })

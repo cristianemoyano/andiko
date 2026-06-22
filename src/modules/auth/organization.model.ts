@@ -27,7 +27,14 @@ export interface OnboardingData {
     iva?: string
     incluirIVA?: boolean
     condPago?: string
+    afipEnvironment?: 'homologacion' | 'produccion'
+    afipCert?: string
+    afipKey?: string
   }
+  /** Paso actual del asistente (0-based), persistido al guardar progreso. */
+  wizardStep?: number
+  /** IDs de pasos marcados como completados en el asistente. */
+  completedStepIds?: string[]
 }
 
 export const ORG_IVA_CONDITIONS = [

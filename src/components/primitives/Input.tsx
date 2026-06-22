@@ -9,7 +9,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({ className, error, ...p
   <input
     ref={ref}
     className={cn(
-      'flex h-8 w-full rounded-sm border bg-surface px-2.5 text-[13px] text-fg transition-colors',
+      'flex h-9 md:h-8 w-full rounded-sm border bg-surface px-2.5 text-base md:text-[13px] text-fg transition-colors',
       'placeholder:text-fg-subtle',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
       'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',

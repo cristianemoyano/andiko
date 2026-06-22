@@ -1,14 +1,25 @@
 import { z } from 'zod'
+import { splitLegacyUserName } from './user.utils'
 
 const assignableBuiltinRole = z.enum(['admin', 'branch-admin'])
 const legacyBuiltinRole = z.enum(['admin', 'operator', 'readonly', 'branch-admin'])
+
+const userNameFields = {
+  firstName: z.string().trim().min(1, 'El nombre es obligatorio').max(100),
+  lastName: z.string().trim().max(100).optional().default(''),
+}
+
+const userNameFieldsOptional = {
+  firstName: z.string().trim().min(1, 'El nombre es obligatorio').max(100).optional(),
+  lastName: z.string().trim().max(100).optional(),
+}
 
 export const orgUserCreateSchema = z.discriminatedUnion('roleKind', [
   z.object({
     roleKind: z.literal('builtin'),
     role: assignableBuiltinRole,
     email: z.string().email().max(255),
-    name: z.string().trim().min(1).max(255),
+    ...userNameFields,
     password: z.string().min(8).max(128),
     posPin: z.string().min(4).max(12).optional(),
     branchIds: z.array(z.string().uuid()).min(1),
@@ -18,7 +29,7 @@ export const orgUserCreateSchema = z.discriminatedUnion('roleKind', [
     roleKind: z.literal('custom'),
     orgRoleId: z.string().uuid(),
     email: z.string().email().max(255),
-    name: z.string().trim().min(1).max(255),
+    ...userNameFields,
     password: z.string().min(8).max(128),
     posPin: z.string().min(4).max(12).optional(),
     branchIds: z.array(z.string().uuid()).min(1),
@@ -45,7 +56,7 @@ export const orgUserUpdateSchema = z.discriminatedUnion('roleKind', [
   z.object({
     roleKind: z.literal('builtin'),
     role: legacyBuiltinRole,
-    name: z.string().trim().min(1).max(255).optional(),
+    ...userNameFieldsOptional,
     branchIds: z.array(z.string().uuid()).min(1).optional(),
     defaultBranchId: z.string().uuid().optional(),
     password: z.string().min(8).max(128).optional(),
@@ -55,7 +66,7 @@ export const orgUserUpdateSchema = z.discriminatedUnion('roleKind', [
   z.object({
     roleKind: z.literal('custom'),
     orgRoleId: z.string().uuid(),
-    name: z.string().trim().min(1).max(255).optional(),
+    ...userNameFieldsOptional,
     branchIds: z.array(z.string().uuid()).min(1).optional(),
     defaultBranchId: z.string().uuid().optional(),
     password: z.string().min(8).max(128).optional(),
@@ -102,24 +113,54 @@ const orgUserUpdateLegacySchema = z.object({
   is_active: z.boolean().optional(),
 })
 
+function normalizeCreatePayload(json: Record<string, unknown>): unknown {
+  if (json.firstName !== undefined || json.name === undefined) return json
+  const { firstName, lastName } = splitLegacyUserName(String(json.name))
+  const rest = { ...json }
+  delete rest.name
+  return { ...rest, firstName, lastName }
+}
+
+function normalizeUpdatePayload(json: Record<string, unknown>): unknown {
+  if (json.firstName !== undefined || json.name === undefined) return json
+  const { firstName, lastName } = splitLegacyUserName(String(json.name))
+  const rest = { ...json }
+  delete rest.name
+  return { ...rest, firstName, lastName }
+}
+
 export function parseOrgUserCreateInput(json: unknown) {
-  const modern = orgUserCreateSchema.safeParse(json)
+  const payload = typeof json === 'object' && json !== null
+    ? normalizeCreatePayload(json as Record<string, unknown>)
+    : json
+  const modern = orgUserCreateSchema.safeParse(payload)
   if (modern.success) return modern
   const legacy = orgUserCreateLegacySchema.safeParse(json)
   if (legacy.success) {
-    return orgUserCreateSchema.safeParse({ roleKind: 'builtin' as const, ...legacy.data })
+    const { name, ...rest } = legacy.data
+    const { firstName, lastName } = splitLegacyUserName(name)
+    return orgUserCreateSchema.safeParse({ roleKind: 'builtin' as const, firstName, lastName, ...rest })
   }
   return modern
 }
 
 export function parseOrgUserUpdateInput(json: unknown) {
-  const modern = orgUserUpdateSchema.safeParse(json)
+  const payload = typeof json === 'object' && json !== null
+    ? normalizeUpdatePayload(json as Record<string, unknown>)
+    : json
+  const modern = orgUserUpdateSchema.safeParse(payload)
   if (modern.success) return modern
   const legacy = orgUserUpdateLegacySchema.safeParse(json)
   if (legacy.success) {
-    const { role, ...rest } = legacy.data
+    const { role, name, ...rest } = legacy.data
+    const nameParts = name ? splitLegacyUserName(name) : {}
     if (role !== undefined) {
-      return orgUserUpdateSchema.safeParse({ roleKind: 'builtin' as const, role, ...rest })
+      return orgUserUpdateSchema.safeParse({
+        roleKind: 'builtin' as const,
+        role,
+        ...nameParts,
+        ...rest,
+      })
     }
   }
   return modern

@@ -104,6 +104,9 @@ function buildCapabilities(
         afip: canSettingsRead,
       },
     },
+    onboarding: {
+      manage: canSettingsWrite,
+    },
   }
 }
 

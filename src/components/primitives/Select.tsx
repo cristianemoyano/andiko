@@ -48,7 +48,7 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
         id={id}
         aria-invalid={error ? 'true' : undefined}
         className={cn(
-          'flex h-8 w-full items-center justify-between gap-2 rounded-sm border bg-surface px-2.5 text-[13px] text-left transition-colors',
+          'flex h-9 md:h-8 w-full items-center justify-between gap-2 rounded-sm border bg-surface px-2.5 text-base md:text-[13px] text-left transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
           'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',
           'data-[placeholder]:text-fg-subtle',

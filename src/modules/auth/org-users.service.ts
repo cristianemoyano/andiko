@@ -10,6 +10,7 @@ import { invalidateCapabilitiesIdentity } from '@/lib/capabilities-cache'
 import { orgUserManagementPeerKey } from '@/lib/org-user-management-access'
 import type { OrgUserMutationActor } from '@/lib/org-user-mutation-actor'
 import type { OrgUserCreateInput, OrgUserUpdateInput } from '@/modules/auth/org-users.schema'
+import { formatUserDisplayName, resolveUserNameParts } from '@/modules/auth/user.utils'
 import type { UserRole } from '@/types/roles'
 
 async function assertBranchesBelongToOrg(orgId: string, branchIds: string[]) {
@@ -87,7 +88,7 @@ export async function listOrgUsers(orgId: string) {
   const users = await User.findAll({
     where: { org_id: orgId, role: { [Op.ne]: 'sys-admin' } },
     attributes: [
-      'id', 'email', 'name', 'role', 'org_role_id', 'is_active', 'branch_id', 'created_at', 'updated_at',
+      'id', 'email', 'name', 'first_name', 'last_name', 'role', 'org_role_id', 'is_active', 'branch_id', 'created_at', 'updated_at',
     ],
     order: [['email', 'ASC']],
   })
@@ -122,7 +123,9 @@ export async function listOrgUsers(orgId: string) {
     return {
       id: u.id,
       email: u.email,
-      name: u.name,
+      name: formatUserDisplayName(u.first_name, u.last_name) || u.name,
+      first_name: u.first_name,
+      last_name: u.last_name,
       role: u.role as UserRole,
       org_role_id: u.org_role_id,
       org_role_name: u.org_role_id ? roleMap.get(u.org_role_id) ?? null : null,
@@ -160,12 +163,15 @@ export async function createOrgUser(orgId: string, input: OrgUserCreateInput) {
 
   const password_hash = await hashPassword(input.password)
   const pos_pin_hash = input.posPin ? await hashPassword(input.posPin) : null
+  const { firstName, lastName, displayName } = resolveUserNameParts(input)
 
   const user = await sequelize.transaction(async t => {
     const created = await User.create(
       {
         email: input.email.trim().toLowerCase(),
-        name: input.name.trim(),
+        first_name: firstName,
+        last_name: lastName,
+        name: displayName,
         password_hash,
         pos_pin_hash,
         role,
@@ -250,6 +256,8 @@ export async function updateOrgUser(
   const updated = await sequelize.transaction(async t => {
     const patch: Partial<{
       name: string
+      first_name: string
+      last_name: string
       role: UserRole
       org_role_id: string | null
       branch_id: string | null
@@ -258,7 +266,17 @@ export async function updateOrgUser(
       is_active: boolean
     }> = {}
 
-    if (input.name !== undefined) patch.name = input.name.trim()
+    if (input.firstName !== undefined) {
+      const lastName = input.lastName ?? user.last_name
+      const displayName = formatUserDisplayName(input.firstName, lastName)
+      patch.first_name = input.firstName.trim()
+      patch.last_name = lastName.trim()
+      patch.name = displayName
+    } else if (input.lastName !== undefined) {
+      const displayName = formatUserDisplayName(user.first_name, input.lastName)
+      patch.last_name = input.lastName.trim()
+      patch.name = displayName
+    }
     if (input.is_active !== undefined) patch.is_active = input.is_active
     if (input.password !== undefined) patch.password_hash = await hashPassword(input.password)
     if (input.posPin !== undefined) patch.pos_pin_hash = input.posPin ? await hashPassword(input.posPin) : null

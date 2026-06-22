@@ -68,6 +68,9 @@ const sampleCaps = {
       afip: true,
     },
   },
+  onboarding: {
+    manage: true,
+  },
 } satisfies UiCapabilities
 
 beforeEach(() => {

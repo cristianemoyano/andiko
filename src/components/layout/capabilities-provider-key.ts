@@ -40,5 +40,6 @@ export function capabilitiesProviderKey(
     orgActions: caps.organizacion.actions,
     orgApi: caps.organizacion.apiNamespace,
     tabs: caps.configuracion.tabs,
+    onboarding: caps.onboarding,
   })}`
 }

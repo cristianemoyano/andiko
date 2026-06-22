@@ -2,6 +2,7 @@ import 'server-only'
 import bcrypt from 'bcryptjs'
 import User from './user.model'
 import logger from '@/lib/logger'
+import { resolveUserNameParts } from './user.utils'
 
 export async function findUserByEmail(email: string) {
   return User.findOne({
@@ -18,12 +19,25 @@ export async function hashPassword(plaintext: string) {
   return bcrypt.hash(plaintext, 12)
 }
 
-export async function createUser(data: { email: string; name: string; password: string; role?: 'admin' | 'operator' | 'readonly' }) {
+export async function createUser(data: {
+  email: string
+  name: string
+  password: string
+  role?: 'admin' | 'operator' | 'readonly'
+}) {
   const existing = await findUserByEmail(data.email)
   if (existing) throw new Error('EMAIL_TAKEN')
 
   const password_hash = await hashPassword(data.password)
-  const user = await User.create({ email: data.email, name: data.name, password_hash, role: data.role ?? 'operator' })
+  const { firstName, lastName, displayName } = resolveUserNameParts({ name: data.name })
+  const user = await User.create({
+    email: data.email,
+    first_name: firstName,
+    last_name: lastName,
+    name: displayName,
+    password_hash,
+    role: data.role ?? 'operator',
+  })
 
   logger.info({ userId: user.id, email: user.email }, 'user created')
   return user

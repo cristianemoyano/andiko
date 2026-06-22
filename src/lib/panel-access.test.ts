@@ -46,6 +46,9 @@ const baseCaps = (overrides: Partial<UiCapabilities['nav']> = {}): UiCapabilitie
       afip: false,
     },
   },
+  onboarding: {
+    manage: false,
+  },
 })
 
 describe('hasPanelAccess()', () => {

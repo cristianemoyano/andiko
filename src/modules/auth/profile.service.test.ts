@@ -55,6 +55,9 @@ describe('updateUserProfile', () => {
       id: 'u1',
       password_hash: 'hash',
       role: 'admin',
+      first_name: 'Gerente',
+      last_name: 'Demo',
+      name: 'Gerente Demo',
       update: mockUpdate,
     })
 
@@ -71,6 +74,9 @@ describe('updateUserProfile', () => {
       id: 'u1',
       password_hash: 'hash',
       role: 'admin',
+      first_name: 'Gerente',
+      last_name: 'Demo',
+      name: 'Gerente Demo',
       update: mockUpdate,
     })
     mockValidatePassword.mockResolvedValue(false)
@@ -91,6 +97,9 @@ describe('updateUserProfile', () => {
       id: 'u1',
       password_hash: 'hash',
       role: 'admin',
+      first_name: 'Gerente',
+      last_name: 'Demo',
+      name: 'Gerente Demo',
       update: mockUpdate,
     }
     mockFindOne
@@ -99,6 +108,8 @@ describe('updateUserProfile', () => {
         id: 'u1',
         email: 'admin@demo.local',
         name: 'Gerente Demo',
+        first_name: 'Gerente',
+        last_name: 'Demo',
         role: 'admin',
         org_id: 'org-1',
         branch_id: null,

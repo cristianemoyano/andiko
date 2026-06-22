@@ -99,6 +99,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
   const [confirmDeleteBranch, setConfirmDeleteBranch] = useState<BranchRow | null>(null)
 
   const [users, setUsers] = useState<OrgUserRow[]>([])
+  const [usersLoadError, setUsersLoadError] = useState<string | null>(null)
   const [userModalOpen, setUserModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<OrgUserRow | null>(null)
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<OrgUserRow | null>(null)
@@ -153,8 +154,12 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
         const j = await fetchJson<{ data: OrgUserRow[] }>(api.users)
         if (cancelled) return
         setUsers(j.data ?? [])
-      } catch {
-        if (!cancelled) setUsers([])
+        setUsersLoadError(null)
+      } catch (e) {
+        if (!cancelled) {
+          setUsers([])
+          setUsersLoadError(getApiErrorMessage(e))
+        }
       }
     })()
     return () => {
@@ -321,7 +326,11 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     {
       key: 'name',
       header: 'Nombre',
-      render: row => <span className="text-fg-muted text-[13px]">{row.name}</span>,
+      render: row => (
+        <span className="text-fg-muted text-[13px]">
+          {[row.first_name, row.last_name].filter(Boolean).join(' ') || row.name}
+        </span>
+      ),
     },
     {
       key: 'role',
@@ -577,11 +586,42 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
                   setUserModalOpen(true)
                 }}
                 disabled={detail.branches.filter(b => b.is_active).length === 0}
+                title={
+                  detail.branches.filter(b => b.is_active).length === 0
+                    ? 'Creá al menos una sucursal activa antes de agregar usuarios'
+                    : undefined
+                }
               >
                 + Nuevo usuario
               </Button>
               )}
             </div>
+            {detail.branches.filter(b => b.is_active).length === 0 && (
+              <div
+                role="status"
+                className="mb-3 flex flex-col gap-2.5 rounded-sm border border-warning bg-warning-bg px-3 py-2.5 text-[12px] text-warning sm:flex-row sm:items-center sm:justify-between"
+              >
+                <p>Creá al menos una sucursal activa antes de agregar usuarios.</p>
+                {ui.actions.createBranch && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    onClick={() => {
+                      setEditingBranch(null)
+                      setBranchModalOpen(true)
+                    }}
+                  >
+                    + Nueva sucursal
+                  </Button>
+                )}
+              </div>
+            )}
+            {usersLoadError ? (
+              <p role="alert" className="mb-3 rounded-sm border border-danger bg-danger-bg px-3 py-2 text-[12px] text-danger">
+                {usersLoadError}
+              </p>
+            ) : null}
             <DataTable
               columns={userColumns}
               data={users}

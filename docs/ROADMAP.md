@@ -48,6 +48,10 @@ Infraestructura base sin lógica de negocio.
 - [x] Prod DB CLI: `db:reset-prod`, `migrate:prod`, `migrate:baseline-prod`, `db:seed-prod` (local, con `.env.production.local`)
 - [x] Landing pública "Próximamente" en `/` con SEO (metadata, sitemap, robots, OG image, JSON-LD)
 - [x] Panel ERP movido a `/panel`; redirects post-login y onboarding actualizados
+- [x] Wizard de onboarding: persistencia de paso en servidor, reanudación (banner/sidebar), módulos desde `ORG_MODULE_DEFS`, AFIP compartido con Configuración, UX mobile
+- [x] Capability `onboarding.manage` — solo Gerente y sys-admin pueden acceder al wizard y API de onboarding
+- [x] Perfil y usuarios de org: `first_name` / `last_name` (migración + formularios de perfil y alta/edición)
+- [x] API sys-admin de roles por organización (`/api/v1/sys-admin/organizations/[id]/roles`)
 - [x] Formulario de contacto en landing vía Web3Forms (`ContactForm`, sin BD)
 - [x] Landing de producto completa en `/` (desde diseño Claude Design): header sticky + nav con smooth-scroll, hero con mockup denso del panel ERP (`DashboardMockup`), secciones Módulos / Por qué / Métricas + rubros / Beta privada, footer. Lenguaje visual de marketing (botones 4px, tarjetas 12px, badges pill, foco teal) distinto del UI de producto.
 - [ ] Mencionar el módulo POS en la landing (ausente en el diseño actual; pendiente decidir tarjeta/copy)

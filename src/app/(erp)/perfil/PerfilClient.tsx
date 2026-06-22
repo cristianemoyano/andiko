@@ -30,7 +30,8 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
   const { data: session, update } = useSession()
   const [profile, setProfile] = useState(initial)
   const [formKey, setFormKey] = useState(0)
-  const [name, setName] = useState(initial.name)
+  const [firstName, setFirstName] = useState(initial.firstName)
+  const [lastName, setLastName] = useState(initial.lastName)
   const [password, setPassword] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -45,7 +46,8 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
         const data = await fetchJson<{ profile: ProfileView }>('/api/v1/me/profile')
         if (!cancelled) {
           setProfile(data.profile)
-          setName(data.profile.name)
+          setFirstName(data.profile.firstName)
+          setLastName(data.profile.lastName)
         }
       } catch {
         // Keep server-rendered profile on failure.
@@ -68,8 +70,9 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
     setServerError(null)
 
     const nextErrors: Record<string, string> = {}
-    const trimmedName = name.trim()
-    if (!trimmedName) nextErrors.name = 'El nombre es obligatorio'
+    const trimmedFirstName = firstName.trim()
+    const trimmedLastName = lastName.trim()
+    if (!trimmedFirstName) nextErrors.firstName = 'El nombre es obligatorio'
 
     const trimmedPassword = password.trim()
     if (trimmedPassword && trimmedPassword.length < 8) {
@@ -79,10 +82,11 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
       nextErrors.currentPassword = 'Ingresá tu contraseña actual'
     }
 
-    const nameChanged = trimmedName !== profile.name
+    const nameChanged =
+      trimmedFirstName !== profile.firstName || trimmedLastName !== profile.lastName
     const passwordChanged = trimmedPassword.length > 0
     if (!nameChanged && !passwordChanged) {
-      nextErrors.name = 'No hay cambios para guardar'
+      nextErrors.firstName = 'No hay cambios para guardar'
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -91,7 +95,10 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
     }
 
     const body: Record<string, string> = {}
-    if (nameChanged) body.name = trimmedName
+    if (nameChanged) {
+      body.firstName = trimmedFirstName
+      body.lastName = trimmedLastName
+    }
     if (passwordChanged) {
       body.password = trimmedPassword
       if (requiresCurrentPassword) body.currentPassword = currentPassword.trim()
@@ -104,7 +111,8 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
         body: JSON.stringify(body),
       })
       setProfile(data.profile)
-      setName(data.profile.name)
+      setFirstName(data.profile.firstName)
+      setLastName(data.profile.lastName)
       setPassword('')
       setCurrentPassword('')
       setFormKey(k => k + 1)
@@ -160,15 +168,26 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
           >
             <h2 className="text-sm font-semibold text-fg">Datos personales</h2>
 
-            <FormField label="Nombre" htmlFor="profile_name" error={errors.name} required>
-              <Input
-                id="profile_name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                autoComplete="name"
-                error={!!errors.name}
-              />
-            </FormField>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField label="Nombre" htmlFor="profile_first_name" error={errors.firstName} required>
+                <Input
+                  id="profile_first_name"
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  autoComplete="given-name"
+                  error={!!errors.firstName}
+                />
+              </FormField>
+              <FormField label="Apellido" htmlFor="profile_last_name" error={errors.lastName}>
+                <Input
+                  id="profile_last_name"
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  autoComplete="family-name"
+                  error={!!errors.lastName}
+                />
+              </FormField>
+            </div>
 
             <FormField label="Email" htmlFor="profile_email">
               <Input

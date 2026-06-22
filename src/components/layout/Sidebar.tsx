@@ -21,6 +21,8 @@ interface SidebarProps {
   showSysAdminNavigation?: boolean
   /** Módulos habilitados para la org; undefined = todos visibles (sys-admin sin org) */
   enabledModules?: OrgModuleKey[]
+  /** Onboarding incompleto con progreso guardado — mostrar acceso al asistente */
+  showOnboardingResume?: boolean
 }
 
 export function Sidebar({
@@ -29,6 +31,7 @@ export function Sidebar({
   isRealSysAdmin = false,
   showSysAdminNavigation: showSysAdminNavigationInitial = false,
   enabledModules,
+  showOnboardingResume = false,
 }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
@@ -198,6 +201,21 @@ export function Sidebar({
         )}
 
         <SectionLabel>Sistema</SectionLabel>
+        {showOnboardingResume && !pathname.startsWith('/onboarding') && (
+          <NavLink
+            item={{
+              id: 'onboarding-resume',
+              label: 'Configuración inicial',
+              href: '/onboarding',
+              icon: (
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/>
+                </svg>
+              ),
+            }}
+            active={pathname.startsWith('/onboarding')}
+          />
+        )}
         {navCapabilities?.organizaciones && navCapabilities.organizacionesHref && !showSysAdminNavigation && (
           <NavLink
             item={{
