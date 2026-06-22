@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CashierListFiltersNote } from '../components/CashierListFiltersNote'
 import { CurrencyInput } from '../components/CurrencyInput'
+import { ShiftDurationBadge, ShiftDurationWarning } from '../components/ShiftDurationBadge'
+import { useShiftElapsed } from '../lib/useShiftElapsed'
 
 interface CashSession {
   id: string
@@ -236,6 +238,7 @@ function OpenSessionView({ onOpened, usersRefreshKey }: { onOpened: (s: CashSess
 // ── Active Turn ─────────────────────────────────────────────────────────────
 
 function ActiveSessionView({ session, onClosed }: { session: CashSession; onClosed: (s: CashSession) => void }) {
+  const { durationMs, state: durationState } = useShiftElapsed(session.opened_at)
   const [totals, setTotals] = useState<SalesTotals | null>(null)
   const [declaredAmount, setDeclaredAmount] = useState('')
   const [pin, setPin] = useState('')
@@ -245,7 +248,7 @@ function ActiveSessionView({ session, onClosed }: { session: CashSession; onClos
 
    
   useEffect(() => {
-    fetchSessionTotals(session.opened_at).then(setTotals).catch(() => setTotals({ cash: 0, card: 0, transfer: 0, total: 0, count: 0 }))
+    fetchSessionTotals(session.opened_at).then(setTotals).catch(() => setTotals({ byType: {}, total: 0, count: 0 }))
   }, [session.opened_at])
 
   async function handleClose() {
@@ -336,11 +339,16 @@ function ActiveSessionView({ session, onClosed }: { session: CashSession; onClos
   return (
     <div className="flex flex-col gap-5 p-6 max-w-xl mx-auto w-full">
 
+      <ShiftDurationWarning state={durationState} />
+
       {/* Session info */}
       <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5 flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-semibold text-green-700 uppercase tracking-wide">Turno abierto</span>
-          <span className="text-[11px] text-zinc-400">{formatDatetime(session.opened_at)}</span>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-green-700 uppercase tracking-wide">Turno abierto</span>
+            <ShiftDurationBadge durationMs={durationMs} state={durationState} />
+          </div>
+          <span className="text-[11px] text-zinc-400">Desde {formatDatetime(session.opened_at)}</span>
         </div>
         {session.cashier_name && (
           <p className="text-sm text-zinc-700 mt-1">Cajero: <span className="font-medium">{session.cashier_name}</span></p>
@@ -478,6 +486,7 @@ function SessionHistory({ sessions }: { sessions: CashSession[] }) {
 
 export function CashSessionScreen() {
   const [session, setSession] = useState<CashSession | null | undefined>(undefined)
+  const shiftElapsed = useShiftElapsed(session?.opened_at)
   const [history, setHistory] = useState<CashSession[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -522,10 +531,17 @@ export function CashSessionScreen() {
     <div className="flex flex-col h-full bg-zinc-50">
       {/* Header */}
       <div className="bg-white border-b border-zinc-200 px-6 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-[15px] font-semibold text-zinc-900">Turno de caja</h1>
           {session && (
-            <span className="text-[11px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">Abierto</span>
+            <>
+              <span className="text-[11px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">Abierto</span>
+              <ShiftDurationBadge
+                durationMs={shiftElapsed.durationMs}
+                state={shiftElapsed.state}
+                compact
+              />
+            </>
           )}
         </div>
         <div className="flex items-center gap-3">

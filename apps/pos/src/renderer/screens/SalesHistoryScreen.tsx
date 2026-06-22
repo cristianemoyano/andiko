@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { PosCustomer, PosSalePayment } from '@andiko/shared'
+import type { PosSalePayment } from '@andiko/shared'
 import { PosReceipt } from '../components/PosReceipt'
 import { usePosFiscalProfile } from '../lib/usePosFiscalProfile'
-import { printPosReceipt } from '../lib/print-receipt'
+import {
+  DEFAULT_SALES_HISTORY_FILTERS,
+  SalesHistoryFilters,
+  saleMatchesDateFilter,
+  saleMatchesPaymentFilter,
+  saleMatchesTicketQuery,
+  salePaymentMethods,
+  type SalesHistoryFilterState,
+} from '../components/SalesHistoryFilters'
 
 type SaleRow = Awaited<ReturnType<typeof window.pos.sales.list>>[number]
 type DraftRow = Awaited<ReturnType<typeof window.pos.draftSales.list>>['data'][number]
@@ -29,11 +37,11 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
   const [draftRows, setDraftRows] = useState<DraftRow[]>([])
   const [tab, setTab] = useState<'paid' | 'draft'>('paid')
   const [paidFilter, setPaidFilter] = useState<'all' | 'no_cae'>('all')
-  const [query, setQuery] = useState('')
+  const [filters, setFilters] = useState<SalesHistoryFilterState>(DEFAULT_SALES_HISTORY_FILTERS)
+  const [paymentMethodOptions, setPaymentMethodOptions] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [openSaleId, setOpenSaleId] = useState<string | null>(null)
   const [openSale, setOpenSale] = useState<null | Awaited<ReturnType<typeof window.pos.sales.get>>>(null)
-  const [openSaleCustomer, setOpenSaleCustomer] = useState<PosCustomer | null>(null)
   const [openDraftId, setOpenDraftId] = useState<string | null>(null)
   const [authorizing, setAuthorizing] = useState(false)
   const [authorizeError, setAuthorizeError] = useState<string | null>(null)
@@ -69,29 +77,23 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh triggers async DB read then setState
     refresh()
+    void window.pos.paymentMethods.list().then(pms => {
+      setPaymentMethodOptions(pms.map(p => p.name).filter(Boolean))
+    })
   }, [])
 
   useEffect(() => {
     if (!openSaleId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on deselect is a valid derived-state pattern
       setOpenSale(null)
-      setOpenSaleCustomer(null)
       setAuthorizeError(null)
       return
     }
 
-    setError(null)
-    window.pos.sales.get(openSaleId).then(async (sale) => {
+    window.pos.sales.get(openSaleId).then((sale) => {
       setOpenSale(sale)
-      if (sale?.sale.customer_id) {
-        const c = await window.pos.customers.get(sale.sale.customer_id)
-        setOpenSaleCustomer(c)
-      } else {
-        setOpenSaleCustomer(null)
-      }
     }).catch(e => {
       setOpenSale(null)
-      setOpenSaleCustomer(null)
       setError(e instanceof Error ? e.message : String(e))
     })
   }, [openSaleId])
@@ -120,32 +122,42 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
     }
   }
 
+  const paymentMethodsFromSales = useMemo(() => {
+    const names = new Set<string>()
+    for (const row of rows) {
+      for (const name of salePaymentMethods(row.payments)) names.add(name)
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, 'es'))
+  }, [rows])
+
+  const allPaymentMethodOptions = useMemo(() => {
+    const names = new Set([...paymentMethodOptions, ...paymentMethodsFromSales])
+    return [...names].sort((a, b) => a.localeCompare(b, 'es'))
+  }, [paymentMethodOptions, paymentMethodsFromSales])
+
   const filtered = useMemo(() => {
     let list = rows
     if (paidFilter === 'no_cae') {
       list = list.filter(saleNeedsFiscal)
     }
-    const q = query.trim().toLowerCase()
-    if (!q) return list
     return list.filter(r =>
-      r.id.toLowerCase().includes(q) ||
-      r.sold_at.toLowerCase().includes(q) ||
-      paymentsLabel(r.payments).toLowerCase().includes(q) ||
-      r.total.toLowerCase().includes(q) ||
-      (r.ticket_number ?? '').toLowerCase().includes(q),
+      saleMatchesDateFilter(r.sold_at, filters) &&
+      saleMatchesPaymentFilter(r.payments, filters.paymentMethod) &&
+      saleMatchesTicketQuery(r, filters.ticketQuery),
     )
-  }, [rows, query, paidFilter])
+  }, [rows, filters, paidFilter])
 
   const filteredDrafts = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return draftRows
-    return draftRows.filter((r) =>
-      r.id.toLowerCase().includes(q) ||
-      (r.updated_at ?? '').toLowerCase().includes(q) ||
-      (r.cashier_name ?? '').toLowerCase().includes(q) ||
-      (r.total ?? '').toLowerCase().includes(q),
-    )
-  }, [draftRows, query])
+    const q = filters.ticketQuery.trim().toLowerCase()
+    return draftRows.filter(r => {
+      if (!saleMatchesDateFilter(r.updated_at, filters)) return false
+      if (!q) return true
+      return (
+        r.id.toLowerCase().includes(q) ||
+        (r.cashier_name ?? '').toLowerCase().includes(q)
+      )
+    })
+  }, [draftRows, filters])
 
   const openSaleNeedsFiscal = openSale?.sale ? saleNeedsFiscal(openSale.sale as SaleRow) : false
 
@@ -184,12 +196,6 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
           </div>
         )}
         <div className="flex-1" />
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder={tab === 'paid' ? 'Buscar por ID, fecha, medio de pago o total…' : 'Buscar por ID, cajero/a o total…'}
-          className="w-80 h-9 px-3 text-[13px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
-        />
         <button
           onClick={tab === 'paid' ? refresh : refreshDrafts}
           className="h-9 px-4 bg-white border border-zinc-300 text-[13px] font-medium rounded-md hover:bg-zinc-50 transition-colors"
@@ -197,6 +203,15 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
           Recargar
         </button>
       </div>
+
+      <SalesHistoryFilters
+        mode={tab}
+        filters={filters}
+        onChange={setFilters}
+        paymentMethodOptions={allPaymentMethodOptions}
+        resultCount={tab === 'paid' ? filtered.length : filteredDrafts.length}
+        totalCount={tab === 'paid' ? rows.length : draftRows.length}
+      />
 
       <div className="flex-1 overflow-hidden flex">
         <div className="w-[420px] border-r border-zinc-200 bg-white overflow-y-auto">
@@ -334,11 +349,11 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
                   taxAmount={openSale.sale.tax_amount}
                   total={openSale.sale.total}
                   payments={JSON.parse(openSale.sale.payments ?? '[]') as PosSalePayment[]}
-                  customer={openSaleCustomer ? {
-                    legal_name: openSaleCustomer.legal_name,
-                    trade_name: openSaleCustomer.trade_name,
-                    cuit: openSaleCustomer.cuit,
-                    iva_condition: openSaleCustomer.iva_condition ?? null,
+                  customer={openSale.customer ? {
+                    legal_name: openSale.customer.legal_name,
+                    trade_name: openSale.customer.trade_name,
+                    cuit: openSale.customer.cuit,
+                    iva_condition: openSale.customer.iva_condition ?? null,
                   } : null}
                   fiscal={fiscal}
                   cashierName={openSale.sale.cashier_name}

@@ -16,8 +16,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -28,8 +26,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Rebuild better-sqlite3 for Electron
-        working-directory: apps/pos
-        run: CXXFLAGS='-std=c++20' pnpm exec electron-rebuild -f -w better-sqlite3 --arch=x64
+        env:
+          POS_REBUILD_ARCH: x64
+        run: node scripts/pos-rebuild-native.mjs
 
       - name: Build renderer + main
         working-directory: apps/pos
@@ -53,8 +52,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -65,9 +62,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Rebuild better-sqlite3 for Electron
-        working-directory: apps/pos
-        shell: pwsh
-        run: pnpm exec electron-rebuild -f -w better-sqlite3 --arch=x64
+        env:
+          POS_REBUILD_ARCH: x64
+        run: node scripts/pos-rebuild-native.mjs
 
       - name: Build renderer + main
         working-directory: apps/pos
@@ -132,8 +129,8 @@ jobs:
             - **macOS**: descargá el `.dmg`, abrilo y arrastrá la app a Aplicaciones
             - **Windows**: descargá el `.exe` y seguí el instalador
 
-            ### Actualizaciones automáticas
-            La app se actualiza sola cuando hay una nueva versión disponible.
+            ### Actualizaciones
+            Descargá la nueva versión desde GitHub Releases cuando haya una actualización disponible.
           files: artifacts/*
           draft: false
           prerelease: false

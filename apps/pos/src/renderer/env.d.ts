@@ -176,6 +176,7 @@ interface PosAPI {
         unit_price: string
         total: string
       }>
+      customer: PosCustomer | null
     }>
   }
   paymentMethods: {

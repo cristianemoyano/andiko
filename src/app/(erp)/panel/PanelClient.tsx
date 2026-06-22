@@ -7,6 +7,7 @@ import { TopBar } from '@/components/layout/TopBar'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Skeleton } from '@/components/primitives/Skeleton'
 import { PerformanceCard, PanelBarChart, PanelDonutChart, Sparkline, KpiLabel, PanelWidgetProvider, PanelWidgetMenu, PanelWidgetSlot, usePanelWidgets, PanelAnalyticsCompareLabel, PanelAnalyticsRevenueSection, PanelAnalyticsOrdersSection, PanelAnalyticsProductsSection } from '@/components/erp'
+import { withPanelTrendInfo } from '@/components/erp/panel-kpi-trend-info'
 import type { BarChartDataPoint, DonutSegment, PerformanceSeriesPoint } from '@/components/erp'
 import type { PanelAnalytics as PanelAnalyticsData } from '@/modules/panel/panel.types'
 import type { PanelWidgetId } from '@/modules/panel/panel-widget.types'
@@ -342,14 +343,19 @@ function PanelClientContent({ lockedBranchId = null }: { lockedBranchId?: string
         />
       </PanelWidgetSlot>
     ),
-    analytics_revenue: <PanelAnalyticsRevenueSection analytics={analytics} loading={loading} />,
-    analytics_orders: <PanelAnalyticsOrdersSection analytics={analytics} loading={loading} />,
+    analytics_revenue: (
+      <PanelAnalyticsRevenueSection analytics={analytics} loading={loading} comparePeriodLabel={comparePeriodLabel} />
+    ),
+    analytics_orders: (
+      <PanelAnalyticsOrdersSection analytics={analytics} loading={loading} comparePeriodLabel={comparePeriodLabel} />
+    ),
     analytics_products: (
       <PanelAnalyticsProductsSection
         periodLabel={periodLabel}
         analytics={analytics}
         lastUpdated={lastUpdated}
         loading={loading}
+        comparePeriodLabel={comparePeriodLabel}
       />
     ),
     kpi_cards: (
@@ -361,7 +367,7 @@ function PanelClientContent({ lockedBranchId = null }: { lockedBranchId?: string
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <KPICard
               label="Facturado"
-              info={DESKTOP_KPI_INFO.facturado}
+              info={withPanelTrendInfo(DESKTOP_KPI_INFO.facturado, comparePeriodLabel)}
               value={kpis ? ars(kpis.facturado.value) : <Skeleton className="h-5 w-28" />}
               spark={kpis?.facturado.spark}
               sparkColor={kpis && kpis.facturado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
@@ -369,7 +375,7 @@ function PanelClientContent({ lockedBranchId = null }: { lockedBranchId?: string
             />
             <KPICard
               label="Cobrado"
-              info={DESKTOP_KPI_INFO.cobrado}
+              info={withPanelTrendInfo(DESKTOP_KPI_INFO.cobrado, comparePeriodLabel)}
               value={kpis ? ars(kpis.cobrado.value) : <Skeleton className="h-5 w-28" />}
               spark={kpis?.cobrado.spark}
               sparkColor={kpis && kpis.cobrado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
@@ -596,6 +602,7 @@ function PanelClientContent({ lockedBranchId = null }: { lockedBranchId?: string
     ),
   }), [
     periodLabel,
+    comparePeriodLabel,
     performanceSeries,
     kpis,
     counts,

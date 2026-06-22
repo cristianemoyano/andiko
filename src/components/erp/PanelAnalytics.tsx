@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/primitives/Skeleton'
 import { KpiInfoIcon, KpiLabel } from './KpiInfoIcon'
+import { Tooltip } from '@/components/primitives/Tooltip'
+import { panelTrendPillTooltip, withPanelTrendInfo } from './panel-kpi-trend-info'
 import { PanelWidgetMenu } from './PanelWidgetMenu'
 import { PanelWidgetSlot } from './PanelWidgetSlot'
 import type { PanelWidgetId } from '@/modules/panel/panel-widget.types'
@@ -52,18 +54,23 @@ function formatUpdatedAt(date: Date): string {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
 
-function TrendPill({ pct }: { pct: number }) {
+function TrendPill({ pct, comparePeriodLabel }: { pct: number; comparePeriodLabel?: string }) {
   if (pct === 0) return null
   const positive = pct > 0
-  return (
+  const pill = (
     <span
       className={cn(
-        'text-[11px] font-semibold px-1.5 py-0.5 rounded shrink-0',
+        'text-[11px] font-semibold px-1.5 py-0.5 rounded shrink-0 cursor-help',
         positive ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger',
       )}
     >
       {positive ? '+' : ''}{pct} %
     </span>
+  )
+  return (
+    <Tooltip content={panelTrendPillTooltip(pct, comparePeriodLabel)} side="top">
+      {pill}
+    </Tooltip>
   )
 }
 
@@ -73,23 +80,28 @@ function MetricCell({
   value,
   metric,
   loading,
+  comparePeriodLabel,
 }: {
   label: string
   info?: string
   value: React.ReactNode
   metric?: PanelMetricWithTrend
   loading?: boolean
+  comparePeriodLabel?: string
 }) {
   const sparkColor = metric && metric.pct_change >= 0 ? SPARK_POSITIVE : SPARK_NEGATIVE
+  const tooltipInfo = info ? withPanelTrendInfo(info, comparePeriodLabel) : undefined
 
   return (
     <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-      <KpiLabel label={label} info={info} labelClassName="text-[11px] text-fg-muted" />
+      <KpiLabel label={label} info={tooltipInfo} labelClassName="text-[11px] text-fg-muted" />
       <div className="flex items-center gap-2 min-w-0">
         <div className="font-mono text-xl sm:text-2xl font-medium text-fg leading-none truncate">
           {loading ? <Skeleton className="h-7 w-24" /> : value}
         </div>
-        {!loading && metric && <TrendPill pct={metric.pct_change} />}
+        {!loading && metric && (
+          <TrendPill pct={metric.pct_change} comparePeriodLabel={comparePeriodLabel} />
+        )}
       </div>
       {!loading && metric && metric.spark.length > 1 && (
         <Sparkline data={metric.spark} color={sparkColor} height={28} />
@@ -141,17 +153,25 @@ function AnalyticsSection({
 
 export function PanelAnalyticsCompareLabel({ label }: { label: string }) {
   if (!label) return null
-  return <div className="text-[11px] text-fg-muted px-0.5">{label}</div>
+  return (
+    <div className="text-[11px] text-fg-muted px-0.5">
+      <span className="font-medium text-fg-subtle">Base de comparación: </span>
+      {label.replace(/^Comparado con\s+/i, '')}
+    </div>
+  )
 }
 
 export function PanelAnalyticsRevenueSection({
   analytics,
   loading,
+  comparePeriodLabel,
 }: {
   analytics: PanelAnalyticsData | null
   loading?: boolean
+  comparePeriodLabel?: string
 }) {
   const revenue = analytics?.revenue
+  const compare = comparePeriodLabel ?? analytics?.compare_period_label
   return (
     <AnalyticsSection title="Ingresos" widgetId="analytics_revenue" reportHref="/ventas/reportes" reportLabel="Ver reporte">
       <MetricCell
@@ -160,6 +180,7 @@ export function PanelAnalyticsRevenueSection({
         value={revenue ? formatARS(revenue.total_sales.value) : null}
         metric={revenue?.total_sales}
         loading={loading}
+        comparePeriodLabel={compare}
       />
       <MetricCell
         label="Ventas netas"
@@ -167,6 +188,7 @@ export function PanelAnalyticsRevenueSection({
         value={revenue ? formatARS(revenue.net_sales.value) : null}
         metric={revenue?.net_sales}
         loading={loading}
+        comparePeriodLabel={compare}
       />
     </AnalyticsSection>
   )
@@ -175,11 +197,14 @@ export function PanelAnalyticsRevenueSection({
 export function PanelAnalyticsOrdersSection({
   analytics,
   loading,
+  comparePeriodLabel,
 }: {
   analytics: PanelAnalyticsData | null
   loading?: boolean
+  comparePeriodLabel?: string
 }) {
   const orders = analytics?.orders
+  const compare = comparePeriodLabel ?? analytics?.compare_period_label
   return (
     <AnalyticsSection title="Pedidos" widgetId="analytics_orders" reportHref="/ventas/facturas" reportLabel="Ver reporte">
       <MetricCell
@@ -188,6 +213,7 @@ export function PanelAnalyticsOrdersSection({
         value={orders ? orders.total_orders.value.toLocaleString('es-AR') : null}
         metric={orders?.total_orders}
         loading={loading}
+        comparePeriodLabel={compare}
       />
       <MetricCell
         label="Ticket promedio"
@@ -195,6 +221,7 @@ export function PanelAnalyticsOrdersSection({
         value={orders ? formatARS(orders.avg_order_value.value) : null}
         metric={orders?.avg_order_value}
         loading={loading}
+        comparePeriodLabel={compare}
       />
     </AnalyticsSection>
   )
@@ -205,13 +232,16 @@ export function PanelAnalyticsProductsSection({
   analytics,
   lastUpdated,
   loading,
+  comparePeriodLabel,
 }: {
   periodLabel: string
   analytics: PanelAnalyticsData | null
   lastUpdated?: Date
   loading?: boolean
+  comparePeriodLabel?: string
 }) {
   const products = analytics?.products
+  const compare = comparePeriodLabel ?? analytics?.compare_period_label
   return (
     <PanelWidgetSlot widgetId="analytics_products">
       <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
@@ -232,6 +262,7 @@ export function PanelAnalyticsProductsSection({
             value={products ? formatCompactCount(products.items_sold.value) : null}
             metric={products?.items_sold}
             loading={loading}
+            comparePeriodLabel={compare}
           />
         </div>
         <div className="px-4 pb-1">

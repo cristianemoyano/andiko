@@ -22,6 +22,13 @@ import { formatFiscalTicketNumber } from '@/modules/pos/pos-fiscal.utils'
 import type { PosSaleAuthorizeInput } from '@/modules/pos/pos-fiscal.schema'
 import { upsertPosSalesOrder } from '@/modules/pos/pos-sales-sync.service'
 import { finalizePosSaleInErp } from '@/modules/pos/pos-sales-finalize.service'
+import Invoice from '@/modules/sales/invoice.model'
+import {
+  afipCbteUsedByOtherInvoice,
+  getMaxAuthorizedCbteNumero,
+  isAfipCbteUniqueViolation,
+} from '@/modules/pos/pos-afip-sequence.service'
+import type { WsfeClient } from '@/modules/afip/wsfe.client'
 
 export type PosFiscalAuthorizeResult = {
   pos_sale_id: string
@@ -104,6 +111,32 @@ function buildQrUrl(org: Organization, req: FECAERequest, cbteNumero: number, ca
   })
 }
 
+async function resolveNextCbteNumero(
+  orgId: string,
+  wsfe: WsfeClient,
+  puntoVenta: number,
+  cbteTipo: CbteTipo,
+): Promise<number> {
+  const [fromWsfe, fromDb] = await Promise.all([
+    wsfe.consultarUltimoAutorizado(puntoVenta, cbteTipo),
+    getMaxAuthorizedCbteNumero(orgId, puntoVenta, cbteTipo),
+  ])
+  return Math.max(fromWsfe, fromDb) + 1
+}
+
+async function clearOrderFiscalFields(order: SalesOrder): Promise<void> {
+  await order.update({
+    cae: null,
+    cae_expiration: null,
+    cbte_numero: null,
+    comprobante_tipo: null,
+    fiscal_ticket_number: null,
+    afip_status: 'pending',
+    afip_observations: null,
+  })
+  await order.reload()
+}
+
 function orderToFiscalResult(order: SalesOrder, qrUrl: string | null): PosFiscalAuthorizeResult {
   return {
     pos_sale_id: order.pos_sale_id!,
@@ -131,36 +164,97 @@ export async function authorizePosSale(
   const org = await Organization.findByPk(ctx.orgId)
   if (!org) throw new Error('AFIP_ORG_NOT_FOUND')
 
+  const existingInvoice = await Invoice.findOne({
+    where: { order_id: order.id, org_id: ctx.orgId },
+    attributes: ['id'],
+  })
+
   if (order.cae && order.punto_venta && order.cbte_numero && order.comprobante_tipo) {
     if (order.afip_status !== 'authorized') {
       await order.update({ afip_status: 'authorized' })
     }
-    try {
-      await finalizePosSaleInErp(order.id, ctx.orgId, { payments: input.payments })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      logger.error({ orderId: order.id, err: message }, 'pos sale ERP finalize failed (existing CAE)')
-      throw new Error('POS_SALE_FINALIZE_ERROR')
+
+    let shouldReissueCae = false
+
+    if (!existingInvoice) {
+      const cbteConflict = await afipCbteUsedByOtherInvoice(
+        ctx.orgId,
+        order.punto_venta,
+        order.comprobante_tipo,
+        order.cbte_numero,
+        order.id,
+      )
+      if (cbteConflict) {
+        logger.warn(
+          { orderId: order.id, cbteNumero: order.cbte_numero, puntoVenta: order.punto_venta },
+          'pos afip cbte already invoiced on another order — re-issuing CAE',
+        )
+        shouldReissueCae = true
+      } else {
+        try {
+          await finalizePosSaleInErp(order.id, ctx.orgId, { payments: input.payments })
+          await order.reload()
+          const contact = order.contact_id ? await Contact.findByPk(order.contact_id) : null
+          const receiver = contact ?? CF_CONTACT
+          const items = await SalesOrderItem.findAll({ where: { order_id: order.id } })
+          const lineItems: AfipLineItem[] = items.map((i) => ({
+            iva_rate: i.iva_rate,
+            tax_base: i.tax_base,
+            tax_amount: i.tax_amount,
+          }))
+          const req = buildPosFECAERequest({
+            org,
+            contact: receiver,
+            items: lineItems,
+            issueDate: order.issue_date ?? input.sold_at,
+            puntoVenta: order.punto_venta,
+            cbteNumero: order.cbte_numero,
+            cbteTipo: order.comprobante_tipo as CbteTipo,
+          })
+          return orderToFiscalResult(order, buildQrUrl(org, req, order.cbte_numero, order.cae))
+        } catch (err) {
+          if (isAfipCbteUniqueViolation(err)) {
+            logger.warn({ orderId: order.id, err }, 'pos afip cbte collision on finalize — re-issuing CAE')
+            shouldReissueCae = true
+          } else {
+            const message = err instanceof Error ? err.message : String(err)
+            logger.error({ orderId: order.id, err: message }, 'pos sale ERP finalize failed (existing CAE)')
+            throw new Error('POS_SALE_FINALIZE_ERROR')
+          }
+        }
+      }
+    } else {
+      try {
+        await finalizePosSaleInErp(order.id, ctx.orgId, { payments: input.payments })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        logger.error({ orderId: order.id, err: message }, 'pos sale ERP finalize failed (existing invoice)')
+        throw new Error('POS_SALE_FINALIZE_ERROR')
+      }
+      await order.reload()
+      const contact = order.contact_id ? await Contact.findByPk(order.contact_id) : null
+      const receiver = contact ?? CF_CONTACT
+      const items = await SalesOrderItem.findAll({ where: { order_id: order.id } })
+      const lineItems: AfipLineItem[] = items.map((i) => ({
+        iva_rate: i.iva_rate,
+        tax_base: i.tax_base,
+        tax_amount: i.tax_amount,
+      }))
+      const req = buildPosFECAERequest({
+        org,
+        contact: receiver,
+        items: lineItems,
+        issueDate: order.issue_date ?? input.sold_at,
+        puntoVenta: order.punto_venta,
+        cbteNumero: order.cbte_numero,
+        cbteTipo: order.comprobante_tipo as CbteTipo,
+      })
+      return orderToFiscalResult(order, buildQrUrl(org, req, order.cbte_numero, order.cae))
     }
-    await order.reload()
-    const contact = order.contact_id ? await Contact.findByPk(order.contact_id) : null
-    const receiver = contact ?? CF_CONTACT
-    const items = await SalesOrderItem.findAll({ where: { order_id: order.id } })
-    const lineItems: AfipLineItem[] = items.map((i) => ({
-      iva_rate: i.iva_rate,
-      tax_base: i.tax_base,
-      tax_amount: i.tax_amount,
-    }))
-    const req = buildPosFECAERequest({
-      org,
-      contact: receiver,
-      items: lineItems,
-      issueDate: order.issue_date ?? input.sold_at,
-      puntoVenta: order.punto_venta,
-      cbteNumero: order.cbte_numero,
-      cbteTipo: order.comprobante_tipo as CbteTipo,
-    })
-    return orderToFiscalResult(order, buildQrUrl(org, req, order.cbte_numero, order.cae))
+
+    if (shouldReissueCae) {
+      await clearOrderFiscalFields(order)
+    }
   }
 
   const [branch, device, posConfig] = await Promise.all([
@@ -186,8 +280,7 @@ export async function authorizePosSale(
   const cbteTipo = resolvePosCbteTipo(org.iva_condition, receiver.iva_condition, posConfig.ticket?.comprobante_codigo)
   const wsfe = deps.wsfe ?? (await getAfipClients(ctx.orgId)).wsfe
 
-  const ultimo = await wsfe.consultarUltimoAutorizado(puntoVenta, cbteTipo)
-  const cbteNumero = ultimo + 1
+  const cbteNumero = await resolveNextCbteNumero(ctx.orgId, wsfe, puntoVenta, cbteTipo)
   const issueDate = order.issue_date ?? input.sold_at.slice(0, 10)
 
   const req = buildPosFECAERequest({

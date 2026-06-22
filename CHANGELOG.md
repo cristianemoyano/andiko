@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.15.0](https://github.com/cristianemoyano/andiko/compare/v0.14.0...v0.15.0) (2026-06-22)
+
+### Features
+
+* **core:** clarify panel KPI trend tooltips ([7d13601](https://github.com/cristianemoyano/andiko/commit/7d13601af7320121161f118a9c2386acfc1ad640))
+* **core:** improve pos sales filters, shift duration and license banner ([6175577](https://github.com/cristianemoyano/andiko/commit/617557750d064c1fd47ce717437113efa45cf557))
+
+### Bug Fixes
+
+* **core:** cross-platform pos native rebuild on Windows CI ([1619542](https://github.com/cristianemoyano/andiko/commit/16195424ef9175d98c7e9fcce43eb85a62a58bbb))
+* **core:** pin electron version for pos release packaging ([fdab55c](https://github.com/cristianemoyano/andiko/commit/fdab55c2bec08f1e628b0094f52cc24948b96ca4))
+* **core:** resolve pos afip cbte collision on erp finalize ([6e5e490](https://github.com/cristianemoyano/andiko/commit/6e5e4909c41edb1718b6f65466af155920619be8))
+* **core:** run pos electron-builder from app directory ([0054893](https://github.com/cristianemoyano/andiko/commit/0054893527ac997f5a3300890f979b4f2774c6d1))
+* **core:** use packageManager pnpm version in pos release workflow ([62e8269](https://github.com/cristianemoyano/andiko/commit/62e82690d9bd77d3bc52779e352877c43fcfd785))
+
 ## [0.14.0](https://github.com/cristianemoyano/andiko/compare/v0.13.0...v0.14.0) (2026-06-21)
 
 ### Features

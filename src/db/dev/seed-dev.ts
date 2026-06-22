@@ -441,6 +441,9 @@ async function seedCatalog(
     { name: 'Servicios', description: 'Servicios y horas', slug: 'servicios' },
     { name: 'Insumos',   description: 'Insumos y materiales', slug: 'insumos' },
     { name: 'Fiambrería', description: 'Productos vendidos por peso en POS', slug: 'fiambreria' },
+    { name: 'Alimentos', description: 'Almacén y comestibles', slug: 'alimentos' },
+    { name: 'Bebidas', description: 'Bebidas y refrescos', slug: 'bebidas' },
+    { name: 'Limpieza', description: 'Artículos de limpieza e higiene', slug: 'limpieza' },
   ] as const
 
   const categories = new Map<string, ProductCategory>()
@@ -463,12 +466,13 @@ async function seedCatalog(
     price: string
     manage_stock: boolean
     stock_quantity: number
+    barcode?: string
     sold_by_weight?: boolean
     plu_code?: string
   }
   type ProductSpec = {
     name: string
-    categorySlug: 'servicios' | 'insumos' | 'fiambreria'
+    categorySlug: 'servicios' | 'insumos' | 'fiambreria' | 'alimentos' | 'bebidas' | 'limpieza'
     product_type: ProductType
     unit_of_measure: UnitOfMeasure
     iva_rate: ProductIvaRate
@@ -531,6 +535,144 @@ async function seedCatalog(
         sold_by_weight: true, plu_code: '00042',
       }],
     },
+    // ── Fiambrería adicional (por peso, con PLU) ────────────────────────────
+    {
+      name: 'Mortadela argentina', categorySlug: 'fiambreria', product_type: 'simple',
+      unit_of_measure: 'kg', iva_rate: '21',
+      variants: [{
+        sku: 'MORTADELA-ARG', variantName: null, price: '6500.00',
+        manage_stock: true, stock_quantity: 35,
+        sold_by_weight: true, plu_code: '00043',
+      }],
+    },
+    {
+      name: 'Salame tipo milán', categorySlug: 'fiambreria', product_type: 'simple',
+      unit_of_measure: 'kg', iva_rate: '21',
+      variants: [{
+        sku: 'SALAME-MILAN', variantName: null, price: '14500.00',
+        manage_stock: true, stock_quantity: 28,
+        sold_by_weight: true, plu_code: '00044',
+      }],
+    },
+    {
+      name: 'Panceta ahumada', categorySlug: 'fiambreria', product_type: 'simple',
+      unit_of_measure: 'kg', iva_rate: '21',
+      variants: [{
+        sku: 'PANCETA-AHUM', variantName: null, price: '9800.00',
+        manage_stock: true, stock_quantity: 22,
+        sold_by_weight: true, plu_code: '00045',
+      }],
+    },
+    {
+      name: 'Bondiola cocida', categorySlug: 'fiambreria', product_type: 'simple',
+      unit_of_measure: 'kg', iva_rate: '21',
+      variants: [{
+        sku: 'BONDIOLA-COC', variantName: null, price: '11200.00',
+        manage_stock: true, stock_quantity: 18,
+        sold_by_weight: true, plu_code: '00046',
+      }],
+    },
+    {
+      name: 'Queso tybo', categorySlug: 'fiambreria', product_type: 'simple',
+      unit_of_measure: 'kg', iva_rate: '21',
+      variants: [{
+        sku: 'QUESO-TYBO', variantName: null, price: '10500.00',
+        manage_stock: true, stock_quantity: 30,
+        sold_by_weight: true, plu_code: '00047',
+      }],
+    },
+    {
+      name: 'Queso sardo', categorySlug: 'fiambreria', product_type: 'simple',
+      unit_of_measure: 'kg', iva_rate: '21',
+      variants: [{
+        sku: 'QUESO-SARDO', variantName: null, price: '13800.00',
+        manage_stock: true, stock_quantity: 25,
+        sold_by_weight: true, plu_code: '00048',
+      }],
+    },
+    // ── Alimentos (unidad / paquete, con EAN-13) ────────────────────────────
+    {
+      name: 'Arroz largo fino', categorySlug: 'alimentos', product_type: 'simple',
+      unit_of_measure: 'kg', iva_rate: '10.5',
+      variants: [{
+        sku: 'ARROZ-1KG', variantName: 'Bolsa 1 kg', price: '890.00',
+        manage_stock: true, stock_quantity: 200, barcode: '7790001000002',
+      }],
+    },
+    {
+      name: 'Fideos spaghetti', categorySlug: 'alimentos', product_type: 'simple',
+      unit_of_measure: 'paquete', iva_rate: '10.5',
+      variants: [{
+        sku: 'FIDEOS-SPAG-500', variantName: 'Paquete 500 g', price: '650.00',
+        manage_stock: true, stock_quantity: 350, barcode: '7790002000001',
+      }],
+    },
+    {
+      name: 'Yerba mate', categorySlug: 'alimentos', product_type: 'simple',
+      unit_of_measure: 'paquete', iva_rate: '10.5',
+      variants: [
+        { sku: 'YERBA-500G', variantName: 'Paquete 500 g', price: '1200.00', manage_stock: true, stock_quantity: 180, barcode: '7790009000004' },
+        { sku: 'YERBA-1KG', variantName: 'Paquete 1 kg', price: '2200.00', manage_stock: true, stock_quantity: 120, barcode: '7790010000000' },
+      ],
+    },
+    {
+      name: 'Aceite de girasol', categorySlug: 'alimentos', product_type: 'simple',
+      unit_of_measure: 'litro', iva_rate: '10.5',
+      variants: [{
+        sku: 'ACEITE-GIR-900', variantName: 'Botella 900 ml', price: '1450.00',
+        manage_stock: true, stock_quantity: 160, barcode: '7790003000000',
+      }],
+    },
+    {
+      name: 'Harina 000', categorySlug: 'alimentos', product_type: 'simple',
+      unit_of_measure: 'kg', iva_rate: '10.5',
+      variants: [{
+        sku: 'HARINA-000-1KG', variantName: 'Bolsa 1 kg', price: '720.00',
+        manage_stock: true, stock_quantity: 240, barcode: '7790011000009',
+      }],
+    },
+    // ── Bebidas ─────────────────────────────────────────────────────────────
+    {
+      name: 'Agua mineral sin gas', categorySlug: 'bebidas', product_type: 'simple',
+      unit_of_measure: 'litro', iva_rate: '21',
+      variants: [{
+        sku: 'AGUA-MIN-2L', variantName: 'Botella 2 L', price: '850.00',
+        manage_stock: true, stock_quantity: 300, barcode: '7790004000009',
+      }],
+    },
+    {
+      name: 'Gaseosa cola', categorySlug: 'bebidas', product_type: 'simple',
+      unit_of_measure: 'litro', iva_rate: '21',
+      variants: [{
+        sku: 'GASEOSA-COLA-225', variantName: 'Botella 2,25 L', price: '1650.00',
+        manage_stock: true, stock_quantity: 220, barcode: '7790005000008',
+      }],
+    },
+    // ── Limpieza e insumos con código de barras ─────────────────────────────
+    {
+      name: 'Alcohol en gel', categorySlug: 'limpieza', product_type: 'simple',
+      unit_of_measure: 'ml', iva_rate: '21',
+      variants: [{
+        sku: 'ALCOHOL-GEL-500', variantName: 'Frasco 500 ml', price: '980.00',
+        manage_stock: true, stock_quantity: 140, barcode: '7790006000007',
+      }],
+    },
+    {
+      name: 'Detergente líquido', categorySlug: 'limpieza', product_type: 'simple',
+      unit_of_measure: 'litro', iva_rate: '21',
+      variants: [{
+        sku: 'DETERG-LIQ-3L', variantName: 'Bidón 3 L', price: '3200.00',
+        manage_stock: true, stock_quantity: 90, barcode: '7790007000006',
+      }],
+    },
+    {
+      name: 'Papel higiénico', categorySlug: 'limpieza', product_type: 'simple',
+      unit_of_measure: 'paquete', iva_rate: '21',
+      variants: [{
+        sku: 'PAPEL-HIG-4', variantName: 'Pack 4 rollos', price: '2100.00',
+        manage_stock: true, stock_quantity: 110, barcode: '7790008000005',
+      }],
+    },
   ]
 
   const allVariants    = new Map<string, ProductVariant>()
@@ -560,7 +702,7 @@ async function seedCatalog(
         where: { org_id: orgId, sku: v.sku },
         defaults: {
           org_id: orgId, product_id: product.id, sku: v.sku,
-          barcode: null, name: v.variantName,
+          barcode: v.barcode ?? null, name: v.variantName,
           is_default: isDefault,
           cost_price: null, base_price: v.price,
           manage_stock: v.manage_stock, stock_quantity: v.stock_quantity,
@@ -570,8 +712,9 @@ async function seedCatalog(
         },
         transaction: t,
       })
-      if (v.sold_by_weight || v.plu_code) {
+      if (v.barcode || v.sold_by_weight || v.plu_code) {
         await variant.update({
+          barcode: v.barcode ?? null,
           sold_by_weight: v.sold_by_weight ?? false,
           plu_code: v.plu_code ?? null,
         }, { transaction: t })
