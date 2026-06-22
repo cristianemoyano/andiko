@@ -4,6 +4,7 @@ import { cashSessions, sales } from '../db/schema'
 import { randomUUID } from 'crypto'
 import { eq, desc, gte } from 'drizzle-orm'
 import type { PosSalePayment } from '@andiko/shared'
+import { syncPendingCashSessions } from './sync'
 
 export function registerCashSessionHandlers(ipc: IpcMain) {
   ipc.handle('cashSessions:getCurrent', async () => {
@@ -66,9 +67,14 @@ export function registerCashSessionHandlers(ipc: IpcMain) {
       closing_amount_declared:  declared,
       closing_amount_expected:  expected,
       difference,
+      synced_at:                null,
     }).where(eq(cashSessions.id, args.session_id)).run()
 
     const updated = db().select().from(cashSessions).where(eq(cashSessions.id, args.session_id)).get()
+
+    // Push close to cloud immediately — don't wait for the 60s background timer
+    void syncPendingCashSessions().catch(() => { /* offline */ })
+
     return { ok: true, session: updated }
   })
 
