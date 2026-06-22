@@ -8,6 +8,7 @@ import { resolveModuleForPath, type OrgModuleKey } from '@/modules/auth/organiza
 import { resolveCapabilities } from '@/lib/capabilities'
 import { hasModuleReadAccess } from '@/lib/nav-module-access'
 import { resolveDefaultLandingPath } from '@/lib/panel-access'
+import { isOnboardingPath, shouldLayoutForceOnboardingRedirect } from '@/lib/onboarding-guards'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { InstallPrompt } from '@/components/layout/InstallPrompt'
@@ -33,11 +34,10 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
     const canManageOnboarding = capabilities?.onboarding.manage ?? false
 
     if (canManageOnboarding) {
-      const isOnboardingRoute = pathname.startsWith('/onboarding')
       const status = await getOnboardingStatus(orgId)
-      if (!status.completed && status.hasProgress && !isOnboardingRoute) {
+      if (!status.completed && status.hasProgress && !isOnboardingPath(pathname)) {
         showOnboardingResume = true
-      } else if (!status.completed && !isOnboardingRoute && !status.hasProgress) {
+      } else if (shouldLayoutForceOnboardingRedirect(pathname, status)) {
         redirect('/onboarding')
       }
     }
