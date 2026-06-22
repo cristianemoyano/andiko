@@ -1,6 +1,7 @@
 appId: com.andiko.pos
 productName: Andiko POS
 copyright: Copyright © 2025 Andiko
+electronVersion: "35.7.5"
 
 # Directories
 directories:
