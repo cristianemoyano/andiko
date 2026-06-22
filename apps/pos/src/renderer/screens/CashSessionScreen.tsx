@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
+import { CashierListFiltersNote } from '../components/CashierListFiltersNote'
+import { CurrencyInput } from '../components/CurrencyInput'
 
 interface CashSession {
   id: string
@@ -65,13 +67,13 @@ async function fetchSessionTotals(openedAt: string): Promise<SalesTotals> {
 
 // ── Open Turn ───────────────────────────────────────────────────────────────
 
-interface PosUser { id: string; name: string; email: string; role: string }
+interface PosUser { id: string; name: string; email: string; role: string; role_label: string }
 
-function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
+function OpenSessionView({ onOpened, usersRefreshKey }: { onOpened: (s: CashSession) => void; usersRefreshKey: number }) {
   const [users, setUsers] = useState<PosUser[]>([])
   const [search, setSearch] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
-  const [amount, setAmount] = useState('0')
+  const [amount, setAmount] = useState('0.00')
   const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -80,15 +82,20 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
     window.pos.users.search('').then(r => {
       if (r.ok) setUsers(r.data)
     }).catch(() => {})
-  }, [])
+  }, [usersRefreshKey])
 
   const filteredUsers = search.trim()
-    ? users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
+    ? users.filter(u => {
+        const q = search.toLowerCase()
+        return u.name.toLowerCase().includes(q)
+          || u.email.toLowerCase().includes(q)
+          || u.role_label.toLowerCase().includes(q)
+      })
     : users
 
   async function handleOpen() {
     if (!selectedUserId) { setError('Seleccioná un cajero para abrir el turno'); return }
-    const val = parseFloat(amount.replace(',', '.'))
+    const val = parseFloat(amount)
     if (isNaN(val) || val < 0) { setError('Ingresá un monto inicial válido'); return }
     if (!pin.trim()) { setError('Ingresá el PIN del cajero'); return }
 
@@ -132,6 +139,8 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
           </div>
         </div>
 
+        <CashierListFiltersNote />
+
         {/* Cashier selector */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-zinc-600">Cajero</label>
@@ -143,7 +152,7 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar cajero…"
+                placeholder="Buscar por nombre, email o rol…"
                 className="border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
                 autoFocus
               />
@@ -167,7 +176,9 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-zinc-900 truncate">{u.name}</p>
-                    <p className="text-[10px] text-zinc-400 truncate">{u.role}</p>
+                    <p className="text-[11px] text-zinc-500 truncate">
+                      {u.role_label} - {u.email}
+                    </p>
                   </div>
                   {selectedUserId === u.id && (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600 shrink-0">
@@ -184,13 +195,11 @@ function OpenSessionView({ onOpened }: { onOpened: (s: CashSession) => void }) {
         {/* Opening amount */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-zinc-600">Efectivo inicial en caja</label>
-          <input
-            type="text"
-            inputMode="decimal"
+          <CurrencyInput
             value={amount}
-            onChange={e => setAmount(e.target.value)}
+            onChange={setAmount}
             onKeyDown={e => e.key === 'Enter' && handleOpen()}
-            className="border border-zinc-300 rounded-lg px-3 py-2.5 text-lg font-mono text-zinc-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-right"
+            className="border border-zinc-300 rounded-lg px-3 py-2.5 text-lg font-mono text-zinc-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-right w-full"
           />
         </div>
 
@@ -240,7 +249,7 @@ function ActiveSessionView({ session, onClosed }: { session: CashSession; onClos
   }, [session.opened_at])
 
   async function handleClose() {
-    const val = parseFloat(declaredAmount.replace(',', '.'))
+    const val = parseFloat(declaredAmount)
     if (isNaN(val) || val < 0) { setError('Ingresá un monto válido'); return }
     if (!pin.trim()) { setError('Ingresá el PIN del cajero para cerrar el turno'); return }
 
@@ -366,17 +375,15 @@ function ActiveSessionView({ session, onClosed }: { session: CashSession; onClos
         </p>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-zinc-600">Efectivo contado en caja</label>
-          <input
-            type="text"
-            inputMode="decimal"
+          <CurrencyInput
             value={declaredAmount}
-            onChange={e => setDeclaredAmount(e.target.value)}
+            onChange={setDeclaredAmount}
             onKeyDown={e => e.key === 'Enter' && handleClose()}
-            placeholder="0,00"
-            className="border border-zinc-300 rounded-lg px-3 py-2.5 text-lg font-mono text-zinc-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-right"
+            placeholder="$ 0,00"
+            className="border border-zinc-300 rounded-lg px-3 py-2.5 text-lg font-mono text-zinc-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-right w-full"
           />
         </div>
-        {declaredAmount !== '' && !isNaN(parseFloat(declaredAmount.replace(',', '.'))) && totals !== null && (
+        {declaredAmount !== '' && !isNaN(parseFloat(declaredAmount)) && totals !== null && (
           <div className="bg-zinc-50 rounded-lg px-4 py-2.5 flex justify-between items-center">
             <span className="text-xs text-zinc-500">
               Esperado: <span className="font-mono font-medium text-zinc-700">
@@ -384,7 +391,7 @@ function ActiveSessionView({ session, onClosed }: { session: CashSession; onClos
               </span>
             </span>
             {(() => {
-              const declared = parseFloat(declaredAmount.replace(',', '.'))
+              const declared = parseFloat(declaredAmount)
               const expected = Number(session.opening_amount) + (totals.byType['Efectivo'] ?? totals.byType['cash'] ?? 0)
               const diff = declared - expected
               return (
@@ -475,6 +482,7 @@ export function CashSessionScreen() {
   const [showHistory, setShowHistory] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [usersRefreshKey, setUsersRefreshKey] = useState(0)
 
   const loadSession = useCallback(async () => {
     const [current, all] = await Promise.all([
@@ -491,9 +499,17 @@ export function CashSessionScreen() {
   async function handleSync() {
     setSyncing(true)
     setSyncMsg(null)
+    const catalog = await window.pos.sync.catalog()
+    if (!catalog.ok) {
+      setSyncing(false)
+      setSyncMsg({ ok: false, text: catalog.error ?? 'Error al sincronizar datos' })
+      setTimeout(() => setSyncMsg(null), 5000)
+      return
+    }
     const result = await window.pos.sync.sales()
     setSyncing(false)
-    setSyncMsg(result.ok ? { ok: true, text: 'Sincronizado' } : { ok: false, text: result.error ?? 'Error al sincronizar' })
+    setSyncMsg(result.ok ? { ok: true, text: 'Datos y ventas sincronizados' } : { ok: false, text: result.error ?? 'Error al sincronizar ventas' })
+    setUsersRefreshKey(k => k + 1)
     loadSession()
     setTimeout(() => setSyncMsg(null), 5000)
   }
@@ -547,7 +563,10 @@ export function CashSessionScreen() {
             onClosed={() => { setSession(null); setShowHistory(true); loadSession() }}
           />
         ) : (
-          <OpenSessionView onOpened={s => { setSession(s); setShowHistory(false) }} />
+          <OpenSessionView
+            usersRefreshKey={usersRefreshKey}
+            onOpened={s => { setSession(s); setShowHistory(false) }}
+          />
         )}
 
         {showHistory && history.length > 0 && (

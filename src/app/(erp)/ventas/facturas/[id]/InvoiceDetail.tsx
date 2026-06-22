@@ -19,7 +19,7 @@ import { StatusPipeline } from '@/components/erp/StatusPipeline'
 import { AfipDocumentPanel } from '@/components/erp/AfipDocumentPanel'
 import { VentasSubNav } from '../../VentasSubNav'
 import type { Invoice, Payment, PaymentMethod } from '../../types'
-import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL } from '../../types'
+import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL, formatSalesPaymentMedium } from '../../types'
 import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
 import { notifyApiError, notifyInfo, notifySuccess } from '@/lib/notify'
@@ -532,7 +532,9 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                         {new Date(p.payment_date).toLocaleDateString('es-AR')}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums font-medium">{formatARS(p.amount)}</td>
-                      <td className="px-4 py-2.5 text-fg-muted">{PAYMENT_METHOD_LABEL[p.payment_method]}</td>
+                      <td className="px-4 py-2.5 text-fg-muted">
+                        {formatSalesPaymentMedium(p, { fromPos: invoice.order?.source === 'pos' })}
+                      </td>
                       <td className="px-4 py-2.5 text-fg-muted">{p.reference ?? '—'}</td>
                       <td className="px-4 py-2.5 text-right">
                         {invoice.status !== 'cancelled' && (

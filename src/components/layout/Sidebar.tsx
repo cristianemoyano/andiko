@@ -181,6 +181,19 @@ export function Sidebar({
           }}
           active={pathname.startsWith('/pos/medios-de-pago')}
         />
+        <NavLink
+          item={{
+            id: 'pos-balanzas',
+            label: 'Balanzas',
+            href: '/pos/balanzas',
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v2M5 5h14l-2.5 6h-9L5 5zM3.5 11h17"/><path d="M6 11l-2 7h6l-2-7M18 11l-2 7h6l-2-7M9 21h6"/>
+              </svg>
+            ),
+          }}
+          active={pathname.startsWith('/pos/balanzas')}
+        />
           </>
         )}
 

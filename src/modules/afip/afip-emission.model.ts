@@ -4,7 +4,7 @@ import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields } from '@/types'
 import type { AfipObservation } from './afip-codes'
 
-export const AFIP_EMISSION_DOC_TYPES = ['invoice', 'credit_note', 'debit_note'] as const
+export const AFIP_EMISSION_DOC_TYPES = ['invoice', 'credit_note', 'debit_note', 'sales_order'] as const
 export type AfipEmissionDocType = typeof AFIP_EMISSION_DOC_TYPES[number]
 
 export const AFIP_EMISSION_STATUSES = ['pending', 'authorized', 'rejected', 'error'] as const

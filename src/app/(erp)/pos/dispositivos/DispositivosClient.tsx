@@ -18,6 +18,7 @@ type PosDevice = {
   is_active: boolean
   last_seen_at: string | null
   license_valid_until: string | null
+  punto_venta: number | null
   created_at: string
 }
 
@@ -27,6 +28,86 @@ function formatDate(iso: string | null) {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   })
+}
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'Registrar la terminal',
+    body: 'Creá un dispositivo por cada caja o PC con POS. Asignale nombre y sucursal. El token de API se muestra una sola vez al crearlo — copialo antes de cerrar.',
+  },
+  {
+    title: 'Configurar el POS',
+    body: 'En el punto de venta, ingresá la URL de tu instancia Andiko y el token que copiaste al crear el dispositivo. Validá la licencia para vincular la sucursal.',
+  },
+  {
+    title: 'Sincronizar datos',
+    body: 'Usá Sincronizar datos del cloud para traer productos, clientes, medios de pago y configuración de balanza. Repetí después de cambios en el ERP.',
+  },
+  {
+    title: 'Mantener la licencia',
+    body: 'Cada validación renueva la licencia por 30 días. Sin conexión el POS opera en modo offline con un período de gracia; después debe reconectar.',
+  },
+] as const
+
+function DispositivosTutorialPanel() {
+  return (
+    <div className="bg-surface border border-border rounded-sm shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+      <div className="px-5 py-4 border-b border-border bg-surface-muted/30">
+        <h2 className="text-sm font-semibold text-fg">Cómo funciona</h2>
+        <p className="text-xs text-fg-subtle mt-1 leading-relaxed">
+          Guía para vincular una terminal POS con tu organización en el cloud.
+        </p>
+      </div>
+
+      <ol className="p-5 space-y-4">
+        {TUTORIAL_STEPS.map((step, i) => (
+          <li key={step.title} className="flex gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700 text-[11px] font-semibold">
+              {i + 1}
+            </span>
+            <div className="min-w-0 pt-0.5">
+              <div className="text-[13px] font-medium text-fg">{step.title}</div>
+              <p className="text-xs text-fg-muted mt-1 leading-relaxed">{step.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <div className="px-5 pb-5">
+        <p className="text-[11px] text-fg-subtle leading-relaxed">
+          Desactivá un dispositivo para revocar el acceso sin borrar el historial. Eliminarlo es permanente
+          y el token deja de funcionar de inmediato.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function DispositivosContent({
+  loading,
+  devices,
+  columns,
+  onRegister,
+}: {
+  loading: boolean
+  devices: PosDevice[]
+  columns: Column<PosDevice>[]
+  onRegister: () => void
+}) {
+  if (loading) {
+    return <div className="flex items-center justify-center h-40 text-fg-subtle text-sm">Cargando…</div>
+  }
+
+  if (devices.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-2">
+        <p className="text-fg-muted text-sm">No hay dispositivos registrados.</p>
+        <Button size="sm" onClick={onRegister}>Registrar el primero</Button>
+      </div>
+    )
+  }
+
+  return <DataTable columns={columns} data={devices} keyExtractor={r => r.id} />
 }
 
 export function DispositivosClient() {
@@ -97,6 +178,15 @@ export function DispositivosClient() {
       render: row => <StatusBadge value={row.is_active ? 'Activo' : 'Inactivo'} />,
     },
     {
+      key: 'punto_venta',
+      header: 'P.V. fiscal',
+      render: row => (
+        <span className="text-sm tabular-nums text-fg-muted">
+          {row.punto_venta != null ? String(row.punto_venta).padStart(4, '0') : 'Sucursal'}
+        </span>
+      ),
+    },
+    {
       key: 'last_seen_at',
       header: 'Última conexión',
       render: row => <span className="text-sm text-fg-muted">{formatDate(row.last_seen_at)}</span>,
@@ -135,16 +225,28 @@ export function DispositivosClient() {
       />
 
       <div className="flex-1 overflow-auto p-6">
-        {loading ? (
-          <div className="flex items-center justify-center h-40 text-fg-subtle text-sm">Cargando…</div>
-        ) : devices.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 gap-2">
-            <p className="text-fg-muted text-sm">No hay dispositivos registrados.</p>
-            <Button size="sm" onClick={() => setModalOpen(true)}>Registrar el primero</Button>
+        <div className="max-w-6xl grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] gap-6 items-start">
+          <div className="bg-surface border border-border rounded-sm shadow-[0_1px_3px_rgba(0,0,0,0.06)] divide-y divide-border min-w-0 overflow-hidden">
+            <section className="px-5 py-4 bg-surface-muted/30">
+              <p className="text-sm text-fg-muted leading-relaxed">
+                Cada terminal POS (caja, mostrador) se registra acá y recibe un token único. Ese token
+                identifica el dispositivo ante el cloud y define a qué sucursal pertenece.
+              </p>
+            </section>
+            <section className="min-w-0">
+              <DispositivosContent
+                loading={loading}
+                devices={devices}
+                columns={columns}
+                onRegister={() => setModalOpen(true)}
+              />
+            </section>
           </div>
-        ) : (
-          <DataTable columns={columns} data={devices} keyExtractor={r => r.id} />
-        )}
+
+          <aside className="min-w-0 xl:sticky xl:top-6">
+            <DispositivosTutorialPanel />
+          </aside>
+        </div>
       </div>
 
       <DeviceModal

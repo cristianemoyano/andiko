@@ -35,6 +35,9 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
       return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
     }
+    if (err instanceof Error && err.message === 'PLU_CODE_TAKEN') {
+      return NextResponse.json({ error: 'El código PLU ya está en uso', code: 'PLU_CODE_TAKEN' }, { status: 409 })
+    }
     if (err instanceof Error && err.message.includes('unique')) {
       return NextResponse.json({ error: 'El SKU ya existe', code: 'DUPLICATE_SKU' }, { status: 409 })
     }

@@ -164,6 +164,18 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   other:    'Otro',
 }
 
+/** POS stores the configured method name in `notes`; ERP manual cobros use generic labels. */
+export function formatSalesPaymentMedium(
+  payment: Pick<Payment, 'payment_method' | 'notes'>,
+  opts?: { fromPos?: boolean },
+): string {
+  if (opts?.fromPos) {
+    const posName = payment.notes?.trim()
+    if (posName) return posName
+  }
+  return PAYMENT_METHOD_LABEL[payment.payment_method] ?? payment.payment_method
+}
+
 export interface Payment {
   id: string
   payment_number: string
@@ -234,6 +246,7 @@ export interface Invoice extends AfipDocumentFields {
   items?: InvoiceItem[]
   /** Present on GET `/api/v1/sales/invoices/:id` when backend includes payments */
   payments?: Payment[]
+  order?: { id: string; source: string | null } | null
 }
 
 // --- Account statement (cuenta corriente) ---

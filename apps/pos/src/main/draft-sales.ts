@@ -2,8 +2,9 @@ import type { IpcMain } from 'electron'
 import { randomUUID } from 'crypto'
 import { and, desc, eq } from 'drizzle-orm'
 import { db } from './db'
-import { posDraftSaleItems, posDraftSales, products, saleItems, sales, settings, syncQueue } from '../db/schema'
+import { posDraftSaleItems, posDraftSales, products } from '../db/schema'
 import type { PosSalePayment } from '@andiko/shared'
+import { completePosCheckout } from './pos-sale-checkout'
 
 type DraftSaleRow = typeof posDraftSales.$inferSelect
 type DraftSaleItemRow = typeof posDraftSaleItems.$inferSelect
@@ -63,10 +64,11 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
       if (args?.draft_sale_id) {
         const existing = d.select().from(posDraftSales).where(eq(posDraftSales.id, args.draft_sale_id)).get()
         if (existing) {
-          d.update(posDraftSales)
-            .set({ last_opened_at: now, updated_at: now })
-            .where(eq(posDraftSales.id, args.draft_sale_id))
-            .run()
+          const patch: Partial<DraftSaleRow> = { last_opened_at: now, updated_at: now }
+          if (args.cashier_user_id) patch.cashier_user_id = args.cashier_user_id
+          if (args.cashier_name) patch.cashier_name = args.cashier_name
+          if (args.customer_id !== undefined) patch.customer_id = args.customer_id
+          d.update(posDraftSales).set(patch).where(eq(posDraftSales.id, args.draft_sale_id)).run()
           return { ok: true, id: args.draft_sale_id }
         }
       }
@@ -198,6 +200,8 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
         subtotal: string
         tax_amount: string
         total: string
+        cashier_user_id?: string | null
+        cashier_name?: string | null
       },
     ) => {
       const d = db()
@@ -208,40 +212,47 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
       const items = d.select().from(posDraftSaleItems).where(eq(posDraftSaleItems.draft_sale_id, args.draft_sale_id)).all()
       if (items.length === 0) return { ok: false, error: 'EMPTY_DRAFT' }
 
-      const s = d.select().from(settings).all()
-      const settingsMap = Object.fromEntries(s.map((r) => [r.key, r.value]))
-
       const paymentsJson = JSON.stringify(args.payments)
       const saleId = randomUUID()
-      d.insert(sales)
-        .values({
-          id: saleId,
+      const soldAt = args.sold_at ?? now
+      const cashierUserId = args.cashier_user_id ?? draft.cashier_user_id ?? null
+      const cashierName = args.cashier_name ?? draft.cashier_name ?? null
+
+      const result = await completePosCheckout({
+        saleId,
+        payload: {
+          pos_sale_id: saleId,
+          customer_id: draft.customer_id ?? undefined,
+          cashier_user_id: cashierUserId ?? undefined,
+          cashier_name: cashierName ?? undefined,
+          payments: args.payments,
+          sold_at: soldAt,
+          items: items.map((item) => ({
+            description: item.product_name,
+            qty: item.qty,
+            unit_price: item.unit_price,
+            iva_rate: item.iva_rate ?? '21',
+          })),
+        },
+        localRow: {
           customer_id: draft.customer_id ?? null,
-          cashier_user_id: draft.cashier_user_id ?? settingsMap['cashier_user_id'] ?? null,
-          cashier_name: draft.cashier_name ?? settingsMap['cashier_name'] ?? null,
+          cashier_user_id: cashierUserId,
+          cashier_name: cashierName,
           payments: paymentsJson,
           subtotal: args.subtotal,
           tax_amount: args.tax_amount,
           total: args.total,
-          sold_at: args.sold_at ?? now,
-        })
-        .run()
-
-      for (const item of items) {
-        d.insert(saleItems)
-          .values({
-            sale_id: saleId,
-            product_id: item.product_id,
-            product_name: item.product_name,
-            qty: item.qty,
-            iva_rate: item.iva_rate ?? '21',
-            unit_price: item.unit_price,
-            total: item.total,
-          })
-          .run()
-      }
-
-      d.insert(syncQueue).values({ sale_id: saleId, attempts: 0, created_at: now }).run()
+          sold_at: soldAt,
+        },
+        items: items.map((item) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          qty: item.qty,
+          unit_price: item.unit_price,
+          total: item.total,
+          iva_rate: item.iva_rate ?? '21',
+        })),
+      })
 
       d.update(posDraftSales)
         .set({
@@ -255,7 +266,18 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
         .where(eq(posDraftSales.id, args.draft_sale_id))
         .run()
 
-      return { ok: true, sale_id: saleId }
+      return {
+        ok: true,
+        sale_id: saleId,
+        ticket_number: result.ticket_number ?? undefined,
+        cloud_id: result.cloud_id ?? undefined,
+        cae: result.cae,
+        cae_expiration: result.cae_expiration,
+        qr_url: result.qr_url,
+        afip_status: result.afip_status,
+        fiscal_pending: result.fiscal_pending,
+        afip_error: result.afip_error,
+      }
     },
   )
 

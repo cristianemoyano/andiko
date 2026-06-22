@@ -1,3 +1,5 @@
+export * from './balanza'
+
 // Primitive types shared between ERP cloud and POS
 export type UUID = string
 
@@ -23,10 +25,14 @@ export type PosProduct = {
   sku: string | null
   barcode: string | null
   name: string
-  price: string     // NUMERIC as string to preserve precision
+  price: string     // NUMERIC as string to preserve precision; for weight items, price per kg
   iva_rate: IvaRate
   is_active: boolean
   image_url: string | null
+  /** Sold by weight (balanza) — price is per kg and qty is fractional kg. */
+  sold_by_weight: boolean
+  /** PLU/item code embedded in scale labels; matches the scanned barcode's item code. */
+  plu_code: string | null
   updated_at: string // ISO timestamp
 }
 
@@ -35,6 +41,7 @@ export type PosCustomer = {
   legal_name: string
   trade_name: string | null
   cuit: string | null
+  iva_condition: string | null
   email: string | null
   phone: string | null
   updated_at: string
@@ -55,19 +62,29 @@ export type PosSaleItem = {
   qty: number
   unit_price: string
   total: string
+  iva_rate?: string
 }
 
 export type PosSalePayment = {
   payment_method_id: UUID
   payment_method_name: string
   payment_method_type: string
+  /** Monto imputado a la venta (≤ total). */
   amount: string
+  /** Efectivo entregado por el cliente (solo type=cash). */
+  tendered_amount?: string | null
   reference: string | null
 }
 
 export type PosSale = {
   local_id: string  // UUID generated on device
   device_id: string
+  ticket_number?: string
+  cloud_id?: string | null
+  cae?: string | null
+  cae_expiration?: string | null
+  qr_url?: string | null
+  afip_status?: string | null
   cashier_user_id?: UUID | null
   cashier_name?: string | null
   customer_id: UUID | null

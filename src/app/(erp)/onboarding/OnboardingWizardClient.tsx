@@ -92,6 +92,11 @@ const ROLES = [
     desc: template('Vendedor')?.description ?? 'Presupuestos, facturas y clientes',
   },
   {
+    id: 'cajero',
+    label: 'Cajero',
+    desc: template('Cajero')?.description ?? 'Ventas en punto de venta y cobros',
+  },
+  {
     id: 'comprador',
     label: 'Gerente de compras',
     desc: template('Gerente de compras')?.description ?? 'Compras, proveedores y recepción',

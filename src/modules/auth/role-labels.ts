@@ -40,6 +40,18 @@ export const DEFAULT_ORG_ROLE_TEMPLATES: DefaultOrgRoleTemplate[] = [
     ],
   },
   {
+    name: 'Cajero',
+    description: 'Ventas en punto de venta, cobros y consulta de catálogo',
+    allows_pos: true,
+    permissions: [
+      'contacts:read',
+      'sales:read',
+      'sales:write',
+      'products:read',
+      'inventory:read',
+    ],
+  },
+  {
     name: 'Gerente de compras',
     description: 'Órdenes de compra, proveedores y recepción',
     allows_pos: false,
@@ -84,4 +96,14 @@ export function getBuiltinRoleLabel(role: UserRole | string): string {
 
 export function isAssignableBuiltinRole(role: string): role is AssignableBuiltinRole {
   return (ASSIGNABLE_BUILTIN_ROLES as readonly string[]).includes(role)
+}
+
+/** Human-readable role for UI (org role name when set, else built-in label). */
+export function resolveUserRoleLabel(
+  builtinRole: UserRole | string,
+  orgRoleName?: string | null,
+): string {
+  if (orgRoleName) return orgRoleName
+  const label = BUILTIN_ROLE_LABEL[builtinRole as UserRole]
+  return label ?? String(builtinRole)
 }

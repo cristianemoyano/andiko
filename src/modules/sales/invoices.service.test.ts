@@ -14,6 +14,9 @@ vi.mock('./invoice-item.model', () => ({
 vi.mock('./payment.model', () => ({
   default: { findAll: vi.fn() },
 }))
+vi.mock('./sales-order.model', () => ({
+  default: { belongsTo: vi.fn(), hasMany: vi.fn() },
+}))
 vi.mock('@/lib/db', () => ({
   default: {
     transaction: vi.fn((cb) => cb({ lock: true })),

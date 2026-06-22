@@ -8,6 +8,7 @@ const patchSchema = z.object({
   license_valid_until: z.string().datetime({ offset: true }).nullable().optional(),
   name: z.string().max(128).optional(),
   is_active: z.boolean().optional(),
+  punto_venta: z.number().int().positive().max(99999).nullable().optional(),
 })
 
 async function resolveDevice(id: string, orgId: string) {
@@ -30,7 +31,12 @@ export const PATCH = withPermission(
       const device = await resolveDevice(id, tenantCtx.orgId)
       if (!device) return NextResponse.json({ error: 'Dispositivo no encontrado', code: 'NOT_FOUND' }, { status: 404 })
 
-      const updates: Partial<{ name: string | null; is_active: boolean; license_valid_until: Date | null }> = {}
+      const updates: Partial<{
+        name: string | null
+        is_active: boolean
+        license_valid_until: Date | null
+        punto_venta: number | null
+      }> = {}
       if (parsed.data.name !== undefined) updates.name = parsed.data.name
       if (parsed.data.is_active !== undefined) updates.is_active = parsed.data.is_active
       if ('license_valid_until' in parsed.data) {
@@ -38,9 +44,15 @@ export const PATCH = withPermission(
           ? new Date(parsed.data.license_valid_until)
           : null
       }
+      if ('punto_venta' in parsed.data) {
+        updates.punto_venta = parsed.data.punto_venta ?? null
+      }
 
       await device.update(updates)
-      return NextResponse.json({ ok: true })
+      return NextResponse.json({
+        ok: true,
+        punto_venta: device.punto_venta,
+      })
     } catch (err) {
       if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
         return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })

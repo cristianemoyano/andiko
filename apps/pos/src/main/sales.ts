@@ -1,51 +1,83 @@
 import type { IpcMain } from 'electron'
 import { db } from './db'
-import { sales, saleItems, syncQueue, products, settings } from '../db/schema'
+import { sales, saleItems } from '../db/schema'
 import { randomUUID } from 'crypto'
-import type { PosSale, PosSalePayment } from '@andiko/shared'
+import type { PosSale } from '@andiko/shared'
 import { desc, eq, sql } from 'drizzle-orm'
+import { completePosCheckout, authorizeFiscalForLocalSale } from './pos-sale-checkout'
+import type { AuthorizePosSalePayload } from './sync'
+
+function buildAuthorizePayload(id: string, payload: PosSale, soldAt: string): AuthorizePosSalePayload {
+  return {
+    pos_sale_id: id,
+    customer_id: payload.customer_id ?? undefined,
+    cashier_user_id: payload.cashier_user_id ?? undefined,
+    cashier_name: payload.cashier_name ?? undefined,
+    payments: payload.payments,
+    sold_at: soldAt,
+    items: payload.items.map((i) => ({
+      description: i.product_name,
+      qty: i.qty,
+      unit_price: i.unit_price,
+      iva_rate: i.iva_rate ?? '21',
+    })),
+  }
+}
 
 export function registerSalesHandlers(ipc: IpcMain) {
   ipc.handle('sales:create', async (_e, payload: PosSale) => {
-    const d = db()
-    const now = new Date().toISOString()
     const id = payload.local_id || randomUUID()
+    const soldAt = payload.sold_at || new Date().toISOString()
 
-    const s = d.select().from(settings).all()
-    const settingsMap = Object.fromEntries(s.map(r => [r.key, r.value]))
+    const result = await completePosCheckout({
+      saleId: id,
+      payload: buildAuthorizePayload(id, payload, soldAt),
+      localRow: {
+        customer_id: payload.customer_id ?? null,
+        cashier_user_id: payload.cashier_user_id ?? null,
+        cashier_name: payload.cashier_name ?? null,
+        payments: JSON.stringify(payload.payments),
+        subtotal: payload.subtotal,
+        tax_amount: payload.tax_amount,
+        total: payload.total,
+        sold_at: soldAt,
+      },
+      items: payload.items.map((i) => ({
+        product_id: i.product_id,
+        product_name: i.product_name,
+        qty: i.qty,
+        unit_price: i.unit_price,
+        total: i.total,
+        iva_rate: i.iva_rate,
+      })),
+    })
 
-    d.insert(sales).values({
-      id,
-      customer_id:    payload.customer_id ?? null,
-      cashier_user_id: payload.cashier_user_id ?? settingsMap['cashier_user_id'] ?? null,
-      cashier_name:   payload.cashier_name ?? settingsMap['cashier_name'] ?? null,
-      payments:       JSON.stringify(payload.payments),
-      subtotal:       payload.subtotal,
-      tax_amount:     payload.tax_amount,
-      total:          payload.total,
-      sold_at:        payload.sold_at || now,
-    }).run()
-
-    for (const item of payload.items) {
-      const p = d.select({ iva_rate: products.iva_rate }).from(products).where(eq(products.id, item.product_id)).get()
-      d.insert(saleItems).values({
-        sale_id:      id,
-        product_id:   item.product_id,
-        product_name: item.product_name,
-        qty:          item.qty,
-        iva_rate:     p?.iva_rate ?? '21',
-        unit_price:   item.unit_price,
-        total:        item.total,
-      }).run()
+    return {
+      id: result.sale_id,
+      ticket_number: result.ticket_number,
+      cloud_id: result.cloud_id,
+      cae: result.cae,
+      cae_expiration: result.cae_expiration,
+      qr_url: result.qr_url,
+      afip_status: result.afip_status,
+      fiscal_pending: result.fiscal_pending,
+      afip_error: result.afip_error,
     }
+  })
 
-    d.insert(syncQueue).values({
-      sale_id:    id,
-      attempts:   0,
-      created_at: now,
-    }).run()
-
-    return { id }
+  ipc.handle('sales:authorizeFiscal', async (_e, saleId: string) => {
+    const result = await authorizeFiscalForLocalSale(saleId)
+    return {
+      ok: true as const,
+      sale_id: result.sale_id,
+      ticket_number: result.ticket_number,
+      cloud_id: result.cloud_id,
+      cae: result.cae,
+      cae_expiration: result.cae_expiration,
+      qr_url: result.qr_url,
+      afip_status: result.afip_status,
+      fiscal_pending: result.fiscal_pending,
+    }
   })
 
   ipc.handle('sales:list-today', async () => {
@@ -73,13 +105,12 @@ export function registerSalesHandlers(ipc: IpcMain) {
       .where(sql`strftime('%Y-%m-%d', ${sales.sold_at}) = ${day}`)
       .all()
 
-    // Aggregate by payment method type across mixed-payment sales
     const byType: Record<string, number> = {}
     let grandTotal = 0
     let count = 0
 
     for (const row of rows) {
-      const payments: PosSalePayment[] = JSON.parse(row.payments ?? '[]')
+      const payments = JSON.parse(row.payments ?? '[]') as PosSale['payments']
       for (const p of payments) {
         byType[p.payment_method_name] = (byType[p.payment_method_name] ?? 0) + Number(p.amount)
       }

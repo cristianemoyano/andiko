@@ -19,10 +19,21 @@ export const AFIP_ERROR_MAP: Record<string, [string, number]> = {
   AFIP_INVALID_CERT: ['El certificado no es un PEM X.509 válido', 422],
   AFIP_INVALID_KEY: ['La clave privada no es un PEM válido', 422],
   AFIP_KEY_MISMATCH: ['La clave privada no corresponde al certificado', 422],
+  POS_BRANCH_REQUIRED: ['El dispositivo POS no tiene sucursal asignada', 422],
+  POS_SALE_FINALIZE_ERROR: [
+    'El CAE se autorizó pero falló la facturación en el ERP. Reintentá desde el POS o contactá soporte.',
+    500,
+  ],
+  AFIP_CAE_REJECTED: ['AFIP rechazó la autorización del comprobante', 422],
+  AFIP_CAE_TRANSPORT_ERROR: ['No se pudo contactar a AFIP. Reintentá más tarde.', 503],
   AFIP_CREDENTIAL_NOT_FOUND: ['No hay credenciales AFIP configuradas para ese entorno', 404],
 }
 
-type AfipMappedError = { code: string; message: string; status: number }
+export type AfipMappedError = {
+  code: string
+  message: string
+  status: number
+}
 
 function errorCode(err: Error): string | null {
   const coded = err as Error & { code?: unknown }

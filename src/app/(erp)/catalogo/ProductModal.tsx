@@ -18,7 +18,7 @@ interface ProductModalProps {
     vendor: string | null
     category_id: string | null
     description: string | null
-    variants: Array<{ sku: string; base_price: string | null; cost_price: string | null; barcode: string | null; manage_stock?: boolean; stock_quantity?: number }>
+    variants: Array<{ sku: string; base_price: string | null; cost_price: string | null; barcode: string | null; manage_stock?: boolean; stock_quantity?: number; sold_by_weight?: boolean; plu_code?: string | null }>
   } | null
   onClose: () => void
   onSaved: () => void
@@ -63,10 +63,12 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
     cost_price:      variant?.cost_price ?? '',
     manage_stock:    variant?.manage_stock ?? true,
     stock_quantity:  variant?.stock_quantity ?? 0,
+    sold_by_weight:  variant?.sold_by_weight ?? false,
+    plu_code:        variant?.plu_code ?? '',
     images_urls:     initialImagesUrls,
   })
 
-  function fieldString(key: Exclude<keyof typeof form, 'manage_stock' | 'stock_quantity'>) {
+  function fieldString(key: Exclude<keyof typeof form, 'manage_stock' | 'stock_quantity' | 'sold_by_weight'>) {
     return {
       value: form[key],
       onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -123,6 +125,8 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
       cost_price:      form.cost_price || null,
       manage_stock:    form.manage_stock,
       stock_quantity:  form.stock_quantity,
+      sold_by_weight:  form.sold_by_weight,
+      plu_code:        form.sold_by_weight ? (form.plu_code.trim() || null) : null,
     }
 
     const url    = isEdit ? `/api/v1/catalog/products/${product!.id}` : '/api/v1/catalog/products'
@@ -139,6 +143,11 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
       }
       if (isApiRequestError(err) && err.code === 'DUPLICATE_SKU') {
         setServerError('El SKU ya existe para otro producto.')
+        return
+      }
+      if (isApiRequestError(err) && err.code === 'PLU_CODE_TAKEN') {
+        setErrors({ plu_code: ['El código PLU ya está en uso por otro producto.'] })
+        setTab('pricing')
         return
       }
       const msg = getApiErrorMessage(err)
@@ -335,6 +344,35 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                     />
                   </FormField>
                 </div>
+              </div>
+
+              <div className="border-t border-border pt-4">
+                <p className="text-xs font-semibold text-fg-muted uppercase tracking-wider mb-3">Balanza</p>
+                <label className="flex items-center gap-2 text-sm text-fg-muted cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.sold_by_weight}
+                    onChange={(e) => setForm(f => ({ ...f, sold_by_weight: e.target.checked }))}
+                    className="accent-brand-600"
+                  />
+                  Se vende por peso
+                </label>
+                {form.sold_by_weight && (
+                  <div className="mt-3">
+                    <FormField label="Código PLU (balanza)" htmlFor="product_plu_code" error={errors.plu_code?.[0]} required>
+                      <Input
+                        id="product_plu_code"
+                        inputMode="numeric"
+                        placeholder="Ej: 00037"
+                        error={!!errors.plu_code?.[0]}
+                        {...fieldString('plu_code')}
+                      />
+                      <p className="text-xs text-fg-subtle mt-1">
+                        El precio de venta base se interpreta por kilo. El PLU debe coincidir con el código de la balanza.
+                      </p>
+                    </FormField>
+                  </div>
+                )}
               </div>
             </>
           )}

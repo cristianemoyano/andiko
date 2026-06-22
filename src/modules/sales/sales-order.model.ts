@@ -2,6 +2,7 @@ import { DataTypes, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, PaymentCondition } from '@/types'
+import type { AfipDocStatus, AfipObservation } from '@/modules/afip/afip-codes'
 import SalesQuote from './sales-quote.model'
 import User from '@/modules/auth/user.model'
 
@@ -47,6 +48,15 @@ export interface SalesOrderAttributes extends Timestamps, AuditFields {
   total: string
   notes: string | null
   internal_notes: string | null
+  issue_date: Date | string | null
+  fiscal_ticket_number: string | null
+  cae: string | null
+  cae_expiration: Date | string | null
+  comprobante_tipo: number | null
+  punto_venta: number | null
+  cbte_numero: number | null
+  afip_status: AfipDocStatus
+  afip_observations: AfipObservation[] | null
 }
 
 type SalesOrderCreationAttributes = Optional<
@@ -59,6 +69,9 @@ type SalesOrderCreationAttributes = Optional<
   | 'billing_street' | 'billing_number' | 'billing_floor' | 'billing_apartment' | 'billing_city' | 'billing_province' | 'billing_postal_code' | 'billing_country'
   | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total'
   | 'notes' | 'internal_notes'
+  | 'issue_date' | 'fiscal_ticket_number'
+  | 'cae' | 'cae_expiration' | 'comprobante_tipo' | 'punto_venta' | 'cbte_numero'
+  | 'afip_status' | 'afip_observations'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -101,6 +114,15 @@ class SalesOrder extends AuditModel<SalesOrderAttributes, SalesOrderCreationAttr
   declare total: string
   declare notes: string | null
   declare internal_notes: string | null
+  declare issue_date: Date | string | null
+  declare fiscal_ticket_number: string | null
+  declare cae: string | null
+  declare cae_expiration: Date | string | null
+  declare comprobante_tipo: number | null
+  declare punto_venta: number | null
+  declare cbte_numero: number | null
+  declare afip_status: AfipDocStatus
+  declare afip_observations: AfipObservation[] | null
 }
 
 SalesOrder.init(
@@ -142,6 +164,15 @@ SalesOrder.init(
     total:             { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
     notes:             { type: DataTypes.TEXT },
     internal_notes:    { type: DataTypes.TEXT },
+    issue_date:        { type: DataTypes.DATEONLY },
+    fiscal_ticket_number: { type: DataTypes.STRING(32) },
+    cae:               { type: DataTypes.STRING(14) },
+    cae_expiration:    { type: DataTypes.DATEONLY },
+    comprobante_tipo:  { type: DataTypes.SMALLINT },
+    punto_venta:       { type: DataTypes.SMALLINT },
+    cbte_numero:       { type: DataTypes.INTEGER },
+    afip_status:       { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'not_sent' },
+    afip_observations: { type: DataTypes.JSONB },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'sales_orders', paranoid: true, underscored: true }

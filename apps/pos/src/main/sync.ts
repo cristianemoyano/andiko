@@ -1,12 +1,88 @@
 import type { IpcMain } from 'electron'
 import { db } from './db'
 import { products, customers, posUsers, posPaymentMethods, sales, saleItems, syncQueue, settings, cashSessions } from '../db/schema'
-import { eq, inArray, like, or, sql } from 'drizzle-orm'
+import { eq, inArray, isNull, like, or, sql } from 'drizzle-orm'
 import type { PosProduct, PosCustomer, PosPaymentMethod, PosSalePayment } from '@andiko/shared'
 import bcrypt from 'bcryptjs'
 
 const SYNC_INTERVAL_MS = 30 * 60 * 1000  // 30 min for catalog
 const SALES_SYNC_INTERVAL_MS = 60 * 1000  // 60 sec for sales
+
+type CloudPosUser = {
+  id: string
+  name: string
+  email: string
+  role: string
+  role_label: string
+  branch_id: string | null
+  updated_at: string
+  pos_pin_hash: string | null
+}
+
+const BUILTIN_ROLE_LABELS: Record<string, string> = {
+  admin: 'Gerente',
+  'branch-admin': 'Encargado de sucursal',
+  operator: 'Operativo',
+  readonly: 'Solo lectura',
+  'sys-admin': 'Sys-admin',
+}
+
+function displayRoleLabel(role: string, roleLabel: string | null | undefined): string {
+  const trimmed = roleLabel?.trim()
+  if (trimmed) return trimmed
+  return BUILTIN_ROLE_LABELS[role] ?? role
+}
+
+function upsertPosUsersFromCloud(userList: CloudPosUser[]) {
+  const syncedUserIds = new Set<string>()
+  for (const u of userList) {
+    syncedUserIds.add(u.id)
+    const roleLabel = displayRoleLabel(u.role, u.role_label)
+    db().insert(posUsers).values({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      role_label: roleLabel,
+      branch_id: u.branch_id ?? null,
+      pos_pin_hash: u.pos_pin_hash ?? null,
+      synced_at: u.updated_at,
+    }).onConflictDoUpdate({ target: posUsers.id, set: {
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      role_label: roleLabel,
+      branch_id: u.branch_id ?? null,
+      pos_pin_hash: u.pos_pin_hash ?? null,
+      synced_at: u.updated_at,
+    }}).run()
+  }
+  const localUsers = db().select({ id: posUsers.id }).from(posUsers).all()
+  for (const row of localUsers) {
+    if (!syncedUserIds.has(row.id)) {
+      db().delete(posUsers).where(eq(posUsers.id, row.id)).run()
+    }
+  }
+  return syncedUserIds
+}
+
+async function refreshPosUsersFromCloud(): Promise<void> {
+  const { data: userList } = await fetchCloud<{ data: CloudPosUser[] }>(
+    `/api/v1/pos/users?limit=100`,
+    { method: 'GET' },
+  )
+  upsertPosUsersFromCloud(userList)
+
+  const s = getSettings()
+  const nextUsersSince =
+    userList.length > 0
+      ? userList
+          .map((u) => u.updated_at)
+          .reduce((max, cur) => (cur > max ? cur : max), '1970-01-01T00:00:00.000Z')
+      : (s['users_synced_at'] ?? '1970-01-01T00:00:00.000Z')
+  db().insert(settings).values({ key: 'users_synced_at', value: nextUsersSince })
+    .onConflictDoUpdate({ target: settings.key, set: { value: nextUsersSince } }).run()
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- timers are assigned on startSync() for future stop/restart support
 let catalogTimer: ReturnType<typeof setInterval> | null = null
@@ -37,6 +113,27 @@ export async function validateLicense(): Promise<{ valid: boolean; reason?: stri
     device_id?: string
     device_name?: string
     valid_until?: string
+    balanza_config?: unknown
+    fiscal?: {
+      legal_name: string | null
+      trade_name: string | null
+      cuit: string | null
+      iva_condition: string | null
+      fiscal_address: string | null
+      gross_income: string | null
+      activity_start_date: string | null
+      consumer_defense_line: string | null
+      comprobante_codigo: string | null
+    } | null
+    branch_fiscal?: {
+      address: string | null
+      establishment_code: string | null
+      punto_venta: number | null
+      branch_punto_venta: number | null
+    } | null
+    device_fiscal?: {
+      punto_venta: number | null
+    } | null
   }>(`/api/v1/pos/license?device_id=${encodeURIComponent(deviceId)}`)
 
   if (res.valid) {
@@ -47,10 +144,47 @@ export async function validateLicense(): Promise<{ valid: boolean; reason?: stri
     if (res.device_id)   saveSetting('device_id', res.device_id)
     if (res.device_name) saveSetting('device_name', res.device_name)
     if (res.valid_until) saveSetting('license_valid_until', res.valid_until)
+    if (res.balanza_config !== undefined) {
+      saveSetting('balanza_config', JSON.stringify(res.balanza_config))
+    }
+    if (res.fiscal) {
+      saveSetting('org_legal_name', res.fiscal.legal_name ?? '')
+      saveSetting('org_cuit', res.fiscal.cuit ?? '')
+      saveSetting('org_iva_condition', res.fiscal.iva_condition ?? '')
+      saveSetting('org_fiscal_address', res.fiscal.fiscal_address ?? '')
+      saveSetting('org_gross_income', res.fiscal.gross_income ?? '')
+      saveSetting('org_activity_start', res.fiscal.activity_start_date ?? '')
+      saveSetting('org_consumer_defense', res.fiscal.consumer_defense_line ?? '')
+      saveSetting('org_comprobante_codigo', res.fiscal.comprobante_codigo ?? '083')
+    }
+    if (res.branch_fiscal) {
+      saveSetting('branch_address', res.branch_fiscal.address ?? '')
+      saveSetting('branch_establishment', res.branch_fiscal.establishment_code ?? '')
+      saveSetting(
+        'branch_punto_venta',
+        res.branch_fiscal.punto_venta != null ? String(res.branch_fiscal.punto_venta) : '',
+      )
+      saveSetting(
+        'branch_punto_venta_default',
+        res.branch_fiscal.branch_punto_venta != null ? String(res.branch_fiscal.branch_punto_venta) : '',
+      )
+    }
+    if (res.device_fiscal) {
+      saveSetting(
+        'device_punto_venta',
+        res.device_fiscal.punto_venta != null ? String(res.device_fiscal.punto_venta) : '',
+      )
+    }
     saveSetting('license_last_valid_at', new Date().toISOString())
   } else {
     // Limpiar caché cuando el cloud confirma revocación
-    for (const key of ['branch_name', 'org_name', 'device_name', 'license_valid_until', 'license_last_valid_at']) {
+    for (const key of [
+      'branch_name', 'org_name', 'device_name', 'license_valid_until', 'license_last_valid_at',
+      'org_legal_name', 'org_cuit', 'org_iva_condition', 'org_fiscal_address',
+      'org_gross_income', 'org_activity_start', 'org_consumer_defense', 'org_comprobante_codigo',
+      'branch_address', 'branch_establishment', 'branch_punto_venta', 'branch_punto_venta_default',
+      'device_punto_venta',
+    ]) {
       db().delete(settings).where(eq(settings.key, key)).run()
     }
   }
@@ -86,8 +220,8 @@ export async function searchUsers(query: string) {
   const q = query.trim()
   const qs = new URLSearchParams()
   if (q) qs.set('q', q)
-  qs.set('limit', '20')
-  return fetchCloud<{ data: Array<{ id: string; name: string; email: string; role: string; branch_id: string | null; updated_at: string; pos_pin_hash: string | null }> }>(
+  qs.set('limit', '50')
+  return fetchCloud<{ data: Array<{ id: string; name: string; email: string; role: string; role_label: string; branch_id: string | null; updated_at: string; pos_pin_hash: string | null }> }>(
     `/api/v1/pos/users?${qs.toString()}`,
     { method: 'GET' },
   )
@@ -98,6 +232,63 @@ export async function verifyUserPin(args: { user_id: string; pin: string }) {
     '/api/v1/pos/users/verify-pin',
     { method: 'POST', body: JSON.stringify(args) },
     10_000,
+  )
+}
+
+export type CloudFiscalAuthorizeResult = {
+  pos_sale_id: string
+  cloud_id: string
+  ticket_number: string
+  punto_venta: number
+  comprobante_tipo: number
+  cbte_numero: number
+  cae: string | null
+  cae_expiration: string | null
+  afip_status: string
+  qr_url: string | null
+  observations: Array<{ code: number; msg: string }>
+}
+
+export type AuthorizePosSalePayload = {
+  pos_sale_id: string
+  customer_id?: string
+  cashier_user_id?: string
+  cashier_name?: string
+  payments: Array<{
+    payment_method_id: string
+    payment_method_name: string
+    payment_method_type: string
+    amount: string
+    reference?: string | null
+  }>
+  sold_at: string
+  items: Array<{
+    description: string
+    qty: number
+    unit_price: string
+    iva_rate: string
+  }>
+}
+
+/** Registers the POS sale in cloud without AFIP CAE. */
+export async function registerPosSaleInCloud(payload: AuthorizePosSalePayload): Promise<{
+  pos_sale_id: string
+  cloud_id: string
+  afip_status: string
+}> {
+  return fetchCloud(
+    '/api/v1/pos/sales/register',
+    { method: 'POST', body: JSON.stringify(payload) },
+    30_000,
+  )
+}
+
+/** Requests AFIP CAE in cloud and returns the official ticket number. */
+export async function authorizePosSaleInCloud(payload: AuthorizePosSalePayload): Promise<CloudFiscalAuthorizeResult> {
+  return fetchCloud<CloudFiscalAuthorizeResult>(
+    '/api/v1/pos/sales/authorize',
+    { method: 'POST', body: JSON.stringify(payload) },
+    60_000,
   )
 }
 
@@ -113,10 +304,14 @@ export async function syncCatalog() {
     db().insert(products).values({
       id: p.id, sku: p.sku ?? null, barcode: p.barcode ?? null, name: p.name,
       price: p.price, iva_rate: p.iva_rate, is_active: p.is_active,
-      image_url: p.image_url ?? null, synced_at: p.updated_at,
+      image_url: p.image_url ?? null,
+      sold_by_weight: p.sold_by_weight ?? false, plu_code: p.plu_code ?? null,
+      synced_at: p.updated_at,
     }).onConflictDoUpdate({ target: products.id, set: {
       sku: p.sku ?? null, barcode: p.barcode ?? null, name: p.name, price: p.price,
-      iva_rate: p.iva_rate, is_active: p.is_active, image_url: p.image_url ?? null, synced_at: p.updated_at,
+      iva_rate: p.iva_rate, is_active: p.is_active, image_url: p.image_url ?? null,
+      sold_by_weight: p.sold_by_weight ?? false, plu_code: p.plu_code ?? null,
+      synced_at: p.updated_at,
     }}).run()
   }
 
@@ -126,47 +321,17 @@ export async function syncCatalog() {
   for (const c of customerList) {
     db().insert(customers).values({
       id: c.id, legal_name: c.legal_name, trade_name: c.trade_name ?? null,
-      cuit: c.cuit ?? null, email: c.email ?? null, phone: c.phone ?? null, synced_at: c.updated_at,
+      cuit: c.cuit ?? null, iva_condition: c.iva_condition ?? null,
+      email: c.email ?? null, phone: c.phone ?? null, synced_at: c.updated_at,
     }).onConflictDoUpdate({ target: customers.id, set: {
       legal_name: c.legal_name, trade_name: c.trade_name ?? null, cuit: c.cuit ?? null,
+      iva_condition: c.iva_condition ?? null,
       email: c.email ?? null, phone: c.phone ?? null, synced_at: c.updated_at,
     }}).run()
   }
 
-  // Users (cashiers) — local cache for offline search
-  const usersSince = s['users_synced_at'] ?? '1970-01-01T00:00:00.000Z'
-  const { data: userList } = await fetchCloud<{ data: Array<{ id: string; name: string; email: string; role: string; branch_id: string | null; updated_at: string; pos_pin_hash: string | null }> }>(
-    `/api/v1/pos/users?since=${encodeURIComponent(usersSince)}&limit=50`,
-    { method: 'GET' },
-  )
-  for (const u of userList) {
-    db().insert(posUsers).values({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      branch_id: u.branch_id ?? null,
-      pos_pin_hash: u.pos_pin_hash ?? null,
-      synced_at: u.updated_at,
-    }).onConflictDoUpdate({ target: posUsers.id, set: {
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      branch_id: u.branch_id ?? null,
-      pos_pin_hash: u.pos_pin_hash ?? null,
-      synced_at: u.updated_at,
-    }}).run()
-  }
-  // Important: use max(updated_at) from cloud to avoid clock-skew misses.
-  // Using "now" can skip updates if server clock is behind or if the update happened just before sync.
-  const nextUsersSince =
-    userList.length > 0
-      ? userList
-          .map((u) => u.updated_at)
-          .reduce((max, cur) => (cur > max ? cur : max), usersSince)
-      : usersSince
-  db().insert(settings).values({ key: 'users_synced_at', value: nextUsersSince })
-    .onConflictDoUpdate({ target: settings.key, set: { value: nextUsersSince } }).run()
+  // Users (cashiers) — full pull each sync (small set; avoids missing renames when updated_at lags)
+  await refreshPosUsersFromCloud()
 
   // Payment methods — branch-scoped, no delta sync needed (small set)
   if (!branchId) throw new Error('Validá la licencia primero para obtener la sucursal asignada')
@@ -414,6 +579,19 @@ export function registerSyncHandlers(ipc: IpcMain) {
   })
 
   ipc.handle('users:search', async (_e, query: string) => {
+    const missingRoleLabel = db()
+      .select({ id: posUsers.id })
+      .from(posUsers)
+      .where(or(isNull(posUsers.role_label), eq(posUsers.role_label, '')))
+      .all()
+    if (missingRoleLabel.length > 0) {
+      try {
+        await refreshPosUsersFromCloud()
+      } catch {
+        // Offline — show best-effort labels from built-in role names
+      }
+    }
+
     const q = (query ?? '').trim()
     const term = `%${q}%`
     const d = db()
@@ -426,14 +604,25 @@ export function registerSyncHandlers(ipc: IpcMain) {
             or(
               like(posUsers.name, term),
               like(posUsers.email, term),
-              like(sql`coalesce(${posUsers.role}, '')`, term),
+              like(sql`coalesce(${posUsers.role_label}, '')`, term),
             ),
           )
-          .limit(20)
+          .orderBy(posUsers.name)
+          .limit(50)
           .all()
-      : d.select().from(posUsers).limit(20).all()
+      : d.select().from(posUsers).orderBy(posUsers.name).limit(50).all()
 
-    return { ok: true, data: rows }
+    return {
+      ok: true,
+      data: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        role: row.role,
+        role_label: displayRoleLabel(row.role, row.role_label),
+        branch_id: row.branch_id,
+      })),
+    }
   })
 
   ipc.handle('users:verifyPin', async (_e, args: { user_id: string; pin: string }) => {
