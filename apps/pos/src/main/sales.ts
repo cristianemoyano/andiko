@@ -1,6 +1,7 @@
 import type { IpcMain } from 'electron'
 import { db } from './db'
-import { sales, saleItems } from '../db/schema'
+import { sales, saleItems, customers } from '../db/schema'
+import type { PosCustomer } from '@andiko/shared'
 import { randomUUID } from 'crypto'
 import type { PosSale } from '@andiko/shared'
 import { desc, eq, sql } from 'drizzle-orm'
@@ -94,7 +95,11 @@ export function registerSalesHandlers(ipc: IpcMain) {
     const s = db().select().from(sales).where(eq(sales.id, saleId)).get()
     if (!s) return null
     const items = db().select().from(saleItems).where(eq(saleItems.sale_id, saleId)).all()
-    return { sale: s, items }
+    let customer: PosCustomer | null = null
+    if (s.customer_id) {
+      customer = (db().select().from(customers).where(eq(customers.id, s.customer_id)).get() as PosCustomer | undefined) ?? null
+    }
+    return { sale: s, items, customer }
   })
 
   ipc.handle('sales:closingReport', async (_e, date?: string) => {

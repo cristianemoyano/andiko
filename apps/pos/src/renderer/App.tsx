@@ -7,6 +7,8 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { LicenseBlockScreen } from './screens/LicenseBlockScreen'
 import { CashSessionScreen } from './screens/CashSessionScreen'
 import { PosDeviceContextBar } from './components/PosDeviceContextBar'
+import { PosLicenseGraceBanner } from './components/PosLicenseGraceBanner'
+import { PosOfflineBanner } from './components/PosOfflineBanner'
 
 type Screen = 'sale' | 'sales' | 'cash-session' | 'settings'
 type LicenseState =
@@ -126,22 +128,16 @@ export function App() {
         </div>
       </nav>
 
-      {/* Offline banner */}
-      {!online && (
-        <div className="absolute top-0 left-14 right-0 z-50 bg-amber-500 text-amber-950 text-[12px] font-medium text-center py-1">
-          Modo offline — las ventas se guardan localmente y se sincronizan al reconectar
-        </div>
-      )}
-
-      {/* Grace period warning */}
-      {license.status === 'grace' && (
-        <div className="absolute top-0 left-14 right-0 z-50 bg-orange-600 text-white text-[12px] font-medium text-center py-1">
-          Sin conexión al servidor — {license.daysLeft} día{license.daysLeft !== 1 ? 's' : ''} de gracia restante{license.daysLeft !== 1 ? 's' : ''}. Conectate para renovar la licencia.
-        </div>
-      )}
-
       {/* Main content */}
       <main className="flex-1 overflow-hidden flex flex-col min-w-0">
+        {license.status === 'grace' && (
+          <PosLicenseGraceBanner
+            daysLeft={license.daysLeft}
+            onRetry={handleRetry}
+            retrying={retrying}
+          />
+        )}
+        {!online && license.status !== 'grace' && <PosOfflineBanner />}
         <PosDeviceContextBar key={screen} />
         <div className="flex-1 overflow-hidden min-h-0">
         {screen === 'sale'     && <SaleScreen resumeDraftId={resumeDraftId} onResumeDraftConsumed={() => setResumeDraftId(null)} />}
