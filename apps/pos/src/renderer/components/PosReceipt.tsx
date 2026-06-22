@@ -245,7 +245,7 @@ export function PosReceipt({
       </TicketText>
 
       <TicketText className="mt-2 text-center text-[9px] text-black/55">
-        {`Andiko POS v${__APP_VERSION__}`}
+        {`powered by Andiko POS · v${__APP_VERSION__}`}
       </TicketText>
 
       {/* ── CAE / QR AFIP ── */}

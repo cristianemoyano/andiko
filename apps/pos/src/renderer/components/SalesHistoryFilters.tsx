@@ -96,6 +96,8 @@ const DATE_PRESETS: Array<{ id: SalesDatePreset; label: string }> = [
   { id: 'custom', label: 'Fecha' },
 ]
 
+type PaidFilter = 'all' | 'no_cae'
+
 interface Props {
   mode: 'paid' | 'draft'
   filters: SalesHistoryFilterState
@@ -103,6 +105,20 @@ interface Props {
   paymentMethodOptions: string[]
   resultCount: number
   totalCount: number
+  paidFilter?: PaidFilter
+  onPaidFilterChange?: (next: PaidFilter) => void
+}
+
+function FilterLabel({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
+  return (
+    <label htmlFor={htmlFor} className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 shrink-0">
+      {children}
+    </label>
+  )
+}
+
+function GroupDivider() {
+  return <span className="h-5 w-px bg-zinc-200 shrink-0" aria-hidden />
 }
 
 export function SalesHistoryFilters({
@@ -112,18 +128,26 @@ export function SalesHistoryFilters({
   paymentMethodOptions,
   resultCount,
   totalCount,
+  paidFilter = 'all',
+  onPaidFilterChange,
 }: Props) {
-  const active = filtersActive(filters)
+  const active = filtersActive(filters) || (mode === 'paid' && paidFilter !== 'all')
 
   function patch(partial: Partial<SalesHistoryFilterState>) {
     onChange({ ...filters, ...partial })
   }
 
+  function clearAll() {
+    onChange(DEFAULT_SALES_HISTORY_FILTERS)
+    onPaidFilterChange?.('all')
+  }
+
   return (
-    <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-3 flex flex-col gap-2.5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 shrink-0">Período</span>
-        <div className="flex flex-wrap items-center gap-1">
+    <div className="px-4 pb-3 pt-0.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+      {/* Período */}
+      <div className="flex items-center gap-1.5">
+        <FilterLabel>Período</FilterLabel>
+        <div className="flex items-center gap-1">
           {DATE_PRESETS.map(({ id, label }) => (
             <button
               key={id}
@@ -144,61 +168,85 @@ export function SalesHistoryFilters({
             type="date"
             value={filters.customDate}
             onChange={e => patch({ customDate: e.target.value })}
-            className="h-8 px-2 text-[12px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
+            className="h-8 px-2 text-[12px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-brand-600"
           />
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {mode === 'paid' && (
-          <>
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 shrink-0" htmlFor="sales-filter-payment">
-              Medio de pago
-            </label>
+      {mode === 'paid' && (
+        <>
+          <GroupDivider />
+          {/* Estado fiscal */}
+          <div className="flex items-center gap-1.5">
+            <FilterLabel>Estado</FilterLabel>
+            <div className="flex items-center gap-1 bg-zinc-100 rounded-lg p-1">
+              <button
+                type="button"
+                onClick={() => onPaidFilterChange?.('all')}
+                className={`h-7 px-2.5 rounded-md text-[12px] font-medium transition-colors ${paidFilter === 'all' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'}`}
+              >
+                Todas
+              </button>
+              <button
+                type="button"
+                onClick={() => onPaidFilterChange?.('no_cae')}
+                className={`h-7 px-2.5 rounded-md text-[12px] font-medium transition-colors ${paidFilter === 'no_cae' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'}`}
+              >
+                Sin CAE
+              </button>
+            </div>
+          </div>
+
+          <GroupDivider />
+          {/* Medio de pago */}
+          <div className="flex items-center gap-1.5">
+            <FilterLabel htmlFor="sales-filter-payment">Medio de pago</FilterLabel>
             <select
               id="sales-filter-payment"
               value={filters.paymentMethod}
               onChange={e => patch({ paymentMethod: e.target.value })}
-              className="h-8 min-w-[140px] max-w-[200px] px-2 text-[12px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
+              className="h-8 min-w-[140px] max-w-[200px] px-2 text-[12px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-brand-600"
             >
               <option value="">Todos</option>
               {paymentMethodOptions.map(name => (
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
-          </>
-        )}
+          </div>
+        </>
+      )}
 
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 shrink-0" htmlFor="sales-filter-ticket">
-          {mode === 'paid' ? 'Nº ticket' : 'Borrador'}
-        </label>
+      <GroupDivider />
+      {/* Búsqueda */}
+      <div className="flex items-center gap-1.5">
+        <FilterLabel htmlFor="sales-filter-ticket">{mode === 'paid' ? 'Nº ticket' : 'Borrador'}</FilterLabel>
         <input
           id="sales-filter-ticket"
           type="search"
           value={filters.ticketQuery}
           onChange={e => patch({ ticketQuery: e.target.value })}
           placeholder={mode === 'paid' ? 'Ej. 0002-00000001' : 'ID o cajero/a'}
-          className="h-8 w-44 px-2.5 text-[12px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-blue-500"
+          className="h-8 w-44 px-2.5 text-[12px] border border-zinc-300 rounded-md bg-white focus:outline-none focus:border-brand-600"
         />
-
-        <div className="flex-1 min-w-[8rem]" />
-
-        <span className="text-[11px] text-zinc-500 tabular-nums">
-          {resultCount === totalCount
-            ? `${totalCount} ${mode === 'paid' ? 'ventas' : 'borradores'}`
-            : `${resultCount} de ${totalCount}`}
-        </span>
-
-        {active && (
-          <button
-            type="button"
-            onClick={() => onChange(DEFAULT_SALES_HISTORY_FILTERS)}
-            className="h-8 px-3 text-[12px] font-medium text-zinc-600 hover:text-zinc-900 underline-offset-2 hover:underline"
-          >
-            Limpiar filtros
-          </button>
-        )}
       </div>
+
+      <div className="flex-1 min-w-[4rem]" />
+
+      <span className="text-[11px] text-zinc-500 tabular-nums shrink-0">
+        {resultCount === totalCount
+          ? `${totalCount} ${mode === 'paid' ? 'ventas' : 'borradores'}`
+          : `${resultCount} de ${totalCount}`}
+      </span>
+
+      {active && (
+        <button
+          type="button"
+          onClick={clearAll}
+          className="h-8 px-3 text-[12px] font-medium text-zinc-600 hover:text-zinc-900 underline-offset-2 hover:underline shrink-0"
+        >
+          Limpiar filtros
+        </button>
+      )}
     </div>
   )
 }

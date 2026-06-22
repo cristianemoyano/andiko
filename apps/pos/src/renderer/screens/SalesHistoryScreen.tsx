@@ -163,55 +163,44 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
 
   return (
     <div className="h-full overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-zinc-200 bg-white flex items-center gap-3 flex-wrap">
-        <div className="text-sm font-semibold text-zinc-800">Ventas</div>
-        <div className="flex items-center gap-1 bg-zinc-100 rounded-lg p-1">
-          <button
-            onClick={() => { setTab('paid'); setOpenDraftId(null) }}
-            className={`h-8 px-3 rounded-md text-[12px] font-medium ${tab === 'paid' ? 'bg-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
-          >
-            Cobradas
-          </button>
-          <button
-            onClick={() => { setTab('draft'); setOpenSaleId(null); if (draftRows.length === 0) void refreshDrafts() }}
-            className={`h-8 px-3 rounded-md text-[12px] font-medium ${tab === 'draft' ? 'bg-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
-          >
-            Borradores
-          </button>
-        </div>
-        {tab === 'paid' && (
+      {/* Unified toolbar: title + tabs on top, all filters below */}
+      <div className="shrink-0 border-b border-zinc-200 bg-white">
+        <div className="px-4 pt-3 pb-2.5 flex items-center gap-3 flex-wrap">
+          <div className="text-sm font-semibold text-zinc-800">Ventas</div>
           <div className="flex items-center gap-1 bg-zinc-100 rounded-lg p-1">
             <button
-              onClick={() => setPaidFilter('all')}
-              className={`h-8 px-3 rounded-md text-[12px] font-medium ${paidFilter === 'all' ? 'bg-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
+              onClick={() => { setTab('paid'); setOpenDraftId(null) }}
+              className={`h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${tab === 'paid' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'}`}
             >
-              Todas
+              Cobradas
             </button>
             <button
-              onClick={() => setPaidFilter('no_cae')}
-              className={`h-8 px-3 rounded-md text-[12px] font-medium ${paidFilter === 'no_cae' ? 'bg-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
+              onClick={() => { setTab('draft'); setOpenSaleId(null); if (draftRows.length === 0) void refreshDrafts() }}
+              className={`h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${tab === 'draft' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'}`}
             >
-              Sin CAE
+              Borradores
             </button>
           </div>
-        )}
-        <div className="flex-1" />
-        <button
-          onClick={tab === 'paid' ? refresh : refreshDrafts}
-          className="h-9 px-4 bg-white border border-zinc-300 text-[13px] font-medium rounded-md hover:bg-zinc-50 transition-colors"
-        >
-          Recargar
-        </button>
-      </div>
+          <div className="flex-1" />
+          <button
+            onClick={tab === 'paid' ? refresh : refreshDrafts}
+            className="h-9 px-4 bg-white border border-zinc-300 text-[13px] font-medium rounded-md hover:bg-zinc-50 transition-colors"
+          >
+            Recargar
+          </button>
+        </div>
 
-      <SalesHistoryFilters
-        mode={tab}
-        filters={filters}
-        onChange={setFilters}
-        paymentMethodOptions={allPaymentMethodOptions}
-        resultCount={tab === 'paid' ? filtered.length : filteredDrafts.length}
-        totalCount={tab === 'paid' ? rows.length : draftRows.length}
-      />
+        <SalesHistoryFilters
+          mode={tab}
+          filters={filters}
+          onChange={setFilters}
+          paymentMethodOptions={allPaymentMethodOptions}
+          resultCount={tab === 'paid' ? filtered.length : filteredDrafts.length}
+          totalCount={tab === 'paid' ? rows.length : draftRows.length}
+          paidFilter={paidFilter}
+          onPaidFilterChange={setPaidFilter}
+        />
+      </div>
 
       <div className="flex-1 overflow-hidden flex">
         <div className="w-[420px] border-r border-zinc-200 bg-white overflow-y-auto">
@@ -231,7 +220,7 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
               key={s.id}
               onClick={() => setOpenSaleId(s.id)}
               className={`w-full text-left px-4 py-3 border-b border-zinc-100 hover:bg-zinc-50 transition-colors ${
-                openSaleId === s.id ? 'bg-blue-50' : ''
+                openSaleId === s.id ? 'bg-brand-50' : ''
               }`}
             >
               <div className="flex items-center justify-between gap-3">
@@ -266,7 +255,7 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
               key={d.id}
               onClick={() => setOpenDraftId(d.id)}
               className={`w-full text-left px-4 py-3 border-b border-zinc-100 hover:bg-zinc-50 transition-colors ${
-                openDraftId === d.id ? 'bg-blue-50' : ''
+                openDraftId === d.id ? 'bg-brand-50' : ''
               }`}
             >
               <div className="flex items-center justify-between gap-3">
@@ -321,7 +310,7 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
                   )}
                   <button
                     onClick={handlePrint}
-                    className="h-9 px-4 bg-blue-600 text-white text-[13px] font-semibold rounded-md hover:bg-blue-700 transition-colors"
+                    className="h-9 px-4 bg-brand-600 text-white text-[13px] font-semibold rounded-md hover:bg-brand-700 transition-colors"
                   >
                     Imprimir
                   </button>
@@ -389,7 +378,7 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
                   </button>
                   <button
                     onClick={() => onResumeDraft(openDraftId)}
-                    className="h-9 px-4 bg-blue-600 text-white text-[13px] font-semibold rounded-md hover:bg-blue-700 transition-colors"
+                    className="h-9 px-4 bg-brand-600 text-white text-[13px] font-semibold rounded-md hover:bg-brand-700 transition-colors"
                   >
                     Reanudar
                   </button>

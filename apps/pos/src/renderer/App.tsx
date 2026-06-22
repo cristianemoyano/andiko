@@ -6,9 +6,13 @@ import { SalesHistoryScreen } from './screens/SalesHistoryScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { LicenseBlockScreen } from './screens/LicenseBlockScreen'
 import { CashSessionScreen } from './screens/CashSessionScreen'
+import { SplashScreen } from './screens/SplashScreen'
 import { PosDeviceContextBar } from './components/PosDeviceContextBar'
 import { PosLicenseGraceBanner } from './components/PosLicenseGraceBanner'
 import { PosOfflineBanner } from './components/PosOfflineBanner'
+import { OrgMonogram } from './components/OrgMonogram'
+import { PoweredByAndiko } from './components/AndikoMark'
+import { usePosDeviceInfo } from './lib/usePosDeviceInfo'
 
 type Screen = 'sale' | 'sales' | 'cash-session' | 'settings'
 type LicenseState =
@@ -34,7 +38,8 @@ const LICENSE_CHECK_INTERVAL_MS = 30 * 60 * 1000 // re-check every 30 min while 
 export function App() {
   const [screen, setScreen] = useState<Screen>('sale')
   const online = useOnlineStatus()
-  const [license, setLicense] = useState<LicenseState>({ status: 'ok' })
+  const { orgName } = usePosDeviceInfo()
+  const [license, setLicense] = useState<LicenseState>({ status: 'checking' })
   const [retrying, setRetrying] = useState(false)
   const [resumeDraftId, setResumeDraftId] = useState<string | null>(null)
 
@@ -60,6 +65,10 @@ export function App() {
     setRetrying(false)
   }
 
+  if (license.status === 'checking') {
+    return <SplashScreen orgName={orgName} />
+  }
+
   if (license.status === 'blocked') {
     return (
       <LicenseBlockScreen
@@ -75,9 +84,15 @@ export function App() {
   }
 
   return (
-    <div className="flex h-screen bg-zinc-100 font-sans text-zinc-900">
+    <div className="flex h-screen bg-zinc-100 font-sans text-base text-zinc-900">
       {/* Sidebar nav */}
-      <nav className="flex flex-col w-14 bg-zinc-900 items-center py-4 gap-3 shrink-0">
+      <nav className="flex flex-col w-16 bg-zinc-900 items-center py-3 gap-3 shrink-0">
+        {/* Org brand mark */}
+        <div title={orgName ?? undefined} className="mb-1">
+          <OrgMonogram name={orgName} size="sm" />
+        </div>
+        <div className="w-8 h-px bg-zinc-800 mb-1" />
+
         <NavBtn active={screen === 'sale'} onClick={() => setScreen('sale')} title="Venta">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
@@ -85,7 +100,7 @@ export function App() {
         </NavBtn>
         <NavBtn active={screen === 'sales'} onClick={() => setScreen('sales')} title="Ventas">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 12h6"/><path d="M9 16h6"/><path d="M10 2h4"/><path d="M12 14v7"/><path d="M6 7h12"/><path d="M8 22h8"/><path d="M7 22V7a2 2 0 012-2h6a2 2 0 012 2v15"/>
+            <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/>
           </svg>
         </NavBtn>
         <NavBtn active={screen === 'cash-session'} onClick={() => setScreen('cash-session')} title="Turno de caja">
@@ -102,29 +117,10 @@ export function App() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* App version */}
-        <span className="text-[9px] text-zinc-600 font-mono select-none">v{__APP_VERSION__}</span>
-
-        {/* Connectivity indicator */}
-        <div
-          title={online ? 'Conectado al cloud' : 'Sin conexión — modo offline'}
-          className="w-10 h-10 flex items-center justify-center"
-        >
-          {online ? (
-            <span className="flex flex-col items-center gap-0.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><circle cx="12" cy="20" r="1" fill="#4ade80" stroke="none"/>
-              </svg>
-              <span className="text-[8px] text-green-400 font-medium leading-none">online</span>
-            </span>
-          ) : (
-            <span className="flex flex-col items-center gap-0.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/><path d="M5 12.55a10.94 10.94 0 015.17-2.39"/><path d="M10.71 5.05A16 16 0 0122.56 9"/><path d="M1.42 9a15.91 15.91 0 014.7-2.88"/><path d="M8.53 16.11a6 6 0 016.95 0"/><circle cx="12" cy="20" r="1" fill="#f87171" stroke="none"/>
-              </svg>
-              <span className="text-[8px] text-red-400 font-medium leading-none">offline</span>
-            </span>
-          )}
+        {/* Co-branding + version */}
+        <div className="flex flex-col items-center gap-1.5">
+          <PoweredByAndiko className="flex-col gap-1 text-center" labelClassName="text-[8px] text-white" />
+          <span className="text-[9px] text-white font-mono select-none">v{__APP_VERSION__}</span>
         </div>
       </nav>
 
@@ -138,7 +134,7 @@ export function App() {
           />
         )}
         {!online && license.status !== 'grace' && <PosOfflineBanner />}
-        <PosDeviceContextBar key={screen} />
+        <PosDeviceContextBar online={online} refreshKey={screen} />
         <div className="flex-1 overflow-hidden min-h-0">
         {screen === 'sale'     && <SaleScreen resumeDraftId={resumeDraftId} onResumeDraftConsumed={() => setResumeDraftId(null)} />}
         {screen === 'sales'    && (

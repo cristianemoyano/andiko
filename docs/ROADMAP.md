@@ -485,6 +485,10 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] QR AFIP en ticket (SVG inline) + vuelto en efectivo (`tendered_amount`)
 - [x] Rol org `cajero` + elegibilidad de cajeros POS (`pos-cashier-eligibility`)
 - [x] Balanzas: PLU / venta por peso, barcode EAN-13 pesable, sync config desde license API
+- [x] Branding white-label en POS: monograma de org, paleta `brand`, co-branding Andiko discreto
+- [x] Pantalla de venta ticket-first: escaneo/búsqueda bajo demanda (sin grid de catálogo completo)
+- [x] Panel lateral de cobro con branding Andiko ERP (slot `promo` para publicidades futuras)
+- [x] Tipografía ampliada y header con cajero, org y estado de conexión
 
 ## Fase 8 — Integraciones de Hardware
 

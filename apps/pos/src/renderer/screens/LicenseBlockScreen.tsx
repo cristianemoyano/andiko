@@ -1,3 +1,5 @@
+import { AndikoMark } from '../components/AndikoMark'
+
 interface Props {
   reason: 'revoked' | 'expired' | 'no_config' | 'unknown'
   offlineDaysLeft?: number
@@ -47,7 +49,7 @@ export function LicenseBlockScreen({ reason, offlineDaysLeft, onRetry, retrying,
           <button
             onClick={onRetry}
             disabled={retrying}
-            className="h-10 px-6 bg-white text-zinc-900 text-[13px] font-medium rounded-lg hover:bg-zinc-100 disabled:opacity-50 transition-colors"
+            className="h-10 px-6 bg-brand-600 text-white text-[13px] font-medium rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors"
           >
             {retrying ? 'Verificando…' : 'Reintentar'}
           </button>
@@ -62,7 +64,10 @@ export function LicenseBlockScreen({ reason, offlineDaysLeft, onRetry, retrying,
           )}
         </div>
 
-        <p className="text-[11px] text-zinc-600">andiko POS</p>
+        <div className="flex items-center gap-1.5 text-zinc-500">
+          <AndikoMark size="xs" tone="muted" />
+          <span className="text-[11px] font-medium">Andiko POS</span>
+        </div>
       </div>
     </div>
   )
