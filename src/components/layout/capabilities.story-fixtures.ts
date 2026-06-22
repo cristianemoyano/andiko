@@ -48,4 +48,7 @@ export const storyCapabilities: UiCapabilities = {
       afip: false,
     },
   },
+  onboarding: {
+    manage: false,
+  },
 }

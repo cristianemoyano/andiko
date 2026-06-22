@@ -1,6 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/layout/Tabs'
 import { PrintTemplateTab } from './PrintTemplateTab'
@@ -25,9 +27,14 @@ function parseSection(value: string | null): Section {
   return 'impresion'
 }
 
-export function ConfiguracionClient() {
+export function ConfiguracionClient({
+  onboardingBanner = null,
+}: {
+  onboardingBanner?: 'resume' | 'revisit' | null
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { data: session } = useSession()
   const { capabilities } = useCapabilities()
   const tabs = capabilities?.configuracion.tabs
   const requested = parseSection(searchParams.get('section'))
@@ -65,6 +72,22 @@ export function ConfiguracionClient() {
       <TopBar breadcrumbs={[{ label: 'Configuración' }, { label: SECTION_LABEL[section] }]} />
 
       <div className="flex-1 overflow-y-auto p-6">
+        {onboardingBanner === 'resume' && (
+          <div className="mb-4 rounded-sm border border-teal-200 bg-teal-50 px-4 py-3 text-[13px] text-teal-900">
+            Tenés una configuración inicial sin terminar.{' '}
+            <Link href="/onboarding" className="font-medium text-teal-800 hover:underline">
+              Continuar configuración
+            </Link>
+          </div>
+        )}
+        {onboardingBanner === 'revisit' && session?.user?.orgId && (
+          <div className="mb-4 rounded-sm border border-border bg-surface-muted px-4 py-3 text-[13px] text-fg-muted">
+            ¿Querés revisar la configuración inicial de tu empresa?{' '}
+            <Link href="/onboarding?revisit=1" className="font-medium text-teal-700 hover:underline">
+              Abrir asistente de configuración
+            </Link>
+          </div>
+        )}
         <Tabs value={section} onValueChange={handleSectionChange}>
           <TabsList>
             {tabs.impresion && <TabsTrigger value="impresion">Impresión</TabsTrigger>}

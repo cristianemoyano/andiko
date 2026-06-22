@@ -23,21 +23,25 @@ const COLUMNS: Column<OrgAdminRow>[] = [
     key: 'name',
     header: 'Organización',
     sortable: true,
+    mobileRole: 'title',
     render: row => <span className="font-medium text-fg">{row.name}</span>,
   },
   {
     key: 'slug',
     header: 'Slug',
+    mobileRole: 'subtitle',
     render: row => <span className="font-mono text-[12px] text-fg-muted">{row.slug}</span>,
   },
   {
     key: 'branch_count',
     header: 'Sucursales',
-    render: row => <span className="tabular-nums">{row.branch_count}</span>,
+    mobileRole: 'subtitle',
+    render: row => <span className="tabular-nums">{row.branch_count} sucursales</span>,
   },
   {
     key: 'is_active',
     header: 'Estado',
+    mobileRole: 'badge',
     render: row => (
       <StatusBadge value={row.is_active ? 'Activa' : 'Inactiva'} />
     ),
@@ -96,6 +100,7 @@ export function OrganizacionesAdminClient() {
           data={rows}
           keyExtractor={r => r.id}
           emptyMessage="No hay organizaciones. Creá la primera."
+          onRowClick={row => router.push(`/organizaciones/${row.id}`)}
         />
       </div>
 

@@ -48,4 +48,8 @@ export type UiCapabilities = {
       afip: boolean
     }
   }
+  /** Configuración inicial de la org (wizard). Mismo alcance que settings:write. */
+  onboarding: {
+    manage: boolean
+  }
 }

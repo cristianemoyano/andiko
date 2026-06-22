@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth'
 import {
   getOnboardingStatus,
   saveOnboardingProgress,
   completeOnboarding,
 } from '@/modules/auth/onboarding.service'
+import { ORG_MODULE_KEYS } from '@/modules/auth/organization-modules'
+import { withSettingsPermission } from '@/lib/settings-guard'
 import logger from '@/lib/logger'
 
 const onboardingDataSchema = z.object({
@@ -25,7 +26,7 @@ const onboardingDataSchema = z.object({
       email: z.string().optional(),
     })
     .optional(),
-  modules: z.array(z.string()).optional(),
+  modules: z.array(z.enum(ORG_MODULE_KEYS)).optional(),
   productsMode: z.enum(['manual', 'csv', 'later']).nullable().optional(),
   integrations: z.array(z.string()).optional(),
   sales: z
@@ -36,8 +37,13 @@ const onboardingDataSchema = z.object({
       iva: z.string().optional(),
       incluirIVA: z.boolean().optional(),
       condPago: z.string().optional(),
+      afipEnvironment: z.enum(['homologacion', 'produccion']).optional(),
+      afipCert: z.string().optional(),
+      afipKey: z.string().optional(),
     })
     .optional(),
+  wizardStep: z.number().int().min(0).optional(),
+  completedStepIds: z.array(z.string()).optional(),
 })
 
 const saveSchema = z.object({
@@ -45,38 +51,12 @@ const saveSchema = z.object({
   complete: z.boolean().optional().default(false),
 })
 
-export async function GET(): Promise<NextResponse> {
-  const session = await auth()
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-  }
-
-  const orgId = session.user.orgId
-  if (!orgId) {
-    return NextResponse.json(
-      { error: 'No org context', code: 'ORG_CONTEXT_REQUIRED' },
-      { status: 400 },
-    )
-  }
-
+export const GET = withSettingsPermission('settings:write', async (_req, _ctx, _session, orgId) => {
   const status = await getOnboardingStatus(orgId)
   return NextResponse.json(status)
-}
+})
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
-  const session = await auth()
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
-  }
-
-  const orgId = session.user.orgId
-  if (!orgId) {
-    return NextResponse.json(
-      { error: 'No org context', code: 'ORG_CONTEXT_REQUIRED' },
-      { status: 400 },
-    )
-  }
-
+export const POST = withSettingsPermission('settings:write', async (req, _ctx, _session, orgId) => {
   let body: unknown
   try {
     body = await req.json()
@@ -98,10 +78,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (complete) {
       await completeOnboarding(orgId, data)
       return NextResponse.json({ completed: true }, { status: 200 })
-    } else {
-      await saveOnboardingProgress(orgId, data)
-      return NextResponse.json({ saved: true }, { status: 200 })
     }
+    await saveOnboardingProgress(orgId, data)
+    return NextResponse.json({ saved: true }, { status: 200 })
   } catch (err) {
     logger.error({ err, orgId }, 'onboarding save error')
     return NextResponse.json(
@@ -109,4 +88,4 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { status: 500 },
     )
   }
-}
+})

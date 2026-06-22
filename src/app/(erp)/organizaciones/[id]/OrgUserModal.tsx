@@ -24,6 +24,8 @@ export interface OrgUserRow {
   id: string
   email: string
   name: string
+  first_name: string
+  last_name: string
   role: string
   org_role_id?: string | null
   org_role_name?: string | null
@@ -137,7 +139,8 @@ function OrgUserForm({ orgId, apiNamespace, branches, user, onClose, onSaved }: 
   const [roleOptions, setRoleOptions] = useState<{ value: string; label: string }[]>([])
 
   const [email, setEmail] = useState(() => (isEdit ? user!.email : ''))
-  const [name, setName] = useState(() => (isEdit ? user!.name : ''))
+  const [firstName, setFirstName] = useState(() => (isEdit ? user!.first_name : ''))
+  const [lastName, setLastName] = useState(() => (isEdit ? user!.last_name : ''))
   const [password, setPassword] = useState('')
   const [posPin, setPosPin] = useState('')
   const [roleSelection, setRoleSelection] = useState<RoleSelection>(() => initialRoleSelection(user))
@@ -242,7 +245,8 @@ function OrgUserForm({ orgId, apiNamespace, branches, user, onClose, onSaved }: 
     }
 
     const shared = {
-      name: name.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       branchIds: ids,
       defaultBranchId: def,
     }
@@ -352,13 +356,23 @@ function OrgUserForm({ orgId, apiNamespace, branches, user, onClose, onSaved }: 
           <Input id="org_user_email_ro" value={email} readOnly className="bg-surface-muted text-fg-muted" />
         </FormField>
       )}
-      <FormField label="Nombre" htmlFor="org_user_name" error={errors.name?.[0]}>
+      <FormField label="Nombre" htmlFor="org_user_first_name" error={errors.firstName?.[0] ?? errors.name?.[0]}>
         <Input
-          id="org_user_name"
-          value={name}
-          onChange={e => setName(e.target.value)}
+          id="org_user_first_name"
+          value={firstName}
+          onChange={e => setFirstName(e.target.value)}
           required
-          error={!!errors.name}
+          autoComplete="given-name"
+          error={!!(errors.firstName ?? errors.name)}
+        />
+      </FormField>
+      <FormField label="Apellido" htmlFor="org_user_last_name" error={errors.lastName?.[0]}>
+        <Input
+          id="org_user_last_name"
+          value={lastName}
+          onChange={e => setLastName(e.target.value)}
+          autoComplete="family-name"
+          error={!!errors.lastName}
         />
       </FormField>
       <FormField

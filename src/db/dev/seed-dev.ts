@@ -11,6 +11,7 @@ import UserBranch from '@/modules/auth/user-branch.model'
 import OrgRole from '@/modules/auth/org-role.model'
 import { seedDefaultOrgRoles, ensureOrgRoleTemplates } from '@/modules/auth/org-roles-seed'
 import { DEFAULT_ORG_ROLE_TEMPLATES } from '@/modules/auth/role-labels'
+import { splitLegacyUserName } from '@/modules/auth/user.utils'
 import type { UserRole } from '@/types/roles'
 import bcrypt from 'bcryptjs'
 import SalesQuote from '@/modules/sales/sales-quote.model'
@@ -1282,11 +1283,14 @@ async function run() {
 
     // sys-admin (no org)
     const sysHash = await hashPassword(seed.sysAdmin.password)
+    const sysNameParts = splitLegacyUserName(seed.sysAdmin.name)
     const [sysAdmin, sysAdminCreated] = await User.findOrCreate({
       where: { email: seed.sysAdmin.email },
       defaults: {
         email: seed.sysAdmin.email,
         name: seed.sysAdmin.name,
+        first_name: sysNameParts.firstName,
+        last_name: sysNameParts.lastName,
         password_hash: sysHash,
         role: 'sys-admin',
         is_active: true,
@@ -1370,11 +1374,14 @@ async function run() {
         const password_hash = await hashPassword(u.password)
         const defaultBranch = branches[u.branchIndex]!
         const { role, org_role_id } = resolveSeedUserRole(u, orgRolesByName)
+        const userNameParts = splitLegacyUserName(u.name)
         const [user, userCreated] = await User.findOrCreate({
           where: { email: u.email },
           defaults: {
             email: u.email,
             name: u.name,
+            first_name: userNameParts.firstName,
+            last_name: userNameParts.lastName,
             password_hash,
             role,
             org_role_id,

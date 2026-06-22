@@ -68,6 +68,7 @@ describe('resolveCapabilities()', () => {
     expect(caps?.organizacion.sections.users).toBe(true)
     expect(caps?.organizacion.sections.enabledModules).toBe(false)
     expect(caps?.nav.organizacionesHref).toBe('/organizaciones/org-1')
+    expect(caps?.onboarding.manage).toBe(true)
   })
 
   it('gives sys-admin platform list and sys-admin API namespace', async () => {
@@ -88,6 +89,7 @@ describe('resolveCapabilities()', () => {
     expect(caps?.nav.organizaciones).toBe(false)
     expect(caps?.configuracion.tabs.impresion).toBe(false)
     expect(caps?.configuracion.tabs.apariencia).toBe(true)
+    expect(caps?.onboarding.manage).toBe(false)
   })
 
   it('hides panel without panel:read permission', async () => {
@@ -110,6 +112,7 @@ describe('resolveCapabilities()', () => {
     expect(caps?.configuracion.tabs.apariencia).toBe(true)
     expect(caps?.configuracion.tabs.impresion).toBe(false)
     expect(caps?.configuracion.tabs.afip).toBe(false)
+    expect(caps?.onboarding.manage).toBe(false)
   })
 
   it('does not grant settings UI to sys-admin while impersonating a limited user', async () => {

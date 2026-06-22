@@ -7,12 +7,15 @@ import Organization from '@/modules/auth/organization.model'
 import UserBranch from '@/modules/auth/user-branch.model'
 import { hashPassword, validatePassword } from '@/modules/auth/auth.service'
 import { getBuiltinRoleLabel } from '@/modules/auth/role-labels'
+import { formatUserDisplayName, resolveUserNameParts } from '@/modules/auth/user.utils'
 import type { ProfileUpdateInput } from '@/modules/auth/profile.schema'
 import type { UserRole } from '@/types/roles'
 
 export type ProfileView = {
   id: string
   name: string
+  firstName: string
+  lastName: string
   email: string
   role: UserRole
   roleLabel: string
@@ -30,7 +33,7 @@ export type ProfileUpdateContext = {
 export async function getUserProfile(userId: string): Promise<ProfileView | null> {
   const user = await User.findOne({
     where: { id: userId, is_active: true },
-    attributes: ['id', 'email', 'name', 'role', 'org_id', 'branch_id', 'org_role_id'],
+    attributes: ['id', 'email', 'name', 'first_name', 'last_name', 'role', 'org_id', 'branch_id', 'org_role_id'],
     paranoid: true,
   })
   if (!user) return null
@@ -51,7 +54,9 @@ export async function getUserProfile(userId: string): Promise<ProfileView | null
 
   return {
     id: user.id,
-    name: user.name,
+    name: formatUserDisplayName(user.first_name, user.last_name) || user.name,
+    firstName: user.first_name,
+    lastName: user.last_name,
     email: user.email,
     role: user.role as UserRole,
     roleLabel,
@@ -94,15 +99,23 @@ export async function updateUserProfile(
 ): Promise<ProfileView> {
   const user = await User.findOne({
     where: { id: userId, is_active: true },
-    attributes: ['id', 'password_hash', 'role'],
+    attributes: ['id', 'password_hash', 'role', 'first_name', 'last_name', 'name'],
     paranoid: true,
   })
   if (!user) throw new Error('NOT_FOUND')
 
-  const patch: { name?: string; password_hash?: string } = {}
+  const patch: { name?: string; first_name?: string; last_name?: string; password_hash?: string } = {}
 
-  if (input.name !== undefined) {
-    patch.name = input.name
+  if (input.firstName !== undefined || input.lastName !== undefined || input.name !== undefined) {
+    const parts = input.firstName !== undefined || input.lastName !== undefined
+      ? resolveUserNameParts({
+          firstName: input.firstName ?? user.first_name,
+          lastName: input.lastName ?? user.last_name,
+        })
+      : resolveUserNameParts({ name: input.name })
+    patch.first_name = parts.firstName
+    patch.last_name = parts.lastName
+    patch.name = parts.displayName
   }
 
   if (input.password !== undefined) {
