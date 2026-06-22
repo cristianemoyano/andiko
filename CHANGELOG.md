@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/cristianemoyano/andiko/compare/v0.13.0...v0.14.0) (2026-06-21)
+
+### Features
+
+* **core:** integrate electronic scales (balanzas) into POS ([d8206a8](https://github.com/cristianemoyano/andiko/commit/d8206a82ea5f5cfef1e7e281a3328645df63eeac))
+* **core:** pos fiscal afip checkout with erp invoice sync ([c5473d8](https://github.com/cristianemoyano/andiko/commit/c5473d8e56c745edbd2f50d951d9772a8d0d67fa))
+
 ## [0.13.0](https://github.com/cristianemoyano/andiko/compare/v0.12.0...v0.13.0) (2026-06-21)
 
 ### Features
