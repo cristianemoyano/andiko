@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.17.1](https://github.com/cristianemoyano/andiko/compare/v0.17.0...v0.17.1) (2026-06-22)
+
+### Bug Fixes
+
+* **auth:** stop onboarding redirect loop on first login ([8635cb1](https://github.com/cristianemoyano/andiko/commit/8635cb14379ae2ab4b41e7d58c2e7c993c6ed20d))
+
 ## [0.17.0](https://github.com/cristianemoyano/andiko/compare/v0.16.0...v0.17.0) (2026-06-22)
 
 ### Features
