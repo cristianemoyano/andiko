@@ -35,7 +35,8 @@ jobs:
         run: pnpm run build
 
       - name: Package macOS DMG
-        run: pnpm exec electron-builder --mac --publish never --project apps/pos --config apps/pos/electron-builder.yml
+        working-directory: apps/pos
+        run: pnpm exec electron-builder --mac --publish never --config electron-builder.yml
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -70,7 +71,8 @@ jobs:
         run: pnpm run build
 
       - name: Package Windows installer
-        run: pnpm exec electron-builder --win --publish never --project apps/pos --config apps/pos/electron-builder.yml
+        working-directory: apps/pos
+        run: pnpm exec electron-builder --win --publish never --config electron-builder.yml
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
