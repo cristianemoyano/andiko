@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Button } from '@/components/primitives/Button'
 import { Badge } from '@/components/primitives/Badge'
@@ -88,7 +89,7 @@ export function DepositosClient() {
       />
       <InventarioSubNav />
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         {error && <p className="text-danger text-sm mb-4">{error}</p>}
         <DataTable
           columns={COLUMNS}
@@ -107,7 +108,7 @@ export function DepositosClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
 
       {modalOpen && (
         <DepositoModal

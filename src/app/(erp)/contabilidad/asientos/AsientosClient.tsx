@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
@@ -105,7 +106,7 @@ export function AsientosClient() {
       />
       <ContabilidadSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         {serverError && (
           <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
@@ -143,7 +144,7 @@ export function AsientosClient() {
           }
           footer={total > 0 ? <TablePagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} /> : undefined}
         />
-      </div>
+      </PageBody>
 
       <AsientoModal open={modalOpen} entry={null} onOpenChange={setModalOpen} onSaved={handleSaved} />
     </div>

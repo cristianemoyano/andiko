@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { InventarioSubNav } from '../InventarioSubNav'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
@@ -72,7 +73,7 @@ export function ReposicionClient() {
         }
       />
       <InventarioSubNav />
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         {error && (
           <div className="mb-4 rounded-[4px] bg-danger-bg border border-danger px-4 py-3 text-sm text-danger">{error}</div>
         )}
@@ -123,7 +124,7 @@ export function ReposicionClient() {
             </table>
           </div>
         )}
-      </div>
+      </PageBody>
     </div>
   )
 }

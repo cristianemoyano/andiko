@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
@@ -489,7 +490,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
         }
       />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-6">
           <div className="bg-surface border border-border rounded-sm p-5">
             <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-2">Organización</p>
@@ -660,7 +661,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
           </div>
           )}
         </div>
-      </div>
+      </PageBody>
 
       <Dialog open={editOrgOpen} onOpenChange={v => { if (!v) setEditOrgOpen(false) }} title={ui.sections.orgMetaEdit ? 'Editar organización' : 'Editar datos fiscales'} size="md">
         <form onSubmit={handleSaveOrg} className="flex flex-col gap-4">

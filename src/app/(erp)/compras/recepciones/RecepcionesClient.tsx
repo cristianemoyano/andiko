@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { ComprasSubNav } from '../ComprasSubNav'
@@ -96,7 +97,7 @@ export function RecepcionesClient() {
       <TopBar breadcrumbs={[{ label: 'Compras', href: '/compras' }, { label: 'Recepciones' }]} />
       <ComprasSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
         <DataTable
           columns={COLUMNS}
@@ -137,7 +138,7 @@ export function RecepcionesClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
     </div>
   )
 }

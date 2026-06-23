@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, type Column, COMPROBANTE_TIPO_LABEL } from '@/components/erp'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -120,7 +121,7 @@ export function LibroIvaClient({ endpoint, breadcrumbs, subnav, counterpartyHead
       <TopBar breadcrumbs={breadcrumbs} />
       {subnav}
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         <DataTable
           columns={columns}
           data={loading ? null : (result?.rows ?? [])}
@@ -155,7 +156,7 @@ export function LibroIvaClient({ endpoint, breadcrumbs, subnav, counterpartyHead
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
     </div>
   )
 }

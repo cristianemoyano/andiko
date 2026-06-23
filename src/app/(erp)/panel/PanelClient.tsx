@@ -4,6 +4,7 @@ import { Fragment, useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Skeleton } from '@/components/primitives/Skeleton'
 import { PerformanceCard, PanelBarChart, PanelDonutChart, Sparkline, KpiLabel, PanelWidgetProvider, PanelWidgetMenu, PanelWidgetSlot, usePanelWidgets, PanelAnalyticsCompareLabel, PanelAnalyticsRevenueSection, PanelAnalyticsOrdersSection, PanelAnalyticsProductsSection } from '@/components/erp'
@@ -639,7 +640,7 @@ function PanelClientContent({ lockedBranchId = null }: { lockedBranchId?: string
         onToChange={to => updateParams({ to })}
       />
 
-      <div className="flex-1 overflow-auto p-4 md:p-6 bg-surface-muted print:bg-surface print:p-4">
+      <PageBody padding="p-4 md:p-6" className="bg-surface-muted print:bg-surface print:p-4">
         {widgetOrder.map(id => {
           const node = widgetNodes[id]
           if (!node) return null
@@ -657,7 +658,7 @@ function PanelClientContent({ lockedBranchId = null }: { lockedBranchId?: string
             </Fragment>
           )
         })}
-      </div>
+      </PageBody>
     </div>
   )
 }

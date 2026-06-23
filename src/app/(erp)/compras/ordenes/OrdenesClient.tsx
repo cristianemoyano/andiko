@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
@@ -114,7 +115,7 @@ export function OrdenesClient() {
       />
       <ComprasSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
         <DataTable
           columns={COLUMNS}
@@ -155,7 +156,7 @@ export function OrdenesClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
     </div>
   )
 }

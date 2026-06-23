@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { PasswordInput } from '@/components/primitives/PasswordInput'
@@ -174,7 +175,7 @@ export function EmailSettingsClient() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <PageBody padding="p-6">
         {loading ? (
           <p className="text-sm text-fg-muted">Cargando…</p>
         ) : !form ? (
@@ -340,7 +341,7 @@ export function EmailSettingsClient() {
             {savedMsg ? <p className="text-sm text-success">{savedMsg}</p> : null}
           </div>
         )}
-      </div>
+      </PageBody>
     </div>
   )
 }

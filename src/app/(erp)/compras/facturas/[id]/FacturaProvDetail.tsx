@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
@@ -188,7 +189,7 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
       />
       <ComprasSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {actionError && (
@@ -394,7 +395,7 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
           )}
 
         </div>
-      </div>
+      </PageBody>
 
       <ConfirmDialog
         open={confirmReceive}

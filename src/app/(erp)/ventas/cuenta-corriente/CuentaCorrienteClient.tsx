@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Button } from '@/components/primitives/Button'
 import { StatusBadge } from '@/components/primitives/Badge'
@@ -166,7 +167,7 @@ export function CuentaCorrienteClient() {
       <TopBar breadcrumbs={[{ label: 'Ventas', href: '/ventas/presupuestos' }, { label: 'Cuenta corriente' }]} />
       <VentasSubNav />
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         {selectedContactId ? (
           <StatementDetail
             contactId={selectedContactId}
@@ -177,7 +178,7 @@ export function CuentaCorrienteClient() {
             onSelect={(contactId) => router.push(`/ventas/cuenta-corriente?contact_id=${contactId}`)}
           />
         )}
-      </div>
+      </PageBody>
     </div>
   )
 }

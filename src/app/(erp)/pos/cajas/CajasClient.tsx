@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 interface CashSessionRow {
@@ -97,7 +98,7 @@ export function CajasClient() {
         <span className="ml-auto text-xs text-fg-subtle">{total} turno{total !== 1 ? 's' : ''}</span>
       </div>
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         {error && (
           <div className="mb-4 rounded-[4px] bg-danger-bg border border-danger px-4 py-3 text-sm text-danger">{error}</div>
         )}
@@ -173,7 +174,7 @@ export function CajasClient() {
             )}
           </div>
         )}
-      </div>
+      </PageBody>
     </div>
   )
 }

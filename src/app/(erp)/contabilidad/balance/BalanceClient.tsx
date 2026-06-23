@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Input } from '@/components/primitives/Input'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
@@ -69,7 +70,7 @@ export function BalanceClient() {
       <TopBar breadcrumbs={[{ label: 'Contabilidad', href: '/contabilidad/asientos' }, { label: 'Balance de sumas y saldos' }]} />
       <ContabilidadSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         <div className="flex items-end gap-3 mb-4">
           <div className="flex flex-col gap-1">
             <label className="text-[12px] font-medium text-fg-muted">Desde</label>
@@ -139,7 +140,7 @@ export function BalanceClient() {
             )}
           </table>
         </div>
-      </div>
+      </PageBody>
     </div>
   )
 }

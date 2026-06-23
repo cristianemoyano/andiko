@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, EmptyState, type Column } from '@/components/erp'
 import { Badge, StatusBadge } from '@/components/primitives/Badge'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -194,7 +195,7 @@ export function ConciliacionDetail({ id }: ConciliacionDetailProps) {
       />
       <ComprasSubNav />
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         <div className="mb-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="rounded border border-border bg-surface p-4">
             <p className="text-[12px] uppercase tracking-wide text-fg-muted">Proveedor</p>
@@ -272,7 +273,7 @@ export function ConciliacionDetail({ id }: ConciliacionDetailProps) {
           keyExtractor={row => row.key}
           emptyMessage="No hay ítems para conciliar."
         />
-      </div>
+      </PageBody>
     </div>
   )
 }
