@@ -252,7 +252,15 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
     <div
       role={onActivate ? 'link' : undefined}
       tabIndex={onActivate ? 0 : undefined}
-      onClick={onActivate}
+      onClick={
+        onActivate
+          ? e => {
+              const t = e.target as HTMLElement | null
+              if (t?.closest('button, a, [role="button"], [data-stop-row-click]')) return
+              onActivate()
+            }
+          : undefined
+      }
       onKeyDown={
         onActivate
           ? e => {

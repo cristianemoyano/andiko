@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
@@ -55,6 +56,8 @@ export function MenuPanel({
     .join('')
     .toUpperCase() || '?'
 
+  useEffect(() => { setMenuOpen(false) }, [pathname, setMenuOpen])
+
   function close() { setMenuOpen(false); setOpen(false) }
 
   return (
@@ -65,8 +68,10 @@ export function MenuPanel({
         'transition-transform duration-200 ease-out',
         menuOpen ? 'translate-y-0' : 'translate-y-full',
       )}
-      aria-hidden={!menuOpen}
+      role="dialog"
+      aria-modal={menuOpen}
       aria-label="Menú de navegación"
+      aria-hidden={!menuOpen}
     >
       <div style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         {/* Header */}
