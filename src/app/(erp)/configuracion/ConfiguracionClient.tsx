@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/layout/Tabs'
 import { PrintTemplateTab } from './PrintTemplateTab'
 import { EmailTemplatesTab } from './EmailTemplatesTab'
@@ -71,7 +72,7 @@ export function ConfiguracionClient({
     <div className="flex flex-col h-full">
       <TopBar breadcrumbs={[{ label: 'Configuración' }, { label: SECTION_LABEL[section] }]} />
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <PageBody padding="p-6">
         {onboardingBanner === 'resume' && (
           <div className="mb-4 rounded-sm border border-teal-200 bg-teal-50 px-4 py-3 text-[13px] text-teal-900">
             Tenés una configuración inicial sin terminar.{' '}
@@ -123,7 +124,7 @@ export function ConfiguracionClient({
             </TabsContent>
           )}
         </Tabs>
-      </div>
+      </PageBody>
     </div>
   )
 }

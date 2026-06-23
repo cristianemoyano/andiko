@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Decimal from 'decimal.js'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
@@ -241,7 +242,7 @@ export function NotasDeDebitoClient() {
       />
       <VentasSubNav />
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         <DataTable
           columns={COLUMNS}
           data={rows}
@@ -272,7 +273,7 @@ export function NotasDeDebitoClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen} title="Nueva nota de débito">
         <form key={formKey} onSubmit={handleSubmit} className="space-y-4 p-5 min-w-[440px]">

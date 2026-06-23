@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -148,7 +149,7 @@ export function FacturasClient() {
       />
       <VentasSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         {listError && (
           <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {listError}
@@ -192,7 +193,7 @@ export function FacturasClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
     </div>
   )
 }

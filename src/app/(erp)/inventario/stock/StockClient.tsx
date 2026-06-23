@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Input } from '@/components/primitives/Input'
 import { Button } from '@/components/primitives/Button'
@@ -223,7 +224,7 @@ export function StockClient() {
     <div className="flex flex-col h-full">
       <TopBar breadcrumbs={[{ label: 'Inventario' }, { label: 'Stock' }]} />
       <InventarioSubNav />
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         {error && <p className="text-danger text-sm mb-4">{error}</p>}
         <DataTable
           columns={columns}
@@ -270,7 +271,7 @@ export function StockClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
 
       <Dialog
         open={batchRow != null}

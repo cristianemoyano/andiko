@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
@@ -135,7 +136,7 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
     <div className="flex flex-col h-full">
       <TopBar breadcrumbs={[{ label: 'Mi perfil' }]} />
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <PageBody padding="p-6">
         <div className="max-w-lg space-y-4">
           {isImpersonating && (
             <div
@@ -257,7 +258,7 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
             </div>
           </form>
         </div>
-      </div>
+      </PageBody>
     </div>
   )
 }

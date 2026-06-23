@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, type Column } from '@/components/erp'
 import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
@@ -208,6 +209,7 @@ export function CategoriesClient() {
     {
       key: '_actions',
       header: '',
+      mobileRole: 'actions' as const,
       align: 'right',
       render: row => (
         <div className="flex items-center gap-1 justify-end">
@@ -276,7 +278,7 @@ export function CategoriesClient() {
       />
       <CatalogoSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         {view === 'table' ? (
           <DataTable
             columns={columnsWithActions}
@@ -350,7 +352,7 @@ export function CategoriesClient() {
             </div>
           </div>
         )}
-      </div>
+      </PageBody>
 
       {modalOpen && (
         <dialog

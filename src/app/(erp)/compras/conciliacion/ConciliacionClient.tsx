@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Badge, StatusBadge } from '@/components/primitives/Badge'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -149,7 +150,7 @@ export function ConciliacionClient() {
       <TopBar breadcrumbs={[{ label: 'Compras', href: '/compras' }, { label: 'Conciliación' }]} />
       <ComprasSubNav />
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
         <DataTable
           columns={COLUMNS}
@@ -196,7 +197,7 @@ export function ConciliacionClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
     </div>
   )
 }

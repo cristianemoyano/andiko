@@ -195,6 +195,7 @@ export function EmailLogsTab() {
     {
       key: '_actions',
       header: '',
+      mobileRole: 'actions' as const,
       render: row => (
         <Button
           variant="ghost"

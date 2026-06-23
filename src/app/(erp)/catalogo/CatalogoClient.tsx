@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
 import {
@@ -406,7 +407,7 @@ export function CatalogoClient() {
       />
       <CatalogoSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         {serverError && (
           <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
@@ -454,7 +455,7 @@ export function CatalogoClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
 
       {modalOpen && (
         <ProductModal

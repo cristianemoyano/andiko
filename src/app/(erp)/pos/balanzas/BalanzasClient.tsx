@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { Switch } from '@/components/primitives/Switch'
@@ -166,7 +167,7 @@ export function BalanzasClient() {
         actions={<Button size="sm" onClick={handleSave} disabled={saving || loading}>{saving ? 'Guardando…' : 'Guardar'}</Button>}
       />
 
-      <div className="flex-1 overflow-auto p-6">
+      <PageBody padding="p-6">
         {loading ? (
           <div className="flex items-center justify-center h-40 text-fg-subtle text-sm">Cargando…</div>
         ) : (
@@ -286,7 +287,7 @@ export function BalanzasClient() {
             </aside>
           </div>
         )}
-      </div>
+      </PageBody>
     </>
   )
 }

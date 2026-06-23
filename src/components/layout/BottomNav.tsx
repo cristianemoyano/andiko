@@ -27,7 +27,7 @@ interface BottomNavProps {
  */
 export function BottomNav({ enabledModules }: BottomNavProps) {
   const pathname = usePathname()
-  const { open, setOpen, toggle } = useSidebar()
+  const { setOpen, menuOpen, toggleMenu } = useSidebar()
   const { capabilities } = useCapabilities()
   const permissions = capabilities?.permissions
   const showPanel = capabilities?.nav.panel === true
@@ -52,7 +52,7 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
           <Link
             key={item.id}
             href={item.href}
-            onClick={() => setOpen(false)}
+            onClick={() => { setOpen(false) }}
             className={cn(
               'flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium leading-tight transition-colors',
               active ? 'text-brand-600' : 'text-fg-muted hover:text-fg',
@@ -68,15 +68,15 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
 
       <button
         type="button"
-        onClick={toggle}
-        aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
-        aria-expanded={open}
+        onClick={toggleMenu}
+        aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+        aria-expanded={menuOpen}
         className={cn(
           'flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium leading-tight transition-colors',
-          open ? 'text-brand-600' : 'text-fg-muted hover:text-fg',
+          menuOpen ? 'text-brand-600' : 'text-fg-muted hover:text-fg',
         )}
       >
-        <span className={cn('flex shrink-0', open ? 'text-brand-600' : 'text-fg-subtle')}>
+        <span className={cn('flex shrink-0', menuOpen ? 'text-brand-600' : 'text-fg-subtle')}>
           <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="3" cy="3" r="1.6" /><circle cx="8" cy="3" r="1.6" /><circle cx="13" cy="3" r="1.6" />
             <circle cx="3" cy="8" r="1.6" /><circle cx="8" cy="8" r="1.6" /><circle cx="13" cy="8" r="1.6" />
@@ -85,6 +85,7 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
         </span>
         Menú
       </button>
+
       </div>
     </nav>
   )

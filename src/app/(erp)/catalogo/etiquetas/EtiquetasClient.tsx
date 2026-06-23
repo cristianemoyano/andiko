@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { Button } from '@/components/primitives/Button'
 import { CatalogoSubNav } from '../CatalogoSubNav'
@@ -181,7 +182,7 @@ export function EtiquetasClient() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <PageBody padding="p-0">
         {error && (
           <p className="m-5 text-sm text-danger">{error}</p>
         )}
@@ -242,7 +243,7 @@ export function EtiquetasClient() {
             </tbody>
           </table>
         )}
-      </div>
+      </PageBody>
     </div>
   )
 }

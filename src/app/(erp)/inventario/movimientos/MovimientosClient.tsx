@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Badge } from '@/components/primitives/Badge'
 import { Input } from '@/components/primitives/Input'
@@ -201,7 +202,7 @@ export function MovimientosClient() {
     <div className="flex flex-col h-full">
       <TopBar breadcrumbs={[{ label: 'Inventario' }, { label: 'Movimientos' }]} />
       <InventarioSubNav />
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         {error && <p className="text-danger text-sm mb-4">{error}</p>}
         <DataTable
           columns={COLUMNS}
@@ -233,7 +234,7 @@ export function MovimientosClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
     </div>
   )
 }

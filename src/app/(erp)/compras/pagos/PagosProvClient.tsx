@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -105,7 +106,7 @@ export function PagosProvClient() {
       <TopBar breadcrumbs={[{ label: 'Compras', href: '/compras' }, { label: 'Pagos' }]} />
       <ComprasSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
         <DataTable
           columns={COLUMNS}
@@ -124,7 +125,7 @@ export function PagosProvClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
     </div>
   )
 }

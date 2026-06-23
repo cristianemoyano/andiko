@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DataTable, type Column } from '@/components/erp'
+import { PageBody } from '@/components/layout'
 import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
@@ -232,7 +233,7 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <PageBody padding="p-6" className="space-y-6">
       <div className="bg-surface border border-border rounded-sm p-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -332,7 +333,7 @@ export function PriceListDetailClient({ priceList }: { priceList: PriceList }) {
         variant="danger"
         onConfirm={handleDeleteList}
       />
-    </div>
+    </PageBody>
   )
 }
 

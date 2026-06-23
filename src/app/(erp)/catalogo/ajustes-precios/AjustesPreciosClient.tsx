@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
@@ -125,7 +126,7 @@ export function AjustesPreciosClient() {
       />
       <CatalogoSubNav />
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <PageBody padding="p-6">
         <div className="max-w-2xl space-y-4">
           <div className="bg-surface border border-border rounded-sm p-5">
             <h2 className="text-sm font-semibold text-fg mb-1">Ajuste masivo de precios</h2>
@@ -241,7 +242,7 @@ export function AjustesPreciosClient() {
             </div>
           )}
         </div>
-      </div>
+      </PageBody>
 
       <ConfirmDialog
         open={confirmOpen}

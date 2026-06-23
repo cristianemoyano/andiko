@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Button } from '@/components/primitives/Button'
 import { Badge } from '@/components/primitives/Badge'
@@ -284,7 +285,7 @@ export function DepositoDetail() {
       />
       <InventarioSubNav />
 
-      <div className="flex-1 overflow-auto p-5 flex flex-col gap-6">
+      <PageBody className="flex flex-col gap-6">
         <section>
           <h2 className="text-sm font-semibold text-fg-muted mb-2">Stock actual</h2>
           <DataTable
@@ -314,7 +315,7 @@ export function DepositoDetail() {
             }
           />
         </section>
-      </div>
+      </PageBody>
 
       {ajusteOpen && (
         <AjusteStockModal

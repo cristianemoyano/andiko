@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, type Column } from '@/components/erp'
 import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
@@ -138,13 +139,14 @@ export function PriceListsClient() {
       />
       <CatalogoSubNav />
 
-      <div className="flex-1 overflow-auto p-6">
+      <PageBody padding="p-6">
         <DataTable
           columns={[
             ...COLUMNS,
             {
               key: '_actions',
               header: '',
+              mobileRole: 'actions' as const,
               align: 'right',
               render: row => (
                 <Button
@@ -165,7 +167,7 @@ export function PriceListsClient() {
           onRowClick={(row) => router.push(`/catalogo/listas-de-precios/${row.id}`)}
           emptyMessage={loading ? 'Cargando…' : 'No hay listas de precios.'}
         />
-      </div>
+      </PageBody>
 
       {modalOpen && (
         <dialog

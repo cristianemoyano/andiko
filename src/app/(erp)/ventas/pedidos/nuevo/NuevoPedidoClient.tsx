@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
@@ -264,7 +265,7 @@ export function NuevoPedidoClient() {
       />
       <VentasSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
           {/* Header fields */}
           <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
@@ -427,7 +428,7 @@ export function NuevoPedidoClient() {
             </p>
           )}
         </div>
-      </div>
+      </PageBody>
 
       <CustomerQuickCreateDialog
         open={createContactOpen}

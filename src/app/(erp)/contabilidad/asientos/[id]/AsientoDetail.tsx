@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -90,7 +91,7 @@ export function AsientoDetail({ id }: { id: string }) {
       />
       <ContabilidadSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         {loadError && (
           <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">{loadError}</div>
         )}
@@ -146,7 +147,7 @@ export function AsientoDetail({ id }: { id: string }) {
             </div>
           </div>
         )}
-      </div>
+      </PageBody>
 
       {entry && (
         <AsientoModal
