@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 
-export type MobileColumnRole = 'lead' | 'prefix' | 'title' | 'subtitle' | 'badge' | 'amount' | 'hidden'
+export type MobileColumnRole = 'lead' | 'prefix' | 'title' | 'subtitle' | 'badge' | 'amount' | 'actions' | 'hidden'
 
 export interface Column<T> {
   key: string
@@ -51,6 +51,7 @@ function inferMobileRole(column: Column<unknown>): MobileColumnRole {
   if (PREFIX_KEYS.some(k => key.includes(k))) return 'prefix'
   if (TITLE_KEYS.some(k => key === k || key.includes(k))) return 'title'
   if (SUBTITLE_KEYS.some(k => key === k || key.includes(k))) return 'subtitle'
+  if (key === '_actions' || key.startsWith('_actions')) return 'actions'
 
   return 'hidden'
 }
@@ -126,7 +127,7 @@ export function DataTable<T extends object>({
   return (
     <div className={cn('bg-surface border border-border rounded', className)}>
       {toolbar && (
-        <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b border-border">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 md:px-3 md:py-2.5 border-b border-border">
           {toolbar}
         </div>
       )}
@@ -235,6 +236,7 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
   const subtitleContents = byRole('subtitle')
   const badge = byRole('badge')[0]
   const amount = byRole('amount')[0]
+  const actionsContents = byRole('actions')
 
   const titleLine =
     hasContent(prefixContent) && hasContent(titleContent) ? (
@@ -250,7 +252,15 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
     <div
       role={onActivate ? 'link' : undefined}
       tabIndex={onActivate ? 0 : undefined}
-      onClick={onActivate}
+      onClick={
+        onActivate
+          ? e => {
+              const t = e.target as HTMLElement | null
+              if (t?.closest('button, a, [role="button"], [data-stop-row-click]')) return
+              onActivate()
+            }
+          : undefined
+      }
       onKeyDown={
         onActivate
           ? e => {
@@ -309,6 +319,17 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
       )}
 
       {badge && <div className="mt-2">{badge}</div>}
+
+      {actionsContents.length > 0 && (
+        <div
+          className="mt-2 pt-2 border-t border-border flex items-center gap-1.5 flex-wrap"
+          data-stop-row-click
+        >
+          {actionsContents.map((node, i) => (
+            <span key={i}>{node}</span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

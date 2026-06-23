@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, type Column, ConfirmDialog } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
@@ -224,7 +225,7 @@ export function DispositivosClient() {
         }
       />
 
-      <div className="flex-1 overflow-auto p-6">
+      <PageBody padding="p-6">
         <div className="max-w-6xl grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] gap-6 items-start">
           <div className="bg-surface border border-border rounded-sm shadow-[0_1px_3px_rgba(0,0,0,0.06)] divide-y divide-border min-w-0 overflow-hidden">
             <section className="px-5 py-4 bg-surface-muted/30">
@@ -247,7 +248,7 @@ export function DispositivosClient() {
             <DispositivosTutorialPanel />
           </aside>
         </div>
-      </div>
+      </PageBody>
 
       <DeviceModal
         open={modalOpen}

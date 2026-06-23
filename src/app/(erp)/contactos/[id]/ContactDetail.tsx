@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { StatusBadge, Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
@@ -111,7 +112,7 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
         }
       />
 
-      <div className="flex-1 overflow-y-auto p-5">
+      <PageBody>
         <div className="flex flex-col gap-4">
 
           {/* Header card */}
@@ -171,7 +172,7 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
             <span>Modificado: {updatedAt}</span>
           </div>
         </div>
-      </div>
+      </PageBody>
 
       <ContactModal
         open={modalOpen}

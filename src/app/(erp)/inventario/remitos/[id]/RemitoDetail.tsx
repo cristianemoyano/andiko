@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
@@ -136,7 +137,7 @@ export function RemitoDetail({ id }: { id: string }) {
       />
       <InventarioSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {actionError && (
@@ -260,7 +261,7 @@ export function RemitoDetail({ id }: { id: string }) {
           )}
 
         </div>
-      </div>
+      </PageBody>
 
       <ConfirmDialog
         open={confirmIssue}

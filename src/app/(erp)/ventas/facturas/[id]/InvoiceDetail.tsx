@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { SendDocumentEmail } from '@/components/erp/SendDocumentEmail'
 import { Input } from '@/components/primitives/Input'
@@ -288,7 +289,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
       />
       <VentasSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         <div className="max-w-3xl mx-auto flex flex-col gap-5">
           {/* Status pipeline */}
           <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-center justify-between gap-4">
@@ -550,7 +551,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
             </div>
           )}
         </div>
-      </div>
+      </PageBody>
 
       <ConfirmDialog
         open={confirmIssue}

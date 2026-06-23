@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, type Column, ConfirmDialog } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
@@ -129,7 +130,7 @@ export function MediosDePagoClient() {
         }
       />
 
-      <div className="flex-1 overflow-auto p-6">
+      <PageBody padding="p-6">
         {loading ? (
           <div className="flex items-center justify-center h-40 text-fg-subtle text-sm">Cargando…</div>
         ) : methods.length === 0 ? (
@@ -141,7 +142,7 @@ export function MediosDePagoClient() {
         ) : (
           <DataTable columns={columns} data={methods} keyExtractor={r => r.id} />
         )}
-      </div>
+      </PageBody>
 
       <MedioPagoModal
         key={editing?.id ?? 'new'}

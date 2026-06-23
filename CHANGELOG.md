@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.18.0](https://127.0.0.1/37255/git/cristianemoyano/compare/v0.17.1...v0.18.0) (2026-06-23)
+
+### Features
+
+* **mobile:** mobile UX phase 2 — PageBody, MenuPanel, TopBar, DataTable actions ([#77](https://127.0.0.1/37255/git/cristianemoyano/issues/77)) ([96b51f8](https://127.0.0.1/37255/git/cristianemoyano/commit/96b51f8015febdf9799438aceb55fa000d1b5914))
+
 ## [0.17.1](https://github.com/cristianemoyano/andiko/compare/v0.17.0...v0.17.1) (2026-06-22)
 
 ### Bug Fixes

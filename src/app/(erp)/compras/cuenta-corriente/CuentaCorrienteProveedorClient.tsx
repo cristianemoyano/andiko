@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -299,7 +300,7 @@ export function CuentaCorrienteProveedorClient() {
       <TopBar breadcrumbs={[{ label: 'Compras', href: '/compras/ordenes' }, { label: 'Cuenta corriente' }]} />
       <ComprasSubNav />
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(360px,420px)_1fr]">
           <DataTable
             columns={contactColumns}
@@ -442,7 +443,7 @@ export function CuentaCorrienteProveedorClient() {
             />
           </div>
         </div>
-      </div>
+      </PageBody>
     </div>
   )
 }

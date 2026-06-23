@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, PanelBarChart, type Column } from '@/components/erp'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -192,7 +193,7 @@ export function ReportesClient() {
       />
       <ComprasSubNav />
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -278,7 +279,7 @@ export function ReportesClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
     </div>
   )
 }

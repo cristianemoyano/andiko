@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
@@ -75,6 +76,7 @@ export function OrganizacionesAdminClient() {
     {
       key: '_actions',
       header: '',
+      mobileRole: 'actions' as const,
       render: row => (
         <Button variant="ghost" size="xs" onClick={() => router.push(`/organizaciones/${row.id}`)}>
           Gestionar
@@ -94,7 +96,7 @@ export function OrganizacionesAdminClient() {
         }
       />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         <DataTable
           columns={columnsWithActions}
           data={rows}
@@ -102,7 +104,7 @@ export function OrganizacionesAdminClient() {
           emptyMessage="No hay organizaciones. Creá la primera."
           onRowClick={row => router.push(`/organizaciones/${row.id}`)}
         />
-      </div>
+      </PageBody>
 
       <OrganizationModal
         open={modalOpen}

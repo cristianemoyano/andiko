@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Textarea } from '@/components/primitives/Textarea'
@@ -108,7 +109,7 @@ export function NuevaOrdenClient() {
       />
       <ComprasSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {serverError && (
@@ -181,7 +182,7 @@ export function NuevaOrdenClient() {
           </div>
 
         </div>
-      </div>
+      </PageBody>
     </div>
   )
 }

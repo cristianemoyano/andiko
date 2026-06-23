@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
@@ -113,6 +114,7 @@ export function PlanDeCuentasClient() {
     {
       key: '_actions',
       header: '',
+      mobileRole: 'actions' as const,
       render: row => (
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>Editar</Button>
@@ -130,7 +132,7 @@ export function PlanDeCuentasClient() {
       />
       <ContabilidadSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         {serverError && (
           <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
@@ -169,7 +171,7 @@ export function PlanDeCuentasClient() {
             </>
           }
         />
-      </div>
+      </PageBody>
 
       <CuentaModal
         open={modalOpen}

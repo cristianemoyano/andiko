@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { SendDocumentEmail } from '@/components/erp/SendDocumentEmail'
 import { FormField } from '@/components/primitives/FormField'
@@ -383,7 +384,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
       />
       <VentasSubNav />
 
-      <div className="flex-1 p-5 overflow-auto">
+      <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {/* Status pipeline */}
@@ -619,7 +620,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
             />
           )}
         </div>
-      </div>
+      </PageBody>
 
       <ConfirmDialog
         open={confirmConvert}

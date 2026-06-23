@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { DataTable, PanelBarChart, type Column } from '@/components/erp'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -229,7 +230,7 @@ export function ReportesClient() {
       />
       <VentasSubNav />
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
         {truncated && (
           <p className="mb-3 text-sm text-warning">
@@ -323,7 +324,7 @@ export function ReportesClient() {
             ) : undefined
           }
         />
-      </div>
+      </PageBody>
     </div>
   )
 }
