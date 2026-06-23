@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Decimal from 'decimal.js'
 import { TopBar } from '@/components/layout/TopBar'
+import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
@@ -266,7 +267,7 @@ export function CreditNoteDetail() {
       />
       <VentasSubNav />
 
-      <div className="flex-1 overflow-auto p-5">
+      <PageBody>
         <div className="mx-auto max-w-2xl space-y-5">
 
           {/* Header card */}
@@ -428,7 +429,7 @@ export function CreditNoteDetail() {
             </div>
           )}
         </div>
-      </div>
+      </PageBody>
 
       <ConfirmDialog
         open={issueConfirmOpen}

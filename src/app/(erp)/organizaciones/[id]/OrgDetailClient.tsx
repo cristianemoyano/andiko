@@ -362,6 +362,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     {
       key: '_actions',
       header: '',
+      mobileRole: 'actions' as const,
       render: row => (
         <div className="flex gap-1">
           {ui.actions.editUser && actorId === row.id && !bypassUserManagementRules && (
@@ -421,6 +422,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
     {
       key: '_actions',
       header: '',
+      mobileRole: 'actions' as const,
       render: row => (
         <div className="flex gap-1">
           {ui.actions.editBranch && (
@@ -626,6 +628,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               columns={userColumns}
               data={users}
               keyExtractor={r => r.id}
+              onRowClick={row => { setEditingUser(row); setUserModalOpen(true) }}
               emptyMessage="No hay usuarios en esta organización."
             />
           </div>
@@ -651,6 +654,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               columns={branchColumns}
               data={detail.branches}
               keyExtractor={r => r.id}
+              onRowClick={row => { setEditingBranch(row); setBranchModalOpen(true) }}
               emptyMessage="No hay sucursales. Creá la primera."
             />
           </div>

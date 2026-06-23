@@ -1,4 +1,5 @@
 export { Sidebar } from './Sidebar'
+export { PageBody } from './PageBody'
 export { TopBar } from './TopBar'
 export { AppVersion } from './AppVersion'
 export { AndikoLogo } from './AndikoLogo'

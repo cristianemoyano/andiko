@@ -11,6 +11,7 @@ import { resolveDefaultLandingPath } from '@/lib/panel-access'
 import { isOnboardingPath, shouldLayoutForceOnboardingRedirect } from '@/lib/onboarding-guards'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BottomNav } from '@/components/layout/BottomNav'
+import { MenuPanel } from '@/components/layout/MenuPanel'
 import { InstallPrompt } from '@/components/layout/InstallPrompt'
 import { Providers } from '@/components/layout/Providers'
 import { capabilitiesProviderKey } from '@/components/layout/capabilities-provider-key'
@@ -75,6 +76,12 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
           {children}
         </main>
         <BottomNav enabledModules={enabledModules} />
+        <MenuPanel
+          enabledModules={enabledModules}
+          isRealSysAdmin={isRealSysAdmin}
+          showSysAdminNavigation={showSysAdminNavigation}
+          showOnboardingResume={showOnboardingResume}
+        />
         <InstallPrompt />
       </div>
     </Providers>
