@@ -2,6 +2,11 @@
 
 import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+} from '@/components/primitives/DropdownMenu'
 
 export type MobileColumnRole = 'lead' | 'prefix' | 'title' | 'subtitle' | 'badge' | 'amount' | 'actions' | 'hidden'
 
@@ -272,7 +277,8 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
           : undefined
       }
       className={cn(
-        'block w-full text-left px-4 py-3.5 transition-colors',
+        'relative block w-full text-left pl-4 py-3.5 transition-colors',
+        actionsContents.length > 0 ? 'pr-10' : 'pr-4',
         onActivate && 'cursor-pointer hover:bg-surface-muted active:bg-surface-muted',
       )}
     >
@@ -308,7 +314,7 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
       )}
 
       {subtitleContents.length > 0 && (
-        <div className="mt-0.5 text-[12px] text-fg-muted truncate">
+        <div className="mt-0.5 text-[13px] text-fg-muted truncate">
           {subtitleContents.map((node, i) => (
             <span key={i}>
               {i > 0 ? ' · ' : null}
@@ -321,13 +327,27 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
       {badge && <div className="mt-2">{badge}</div>}
 
       {actionsContents.length > 0 && (
-        <div
-          className="mt-2 pt-2 border-t border-border flex items-center gap-1.5 flex-wrap"
-          data-stop-row-click
-        >
-          {actionsContents.map((node, i) => (
-            <span key={i}>{node}</span>
-          ))}
+        <div className="absolute top-2 right-2" data-stop-row-click>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Acciones"
+                className="flex items-center justify-center w-8 h-8 rounded-md text-fg-subtle hover:bg-surface-hover transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <div className="[&_button]:!flex [&_button]:!w-full [&_button]:!justify-start [&_button]:!h-auto [&_button]:!text-[13px] [&_button]:!py-1.5 [&_button]:!px-2.5 [&_button]:!font-normal [&_button]:!rounded-[3px]">
+                {actionsContents.map((node, i) => (
+                  <div key={i}>{node}</div>
+                ))}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
     </div>

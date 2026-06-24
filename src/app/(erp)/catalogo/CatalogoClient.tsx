@@ -247,6 +247,7 @@ export function CatalogoClient() {
     {
       key: 'name',
       header: 'Nombre / Variante',
+      mobileRole: 'title',
       render: p => (
         <div className="flex items-center gap-3">
           <Image
@@ -268,6 +269,7 @@ export function CatalogoClient() {
     {
       key: 'sku',
       header: 'SKU',
+      mobileRole: 'subtitle',
       render: p => {
         if (p.variants.length > 1) return <span className="text-fg-subtle text-xs italic">múltiples</span>
         const sku = p.variants[0]?.sku
@@ -277,6 +279,7 @@ export function CatalogoClient() {
     {
       key: 'category',
       header: 'Categoría',
+      mobileRole: 'hidden',
       render: p => p.category?.name
         ? <span className="text-fg-muted">{p.category.name}</span>
         : <span className="text-fg-subtle">—</span>,
@@ -284,6 +287,7 @@ export function CatalogoClient() {
     {
       key: 'type',
       header: 'Tipo · IVA',
+      mobileRole: 'hidden',
       render: p => (
         <>
           <span className="text-fg-muted">{TYPE_LABEL[p.product_type] ?? p.product_type}</span>
@@ -295,6 +299,7 @@ export function CatalogoClient() {
       key: 'price',
       header: 'Precio',
       align: 'right',
+      mobileRole: 'amount',
       render: p => {
         const display = priceRange(p.variants)
         return display ? <span className="tabular-nums">{display}</span> : <span className="text-fg-subtle">—</span>
@@ -304,6 +309,7 @@ export function CatalogoClient() {
       key: 'stock',
       header: 'Stock',
       align: 'right',
+      mobileRole: 'hidden',
       render: p => {
         const managed = p.variants.filter(v => v.manage_stock)
         if (!managed.length) return <span className="text-fg-subtle text-xs">—</span>
@@ -314,12 +320,14 @@ export function CatalogoClient() {
     {
       key: 'status',
       header: 'Estado',
+      mobileRole: 'badge',
       render: p => <Badge status={STATUS_BADGE[p.status] ?? 'neutral'}>{STATUS_LABEL[p.status] ?? p.status}</Badge>,
     },
     {
       key: 'actions',
       header: '',
       className: 'w-[140px]',
+      mobileRole: 'hidden',
       render: p => (
         <div className="flex items-center gap-1 justify-end">
           <Button

@@ -16,7 +16,9 @@ export function PageBody({ children, className, padding = 'p-4 md:p-5' }: PageBo
         className,
       )}
     >
-      {children}
+      <div className="pb-[calc(env(safe-area-inset-bottom)+0.5rem)] md:pb-0">
+        {children}
+      </div>
     </div>
   )
 }
