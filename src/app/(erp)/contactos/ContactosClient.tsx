@@ -7,6 +7,7 @@ import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
+import { DropdownMenuItem } from '@/components/primitives/DropdownMenu'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { ContactModal } from './ContactModal'
 import { ImportModal } from '@/components/erp/ImportModal'
@@ -202,6 +203,13 @@ export function ContactosClient() {
           </Button>
         </div>
       ),
+      mobileRender: row => (
+        <>
+          <DropdownMenuItem onSelect={() => router.push(`/contactos/${row.id}`)}>Ver</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => openEdit(row)}>Editar</DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onSelect={() => setContactToDelete(row)}>Eliminar</DropdownMenuItem>
+        </>
+      ),
     },
   ]
 
@@ -240,7 +248,7 @@ export function ContactosClient() {
         }
       />
 
-      <PageBody>
+      <PageBody onRefresh={async () => setRefresh(r => r + 1)}>
         {serverError && (
           <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}

@@ -14,6 +14,10 @@ export interface Column<T> {
   key: string
   header: string
   render?: (row: T) => React.ReactNode
+  /** Mobile-only renderer for actions columns. Return DropdownMenuItem elements; they render
+   *  directly inside DropdownMenuContent with full keyboard nav and auto-close. When omitted
+   *  for an 'actions' column, falls back to the CSS-override approach. */
+  mobileRender?: (row: T) => React.ReactNode
   sortable?: boolean
   align?: 'left' | 'right'
   className?: string
@@ -241,7 +245,15 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
   const subtitleContents = byRole('subtitle')
   const badge = byRole('badge')[0]
   const amount = byRole('amount')[0]
-  const actionsContents = byRole('actions')
+
+  // Actions: prefer mobileRender (DropdownMenuItems, proper keyboard nav) over the CSS fallback
+  const actionsColumns = mobileColumns.filter(item => item.role === 'actions')
+  const actionsMenuContent = actionsColumns.find(item => item.col.mobileRender)
+    ?.col.mobileRender?.(row) ?? null
+  const actionsLegacy = actionsColumns
+    .filter(item => !item.col.mobileRender)
+    .map(item => renderCell(item.col, row))
+  const hasActions = actionsMenuContent !== null || actionsLegacy.length > 0
 
   const titleLine =
     hasContent(prefixContent) && hasContent(titleContent) ? (
@@ -278,7 +290,7 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
       }
       className={cn(
         'relative block w-full text-left pl-4 py-3.5 transition-colors',
-        actionsContents.length > 0 ? 'pr-10' : 'pr-4',
+        hasActions ? 'pr-10' : 'pr-4',
         onActivate && 'cursor-pointer hover:bg-surface-muted active:bg-surface-muted',
       )}
     >
@@ -326,7 +338,7 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
 
       {badge && <div className="mt-2">{badge}</div>}
 
-      {actionsContents.length > 0 && (
+      {hasActions && (
         <div className="absolute top-2 right-2" data-stop-row-click>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -341,11 +353,13 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <div className="[&_button]:!flex [&_button]:!w-full [&_button]:!justify-start [&_button]:!h-auto [&_button]:!text-[13px] [&_button]:!py-1.5 [&_button]:!px-2.5 [&_button]:!font-normal [&_button]:!rounded-[3px]">
-                {actionsContents.map((node, i) => (
-                  <div key={i}>{node}</div>
-                ))}
-              </div>
+              {actionsMenuContent ?? (
+                <div className="[&_button]:!flex [&_button]:!w-full [&_button]:!justify-start [&_button]:!h-auto [&_button]:!text-[13px] [&_button]:!py-1.5 [&_button]:!px-2.5 [&_button]:!font-normal [&_button]:!rounded-[3px]">
+                  {actionsLegacy.map((node, i) => (
+                    <div key={i}>{node}</div>
+                  ))}
+                </div>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

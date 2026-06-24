@@ -415,7 +415,7 @@ export function CatalogoClient() {
       />
       <CatalogoSubNav />
 
-      <PageBody>
+      <PageBody onRefresh={async () => setRefresh(r => r + 1)}>
         {serverError && (
           <div className="mb-3 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}

@@ -2,11 +2,18 @@
 
 import { cn } from '@/lib/utils'
 import { type MobileColumnRole } from './DataTable'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+} from '@/components/primitives/DropdownMenu'
 
 export interface GroupedColumn<T> {
   key: string
   header: string
   render?: (row: T) => React.ReactNode
+  /** Mobile-only renderer for actions columns. Return DropdownMenuItem elements. */
+  mobileRender?: (row: T) => React.ReactNode
   align?: 'left' | 'right'
   className?: string
   mobileRole?: MobileColumnRole
@@ -55,11 +62,26 @@ function GroupedMobileCard<P extends object>({
   const badge = byRole('badge')[0]
   const amount = byRole('amount')[0]
 
+  const actionsColumns = columns.filter(c => c.mobileRole === 'actions')
+  const actionsMenuContent = actionsColumns.find(c => c.mobileRender)?.mobileRender?.(row) ?? null
+  const actionsLegacy = actionsColumns
+    .filter(c => !c.mobileRender)
+    .map(c => renderGroupedCell(c, row))
+  const hasActions = actionsMenuContent !== null || actionsLegacy.length > 0
+
   return (
     <div
       role={onActivate ? 'link' : undefined}
       tabIndex={onActivate ? 0 : undefined}
-      onClick={onActivate}
+      onClick={
+        onActivate
+          ? e => {
+              const t = e.target as HTMLElement | null
+              if (t?.closest('button, a, [role="button"], [data-stop-row-click]')) return
+              onActivate()
+            }
+          : undefined
+      }
       onKeyDown={
         onActivate
           ? e => {
@@ -71,7 +93,8 @@ function GroupedMobileCard<P extends object>({
           : undefined
       }
       className={cn(
-        'block w-full text-left px-4 py-3.5 transition-colors',
+        'relative block w-full text-left px-4 py-3.5 transition-colors',
+        hasActions ? 'pr-12' : '',
         onActivate && 'cursor-pointer hover:bg-surface-muted active:bg-surface-muted',
       )}
     >
@@ -113,6 +136,33 @@ function GroupedMobileCard<P extends object>({
           </div>
         )}
       </div>
+
+      {hasActions && (
+        <div className="absolute top-2 right-2" data-stop-row-click>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Acciones"
+                className="flex items-center justify-center w-8 h-8 rounded-md text-fg-subtle hover:bg-surface-hover transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {actionsMenuContent ?? (
+                <div className="[&_button]:!flex [&_button]:!w-full [&_button]:!justify-start [&_button]:!h-auto [&_button]:!text-[13px] [&_button]:!py-1.5 [&_button]:!px-2.5 [&_button]:!font-normal [&_button]:!rounded-[3px]">
+                  {actionsLegacy.map((node, i) => (
+                    <div key={i}>{node}</div>
+                  ))}
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
     </div>
   )
 }

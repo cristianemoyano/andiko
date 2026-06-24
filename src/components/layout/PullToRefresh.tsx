@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 
 const THRESHOLD = 64
@@ -14,50 +14,100 @@ interface PullToRefreshProps {
 }
 
 export function PullToRefresh({ onRefresh, children, className, disabled }: PullToRefreshProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const startYRef = useRef<number | null>(null)
+  // Ref tracks pull distance synchronously so touchend reads the correct value
+  const pullYRef = useRef(0)
+  // Stable refs so effect closure never goes stale
+  const onRefreshRef = useRef(onRefresh)
+  const disabledRef = useRef(disabled)
+  const refreshingRef = useRef(false)
+
+  onRefreshRef.current = onRefresh
+  disabledRef.current = disabled
+
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  // Tracks whether a gesture is active so we skip the snap-back transition while dragging
+  const [isDragging, setIsDragging] = useState(false)
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (disabled || refreshing) return
-    const el = e.currentTarget
-    if (el.scrollTop > 0) return
-    startYRef.current = e.touches[0].clientY
-  }, [disabled, refreshing])
+  useEffect(() => {
+    refreshingRef.current = refreshing
+  }, [refreshing])
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (startYRef.current === null) return
-    const delta = e.touches[0].clientY - startYRef.current
-    if (delta <= 0) { startYRef.current = null; return }
-    e.preventDefault()
-    setPullY(Math.min(delta / RESISTANCE, THRESHOLD * 1.2))
-  }, [])
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
 
-  const handleTouchEnd = useCallback(async () => {
-    if (startYRef.current === null) return
-    startYRef.current = null
-    if (pullY >= THRESHOLD) {
-      setRefreshing(true)
-      setPullY(0)
-      try {
-        await onRefresh()
-      } finally {
-        setRefreshing(false)
-      }
-    } else {
-      setPullY(0)
+    function handleTouchStart(e: TouchEvent) {
+      if (disabledRef.current || refreshingRef.current) return
+      if (container!.scrollTop > 0) return
+      startYRef.current = e.touches[0].clientY
+      setIsDragging(true)
     }
-  }, [pullY, onRefresh])
+
+    function handleTouchMove(e: TouchEvent) {
+      if (startYRef.current === null) return
+      // Cancel if user scrolled down mid-gesture to prevent scroll lock
+      if (container!.scrollTop > 0) {
+        startYRef.current = null
+        pullYRef.current = 0
+        setPullY(0)
+        setIsDragging(false)
+        return
+      }
+      const delta = e.touches[0].clientY - startYRef.current
+      if (delta <= 0) {
+        startYRef.current = null
+        pullYRef.current = 0
+        setPullY(0)
+        setIsDragging(false)
+        return
+      }
+      e.preventDefault()
+      const clamped = Math.min(delta / RESISTANCE, THRESHOLD * 1.2)
+      pullYRef.current = clamped
+      setPullY(clamped)
+    }
+
+    function handleTouchEnd() {
+      if (startYRef.current === null) return
+      startYRef.current = null
+      setIsDragging(false)
+      const currentPull = pullYRef.current
+      pullYRef.current = 0
+      if (currentPull >= THRESHOLD) {
+        refreshingRef.current = true
+        setRefreshing(true)
+        setPullY(0)
+        void onRefreshRef.current().finally(() => {
+          refreshingRef.current = false
+          setRefreshing(false)
+        })
+      } else {
+        setPullY(0)
+      }
+    }
+
+    // passive: false on touchmove so preventDefault() actually works on iOS
+    container.addEventListener('touchstart', handleTouchStart, { passive: true })
+    container.addEventListener('touchmove', handleTouchMove, { passive: false })
+    container.addEventListener('touchend', handleTouchEnd, { passive: true })
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart)
+      container.removeEventListener('touchmove', handleTouchMove)
+      container.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, []) // stable — all mutable state accessed via refs
 
   const progress = Math.min(pullY / THRESHOLD, 1)
   const showIndicator = pullY > 4 || refreshing
 
   return (
     <div
+      ref={containerRef}
       className={cn('relative flex-1 min-h-0 overflow-auto', className)}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {showIndicator && (
         <div
@@ -74,10 +124,7 @@ export function PullToRefresh({ onRefresh, children, className, disabled }: Pull
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={cn(
-                'text-fg-subtle transition-transform duration-100',
-                refreshing && 'animate-spin',
-              )}
+              className={cn('text-fg-subtle', refreshing && 'animate-spin')}
               style={{ transform: refreshing ? undefined : `rotate(${progress * 360}deg)` }}
               aria-hidden
             >
@@ -87,8 +134,12 @@ export function PullToRefresh({ onRefresh, children, className, disabled }: Pull
         </div>
       )}
       <div
-        style={{ transform: pullY > 0 ? `translateY(${pullY}px)` : undefined, willChange: pullY > 0 ? 'transform' : undefined }}
-        className="transition-transform duration-100 ease-out"
+        style={{
+          transform: pullY > 0 ? `translateY(${pullY}px)` : undefined,
+          willChange: pullY > 0 ? 'transform' : undefined,
+        }}
+        // Transition only on release/snap-back, not during active drag
+        className={cn(!isDragging && 'transition-transform duration-200 ease-out')}
       >
         {children}
       </div>

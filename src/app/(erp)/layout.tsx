@@ -24,14 +24,15 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') ?? headersList.get('x-invoke-path') ?? ''
 
-  const capabilities = await resolveCapabilities(session)
-  let enabledModules: OrgModuleKey[] | undefined
+  const [capabilities, settings] = await Promise.all([
+    resolveCapabilities(session),
+    orgId ? getEffectiveOrganizationSettings(orgId) : Promise.resolve(null),
+  ])
+
+  let enabledModules: OrgModuleKey[] | undefined = settings?.enabled_modules
   let showOnboardingResume = false
 
   if (orgId) {
-    const settings = await getEffectiveOrganizationSettings(orgId)
-    enabledModules = settings.enabled_modules
-
     const canManageOnboarding = capabilities?.onboarding.manage ?? false
 
     if (canManageOnboarding) {
