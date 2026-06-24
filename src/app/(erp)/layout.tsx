@@ -29,7 +29,7 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
     orgId ? getEffectiveOrganizationSettings(orgId) : Promise.resolve(null),
   ])
 
-  let enabledModules: OrgModuleKey[] | undefined = settings?.enabled_modules
+  const enabledModules: OrgModuleKey[] | undefined = settings?.enabled_modules
   let showOnboardingResume = false
 
   if (orgId) {
