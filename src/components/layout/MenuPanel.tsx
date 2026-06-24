@@ -9,6 +9,7 @@ import { useSidebar } from './SidebarContext'
 import { NAV_MAIN, NAV_MODULES, NAV_SYSTEM, isModuleNavVisible, type NavItem } from './nav-items'
 import { type OrgModuleKey } from '@/modules/auth/organization-modules'
 import { useCapabilities } from './CapabilitiesContext'
+import { AppVersion } from './AppVersion'
 
 interface MenuPanelProps {
   enabledModules?: OrgModuleKey[]
@@ -283,6 +284,9 @@ export function MenuPanel({
             </svg>
             Cerrar sesión
           </button>
+          <div className="mt-3 flex justify-center">
+            <AppVersion />
+          </div>
         </div>
       </div>
     </div>
