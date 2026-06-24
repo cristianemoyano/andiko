@@ -1,13 +1,22 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { type MobileColumnRole } from './DataTable'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+} from '@/components/primitives/DropdownMenu'
 
 export interface GroupedColumn<T> {
   key: string
   header: string
   render?: (row: T) => React.ReactNode
+  /** Mobile-only renderer for actions columns. Return DropdownMenuItem elements. */
+  mobileRender?: (row: T) => React.ReactNode
   align?: 'left' | 'right'
   className?: string
+  mobileRole?: MobileColumnRole
 }
 
 export interface RowGroup<P extends object, C extends object> {
@@ -28,6 +37,134 @@ interface GroupedDataTableProps<P extends object, C extends object> {
   footer?: React.ReactNode
   emptyMessage?: string
   className?: string
+  /** Render card list on viewports below md. Default true. */
+  mobileList?: boolean
+}
+
+function renderGroupedCell<T extends object>(col: GroupedColumn<T>, row: T): React.ReactNode {
+  return col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '')
+}
+
+function GroupedMobileCard<P extends object>({
+  row,
+  columns,
+  onActivate,
+}: {
+  row: P
+  columns: GroupedColumn<P>[]
+  onActivate?: () => void
+}) {
+  const byRole = (role: MobileColumnRole) =>
+    columns.filter(c => c.mobileRole === role).map(c => renderGroupedCell(c, row))
+
+  const titleContent = byRole('title')[0]
+  const subtitleContents = byRole('subtitle')
+  const badge = byRole('badge')[0]
+  const amount = byRole('amount')[0]
+
+  const actionsColumns = columns.filter(c => c.mobileRole === 'actions')
+  const actionsMenuContent = actionsColumns.find(c => c.mobileRender)?.mobileRender?.(row) ?? null
+  const actionsLegacy = actionsColumns
+    .filter(c => !c.mobileRender)
+    .map(c => renderGroupedCell(c, row))
+  const hasActions = actionsMenuContent !== null || actionsLegacy.length > 0
+
+  return (
+    <div
+      role={onActivate ? 'link' : undefined}
+      tabIndex={onActivate ? 0 : undefined}
+      onClick={
+        onActivate
+          ? e => {
+              const t = e.target as HTMLElement | null
+              if (t?.closest('button, a, [role="button"], [data-stop-row-click]')) return
+              onActivate()
+            }
+          : undefined
+      }
+      onKeyDown={
+        onActivate
+          ? e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onActivate()
+              }
+            }
+          : undefined
+      }
+      className={cn(
+        'relative block w-full text-left px-4 py-3.5 transition-colors',
+        hasActions ? 'pr-12' : '',
+        onActivate && 'cursor-pointer hover:bg-surface-muted active:bg-surface-muted',
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          {titleContent && (
+            <div className="text-fg leading-snug">{titleContent}</div>
+          )}
+          {subtitleContents.length > 0 && (
+            <div className="mt-0.5 text-[13px] text-fg-muted truncate">
+              {subtitleContents.map((node, i) => (
+                <span key={i}>{i > 0 ? ' · ' : null}{node}</span>
+              ))}
+            </div>
+          )}
+          {badge && <div className="mt-2">{badge}</div>}
+        </div>
+        {(amount || onActivate) && (
+          <div className="flex items-center gap-1.5 shrink-0 min-w-0 mt-0.5">
+            {amount && (
+              <span className="text-[15px] font-semibold text-fg tabular-nums">{amount}</span>
+            )}
+            {onActivate && (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-fg-subtle shrink-0"
+                aria-hidden
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            )}
+          </div>
+        )}
+      </div>
+
+      {hasActions && (
+        <div className="absolute top-2 right-2" data-stop-row-click>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Acciones"
+                className="flex items-center justify-center w-8 h-8 rounded-md text-fg-subtle hover:bg-surface-hover transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {actionsMenuContent ?? (
+                <div className="[&_button]:!flex [&_button]:!w-full [&_button]:!justify-start [&_button]:!h-auto [&_button]:!text-[13px] [&_button]:!py-1.5 [&_button]:!px-2.5 [&_button]:!font-normal [&_button]:!rounded-[3px]">
+                  {actionsLegacy.map((node, i) => (
+                    <div key={i}>{node}</div>
+                  ))}
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function GroupedDataTable<P extends object, C extends object>({
@@ -41,6 +178,7 @@ export function GroupedDataTable<P extends object, C extends object>({
   footer,
   emptyMessage = 'Sin registros.',
   className,
+  mobileList = true,
 }: GroupedDataTableProps<P, C>) {
   return (
     <div className={cn('bg-surface border border-border rounded', className)}>
@@ -50,7 +188,24 @@ export function GroupedDataTable<P extends object, C extends object>({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      {mobileList && (
+        <div className="md:hidden divide-y divide-border">
+          {groups.length === 0 ? (
+            <div className="px-4 py-10 text-center text-sm text-fg-subtle">{emptyMessage}</div>
+          ) : (
+            groups.map(({ parent }) => (
+              <GroupedMobileCard
+                key={parentKey(parent)}
+                row={parent}
+                columns={parentColumns}
+                onActivate={onRowClick ? () => onRowClick(parent) : undefined}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      <div className={cn('overflow-x-auto', mobileList && 'hidden md:block')}>
         <table className="w-full border-collapse">
           <thead>
             <tr>
