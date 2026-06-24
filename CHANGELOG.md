@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.20.0](https://127.0.0.1/41729/git/cristianemoyano/compare/v0.17.1...v0.20.0) (2026-06-24)
+
+### Features
+
+* **mobile:** mobile UX phase 2 — PageBody, MenuPanel, TopBar, DataTable actions ([#77](https://127.0.0.1/41729/git/cristianemoyano/issues/77)) ([96b51f8](https://127.0.0.1/41729/git/cristianemoyano/commit/96b51f8015febdf9799438aceb55fa000d1b5914))
+* **pwa:** startup perf + mobile UX improvements ([4d48246](https://127.0.0.1/41729/git/cristianemoyano/commit/4d482468737cd05d7583c5944ff4eb0a48d19443))
+
+### Bug Fixes
+
+* **core:** fix pre-existing lint errors (prefer-const, stale refs, unused import) ([2776718](https://127.0.0.1/41729/git/cristianemoyano/commit/27767183160be50ad9eafd64dc5816ac5c766e37))
+* **core:** show app version in mobile menu panel ([f7252c9](https://127.0.0.1/41729/git/cristianemoyano/commit/f7252c933c3a2ef0b09c42d98c44b585e18cf5e4))
+* **pwa:** fix adversarial-review findings — parallelise layout DB calls, fix PullToRefresh bugs, add mobileRender for accessible kebab menu ([5cb6ca7](https://127.0.0.1/41729/git/cristianemoyano/commit/5cb6ca7ad4f16333fb3de3e2a8839e2d2c9ee750))
+
 ## [0.19.0](https://github.com/cristianemoyano/andiko/compare/v0.18.0...v0.19.0) (2026-06-24)
 
 ### Features
