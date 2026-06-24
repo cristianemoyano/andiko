@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.19.0](https://github.com/cristianemoyano/andiko/compare/v0.18.0...v0.19.0) (2026-06-24)
+
+### Features
+
+* **pwa:** parallelize ERP layout DB calls to eliminate iPhone black screen on cold start ([703fa79](https://github.com/cristianemoyano/andiko/commit/703fa79))
+* **pwa:** fix PullToRefresh bugs — no-lag gesture tracking, stale-ref fix, iOS scroll-lock prevention ([5cb6ca7](https://github.com/cristianemoyano/andiko/commit/5cb6ca7))
+* **pwa:** migrate DataTable kebab menu to Radix DropdownMenuItem for keyboard nav and accessibility ([703fa79](https://github.com/cristianemoyano/andiko/commit/703fa79))
+* **pwa:** add `actions` role support to GroupedMobileCard ([703fa79](https://github.com/cristianemoyano/andiko/commit/703fa79))
+* **pwa:** wire pull-to-refresh in Contactos and Catálogo via PageBody onRefresh prop ([703fa79](https://github.com/cristianemoyano/andiko/commit/703fa79))
+
 ## [0.18.0](https://127.0.0.1/37255/git/cristianemoyano/compare/v0.17.1...v0.18.0) (2026-06-23)
 
 ### Features
