@@ -1,6 +1,5 @@
 import 'server-only'
 import Decimal from 'decimal.js'
-import { Op } from 'sequelize'
 import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
 import Product from './product.model'

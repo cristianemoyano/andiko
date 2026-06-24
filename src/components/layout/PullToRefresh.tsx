@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useLayoutEffect } from 'react'
 import { cn } from '@/lib/utils'
 
 const THRESHOLD = 64
@@ -23,8 +23,10 @@ export function PullToRefresh({ onRefresh, children, className, disabled }: Pull
   const disabledRef = useRef(disabled)
   const refreshingRef = useRef(false)
 
-  onRefreshRef.current = onRefresh
-  disabledRef.current = disabled
+  useLayoutEffect(() => {
+    onRefreshRef.current = onRefresh
+    disabledRef.current = disabled
+  })
 
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
