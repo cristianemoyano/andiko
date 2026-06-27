@@ -2332,6 +2332,13 @@ async function authorizePosSaleInCloud(payload) {
     6e4
   );
 }
+async function postPosReturnToCloud(orderId, payload) {
+  return fetchCloud(
+    `/api/v1/pos/sales/${orderId}/return`,
+    { method: "POST", body: JSON.stringify(payload) },
+    3e4
+  );
+}
 async function syncCatalog() {
   const s = getSettings$1();
   const since = s["catalog_synced_at"] ?? "1970-01-01T00:00:00.000Z";
@@ -2425,7 +2432,7 @@ async function syncPendingSales() {
     payments: JSON.parse(s.payments ?? "[]"),
     sold_at: s.sold_at,
     items: (itemsBySaleId[s.id] ?? []).map((i) => ({
-      variant_id: i.product_id,
+      product_id: i.product_id,
       description: i.product_name,
       qty: i.qty,
       unit_price: i.unit_price,
@@ -2736,6 +2743,7 @@ function buildAuthorizePayloadFromLocalSale(saleId) {
     payments,
     sold_at: sale.sold_at,
     items: items.map((item) => ({
+      product_id: item.product_id,
       description: item.product_name,
       qty: item.qty,
       unit_price: item.unit_price,
@@ -2786,7 +2794,12 @@ async function completePosCheckout(args) {
     registerError = parseCloudError(err);
     const existing = d.select().from(syncQueue).where(drizzleOrm.eq(syncQueue.sale_id, args.saleId)).get();
     if (!existing) {
-      d.insert(syncQueue).values({ sale_id: args.saleId, attempts: 0, last_error: registerError }).run();
+      d.insert(syncQueue).values({
+        sale_id: args.saleId,
+        attempts: 0,
+        last_error: registerError,
+        created_at: now
+      }).run();
     }
   }
   try {
@@ -2856,6 +2869,7 @@ function buildAuthorizePayload(id, payload, soldAt) {
     payments: payload.payments,
     sold_at: soldAt,
     items: payload.items.map((i) => ({
+      product_id: i.product_id,
       description: i.product_name,
       qty: i.qty,
       unit_price: i.unit_price,
@@ -2914,6 +2928,26 @@ function registerSalesHandlers(ipc) {
       afip_status: result.afip_status,
       fiscal_pending: result.fiscal_pending
     };
+  });
+  ipc.handle("sales:return", async (_e, payload) => {
+    const sale = db().select().from(sales).where(drizzleOrm.eq(sales.id, payload.sale_id)).get();
+    if (!sale) throw new Error("Venta no encontrada");
+    if (!sale.cloud_id) throw new Error("La venta aún no está sincronizada con el servidor");
+    const localItems = db().select().from(saleItems).where(drizzleOrm.eq(saleItems.sale_id, payload.sale_id)).all();
+    const nameByProductId = new Map(localItems.map((i) => [i.product_id, i.product_name]));
+    const items = payload.items.map((i) => ({
+      product_id: i.product_id,
+      quantity: i.quantity,
+      description: nameByProductId.get(i.product_id)
+    }));
+    if (items.length === 0) throw new Error("Indicá al menos un ítem a devolver");
+    return postPosReturnToCloud(sale.cloud_id, {
+      pos_local_id: payload.pos_local_id,
+      operation_type: payload.operation_type ?? "return",
+      items,
+      exchange_items: payload.exchange_items,
+      refund_disposition: payload.refund_disposition ?? "account_credit"
+    });
   });
   ipc.handle("sales:list-today", async () => {
     const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
@@ -3128,6 +3162,7 @@ function registerDraftSalesHandlers(ipc) {
           payments: args.payments,
           sold_at: soldAt,
           items: items.map((item) => ({
+            product_id: item.product_id,
             description: item.product_name,
             qty: item.qty,
             unit_price: item.unit_price,

@@ -39,6 +39,7 @@ electron.contextBridge.exposeInMainWorld("pos", {
     list: (args) => electron.ipcRenderer.invoke("sales:list", args),
     get: (saleId) => electron.ipcRenderer.invoke("sales:get", saleId),
     authorizeFiscal: (saleId) => electron.ipcRenderer.invoke("sales:authorizeFiscal", saleId),
+    return: (payload) => electron.ipcRenderer.invoke("sales:return", payload),
     closingReport: (date) => electron.ipcRenderer.invoke("sales:closingReport", date)
   },
   paymentMethods: {

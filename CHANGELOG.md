@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.24.0](https://github.com/cristianemoyano/andiko/compare/v0.23.0...v0.24.0) (2026-06-27)
+
+### Features
+
+* **sales:** devoluciones y cambios de venta con NC, stock y POS ([b06ef86](https://github.com/cristianemoyano/andiko/commit/b06ef8629520abb20c407e19ab3c5dc58f317eba))
+
 ## [0.23.0](https://github.com/cristianemoyano/andiko/compare/v0.22.0...v0.23.0) (2026-06-27)
 
 ### Features
