@@ -372,6 +372,42 @@ detrás de un adaptador mockeable (`AFIP_MODE=stub|homologacion|produccion`).
 
 ---
 
+## Facturación de Plataforma (SaaS Billing)
+
+Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cada org por su suscripción (base + por-seat + add-ons de módulo + uso metered). Solo accesible desde el panel sys-admin (fase 1 — sin self-service de org ni gateway de pagos).
+
+### Backend (completado)
+- [x] Migraciones: `billing_plans`, `billing_plan_modules`, `billing_metrics`, `org_subscriptions`, `subscription_addons`, `billing_sequences`, `billing_invoices`, `billing_invoice_items`, `billing_payments`, `usage_records`
+- [x] Modelos Sequelize con tipos estrictos para las 10 tablas del módulo
+- [x] `billing.math.ts` — cálculo de cargos con `Decimal.js` (base + overage de seats + add-ons + uso metered + IVA 21%)
+- [x] `billing.numbering.ts` — numeración global atómica (FAC-XXXXXX / PAG-XXXXXX) vía `billing_sequences` con `ON CONFLICT DO UPDATE`
+- [x] Schemas Zod para todos los recursos (create / partial-update / query con paginación)
+- [x] `billing-plans.service.ts` — CRUD del catálogo de planes
+- [x] `subscriptions.service.ts` — asignación de plan a org, cambio de plan/seats/add-ons, transiciones de estado
+- [x] `billing-invoices.service.ts` — `generateInvoiceForPeriod`, `issueBillingInvoice`, `voidBillingInvoice`, `recalcBillingInvoiceBalance` (atómico en transacción)
+- [x] `billing-payments.service.ts` — registrar/eliminar pago con recálculo atómico de saldo (`SELECT FOR UPDATE` contra race conditions)
+- [x] `usage.service.ts` — registro y agregación de uso metered por período
+- [x] API REST bajo `/api/v1/sys-admin/billing/` — plans, subscriptions, invoices, payments, metrics, usage — todos con `requireSysAdmin()`
+- [x] Tests unitarios: `billing.math.test.ts`, `billing-invoices.service.test.ts`, `billing-payments.service.test.ts`, `subscriptions.service.test.ts` (25 test cases)
+
+### Frontend (completado)
+- [x] `/sys-admin/billing` — dashboard con `StatCard`s (total/activas/vencidas), tabla de suscripciones, navegación a planes
+- [x] `/sys-admin/billing/planes` — catálogo de planes con CRUD modal; grid de add-ons mobile-safe
+- [x] `/sys-admin/billing/suscripciones/[id]` — detalle: info card semántico `<dl>/<dt>/<dd>`, listado de facturas con acciones contextuales, modal generar factura, modal registrar pago, confirmación de anulación
+- [x] `StatCard` — primitiva reutilizable en `src/components/erp/StatCard.tsx` (label, value, tone)
+- [x] `SubscriptionModal` — patrón de formulario interno (remount en cada apertura, sin estado residual)
+- [x] Mobile UX: `mobileRender` en todas las columnas `_actions`, skeletons de carga, DataTable con roles mobile
+- [x] Entrada "Facturación" en sidebar sys-admin (desktop y mobile)
+
+### Pendientes (fases futuras)
+- [ ] Gateway de pagos (Mercado Pago / Stripe) + webhooks para débito automático
+- [ ] Portal self-service de facturación para la org
+- [ ] Factura electrónica AFIP (CAE) de la plataforma hacia las orgs
+- [ ] Generación automática de facturas recurrentes (cron)
+- [ ] Dunning / suspensión automática en `past_due`
+
+---
+
 ## Fase 7 — Contabilidad
 
 Módulo contable básico. Depende de todos los módulos anteriores.
