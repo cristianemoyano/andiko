@@ -127,7 +127,7 @@ export function FacturacionClient() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopBar breadcrumbs={[{ label: 'Facturación' }]} />
+      <TopBar breadcrumbs={[{ label: 'Suscripción' }]} />
 
       <PageBody>
         {loading ? (
@@ -202,7 +202,7 @@ export function FacturacionClient() {
 
             {/* Invoices */}
             <section>
-              <h2 className="text-[13px] font-semibold text-fg mb-2">Facturas</h2>
+              <h2 className="text-[13px] font-semibold text-fg mb-2">Facturas de tu suscripción</h2>
               <DataTable
                 columns={columns}
                 data={invoices}

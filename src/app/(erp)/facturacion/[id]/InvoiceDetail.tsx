@@ -100,7 +100,7 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
 
   return (
     <div className="flex flex-col h-full">
-      <TopBar breadcrumbs={[{ label: 'Facturación', href: '/facturacion' }, { label: invoice?.invoice_number ?? 'Factura' }]} />
+      <TopBar breadcrumbs={[{ label: 'Suscripción', href: '/facturacion' }, { label: invoice?.invoice_number ?? 'Factura' }]} />
 
       <PageBody>
         {loading ? (

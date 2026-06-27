@@ -289,7 +289,7 @@ export function MenuPanel({
             <MenuRow
               item={{
                 id: 'facturacion',
-                label: 'Facturación',
+                label: 'Suscripción',
                 href: '/facturacion',
                 icon: (
                   <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
