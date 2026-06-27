@@ -129,14 +129,14 @@ function PlanModalForm({ plan, onClose, onSaved }: Omit<PlanModalProps, 'open'>)
           <div className="flex flex-col gap-2">
             {ORG_MODULE_DEFS.map(d => (
               <div key={d.key} className="flex items-center gap-3 rounded-sm border border-border px-3 py-2">
-                <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
                   <Checkbox
                     checked={modules[d.key].included}
                     onCheckedChange={v => setModule(d.key, { included: v === true })}
                   />
-                  <span className="text-[13px] text-fg">{d.label}</span>
+                  <span className="text-[13px] text-fg truncate">{d.label}</span>
                 </label>
-                <div className="w-40">
+                <div className="w-32 shrink-0">
                   <CurrencyInput
                     value={modules[d.key].addon_price}
                     onChange={v => setModule(d.key, { addon_price: v })}

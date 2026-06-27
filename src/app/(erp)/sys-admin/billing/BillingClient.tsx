@@ -4,9 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, type Column } from '@/components/erp'
+import { DataTable, type Column, StatCard } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
+import { Skeleton } from '@/components/primitives/Skeleton'
+import { DropdownMenuItem } from '@/components/primitives/DropdownMenu'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { SubscriptionModal } from './SubscriptionModal'
 import { fetchJson } from '@/lib/fetch-json'
@@ -45,6 +47,7 @@ export function BillingClient() {
   const router = useRouter()
   const [rows, setRows] = useState<SubscriptionRow[]>([])
   const [orgNames, setOrgNames] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(0)
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -52,17 +55,20 @@ export function BillingClient() {
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
     void (async () => {
       try {
         const [subs, orgs] = await Promise.all([
           fetchJson<{ data: SubscriptionRow[] }>('/api/v1/sys-admin/billing/subscriptions?limit=100'),
-          fetchJson<{ data: OrgRef[] }>('/api/v1/sys-admin/organizations'),
+          fetchJson<{ data: OrgRef[] }>('/api/v1/sys-admin/organizations?limit=500'),
         ])
         if (cancelled) return
         setRows(subs.data ?? [])
         setOrgNames(Object.fromEntries((orgs.data ?? []).map(o => [o.id, o.name])))
       } catch {
         if (!cancelled) setRows([])
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     })()
     return () => { cancelled = true }
@@ -113,6 +119,11 @@ export function BillingClient() {
           Gestionar
         </Button>
       ),
+      mobileRender: row => (
+        <DropdownMenuItem onSelect={() => router.push(`/sys-admin/billing/suscripciones/${row.id}`)}>
+          Gestionar
+        </DropdownMenuItem>
+      ),
     },
   ]
 
@@ -134,18 +145,26 @@ export function BillingClient() {
 
       <PageBody>
         <div className="flex flex-wrap gap-3 mb-4">
-          <SummaryCard label="Suscripciones" value={String(rows.length)} />
-          <SummaryCard label="Activas" value={String(activeCount)} />
-          <SummaryCard label="Vencidas" value={String(pastDueCount)} tone={pastDueCount > 0 ? 'danger' : 'default'} />
+          <StatCard label="Suscripciones" value={String(rows.length)} />
+          <StatCard label="Activas" value={String(activeCount)} />
+          <StatCard label="Vencidas" value={String(pastDueCount)} tone={pastDueCount > 0 ? 'danger' : 'default'} />
         </div>
 
-        <DataTable
-          columns={columns}
-          data={rows}
-          keyExtractor={r => r.id}
-          emptyMessage="No hay suscripciones. Creá la primera."
-          onRowClick={row => router.push(`/sys-admin/billing/suscripciones/${row.id}`)}
-        />
+        {loading ? (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} shape="block" className="h-12 w-full" />
+            ))}
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={rows}
+            keyExtractor={r => r.id}
+            emptyMessage="No hay suscripciones. Creá la primera."
+            onRowClick={row => router.push(`/sys-admin/billing/suscripciones/${row.id}`)}
+          />
+        )}
       </PageBody>
 
       <SubscriptionModal
@@ -153,15 +172,6 @@ export function BillingClient() {
         onClose={() => setModalOpen(false)}
         onSaved={() => setRefresh(r => r + 1)}
       />
-    </div>
-  )
-}
-
-function SummaryCard({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'danger' }) {
-  return (
-    <div className="rounded-md border border-border bg-surface px-4 py-3 min-w-[140px]">
-      <div className="text-[12px] text-fg-muted">{label}</div>
-      <div className={`text-[20px] font-semibold tabular-nums ${tone === 'danger' ? 'text-danger' : 'text-fg'}`}>{value}</div>
     </div>
   )
 }

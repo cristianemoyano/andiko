@@ -8,6 +8,8 @@ import { DataTable, type Column } from '@/components/erp'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
+import { Skeleton } from '@/components/primitives/Skeleton'
+import { DropdownMenuItem } from '@/components/primitives/DropdownMenu'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { GenerateInvoiceModal } from './GenerateInvoiceModal'
 import { RecordPaymentModal } from './RecordPaymentModal'
@@ -34,6 +36,14 @@ interface InvoiceRow {
   balance: string
 }
 
+const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
+  trialing: 'Prueba',
+  active: 'Activa',
+  past_due: 'Vencida',
+  paused: 'Pausada',
+  cancelled: 'Cancelada',
+}
+
 const INVOICE_STATUS_LABELS: Record<BillingInvoiceStatus, string> = {
   draft: 'Borrador',
   issued: 'Emitida',
@@ -46,6 +56,7 @@ export function SubscriptionDetail({ subscriptionId }: { subscriptionId: string 
   const router = useRouter()
   const [sub, setSub] = useState<Subscription | null>(null)
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
+  const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(0)
   const [genOpen, setGenOpen] = useState(false)
   const [payInvoice, setPayInvoice] = useState<InvoiceRow | null>(null)
@@ -54,6 +65,7 @@ export function SubscriptionDetail({ subscriptionId }: { subscriptionId: string 
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
     void (async () => {
       try {
         const [s, inv] = await Promise.all([
@@ -65,6 +77,8 @@ export function SubscriptionDetail({ subscriptionId }: { subscriptionId: string 
         setInvoices(inv.data ?? [])
       } catch {
         if (!cancelled) { setSub(null); setInvoices([]) }
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     })()
     return () => { cancelled = true }
@@ -93,7 +107,9 @@ export function SubscriptionDetail({ subscriptionId }: { subscriptionId: string 
     { key: 'total', header: 'Total', align: 'right', mobileRole: 'amount', render: r => <span className="tabular-nums">{formatARS(r.total)}</span> },
     { key: 'balance', header: 'Saldo', align: 'right', mobileRole: 'subtitle', render: r => <span className="tabular-nums">{formatARS(r.balance)}</span> },
     {
-      key: '_actions', header: '', mobileRole: 'actions',
+      key: '_actions',
+      header: '',
+      mobileRole: 'actions',
       render: r => (
         <div className="flex gap-1 justify-end">
           {r.status === 'draft' && <Button variant="ghost" size="xs" onClick={() => issueInvoice(r.id)}>Emitir</Button>}
@@ -105,6 +121,19 @@ export function SubscriptionDetail({ subscriptionId }: { subscriptionId: string 
           )}
         </div>
       ),
+      mobileRender: r => (
+        <>
+          {r.status === 'draft' && (
+            <DropdownMenuItem onSelect={() => issueInvoice(r.id)}>Emitir</DropdownMenuItem>
+          )}
+          {(r.status === 'issued' || r.status === 'partially_paid') && (
+            <DropdownMenuItem onSelect={() => setPayInvoice(r)}>Registrar pago</DropdownMenuItem>
+          )}
+          {(r.status === 'draft' || r.status === 'issued') && Number(r.paid_amount) === 0 && (
+            <DropdownMenuItem variant="destructive" onSelect={() => setVoidInvoice(r)}>Anular</DropdownMenuItem>
+          )}
+        </>
+      ),
     },
   ]
 
@@ -115,25 +144,50 @@ export function SubscriptionDetail({ subscriptionId }: { subscriptionId: string 
         actions={<Button size="sm" onClick={() => setGenOpen(true)} disabled={!sub}>+ Generar factura</Button>}
       />
       <PageBody>
-        {sub && (
-          <div className="rounded-md border border-border bg-surface px-4 py-3 mb-4 flex flex-wrap gap-x-8 gap-y-2">
-            <Field label="Plan" value={sub.plan?.name ?? '—'} />
-            <Field label="Usuarios" value={String(sub.seats)} />
-            <Field label="Estado" value={<StatusBadge value={sub.status} />} />
-            <Field label="Precio base" value={sub.plan ? formatARS(sub.plan.base_price) : '—'} />
+        {loading ? (
+          <div className="flex flex-col gap-3 mb-4">
+            <Skeleton shape="block" className="h-20 w-full" />
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 3 }, (_, i) => (
+                <Skeleton key={i} shape="block" className="h-12 w-full" />
+              ))}
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            {sub && (
+              <dl className="rounded-md border border-border bg-surface px-4 py-3 mb-4 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3">
+                <div>
+                  <dt className="text-[12px] text-fg-muted">Plan</dt>
+                  <dd className="text-[14px] font-medium text-fg">{sub.plan?.name ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] text-fg-muted">Usuarios</dt>
+                  <dd className="text-[14px] font-medium text-fg tabular-nums">{sub.seats}</dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] text-fg-muted">Estado</dt>
+                  <dd className="mt-0.5"><StatusBadge value={SUBSCRIPTION_STATUS_LABELS[sub.status]} /></dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] text-fg-muted">Precio base</dt>
+                  <dd className="text-[14px] font-medium text-fg tabular-nums">{sub.plan ? formatARS(sub.plan.base_price) : '—'}</dd>
+                </div>
+              </dl>
+            )}
 
-        {error && (
-          <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2 mb-4">{error}</p>
-        )}
+            {error && (
+              <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2 mb-4">{error}</p>
+            )}
 
-        <DataTable
-          columns={columns}
-          data={invoices}
-          keyExtractor={r => r.id}
-          emptyMessage="No hay facturas. Generá la primera."
-        />
+            <DataTable
+              columns={columns}
+              data={invoices}
+              keyExtractor={r => r.id}
+              emptyMessage="No hay facturas. Generá la primera."
+            />
+          </>
+        )}
 
         <div className="mt-4">
           <Button variant="ghost" size="xs" onClick={() => router.push('/sys-admin/billing')}>← Volver</Button>
@@ -163,15 +217,6 @@ export function SubscriptionDetail({ subscriptionId }: { subscriptionId: string 
         confirmLabel="Anular"
         onConfirm={doVoid}
       />
-    </div>
-  )
-}
-
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-[12px] text-fg-muted">{label}</div>
-      <div className="text-[14px] font-medium text-fg">{value}</div>
     </div>
   )
 }
