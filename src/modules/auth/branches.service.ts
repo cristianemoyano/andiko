@@ -8,7 +8,11 @@ export async function listActiveBranchesForOrg(orgId: string) {
   return Branch.findAll({
     where: { org_id: orgId, is_active: true },
     order: [['branch_code', 'ASC'], ['name', 'ASC']],
-    attributes: ['id', 'org_id', 'name', 'branch_code', 'address', 'is_active'],
+    attributes: [
+      'id', 'org_id', 'name', 'branch_code', 'address',
+      'street', 'number', 'floor', 'apartment', 'city', 'province', 'postal_code', 'country',
+      'is_active',
+    ],
   })
 }
 
@@ -43,6 +47,10 @@ export async function listActiveBranchesForUser(orgId: string, userId: string) {
       id: { [Op.in]: branchIds },
     },
     order: [['branch_code', 'ASC'], ['name', 'ASC']],
-    attributes: ['id', 'org_id', 'name', 'branch_code', 'address', 'is_active'],
+    attributes: [
+      'id', 'org_id', 'name', 'branch_code', 'address',
+      'street', 'number', 'floor', 'apartment', 'city', 'province', 'postal_code', 'country',
+      'is_active',
+    ],
   })
 }

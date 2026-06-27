@@ -40,15 +40,29 @@ export const organizationUpdateSchema = z.object({
   ...fiscalFields,
 })
 
+const branchAddressFields = {
+  street:      z.string().max(255).nullable().optional(),
+  number:      z.string().max(20).nullable().optional(),
+  floor:       z.string().max(20).nullable().optional(),
+  apartment:   z.string().max(20).nullable().optional(),
+  city:        z.string().max(100).nullable().optional(),
+  province:    z.string().max(100).nullable().optional(),
+  postal_code: z.string().max(10).nullable().optional(),
+  country:     z.string().max(100).nullable().optional(),
+}
+
 export const branchCreateSchema = z.object({
   name: z.string().min(1).max(255),
+  // Legacy free-text address; kept for back-compat. New clients send structured fields.
   address: z.string().max(500).nullable().optional(),
+  ...branchAddressFields,
 })
 
 export const branchUpdateSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   address: z.string().max(500).nullable().optional(),
   is_active: z.boolean().optional(),
+  ...branchAddressFields,
 })
 
 export const organizationSettingsUpdateSchema = z.object({
