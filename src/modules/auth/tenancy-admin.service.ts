@@ -4,6 +4,7 @@ import sequelize from '@/lib/db'
 import Organization, { type OrgIvaCondition } from '@/modules/auth/organization.model'
 import Branch from '@/modules/auth/branch.model'
 import { slugifyText } from '@/lib/slug'
+import { formatAddress } from '@/lib/format-address'
 import { seedDefaultChartOfAccounts } from '@/modules/accounting/chart-seed'
 import { seedDefaultOrgRoles } from '@/modules/auth/org-roles.service'
 import type {
@@ -87,7 +88,11 @@ export async function getOrganizationWithBranches(id: string) {
   const branches = await Branch.findAll({
     where: { org_id: id },
     order: [['branch_code', 'ASC'], ['name', 'ASC']],
-    attributes: ['id', 'org_id', 'branch_code', 'name', 'address', 'is_active', 'created_at', 'updated_at'],
+    attributes: [
+      'id', 'org_id', 'branch_code', 'name', 'address',
+      'street', 'number', 'floor', 'apartment', 'city', 'province', 'postal_code', 'country',
+      'is_active', 'created_at', 'updated_at',
+    ],
   })
   return { organization: org, branches }
 }
@@ -168,6 +173,14 @@ export async function getOrganizationDetailForTenant(orgId: string) {
       branch_code: b.branch_code,
       name: b.name,
       address: b.address,
+      street: b.street,
+      number: b.number,
+      floor: b.floor,
+      apartment: b.apartment,
+      city: b.city,
+      province: b.province,
+      postal_code: b.postal_code,
+      country: b.country,
       is_active: b.is_active,
     })),
   }
@@ -189,6 +202,27 @@ export async function deleteOrganization(id: string) {
   await org.destroy()
 }
 
+const ADDRESS_KEYS = ['street', 'number', 'floor', 'apartment', 'city', 'province', 'postal_code', 'country'] as const
+type BranchAddressColumns = { [K in (typeof ADDRESS_KEYS)[number]]: string | null }
+type AddressInput = Partial<Record<(typeof ADDRESS_KEYS)[number], string | null | undefined>>
+
+/** `undefined` keeps the current value; `''`/whitespace clears it to null. */
+function normField(value: string | null | undefined, fallback: string | null): string | null {
+  if (value === undefined) return fallback
+  if (value === null) return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+/** Resolve the 8 structured address columns, merging input over the current branch. */
+function pickAddressFields(input: AddressInput, current?: Branch): BranchAddressColumns {
+  const out = {} as BranchAddressColumns
+  for (const key of ADDRESS_KEYS) {
+    out[key] = normField(input[key], (current?.[key] ?? null) as string | null)
+  }
+  return out
+}
+
 export async function createBranch(orgId: string, input: BranchCreateInput) {
   const org = await Organization.findByPk(orgId)
   if (!org) throw new Error('ORG_NOT_FOUND')
@@ -200,12 +234,16 @@ export async function createBranch(orgId: string, input: BranchCreateInput) {
     const maxCode = typeof maxRaw === 'number' ? maxRaw : 0
     const branch_code = maxCode + 1
     if (branch_code > 9999) throw new Error('BRANCH_CODE_EXHAUSTED')
+    const structured = pickAddressFields(input)
     return Branch.create(
       {
         org_id: orgId,
         branch_code,
         name: input.name.trim(),
-        address: input.address ?? null,
+        ...structured,
+        // Derive the legacy one-line address from structured fields, falling
+        // back to any free-text address provided by legacy clients.
+        address: formatAddress(structured) || input.address?.trim() || null,
         is_active: true,
       },
       { transaction: t },
@@ -216,10 +254,21 @@ export async function createBranch(orgId: string, input: BranchCreateInput) {
 export async function updateBranch(id: string, input: BranchUpdateInput) {
   const branch = await Branch.findByPk(id)
   if (!branch) throw new Error('BRANCH_NOT_FOUND')
-  const next: Partial<{ name: string; address: string | null; is_active: boolean }> = {}
+
+  const next: Partial<BranchAddressColumns & { name: string; address: string | null; is_active: boolean }> = {}
   if (input.name !== undefined) next.name = input.name.trim()
-  if (input.address !== undefined) next.address = input.address
   if (input.is_active !== undefined) next.is_active = input.is_active
+
+  const touchesAddress = ADDRESS_KEYS.some(k => input[k] !== undefined) || input.address !== undefined
+  if (touchesAddress) {
+    const structured = pickAddressFields(input, branch)
+    Object.assign(next, structured)
+    // Re-derive from the structured fields; fall back to a legacy free-text
+    // `address` only. Do NOT fall back to the previous value, otherwise
+    // clearing every field would leave the derived address stale.
+    next.address = formatAddress(structured) || input.address?.trim() || null
+  }
+
   await branch.update(next)
   return branch.reload()
 }

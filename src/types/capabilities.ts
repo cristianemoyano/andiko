@@ -15,6 +15,8 @@ export type UiCapabilities = {
     organizaciones: boolean
     organizacionesHref: string | null
     configuracion: boolean
+    /** Panel de facturación de la propia organización (Gerente); no para sys-admin de plataforma. */
+    facturacion: boolean
   }
   organizacion: {
     detail: boolean

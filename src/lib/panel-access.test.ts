@@ -12,6 +12,7 @@ const baseCaps = (overrides: Partial<UiCapabilities['nav']> = {}): UiCapabilitie
     organizaciones: false,
     organizacionesHref: null,
     configuracion: true,
+    facturacion: false,
     ...overrides,
   },
   organizacion: {
