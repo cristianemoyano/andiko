@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.0](https://github.com/cristianemoyano/andiko/compare/v0.24.0...v0.25.0) (2026-06-27)
+
+### Features
+
+* **core:** progreso en import CSV y conversor WooCommerce ([41420da](https://github.com/cristianemoyano/andiko/commit/41420dae32ed9138bd4c6cddaa21a3e62b35deb2))
+* **purchases:** add returns and exchanges (devoluciones a proveedor) ([#89](https://github.com/cristianemoyano/andiko/issues/89)) ([659298a](https://github.com/cristianemoyano/andiko/commit/659298ac25c68c9c17d3108073f6790541aad088))
+
 ## [0.24.0](https://github.com/cristianemoyano/andiko/compare/v0.23.0...v0.24.0) (2026-06-27)
 
 ### Features
