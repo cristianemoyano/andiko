@@ -39,8 +39,23 @@ interface Invoice {
   total: string
   paid_amount: string
   balance: string
+  issuer_legal_name: string | null
+  issuer_cuit: string | null
+  issuer_iva_condition: string | null
+  issuer_fiscal_address: string | null
+  issuer_gross_income: string | null
+  issuer_email: string | null
+  issuer_phone: string | null
   items?: InvoiceItem[]
   payments?: InvoicePayment[]
+}
+
+const IVA_CONDITION_LABELS: Record<string, string> = {
+  responsable_inscripto: 'Responsable Inscripto',
+  monotributista: 'Monotributista',
+  exento: 'Exento',
+  no_responsable: 'No Responsable',
+  consumidor_final: 'Consumidor Final',
 }
 
 const INVOICE_STATUS_LABELS: Record<BillingInvoiceStatus, string> = {
@@ -148,6 +163,22 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                 <dd className="text-[14px] font-semibold text-fg tabular-nums">{formatARS(invoice.balance)}</dd>
               </div>
             </dl>
+
+            {invoice.issuer_legal_name && (
+              <section className="mb-4 rounded-md border border-border bg-surface px-4 py-3">
+                <h2 className="text-[13px] font-semibold text-fg mb-1">Emisor</h2>
+                <p className="text-[14px] font-medium text-fg">{invoice.issuer_legal_name}</p>
+                <div className="mt-0.5 text-[12px] text-fg-muted leading-relaxed">
+                  {invoice.issuer_cuit && <span>CUIT {invoice.issuer_cuit}</span>}
+                  {invoice.issuer_iva_condition && <span> · {IVA_CONDITION_LABELS[invoice.issuer_iva_condition] ?? invoice.issuer_iva_condition}</span>}
+                  {invoice.issuer_gross_income && <span> · IIBB {invoice.issuer_gross_income}</span>}
+                  {invoice.issuer_fiscal_address && <div>{invoice.issuer_fiscal_address}</div>}
+                  {(invoice.issuer_email || invoice.issuer_phone) && (
+                    <div>{[invoice.issuer_email, invoice.issuer_phone].filter(Boolean).join(' · ')}</div>
+                  )}
+                </div>
+              </section>
+            )}
 
             <section className="mb-4">
               <h2 className="text-[13px] font-semibold text-fg mb-2">Detalle</h2>

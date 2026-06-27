@@ -14,6 +14,7 @@ import BillingMetric from './billing-metric.model'
 import { calcSubscriptionCharges, calcBillingTotals } from './billing.math'
 import { nextBillingNumber } from './billing.numbering'
 import { aggregateUsage, markUsageInvoiced } from './usage.service'
+import { getResolvedBillerSettings } from './platform-billing-settings.service'
 import type { GenerateInvoiceInput, BillingInvoiceQuery } from './billing-invoice.schema'
 
 export async function listBillingInvoices(query: BillingInvoiceQuery) {
@@ -163,7 +164,29 @@ export async function issueBillingInvoice(id: string, actorId: string) {
     const issue_date = new Date()
     const due_date = invoice.due_date ?? defaultDueDate(issue_date)
 
-    await invoice.update({ status: 'issued', issue_date, due_date, updated_by: actorId }, { transaction: t })
+    // Snapshot the platform issuer ("emisor") onto the invoice at issue time so
+    // it stays accurate even if the platform later changes its fiscal details.
+    const issuer = await getResolvedBillerSettings()
+
+    await invoice.update(
+      {
+        status: 'issued',
+        issue_date,
+        due_date,
+        updated_by: actorId,
+        issuer_legal_name:     issuer?.legal_name ?? null,
+        issuer_cuit:           issuer?.cuit ?? null,
+        issuer_iva_condition:  issuer?.iva_condition ?? null,
+        issuer_fiscal_address: issuer?.fiscal_address ?? null,
+        issuer_gross_income:   issuer?.gross_income ?? null,
+        issuer_email:          issuer?.email ?? null,
+        issuer_phone:          issuer?.phone ?? null,
+      },
+      { transaction: t },
+    )
+    if (!issuer) {
+      logger.warn({ invoiceId: id, actorId }, 'billing invoice issued without configured issuer details')
+    }
     logger.info({ invoiceId: id, actorId }, 'billing invoice issued')
     return await invoice.reload({ transaction: t })
   })
