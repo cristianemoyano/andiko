@@ -1,12 +1,13 @@
 import type { IpcMain } from 'electron'
 import { db } from './db'
 import { sales, saleItems, customers } from '../db/schema'
-import type { PosCustomer } from '@andiko/shared'
+import type { PosCustomer, PosSaleReturnPayload } from '@andiko/shared'
 import { randomUUID } from 'crypto'
 import type { PosSale } from '@andiko/shared'
 import { desc, eq, sql } from 'drizzle-orm'
 import { completePosCheckout, authorizeFiscalForLocalSale } from './pos-sale-checkout'
 import type { AuthorizePosSalePayload } from './sync'
+import { postPosReturnToCloud } from './sync'
 
 function buildAuthorizePayload(id: string, payload: PosSale, soldAt: string): AuthorizePosSalePayload {
   return {
@@ -17,6 +18,7 @@ function buildAuthorizePayload(id: string, payload: PosSale, soldAt: string): Au
     payments: payload.payments,
     sold_at: soldAt,
     items: payload.items.map((i) => ({
+      product_id: i.product_id,
       description: i.product_name,
       qty: i.qty,
       unit_price: i.unit_price,
@@ -79,6 +81,30 @@ export function registerSalesHandlers(ipc: IpcMain) {
       afip_status: result.afip_status,
       fiscal_pending: result.fiscal_pending,
     }
+  })
+
+  ipc.handle('sales:return', async (_e, payload: PosSaleReturnPayload) => {
+    const sale = db().select().from(sales).where(eq(sales.id, payload.sale_id)).get()
+    if (!sale) throw new Error('Venta no encontrada')
+    if (!sale.cloud_id) throw new Error('La venta aún no está sincronizada con el servidor')
+
+    const localItems = db().select().from(saleItems).where(eq(saleItems.sale_id, payload.sale_id)).all()
+    const nameByProductId = new Map(localItems.map(i => [i.product_id, i.product_name]))
+    const items = payload.items.map(i => ({
+      product_id: i.product_id,
+      variant_id: i.product_id,
+      quantity: i.quantity,
+      description: nameByProductId.get(i.product_id),
+    }))
+    if (items.length === 0) throw new Error('Indicá al menos un ítem a devolver')
+
+    return postPosReturnToCloud(sale.cloud_id, {
+      pos_local_id: payload.pos_local_id,
+      operation_type: payload.operation_type ?? 'return',
+      items,
+      exchange_items: payload.exchange_items,
+      refund_disposition: payload.refund_disposition ?? 'account_credit',
+    })
   })
 
   ipc.handle('sales:list-today', async () => {

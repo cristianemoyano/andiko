@@ -15,6 +15,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:vercel": "pnpm migrate:deploy && pnpm build",
     "start": "next start",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
@@ -22,6 +23,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "migrate": "tsx --env-file=.env.local src/db/migrate.ts",
+    "migrate:deploy": "tsx src/db/migrate.ts up",
     "migrate:prod": "tsx --env-file=.env.production.local src/db/migrate.ts up",
     "migrate:baseline-prod": "ALLOW_PROD_BASELINE=yes tsx --env-file=.env.production.local src/db/migrate.ts baseline",
     "db:clear-data": "tsx --env-file=.env.local src/db/dev/clear-data.ts",

@@ -105,6 +105,26 @@ export type PosSyncSalesResult = {
   errors: { local_id: string; message: string }[]
 }
 
+export type PosReturnItemInput = {
+  product_id: string
+  quantity: number
+}
+
+export type PosSaleReturnPayload = {
+  pos_local_id: string
+  sale_id: string
+  operation_type?: 'return' | 'exchange'
+  items: PosReturnItemInput[]
+  exchange_items?: Array<{
+    product_id: string
+    description: string
+    quantity: number
+    unit_price: number
+    iva_rate?: IvaRate
+  }>
+  refund_disposition?: 'account_credit' | 'cash_refund'
+}
+
 export type PosLicense = {
   valid: boolean
   org_id: UUID

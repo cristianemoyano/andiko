@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { DataTable, TablePagination, SalesDocumentNumber, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import type { Invoice, InvoiceStatus } from '../types'
@@ -28,7 +28,12 @@ const COLUMNS: Column<Invoice>[] = [
     key: 'invoice_number',
     header: 'N°',
     render: row => (
-      <span className="font-mono text-[12px] text-fg-muted">{row.invoice_number}</span>
+      <SalesDocumentNumber
+        internalNumber={row.invoice_number}
+        afip_status={row.afip_status}
+        punto_venta={row.punto_venta}
+        cbte_numero={row.cbte_numero}
+      />
     ),
   },
   {

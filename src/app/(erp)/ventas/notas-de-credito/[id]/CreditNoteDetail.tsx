@@ -2,21 +2,22 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
 import Decimal from 'decimal.js'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
+import { PageActionBar, type PageAction } from '@/components/erp/PageActionBar'
 import { SearchableSelect, type SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { AfipDocumentPanel } from '@/components/erp/AfipDocumentPanel'
+import { SalesDocumentNumber } from '@/components/erp/SalesDocumentNumber'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { VentasSubNav } from '../../VentasSubNav'
 import type { AfipDocumentFields, BranchSummary } from '../../types'
+import { resolveSalesDocumentDisplay } from '@/lib/fiscal-document-number'
 import { fetchJson } from '@/lib/fetch-json'
 import { notifyApiError, notifyInfo, notifySuccess } from '@/lib/notify'
 
@@ -39,7 +40,13 @@ type CreditNote = AfipDocumentFields & {
   contact_id: string | null
   invoice_id: string | null
   contact: { id: string; legal_name: string; trade_name: string | null } | null
-  invoice: { id: string; invoice_number: string } | null
+  invoice: {
+    id: string
+    invoice_number: string
+    afip_status?: string | null
+    punto_venta?: number | null
+    cbte_numero?: number | null
+  } | null
   branch?: BranchSummary | null
   created_at: string
 }
@@ -63,6 +70,19 @@ type InvoiceOption = {
   total: string
   balance: string
   status: string
+  afip_status?: string | null
+  punto_venta?: number | null
+  cbte_numero?: number | null
+}
+
+function invoiceOptionLabel(inv: InvoiceOption): string {
+  const number = resolveSalesDocumentDisplay({
+    internalNumber: inv.invoice_number,
+    afip_status: inv.afip_status,
+    punto_venta: inv.punto_venta,
+    cbte_numero: inv.cbte_numero,
+  }).primary
+  return `${number} — Saldo: ${formatARS(inv.balance)}`
 }
 
 function deriveIvaRate(subtotal: string, taxAmount: string): string {
@@ -239,30 +259,50 @@ export function CreditNoteDetail() {
   const isDraft = note.status === 'draft'
   const selectedInvoice = invoiceOptions.find(i => i.id === invoiceId)
 
+  const creditNoteSecondaryActions: PageAction[] = editing
+    ? []
+    : [
+        { id: 'print', label: 'Imprimir', href: `/ventas/notas-de-credito/${id}/print`, openInNewTab: true },
+        ...(isDraft ? [{ id: 'edit', label: 'Editar', onClick: startEditing }] : []),
+        ...(note.status !== 'cancelled'
+          ? [{ id: 'cancel', label: 'Anular', onClick: () => setCancelConfirmOpen(true), variant: 'destructive' as const }]
+          : []),
+      ]
+
+  const displayNumber = resolveSalesDocumentDisplay({
+    internalNumber: note.credit_note_number,
+    afip_status: note.afip_status,
+    punto_venta: note.punto_venta,
+    cbte_numero: note.cbte_numero,
+  })
+
+  const linkedInvoiceDisplay = note.invoice
+    ? resolveSalesDocumentDisplay({
+        internalNumber: note.invoice.invoice_number,
+        afip_status: note.invoice.afip_status,
+        punto_venta: note.invoice.punto_venta,
+        cbte_numero: note.invoice.cbte_numero,
+      }).primary
+    : null
+
   return (
     <div className="flex h-full flex-col">
       <TopBar
         breadcrumbs={[
           { label: 'Notas de crédito', href: '/ventas/notas-de-credito' },
-          { label: note.credit_note_number },
+          { label: displayNumber.primary },
         ]}
         actions={
-          <div className="flex gap-2">
-            {!editing && (
-              <Button asChild size="sm" variant="ghost">
-                <Link href={`/ventas/notas-de-credito/${id}/print`} target="_blank" rel="noopener noreferrer">
-                  Imprimir
-                </Link>
-              </Button>
-            )}
-            {isDraft && !editing && <Button size="sm" variant="secondary" onClick={startEditing}>Editar</Button>}
-            {editing && <Button size="sm" variant="secondary" onClick={() => setEditing(false)}>Cancelar edición</Button>}
-            {editing && <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</Button>}
-            {isDraft && !editing && <Button size="sm" variant="secondary" onClick={() => setIssueConfirmOpen(true)}>Emitir</Button>}
-            {note.status !== 'cancelled' && !editing && (
-              <Button size="sm" variant="danger" onClick={() => setCancelConfirmOpen(true)}>Anular</Button>
-            )}
-          </div>
+          <PageActionBar
+            edit={editing ? {
+              onCancel: () => setEditing(false),
+              onSave: handleSave,
+              saving,
+              saveLabel: 'Guardar',
+            } : undefined}
+            primary={isDraft && !editing ? { id: 'issue', label: 'Emitir', onClick: () => setIssueConfirmOpen(true) } : null}
+            secondary={creditNoteSecondaryActions}
+          />
         }
       />
       <VentasSubNav />
@@ -275,7 +315,16 @@ export function CreditNoteDetail() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[12px] uppercase tracking-wide text-fg-subtle">Nota de crédito</p>
-                <h1 className="mt-0.5 text-[22px] font-semibold text-fg">{note.credit_note_number}</h1>
+                <h1 className="mt-0.5 text-[22px] font-semibold text-fg">
+                  <SalesDocumentNumber
+                    variant="heading"
+                    internalNumber={note.credit_note_number}
+                    afip_status={note.afip_status}
+                    punto_venta={note.punto_venta}
+                    cbte_numero={note.cbte_numero}
+                    className="text-[22px] font-semibold text-fg"
+                  />
+                </h1>
               </div>
               <StatusBadge value={STATUS_LABEL[note.status]} />
             </div>
@@ -297,7 +346,7 @@ export function CreditNoteDetail() {
             {note.invoice && (
               <div className="text-[13px] text-fg-muted">
                 <span className="text-fg-subtle">Factura original: </span>
-                <span className="font-mono">{note.invoice.invoice_number}</span>
+                <span className="font-mono">{linkedInvoiceDisplay}</span>
               </div>
             )}
             {note.reason && (
@@ -341,7 +390,7 @@ export function CreditNoteDetail() {
                     <option value="">— Sin factura vinculada —</option>
                     {invoiceOptions.map(inv => (
                       <option key={inv.id} value={inv.id}>
-                        {inv.invoice_number} — Saldo: {formatARS(inv.balance)}
+                        {invoiceOptionLabel(inv)}
                       </option>
                     ))}
                   </select>

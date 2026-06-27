@@ -24,6 +24,10 @@ export const AFIP_ERROR_MAP: Record<string, [string, number]> = {
     'El CAE se autorizó pero falló la facturación en el ERP. Reintentá desde el POS o contactá soporte.',
     500,
   ],
+  AFIP_ORDER_ALREADY_INVOICED: [
+    'Este pedido ya tiene otra factura con CAE autorizado. Abrí la factura existente o anulá el duplicado.',
+    409,
+  ],
   AFIP_CAE_REJECTED: ['AFIP rechazó la autorización del comprobante', 422],
   AFIP_CAE_TRANSPORT_ERROR: ['No se pudo contactar a AFIP. Reintentá más tarde.', 503],
   AFIP_CREDENTIAL_NOT_FOUND: ['No hay credenciales AFIP configuradas para ese entorno', 404],
@@ -55,5 +59,12 @@ export function resolveAfipError(err: unknown): AfipMappedError | null {
 export function mapAfipErrorResponse(err: unknown): NextResponse {
   const mapped = resolveAfipError(err)
   if (!mapped) throw err
-  return NextResponse.json({ error: mapped.message, code: mapped.code }, { status: mapped.status })
+  const details =
+    err instanceof Error && 'details' in err
+      ? (err as Error & { details?: object }).details
+      : undefined
+  return NextResponse.json(
+    { error: mapped.message, code: mapped.code, ...(details ? { details } : {}) },
+    { status: mapped.status },
+  )
 }

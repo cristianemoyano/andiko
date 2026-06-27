@@ -10,6 +10,7 @@ const ERROR_MAP: Record<string, [string, number]> = {
   DEBIT_NOTE_NOT_FOUND: ['Nota de débito no encontrada', 404],
   DEBIT_NOTE_NOT_EDITABLE: ['La nota de débito no se puede editar en su estado actual', 409],
   DEBIT_NOTE_NOT_DELETABLE: ['Solo se pueden eliminar notas de débito en borrador', 409],
+  DOCUMENT_BRANCH_NOT_CHANGEABLE: ['La sucursal solo se puede cambiar en notas de débito en borrador.', 409],
 }
 
 function handleError(err: unknown) {

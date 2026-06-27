@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const posSaleItemInputSchema = z.object({
+  product_id: z.string().uuid().optional(),
   variant_id: z.string().uuid().optional(),
   description: z.string().default('Producto POS'),
   qty: z.number().positive(),

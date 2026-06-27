@@ -85,14 +85,16 @@ export interface Quote {
 
 // --- Order ---
 
-export type OrderStatus = 'draft' | 'confirmed' | 'in_progress' | 'delivered' | 'cancelled'
+export type OrderStatus = 'draft' | 'confirmed' | 'in_progress' | 'delivered' | 'partial_returned' | 'returned' | 'cancelled'
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  draft:       'Borrador',
-  confirmed:   'Confirmado',
-  in_progress: 'En proceso',
-  delivered:   'Entregado',
-  cancelled:   'Cancelado',
+  draft:            'Borrador',
+  confirmed:        'Confirmado',
+  in_progress:      'En proceso',
+  delivered:        'Entregado',
+  partial_returned: 'Devolución parcial',
+  returned:         'Devuelto',
+  cancelled:        'Cancelado',
 }
 
 export interface OrderItem {
@@ -101,6 +103,7 @@ export interface OrderItem {
   variant_id: string | null
   description: string
   quantity: string
+  returned_qty?: string
   unit_price: string
   discount_pct: string
   iva_rate: IvaRate
@@ -246,7 +249,7 @@ export interface Invoice extends AfipDocumentFields {
   items?: InvoiceItem[]
   /** Present on GET `/api/v1/sales/invoices/:id` when backend includes payments */
   payments?: Payment[]
-  order?: { id: string; source: string | null } | null
+  order?: { id: string; source: string | null; status?: OrderStatus; order_number?: string } | null
 }
 
 // --- Account statement (cuenta corriente) ---

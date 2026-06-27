@@ -14,6 +14,8 @@ export interface CreditNoteAttributes extends Timestamps, AuditFields {
   branch_id: UUID | null
   contact_id: UUID | null
   invoice_id: UUID | null
+  order_id: UUID | null
+  return_id: UUID | null
   credit_note_number: string
   status: CreditNoteStatus
   issue_date: Date | null
@@ -38,7 +40,7 @@ export interface CreditNoteAttributes extends Timestamps, AuditFields {
 
 type CreditNoteCreationAttributes = Optional<
   CreditNoteAttributes,
-  | 'id' | 'branch_id' | 'contact_id' | 'invoice_id' | 'status' | 'issue_date' | 'currency'
+  | 'id' | 'branch_id' | 'contact_id' | 'invoice_id' | 'order_id' | 'return_id' | 'status' | 'issue_date' | 'currency'
   | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total' | 'applied_amount' | 'remaining'
   | 'reason' | 'notes'
   | 'cae' | 'cae_expiration' | 'comprobante_tipo' | 'punto_venta' | 'cbte_numero' | 'afip_status' | 'afip_observations'
@@ -50,6 +52,8 @@ class CreditNote extends AuditModel<CreditNoteAttributes, CreditNoteCreationAttr
   declare branch_id: UUID | null
   declare contact_id: UUID | null
   declare invoice_id: UUID | null
+  declare order_id: UUID | null
+  declare return_id: UUID | null
   declare credit_note_number: string
   declare status: CreditNoteStatus
   declare issue_date: Date | null
@@ -77,6 +81,8 @@ CreditNote.init(
     branch_id:          { type: DataTypes.UUID },
     contact_id:         { type: DataTypes.UUID },
     invoice_id:         { type: DataTypes.UUID },
+    order_id:           { type: DataTypes.UUID },
+    return_id:          { type: DataTypes.UUID },
     credit_note_number: { type: DataTypes.STRING(50), allowNull: false },
     status:             { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'draft' },
     issue_date:         { type: DataTypes.DATEONLY },

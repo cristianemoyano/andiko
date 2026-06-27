@@ -8,6 +8,7 @@ import PurchaseReceipt from './purchase-receipt.model'
 import PurchaseReceiptItem from './purchase-receipt-item.model'
 import PurchaseOrderItem from './purchase-order-item.model'
 import type { PurchaseReceiptInput, PurchaseReceiptUpdateInput, PurchaseReceiptQuery } from './purchase-receipt.schema'
+import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { nextPurchaseDocNumber } from './purchases.utils'
 import { ensurePurchasesBranchAssociations } from './purchases-branch-associations'
 import { recalcOrderReceiptStatus } from './purchase-orders.service'
@@ -135,7 +136,20 @@ export async function updatePurchaseReceipt(id: string, input: PurchaseReceiptUp
     if (!receipt) throw new Error('PURCHASE_RECEIPT_NOT_FOUND')
     if (receipt.status !== 'draft') throw new Error('PURCHASE_RECEIPT_NOT_DRAFT')
 
-    const { items, ...fields } = input
+    const { items, branch_id: nextBranchId, ...fields } = input
+
+    const branchPatch: Record<string, unknown> = {}
+    if (nextBranchId && nextBranchId !== receipt.branch_id) {
+      assertDraftBranchChange(receipt.status)
+      Object.assign(branchPatch, await buildBranchRenumberPatch({
+        orgId,
+        currentBranchId: receipt.branch_id,
+        nextBranchId,
+        numberField: 'receipt_number',
+        resolveNextNumber: (oid, branchId, tx) => nextPurchaseDocNumber(oid, branchId, 'receipt', tx),
+        t,
+      }))
+    }
 
     if (items && items.length > 0) {
       await PurchaseReceiptItem.destroy({ where: { receipt_id: id }, transaction: t })
@@ -163,7 +177,7 @@ export async function updatePurchaseReceipt(id: string, input: PurchaseReceiptUp
       )
     }
 
-    await receipt.update({ ...fields, updated_by: actorId }, { transaction: t })
+    await receipt.update({ ...fields, ...branchPatch, updated_by: actorId }, { transaction: t })
     return receipt
   })
 }

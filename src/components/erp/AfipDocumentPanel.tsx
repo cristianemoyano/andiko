@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Card, CardHeader, CardContent } from '@/components/layout/Card'
 import { Button } from '@/components/primitives/Button'
 import { ConfirmDialog } from './ConfirmDialog'
+import { formatAfipComprobanteNumber } from '@/lib/fiscal-document-number'
 import { AfipStatusBadge, type AfipDocStatus } from './AfipStatusBadge'
 
 /** AFIP comprobante type codes (CbteTipo) → human label. FE-local; no backend import. */
@@ -56,11 +57,6 @@ function formatDate(value: string | null): string {
   return d && m && y ? `${d}/${m}/${y}` : value
 }
 
-function formatComprobanteNumber(pv: number | null, nro: number | null): string | null {
-  if (!pv || !nro) return null
-  return `${String(pv).padStart(4, '0')}-${String(nro).padStart(8, '0')}`
-}
-
 function formatBranchLabel(branch: AfipBranchContext): string {
   return `${branch.name} (Sucursal ${String(branch.branch_code).padStart(2, '0')})`
 }
@@ -78,7 +74,7 @@ function missingPuntoVentaMessage(branch: AfipBranchContext | null | undefined):
  */
 export function AfipDocumentPanel({ doc, branch, canAuthorize, onAuthorize }: AfipDocumentPanelProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const comprobanteNumber = formatComprobanteNumber(doc.punto_venta, doc.cbte_numero)
+  const comprobanteNumber = formatAfipComprobanteNumber(doc.punto_venta, doc.cbte_numero)
   const puntoVentaBlock = canAuthorize ? missingPuntoVentaMessage(branch) : null
   const showAuthorize = canAuthorize && !puntoVentaBlock
 

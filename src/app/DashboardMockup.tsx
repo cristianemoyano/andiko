@@ -5,7 +5,7 @@
 
 const navItems = [
   { label: 'Panel', active: true, icon: (
-    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <rect width="7" height="9" x="3" y="3" rx="1" />
       <rect width="7" height="5" x="14" y="3" rx="1" />
       <rect width="7" height="9" x="14" y="12" rx="1" />
@@ -13,41 +13,51 @@ const navItems = [
     </svg>
   ) },
   { label: 'Ventas', active: false, icon: (
-    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="8" cy="21" r="1" />
       <circle cx="19" cy="21" r="1" />
       <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
     </svg>
   ) },
   { label: 'Inventario', active: false, icon: (
-    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" />
       <path d="m3.3 7 8.7 5 8.7-5" />
       <path d="M12 22V12" />
     </svg>
   ) },
   { label: 'Compras', active: false, icon: (
-    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 7h14l-1.5 9.5a2 2 0 0 1-2 1.5h-7a2 2 0 0 1-2-1.5z" />
       <path d="M9 7V5a3 3 0 0 1 6 0v2" />
     </svg>
   ) },
   { label: 'Contabilidad', active: false, icon: (
-    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <rect width="16" height="20" x="4" y="2" rx="2" />
       <line x1="8" x2="16" y1="6" y2="6" />
       <path d="M8 10h.01" />
       <path d="M12 10h.01" />
       <path d="M16 10h.01" />
-      <path d="M8 14h.01" />
-      <path d="M12 14h.01" />
     </svg>
   ) },
   { label: 'Contactos', active: false, icon: (
-    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+    </svg>
+  ) },
+  { label: 'Catálogo', active: false, icon: (
+    <svg viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="18" height="5" x="3" y="4" rx="1" />
+      <rect width="18" height="5" x="3" y="12" rx="1" />
+    </svg>
+  ) },
+  { label: 'POS', active: false, icon: (
+    <svg viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="20" height="14" x="2" y="5" rx="2" />
+      <path d="M2 10h20" />
     </svg>
   ) },
 ] as const
@@ -81,8 +91,8 @@ export function DashboardMockup() {
 
       <div className="flex h-[372px]">
         {/* sidebar */}
-        <div className="flex w-[152px] flex-shrink-0 flex-col gap-0.5 border-r border-zinc-100 bg-white px-2.5 py-3">
-          <div className="flex items-center gap-2 px-1.5 pb-3 pt-0.5">
+        <div className="flex w-[152px] flex-shrink-0 flex-col gap-0.5 border-r border-zinc-100 bg-white px-2.5 py-2.5">
+          <div className="flex items-center gap-2 px-1.5 pb-2 pt-0.5">
             <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-[5px] bg-brand-600">
               <svg viewBox="0 0 12 12" className="h-[11px] w-[11px] fill-white">
                 <rect x="0" y="1" width="2.4" height="10" />
@@ -98,8 +108,8 @@ export function DashboardMockup() {
               key={item.label}
               className={
                 item.active
-                  ? 'flex items-center gap-[9px] rounded-[5px] bg-brand-50 px-[9px] py-[7px] text-xs font-semibold text-brand-700'
-                  : 'flex items-center gap-[9px] rounded-[5px] px-[9px] py-[7px] text-xs text-zinc-600'
+                  ? 'flex items-center gap-[7px] rounded-[5px] bg-brand-50 px-[8px] py-[5px] text-[11px] font-semibold text-brand-700'
+                  : 'flex items-center gap-[7px] rounded-[5px] px-[8px] py-[5px] text-[11px] text-zinc-600'
               }
             >
               {item.icon}

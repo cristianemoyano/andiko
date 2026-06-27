@@ -25,10 +25,9 @@ import { finalizePosSaleInErp } from '@/modules/pos/pos-sales-finalize.service'
 import Invoice from '@/modules/sales/invoice.model'
 import {
   afipCbteUsedByOtherInvoice,
-  getMaxAuthorizedCbteNumero,
   isAfipCbteUniqueViolation,
+  resolveNextCbteNumero,
 } from '@/modules/pos/pos-afip-sequence.service'
-import type { WsfeClient } from '@/modules/afip/wsfe.client'
 
 export type PosFiscalAuthorizeResult = {
   pos_sale_id: string
@@ -109,19 +108,6 @@ function buildQrUrl(org: Organization, req: FECAERequest, cbteNumero: number, ca
     nroDocRec: req.docNro,
     codAut: Number(cae),
   })
-}
-
-async function resolveNextCbteNumero(
-  orgId: string,
-  wsfe: WsfeClient,
-  puntoVenta: number,
-  cbteTipo: CbteTipo,
-): Promise<number> {
-  const [fromWsfe, fromDb] = await Promise.all([
-    wsfe.consultarUltimoAutorizado(puntoVenta, cbteTipo),
-    getMaxAuthorizedCbteNumero(orgId, puntoVenta, cbteTipo),
-  ])
-  return Math.max(fromWsfe, fromDb) + 1
 }
 
 async function clearOrderFiscalFields(order: SalesOrder): Promise<void> {
@@ -280,7 +266,7 @@ export async function authorizePosSale(
   const cbteTipo = resolvePosCbteTipo(org.iva_condition, receiver.iva_condition, posConfig.ticket?.comprobante_codigo)
   const wsfe = deps.wsfe ?? (await getAfipClients(ctx.orgId)).wsfe
 
-  const cbteNumero = await resolveNextCbteNumero(ctx.orgId, wsfe, puntoVenta, cbteTipo)
+  const cbteNumero = await resolveNextCbteNumero(ctx.orgId, await wsfe.consultarUltimoAutorizado(puntoVenta, cbteTipo), puntoVenta, cbteTipo)
   const issueDate = order.issue_date ?? input.sold_at.slice(0, 10)
 
   const req = buildPosFECAERequest({

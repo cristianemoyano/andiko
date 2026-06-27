@@ -3,10 +3,12 @@ import { Op } from 'sequelize'
 import Decimal from 'decimal.js'
 import { paginate, toPaginated } from '@/lib/pagination'
 import { whereAllowedBranches, whereOrg, type TenantContext } from '@/lib/tenancy'
+import { FISCAL_NUMBER_SOURCE_ATTRS, resolveSalesDocumentDisplay } from '@/lib/fiscal-document-number'
 import Contact from '@/modules/contacts/contact.model'
 import Invoice from './invoice.model'
 import Payment from './payment.model'
 import CreditNote from './credit-note.model'
+import SalesOrder from './sales-order.model'
 import type { AccountStatementQuery, AccountStatementMovementType } from './account-statement.schema'
 
 export type AccountStatementLine = {
@@ -56,7 +58,10 @@ export async function getAccountStatement(contactId: string, query: AccountState
       contact_id: contactId,
       status: { [Op.notIn]: ['cancelled'] },
     }),
-    attributes: ['id', 'invoice_number', 'status', 'issue_date', 'due_date', 'created_at', 'total', 'paid_amount', 'balance', 'currency', 'notes'],
+    attributes: [
+      'id', 'invoice_number', 'status', 'issue_date', 'due_date', 'created_at', 'total', 'paid_amount', 'balance', 'currency', 'notes',
+      ...FISCAL_NUMBER_SOURCE_ATTRS,
+    ],
     order: [['issue_date', 'ASC'], ['created_at', 'ASC']],
   })
 
@@ -88,15 +93,38 @@ export async function getAccountStatement(contactId: string, query: AccountState
       contact_id: contactId,
       status: 'issued',
     }),
-    attributes: ['id', 'credit_note_number', 'issue_date', 'total', 'reason', 'created_at'],
+    attributes: ['id', 'credit_note_number', 'issue_date', 'total', 'reason', 'created_at', ...FISCAL_NUMBER_SOURCE_ATTRS],
     order: [['issue_date', 'ASC'], ['created_at', 'ASC']],
+  })
+
+  const SalesRefund = (await import('./sales-refund.model')).default
+  const SalesReturn = (await import('./sales-return.model')).default
+  const { ensureSalesReturnAssociations } = await import('./sales-returns.service')
+  ensureSalesReturnAssociations()
+  const refunds = await SalesRefund.findAll({
+    where: whereAllowedBranches(ctx, {}),
+    attributes: ['id', 'refund_number', 'refund_date', 'amount', 'reference', 'notes', 'return_id'],
+    include: [{
+      model: SalesReturn,
+      as: 'salesReturn',
+      attributes: ['id', 'order_id'],
+      required: true,
+      include: [{
+        model: SalesOrder,
+        as: 'order',
+        attributes: ['id', 'contact_id'],
+        where: { contact_id: contactId },
+        required: true,
+      }],
+    }],
+    order: [['refund_date', 'ASC'], ['created_at', 'ASC']],
   })
 
   const from = query.from ? atStartOfDay(query.from) : null
   const to = query.to ? atEndOfDay(query.to) : null
   const search = query.search?.trim().toLowerCase() ?? ''
 
-  const allMovements = buildMovements(invoices, payments, creditNotes)
+  const allMovements = buildMovements(invoices, payments, creditNotes, refunds)
   const openingBalance = allMovements
     .filter(m => (from ? m.date < from : false))
     .reduce((acc, m) => acc.plus(m.debit).minus(m.credit), new Decimal(0))
@@ -183,7 +211,12 @@ function buildSummary(invoices: Invoice[]) {
   } satisfies AccountStatementSummary
 }
 
-function buildMovements(invoices: Invoice[], payments: Payment[], creditNotes: CreditNote[]): MovementDraft[] {
+function buildMovements(
+  invoices: Invoice[],
+  payments: Payment[],
+  creditNotes: CreditNote[],
+  refunds: Array<{ id: string; refund_number: string; refund_date: Date; amount: string; reference: string | null; notes: string | null }>,
+): MovementDraft[] {
   const invoiceMovements: MovementDraft[] = invoices
     .filter(i => i.status !== 'cancelled')
     .map(invoice => ({
@@ -191,7 +224,12 @@ function buildMovements(invoices: Invoice[], payments: Payment[], creditNotes: C
       movement_type: 'invoice',
       movement_id: String(invoice.id),
       date: invoice.issue_date ? new Date(invoice.issue_date) : new Date(invoice.created_at),
-      document_number: String(invoice.invoice_number),
+      document_number: resolveSalesDocumentDisplay({
+        internalNumber: String(invoice.invoice_number),
+        afip_status: invoice.afip_status,
+        punto_venta: invoice.punto_venta,
+        cbte_numero: invoice.cbte_numero,
+      }).primary,
       description: invoice.notes ? String(invoice.notes) : null,
       due_date: invoice.due_date ? new Date(invoice.due_date) : null,
       debit: parseDecimal(invoice.total),
@@ -220,14 +258,31 @@ function buildMovements(invoices: Invoice[], payments: Payment[], creditNotes: C
     movement_type: 'credit_note' as AccountStatementMovementType,
     movement_id: String(cn.id),
     date: cn.issue_date ? new Date(cn.issue_date) : new Date(cn.created_at),
-    document_number: String(cn.credit_note_number),
+    document_number: resolveSalesDocumentDisplay({
+      internalNumber: String(cn.credit_note_number),
+      afip_status: cn.afip_status,
+      punto_venta: cn.punto_venta,
+      cbte_numero: cn.cbte_numero,
+    }).primary,
     description: cn.reason ? String(cn.reason) : null,
     due_date: null,
     debit: new Decimal(0),
     credit: parseDecimal(cn.total),
   }))
 
-  return [...invoiceMovements, ...paymentMovements, ...creditNoteMovements].sort((a, b) => {
+  const refundMovements: MovementDraft[] = refunds.map(r => ({
+    id: `refund:${r.id}`,
+    movement_type: 'refund' as AccountStatementMovementType,
+    movement_id: String(r.id),
+    date: new Date(r.refund_date),
+    document_number: String(r.refund_number),
+    description: r.reference ? String(r.reference) : (r.notes ? String(r.notes) : 'Reembolso'),
+    due_date: null,
+    debit: new Decimal(0),
+    credit: parseDecimal(r.amount),
+  }))
+
+  return [...invoiceMovements, ...paymentMovements, ...creditNoteMovements, ...refundMovements].sort((a, b) => {
     const dayCompare = toUtcDayKey(a.date).localeCompare(toUtcDayKey(b.date))
     if (dayCompare !== 0) return dayCompare
 

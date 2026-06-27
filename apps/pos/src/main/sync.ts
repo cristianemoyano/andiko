@@ -263,6 +263,7 @@ export type AuthorizePosSalePayload = {
   }>
   sold_at: string
   items: Array<{
+    product_id?: string
     description: string
     qty: number
     unit_price: string
@@ -289,6 +290,28 @@ export async function authorizePosSaleInCloud(payload: AuthorizePosSalePayload):
     '/api/v1/pos/sales/authorize',
     { method: 'POST', body: JSON.stringify(payload) },
     60_000,
+  )
+}
+
+export type PosReturnCloudPayload = {
+  pos_local_id: string
+  operation_type?: 'return' | 'exchange'
+  items: Array<{ product_id: string; quantity: number; description?: string }>
+  exchange_items?: Array<{
+    product_id: string
+    description: string
+    quantity: number
+    unit_price: number
+    iva_rate?: string
+  }>
+  refund_disposition?: 'account_credit' | 'cash_refund'
+}
+
+export async function postPosReturnToCloud(orderId: string, payload: PosReturnCloudPayload) {
+  return fetchCloud<Record<string, unknown>>(
+    `/api/v1/pos/sales/${orderId}/return`,
+    { method: 'POST', body: JSON.stringify(payload) },
+    30_000,
   )
 }
 
@@ -378,7 +401,7 @@ export async function syncPendingSales(): Promise<{ synced: number; failed: Arra
     payments:       JSON.parse(s.payments ?? '[]') as PosSalePayment[],
     sold_at:        s.sold_at,
     items: (itemsBySaleId[s.id] ?? []).map(i => ({
-      variant_id:  i.product_id,
+      product_id:  i.product_id,
       description: i.product_name,
       qty:         i.qty,
       unit_price:  i.unit_price,

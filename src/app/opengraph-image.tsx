@@ -59,7 +59,7 @@ export default function OpenGraphImage() {
               letterSpacing: '0.08em',
             }}
           >
-            Próximamente
+            Gestión integral · Beta privada
           </span>
           <h1
             style={{
@@ -71,10 +71,10 @@ export default function OpenGraphImage() {
               letterSpacing: '-0.03em',
             }}
           >
-            ERP para pymes argentinas
+            Software de gestión para pymes argentinas
           </h1>
           <p style={{ margin: 0, fontSize: 28, lineHeight: 1.4, color: '#52525B' }}>
-            Ventas, stock, compras y finanzas en un solo lugar.
+            Contactos, catálogo, ventas, stock, compras, contabilidad y POS.
           </p>
         </div>
       </div>

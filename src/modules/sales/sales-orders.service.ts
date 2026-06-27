@@ -12,6 +12,7 @@ import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
 import User from '@/modules/auth/user.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
+import { buildBranchRenumberPatch, assertDraftBranchChange, DOCUMENT_BRANCH_NOT_CHANGEABLE } from '@/lib/branch-document-renumber'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
 import type { TenantContext } from '@/lib/tenancy'
@@ -123,15 +124,93 @@ export async function createOrder(input: SalesOrderInput, ctx: TenantContext, ac
   })
 }
 
-export async function updateOrder(id: string, input: SalesOrderUpdateInput, ctx: TenantContext, actorId: string) {
+const CONTACT_ASSIGNMENT_FIELDS = [
+  'contact_id',
+  'shipping_street', 'shipping_number', 'shipping_floor', 'shipping_apartment',
+  'shipping_city', 'shipping_province', 'shipping_postal_code', 'shipping_country',
+  'billing_street', 'billing_number', 'billing_floor', 'billing_apartment',
+  'billing_city', 'billing_province', 'billing_postal_code', 'billing_country',
+] as const satisfies ReadonlyArray<keyof SalesOrderUpdateInput>
+
+const LOCKED_ORDER_PATCH_FIELDS = new Set([
+  'items', 'status', 'branch_id', 'price_list_id', 'promised_date', 'payment_condition',
+  'notes', 'internal_notes', 'delivered_date', 'quote_id', 'currency',
+])
+
+function isContactAssignmentPayload(submittedKeys: string[]): boolean {
+  if (!submittedKeys.includes('contact_id')) return false
+  return submittedKeys.every(key => !LOCKED_ORDER_PATCH_FIELDS.has(key))
+}
+
+function canAssignMissingContact(
+  order: SalesOrder,
+  input: SalesOrderUpdateInput,
+  submittedKeys: string[],
+): boolean {
+  if (order.status === 'cancelled') return false
+  if (order.contact_id) return false
+  if (!input.contact_id) return false
+  return isContactAssignmentPayload(submittedKeys)
+}
+
+function pickContactAssignmentFields(input: SalesOrderUpdateInput): Record<string, unknown> {
+  const patch: Record<string, unknown> = {}
+  for (const key of CONTACT_ASSIGNMENT_FIELDS) {
+    if (input[key] !== undefined) patch[key] = input[key]
+  }
+  return patch
+}
+
+async function syncContactToUnassignedInvoices(
+  orderId: string,
+  orgId: string,
+  contactId: string,
+  actorId: string,
+  t: import('sequelize').Transaction,
+) {
+  await Invoice.update(
+    { contact_id: contactId, updated_by: actorId },
+    {
+      where: {
+        order_id: orderId,
+        org_id: orgId,
+        contact_id: null,
+        afip_status: { [Op.ne]: 'authorized' },
+      },
+      transaction: t,
+    },
+  )
+}
+
+export async function updateOrder(
+  id: string,
+  input: SalesOrderUpdateInput,
+  ctx: TenantContext,
+  actorId: string,
+  submittedKeys?: string[],
+) {
+  const patchKeys = submittedKeys ?? Object.keys(input).filter(
+    key => input[key as keyof SalesOrderUpdateInput] !== undefined,
+  )
+
   return sequelize.transaction(async (t) => {
     const order = await SalesOrder.findOne({ where: { id, org_id: ctx.orgId }, transaction: t })
     if (!order) throw new Error('ORDER_NOT_FOUND')
     if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(order.branch_id as string)) {
       throw new Error('ORDER_NOT_FOUND')
     }
-    if (order.status === 'delivered' || order.status === 'cancelled') {
-      throw new Error('ORDER_NOT_EDITABLE')
+
+    const isLocked = order.status === 'delivered' || order.status === 'cancelled'
+    if (isLocked) {
+      if (!canAssignMissingContact(order, input, patchKeys)) {
+        throw new Error('ORDER_NOT_EDITABLE')
+      }
+
+      const patch = pickContactAssignmentFields(input)
+      await order.update({ ...patch, updated_by: actorId }, { transaction: t })
+      await syncContactToUnassignedInvoices(id, ctx.orgId, input.contact_id!, actorId, t)
+      logger.info({ orderId: id, contactId: input.contact_id, actorId }, 'order contact assigned on locked order')
+      return getOrderInTransaction(id, ctx, t)
     }
 
     const prevStatus = order.status
@@ -167,9 +246,23 @@ export async function updateOrder(id: string, input: SalesOrderUpdateInput, ctx:
       Object.assign(updateData, docTotals)
     }
 
-    const { items: discardedItems, branch_id: discardedBranch, ...rest } = input
+    const { items: discardedItems, branch_id: nextBranchId, ...rest } = input
     void discardedItems
-    void discardedBranch
+
+    if (nextBranchId && nextBranchId !== order.branch_id) {
+      if (order.source === 'pos') throw new Error(DOCUMENT_BRANCH_NOT_CHANGEABLE)
+      assertDraftBranchChange(order.status)
+      void whereBranch(ctx, nextBranchId)
+      Object.assign(updateData, await buildBranchRenumberPatch({
+        orgId: ctx.orgId!,
+        currentBranchId: order.branch_id,
+        nextBranchId,
+        numberField: 'order_number',
+        resolveNextNumber: (orgId, branchId, tx) => nextDocumentNumber(orgId, branchId, 'order', tx),
+        t,
+      }))
+    }
+
     await order.update({ ...rest, ...updateData }, { transaction: t })
 
     // Stock hooks: deduct when confirmed, restore when cancelled from confirmed
@@ -215,6 +308,13 @@ export async function convertOrderToInvoice(id: string, ctx: TenantContext, acto
     }
     if (!order.branch_id) throw new Error('ORDER_BRANCH_REQUIRED')
     if (!order.contact_id) throw new Error('ORDER_CONTACT_REQUIRED')
+
+    const existingInvoice = await Invoice.findOne({
+      where: { order_id: order.id, org_id: ctx.orgId },
+      attributes: ['id'],
+      transaction: t,
+    })
+    if (existingInvoice) throw new Error('ORDER_ALREADY_INVOICED')
 
     const invoice_number = await nextDocumentNumber(ctx.orgId, order.branch_id, 'invoice', t)
     const items = (order as SalesOrder & { items: SalesOrderItem[] }).items

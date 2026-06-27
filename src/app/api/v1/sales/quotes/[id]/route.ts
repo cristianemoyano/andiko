@@ -38,6 +38,9 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     if (err instanceof Error) {
       if (err.message === 'QUOTE_NOT_FOUND')     return NextResponse.json({ error: 'Presupuesto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
       if (err.message === 'QUOTE_NOT_EDITABLE')  return NextResponse.json({ error: 'El presupuesto no es editable', code: 'NOT_EDITABLE' }, { status: 409 })
+      if (err.message === 'QUOTE_BRANCH_NOT_CHANGEABLE' || err.message === 'DOCUMENT_BRANCH_NOT_CHANGEABLE') {
+        return NextResponse.json({ error: 'La sucursal solo se puede cambiar en presupuestos en borrador.', code: 'BRANCH_NOT_CHANGEABLE' }, { status: 409 })
+      }
     }
     throw err
   }

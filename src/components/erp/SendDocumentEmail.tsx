@@ -6,6 +6,7 @@ import { Input } from '@/components/primitives/Input'
 import { Textarea } from '@/components/primitives/Textarea'
 import { FormField } from '@/components/primitives/FormField'
 import { Dialog } from '@/components/primitives/Dialog'
+import { DropdownMenuItem } from '@/components/primitives/DropdownMenu'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 export type EmailDocumentType = 'quote' | 'order' | 'invoice' | 'delivery_note'
@@ -39,6 +40,8 @@ interface Props {
   defaultEmail?: string | null
   buttonVariant?: 'primary' | 'secondary' | 'ghost'
   buttonSize?: 'sm' | 'md' | 'lg'
+  /** When `menu-item`, renders inside a PageActionBar dropdown instead of a standalone button. */
+  triggerMode?: 'button' | 'menu-item'
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -61,6 +64,7 @@ export function SendDocumentEmail({
   defaultEmail,
   buttonVariant = 'ghost',
   buttonSize = 'sm',
+  triggerMode = 'button',
 }: Props) {
   const [open, setOpen] = useState(false)
   const [to, setTo] = useState('')
@@ -147,9 +151,15 @@ export function SendDocumentEmail({
 
   return (
     <>
-      <Button type="button" variant={buttonVariant} size={buttonSize} onClick={() => setOpen(true)}>
-        Enviar por email
-      </Button>
+      {triggerMode === 'menu-item' ? (
+        <DropdownMenuItem onSelect={() => setOpen(true)}>
+          Enviar por email
+        </DropdownMenuItem>
+      ) : (
+        <Button type="button" variant={buttonVariant} size={buttonSize} onClick={() => setOpen(true)}>
+          Enviar por email
+        </Button>
+      )}
 
       <Dialog
         open={open}

@@ -6,7 +6,7 @@ import type { AfipDocStatus, AfipObservation } from '@/modules/afip/afip-codes'
 import SalesQuote from './sales-quote.model'
 import User from '@/modules/auth/user.model'
 
-export const ORDER_STATUSES = ['draft', 'confirmed', 'in_progress', 'delivered', 'cancelled'] as const
+export const ORDER_STATUSES = ['draft', 'confirmed', 'in_progress', 'delivered', 'partial_returned', 'returned', 'cancelled'] as const
 export type OrderStatus = typeof ORDER_STATUSES[number]
 
 export interface SalesOrderAttributes extends Timestamps, AuditFields {

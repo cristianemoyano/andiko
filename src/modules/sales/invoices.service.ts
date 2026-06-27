@@ -13,7 +13,9 @@ import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
 import User from '@/modules/auth/user.model'
 import { ensureSalesBranchAssociations, BRANCH_AFIP_ATTRIBUTES } from './sales-branch-associations'
+import { buildBranchRenumberPatch } from '@/lib/branch-document-renumber'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
+import { FISCAL_NUMBER_SOURCE_ATTRS } from '@/lib/fiscal-document-number'
 import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
 import type { IvaRate } from '@/types'
 
@@ -28,9 +30,18 @@ export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
   if (contact_id) where.contact_id = contact_id
   if (order_id)   where.order_id   = order_id
   if (search) {
-    where[Op.or as unknown as string] = [
-      { invoice_number: { [Op.iLike]: `%${search}%` } },
+    const term = search.trim()
+    const or: Record<string, unknown>[] = [
+      { invoice_number: { [Op.iLike]: `%${term}%` } },
     ]
+    const afipMatch = term.match(/^(\d{1,5})-(\d{1,8})$/)
+    if (afipMatch) {
+      or.push({
+        punto_venta: Number.parseInt(afipMatch[1], 10),
+        cbte_numero: Number.parseInt(afipMatch[2], 10),
+      })
+    }
+    where[Op.or as unknown as string] = or
   }
   if (overdue) {
     where.due_date = { [Op.lt]: new Date() }
@@ -47,6 +58,7 @@ export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
       'issue_date', 'due_date', 'payment_condition', 'currency',
       'subtotal', 'tax_amount', 'total', 'paid_amount', 'balance',
       'notes', 'created_at',
+      ...FISCAL_NUMBER_SOURCE_ATTRS,
     ],
     include: [
       { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES] },
@@ -69,7 +81,7 @@ export async function getInvoice(id: string, ctx: TenantContext) {
       { model: User, as: 'salesperson', attributes: ['id', 'name'] },
       { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
       { model: Payment, as: 'payments', where: { deleted_at: null }, required: false },
-      { model: SalesOrder, as: 'order', attributes: ['id', 'source'], required: false },
+      { model: SalesOrder, as: 'order', attributes: ['id', 'source', 'status', 'order_number'], required: false },
     ],
   })
   if (!invoice) throw new Error('INVOICE_NOT_FOUND')
@@ -88,6 +100,13 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
     if (!order) throw new Error('ORDER_NOT_FOUND')
     if (order.status !== 'delivered') throw new Error('ORDER_NOT_DELIVERED')
     if (!order.contact_id) throw new Error('ORDER_CONTACT_REQUIRED')
+
+    const existingInvoice = await Invoice.findOne({
+      where: { order_id: input.order_id, org_id: orgId },
+      attributes: ['id'],
+      transaction: t,
+    })
+    if (existingInvoice) throw new Error('ORDER_ALREADY_INVOICED')
 
     const invoice_number = await nextDocumentNumber(orgId, branch_id, 'invoice', t)
 
@@ -172,9 +191,20 @@ export async function updateInvoice(id: string, input: InvoiceUpdateInput, actor
       Object.assign(updateData, { ...docTotals, balance: docTotals.total })
     }
 
-    const { items: discardedItems, branch_id: discardedBranch, ...rest } = input
+    const { items: discardedItems, branch_id: nextBranchId, ...rest } = input
     void discardedItems
-    void discardedBranch
+
+    if (nextBranchId && nextBranchId !== invoice.branch_id) {
+      Object.assign(updateData, await buildBranchRenumberPatch({
+        orgId: invoice.org_id!,
+        currentBranchId: invoice.branch_id,
+        nextBranchId,
+        numberField: 'invoice_number',
+        resolveNextNumber: (orgId, branchId, tx) => nextDocumentNumber(orgId, branchId, 'invoice', tx),
+        t,
+      }))
+    }
+
     await invoice.update({ ...rest, ...updateData }, { transaction: t })
 
     logger.info({ invoiceId: id, actorId }, 'invoice updated')
@@ -223,10 +253,10 @@ export async function cancelInvoice(id: string, actorId: string) {
       { transaction: t },
     )
 
-    // Restore stock: cancelling an invoice returns goods to inventory
+    // Restore stock not already returned via sales_returns
     if (invoice.order_id && invoice.org_id) {
-      const { restoreStockForOrder } = await import('@/modules/inventory/stock-movements.service')
-      await restoreStockForOrder(invoice.order_id, invoice.org_id, actorId, t)
+      const { restoreRemainingStockForOrder } = await import('@/modules/inventory/stock-movements.service')
+      await restoreRemainingStockForOrder(invoice.order_id, invoice.org_id, actorId, t)
     }
 
     logger.info({ invoiceId: id, actorId }, 'invoice cancelled')

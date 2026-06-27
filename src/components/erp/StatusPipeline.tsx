@@ -28,9 +28,11 @@ const PIPELINES: Record<DocType, Step[]> = {
 }
 
 const NEGATIVE: Partial<Record<string, { label: string; variant: 'red' | 'amber' }>> = {
-  rejected:  { label: 'Rechazado', variant: 'red' },
-  expired:   { label: 'Vencido',   variant: 'amber' },
-  cancelled: { label: 'Cancelado', variant: 'red' },
+  rejected:         { label: 'Rechazado', variant: 'red' },
+  expired:          { label: 'Vencido',   variant: 'amber' },
+  cancelled:        { label: 'Cancelado', variant: 'red' },
+  partial_returned: { label: 'Devolución parcial', variant: 'amber' },
+  returned:         { label: 'Devuelto', variant: 'amber' },
 }
 
 export interface StatusPipelineProps {

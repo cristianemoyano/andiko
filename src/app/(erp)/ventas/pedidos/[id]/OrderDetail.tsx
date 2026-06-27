@@ -13,6 +13,9 @@ import { Textarea } from '@/components/primitives/Textarea'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
+import { PageActionBar, type PageAction } from '@/components/erp/PageActionBar'
+import { SalesDocumentNumber } from '@/components/erp/SalesDocumentNumber'
+import { resolveSalesDocumentDisplay } from '@/lib/fiscal-document-number'
 import { EmptyState } from '@/components/erp/EmptyState'
 import { StatusPipeline } from '@/components/erp/StatusPipeline'
 import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
@@ -121,6 +124,54 @@ const STATUS_TRANSITIONS: Partial<Record<OrderStatus, { next: OrderStatus; label
 }
 const CAN_CANCEL: OrderStatus[] = ['draft', 'confirmed', 'in_progress']
 
+type RelatedInvoiceSummary = {
+  id: string
+  invoice_number: string
+  status: keyof typeof INVOICE_STATUS_LABEL
+  issue_date: string | null
+  created_at: string
+  afip_status?: string | null
+  punto_venta?: number | null
+  cbte_numero?: number | null
+}
+
+function relatedInvoiceDisplayNumber(invoice: RelatedInvoiceSummary): string {
+  return resolveSalesDocumentDisplay({
+    internalNumber: invoice.invoice_number,
+    afip_status: invoice.afip_status,
+    punto_venta: invoice.punto_venta,
+    cbte_numero: invoice.cbte_numero,
+  }).primary
+}
+
+function orderEditLockReason(
+  order: Order,
+  relatedInvoices: RelatedInvoiceSummary[],
+): string | null {
+  if (order.status === 'cancelled') {
+    return 'Este pedido está cancelado y no puede modificarse.'
+  }
+  if (order.status !== 'delivered') return null
+
+  if (!order.contact_id) {
+    return 'Este pedido está entregado y no tiene cliente asignado. Podés asignar uno con «Asignar cliente»; no se pueden modificar ítems ni importes.'
+  }
+
+  const activeInvoice = relatedInvoices.find(
+    inv => inv.status !== 'cancelled' && inv.status !== 'draft',
+  )
+  if (activeInvoice) {
+    const statusLabel = INVOICE_STATUS_LABEL[activeInvoice.status].toLowerCase()
+    return `Este pedido está entregado y ya tiene la factura ${relatedInvoiceDisplayNumber(activeInvoice)} (${statusLabel}). No se puede editar.`
+  }
+
+  return 'Este pedido está marcado como entregado y ya no admite cambios en ítems, cliente o importes.'
+}
+
+function hasActiveInvoice(relatedInvoices: RelatedInvoiceSummary[]): boolean {
+  return relatedInvoices.some(inv => inv.status !== 'cancelled' && inv.status !== 'draft')
+}
+
 function itemsToLineInput(items: Order['items']): LineItemInput[] {
   if (!items || items.length === 0) return [makeEmptyLine()]
   return items.map((item, idx) => ({
@@ -144,16 +195,19 @@ export function OrderDetail({ id }: OrderDetailProps) {
   const [order, setOrder]     = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(0)
-  const [relatedInvoices, setRelatedInvoices] = useState<Array<{
+  const [relatedInvoices, setRelatedInvoices] = useState<RelatedInvoiceSummary[]>([])
+  const [relatedReturns, setRelatedReturns] = useState<Array<{
     id: string
-    invoice_number: string
-    status: keyof typeof INVOICE_STATUS_LABEL
-    issue_date: string | null
-    created_at: string
+    return_number: string
+    operation_type: 'return' | 'exchange'
+    status: string
+    returned_total: string
+    creditNote?: { id: string; credit_note_number: string } | null
   }>>([])
   const [loadingTraceability, setLoadingTraceability] = useState(false)
 
   const [editMode, setEditMode] = useState(false)
+  const [contactOnlyEdit, setContactOnlyEdit] = useState(false)
   const [saving, setSaving]     = useState(false)
   const [errors, setErrors]     = useState<FieldErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
@@ -207,17 +261,24 @@ export function OrderDetail({ id }: OrderDetailProps) {
         limit: '50',
       })
       try {
-        const payload = await fetchJson<{
-          data?: Array<{
-            id: string
-            invoice_number: string
-            status: keyof typeof INVOICE_STATUS_LABEL
-            issue_date: string | null
-            created_at: string
-          }>
-        }>(`/api/v1/sales/invoices?${params}`)
+        const [invoicePayload, returnsPayload] = await Promise.all([
+          fetchJson<{
+            data?: Array<{
+              id: string
+              invoice_number: string
+              status: keyof typeof INVOICE_STATUS_LABEL
+              issue_date: string | null
+              created_at: string
+              afip_status?: string | null
+              punto_venta?: number | null
+              cbte_numero?: number | null
+            }>
+          }>(`/api/v1/sales/invoices?${params}`),
+          fetchJson<{ data: typeof relatedReturns }>(`/api/v1/sales/orders/${id}/returns`).catch(() => ({ data: [] })),
+        ])
         if (cancelled) return
-        setRelatedInvoices(Array.isArray(payload.data) ? payload.data : [])
+        setRelatedInvoices(Array.isArray(invoicePayload.data) ? invoicePayload.data : [])
+        setRelatedReturns(Array.isArray(returnsPayload.data) ? returnsPayload.data : [])
       } catch {
         if (!cancelled) setRelatedInvoices([])
       } finally {
@@ -229,7 +290,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
     return () => { cancelled = true }
   }, [id, refresh])
 
-  function enterEditMode(o: Order) {
+  function enterEditMode(o: Order, opts?: { contactOnly?: boolean }) {
     setContactId(o.contact_id ?? null)
     if (o.contact_id && o.contact) {
       setContactOption({
@@ -253,32 +314,20 @@ export function OrderDetail({ id }: OrderDetailProps) {
     setInternalNotes(o.internal_notes ?? '')
     setErrors({})
     setServerError(null)
+    setContactOnlyEdit(opts?.contactOnly ?? false)
     setEditMode(true)
   }
 
   function cancelEdit() {
     setEditMode(false)
+    setContactOnlyEdit(false)
     setErrors({})
     setServerError(null)
   }
 
-  async function handleSave() {
-    if (!order) return
-    setSaving(true)
-    setErrors({})
-    setServerError(null)
-
-    if (!contactId) {
-      setSaving(false)
-      setErrors(prev => ({ ...prev, contact_id: ['Seleccioná un cliente.'] }))
-      return
-    }
-
-    const body = {
-      contact_id:        contactId,
-      branch_id:         branchId,
-      price_list_id:     priceListId,
-      promised_date:     promisedDate ? promisedDate.toISOString() : null,
+  function buildContactBody() {
+    return {
+      contact_id: contactId,
       shipping_street: shippingAddress.street || null,
       shipping_number: shippingAddress.number || null,
       shipping_floor: shippingAddress.floor || null,
@@ -295,20 +344,42 @@ export function OrderDetail({ id }: OrderDetailProps) {
       billing_province: billingAddress.province || null,
       billing_postal_code: billingAddress.postal_code || null,
       billing_country: billingAddress.country || null,
-      payment_condition: paymentCondition,
-      notes:             notes.trim() || null,
-      internal_notes:    internalNotes.trim() || null,
-      items: items.map((item, idx) => ({
-        product_id:   item.product_id ?? null,
-        variant_id:   item.variant_id ?? null,
-        description:  item.description,
-        quantity:     parseFloat(item.quantity) || 0,
-        unit_price:   parseFloat(item.unit_price) || 0,
-        discount_pct: parseFloat(item.discount_pct) || 0,
-        iva_rate:     item.iva_rate,
-        sort_order:   idx,
-      })),
     }
+  }
+
+  async function handleSave() {
+    if (!order) return
+    setSaving(true)
+    setErrors({})
+    setServerError(null)
+
+    if (!contactId) {
+      setSaving(false)
+      setErrors(prev => ({ ...prev, contact_id: ['Seleccioná un cliente.'] }))
+      return
+    }
+
+    const body = contactOnlyEdit
+      ? buildContactBody()
+      : {
+          ...buildContactBody(),
+          branch_id:         branchId,
+          price_list_id:     priceListId,
+          promised_date:     promisedDate ? promisedDate.toISOString() : null,
+          payment_condition: paymentCondition,
+          notes:             notes.trim() || null,
+          internal_notes:    internalNotes.trim() || null,
+          items: items.map((item, idx) => ({
+            product_id:   item.product_id ?? null,
+            variant_id:   item.variant_id ?? null,
+            description:  item.description,
+            quantity:     parseFloat(item.quantity) || 0,
+            unit_price:   parseFloat(item.unit_price) || 0,
+            discount_pct: parseFloat(item.discount_pct) || 0,
+            iva_rate:     item.iva_rate,
+            sort_order:   idx,
+          })),
+        }
 
     try {
       await fetchJson(`/api/v1/sales/orders/${id}`, {
@@ -316,6 +387,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
         body: JSON.stringify(body),
       })
       setEditMode(false)
+      setContactOnlyEdit(false)
       setRefresh(r => r + 1)
     } catch (err) {
       const fe = fieldErrorsFromApiError(err)
@@ -444,11 +516,55 @@ export function OrderDetail({ id }: OrderDetailProps) {
 
   const transitions = STATUS_TRANSITIONS[order.status] ?? []
   const canCancel   = CAN_CANCEL.includes(order.status)
-  const canConvert  = order.status === 'delivered'
-  const canEdit     = order.status !== 'delivered' && order.status !== 'cancelled'
+  const canConvert  = order.status === 'delivered' && !hasActiveInvoice(relatedInvoices)
+  const canEdit     = !['delivered', 'cancelled', 'partial_returned', 'returned'].includes(order.status)
+  const canAssignClient = !order.contact_id && order.status !== 'cancelled' && !canEdit
+  const editLockReason = orderEditLockReason(order, relatedInvoices)
+  const canReturn = ['delivered', 'partial_returned'].includes(order.status)
   const canDeliver  = order.status === 'confirmed' || order.status === 'in_progress' || order.status === 'delivered'
 
   const editTotals = editMode ? calcTotals(items) : null
+
+  const orderPrimaryAction: PageAction | null = !editMode && canConvert
+    ? { id: 'convert', label: 'Crear factura', onClick: () => setConfirmConvert(true), disabled: transitioning }
+    : !editMode && transitions[0]
+      ? {
+          id: transitions[0].next,
+          label: transitions[0].label,
+          onClick: () => handleTransition(transitions[0].next),
+          disabled: transitioning,
+        }
+      : !editMode && canEdit
+        ? { id: 'edit', label: 'Editar', onClick: () => enterEditMode(order) }
+        : !editMode && canAssignClient
+          ? { id: 'assign-client', label: 'Asignar cliente', onClick: () => enterEditMode(order, { contactOnly: true }) }
+          : null
+
+  const orderSecondaryActions: PageAction[] = editMode
+    ? []
+    : [
+        { id: 'print', label: 'Imprimir', href: `/ventas/pedidos/${id}/print`, openInNewTab: true },
+        ...transitions.slice(orderPrimaryAction && transitions[0] && orderPrimaryAction.id === transitions[0].next ? 1 : 0).map(t => ({
+          id: t.next,
+          label: t.label,
+          onClick: () => handleTransition(t.next),
+          disabled: transitioning,
+        })),
+        ...(canDeliver ? [{ id: 'delivery-note', label: 'Crear remito', onClick: () => router.push(`/inventario/remitos/nuevo?order_id=${order.id}`) }] : []),
+        ...(canReturn ? [
+          { id: 'return', label: 'Registrar devolución', onClick: () => router.push(`/ventas/devoluciones/nuevo?order_id=${order.id}`) },
+          { id: 'exchange', label: 'Registrar cambio', onClick: () => router.push(`/ventas/devoluciones/nuevo?order_id=${order.id}&type=exchange`) },
+        ] : []),
+        ...(canEdit && orderPrimaryAction?.id !== 'edit'
+          ? [{ id: 'edit', label: 'Editar', onClick: () => enterEditMode(order) }]
+          : []),
+        ...(canAssignClient && orderPrimaryAction?.id !== 'assign-client'
+          ? [{ id: 'assign-client', label: 'Asignar cliente', onClick: () => enterEditMode(order, { contactOnly: true }) }]
+          : []),
+        ...(canCancel
+          ? [{ id: 'cancel', label: 'Cancelar pedido', onClick: () => setConfirmCancel(true), disabled: transitioning, variant: 'destructive' as const }]
+          : []),
+      ]
 
   return (
     <div className="flex flex-col h-full">
@@ -459,57 +575,25 @@ export function OrderDetail({ id }: OrderDetailProps) {
           { label: order.order_number },
         ]}
         actions={
-          <div className="flex flex-wrap gap-2 justify-end">
-            <Button asChild size="sm" variant="ghost">
-              <Link href={`/ventas/pedidos/${id}/print`} target="_blank" rel="noopener noreferrer">
-                Imprimir
-              </Link>
-            </Button>
-            <SendDocumentEmail
-              documentType="order"
-              documentId={id}
-              documentLabel={`Pedido ${order.order_number}`}
-            />
-            {!editMode && (
-              <>
-                {transitions.map(t => (
-                  <Button key={t.next} size="sm" variant="secondary" onClick={() => handleTransition(t.next)} disabled={transitioning}>
-                    {t.label}
-                  </Button>
-                ))}
-                {canDeliver && (
-                  <Button size="sm" variant="secondary" onClick={() => router.push(`/inventario/remitos/nuevo?order_id=${order.id}`)}>
-                    Crear remito
-                  </Button>
-                )}
-                {canConvert && (
-                  <Button size="sm" onClick={() => setConfirmConvert(true)} disabled={transitioning}>
-                    Crear factura
-                  </Button>
-                )}
-                {canCancel && (
-                  <Button size="sm" variant="ghost" onClick={() => setConfirmCancel(true)} disabled={transitioning}>
-                    Cancelar pedido
-                  </Button>
-                )}
-                {canEdit && (
-                  <Button size="sm" variant="secondary" onClick={() => enterEditMode(order)}>
-                    Editar
-                  </Button>
-                )}
-              </>
-            )}
-            {editMode && (
-              <>
-                <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saving}>
-                  Cancelar
-                </Button>
-                <Button size="sm" onClick={handleSave} disabled={saving}>
-                  {saving ? 'Guardando…' : 'Guardar cambios'}
-                </Button>
-              </>
-            )}
-          </div>
+          <PageActionBar
+            edit={editMode ? {
+              onCancel: cancelEdit,
+              onSave: handleSave,
+              saving,
+              saveLabel: contactOnlyEdit ? 'Asignar cliente' : 'Guardar cambios',
+              savingLabel: contactOnlyEdit ? 'Asignando…' : 'Guardando…',
+            } : undefined}
+            primary={orderPrimaryAction}
+            secondary={orderSecondaryActions}
+            menuChildren={!editMode ? (
+              <SendDocumentEmail
+                triggerMode="menu-item"
+                documentType="order"
+                documentId={id}
+                documentLabel={`Pedido ${order.order_number}`}
+              />
+            ) : undefined}
+          />
         }
       />
       <VentasSubNav />
@@ -525,6 +609,15 @@ export function OrderDetail({ id }: OrderDetailProps) {
             </div>
             <StatusPipeline type="order" status={order.status} />
           </div>
+
+          {editLockReason && !editMode && (
+            <div
+              role="status"
+              className="rounded-sm border border-warning bg-warning-bg px-4 py-3 text-[13px] text-warning"
+            >
+              {editLockReason}
+            </div>
+          )}
 
           {/* Header info card */}
           <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
@@ -555,42 +648,48 @@ export function OrderDetail({ id }: OrderDetailProps) {
                       error={!!errors.contact_id}
                     />
                   </FormField>
-                  <FormField label="Fecha prometida" htmlFor="promised_date">
-                    <DatePicker id="promised_date" value={promisedDate} onChange={setPromisedDate} placeholder="Seleccionar fecha" />
-                  </FormField>
+                  {!contactOnlyEdit && (
+                    <FormField label="Fecha prometida" htmlFor="promised_date">
+                      <DatePicker id="promised_date" value={promisedDate} onChange={setPromisedDate} placeholder="Seleccionar fecha" />
+                    </FormField>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <VentasBranchField value={branchId} onChange={setBranchId} error={errors.branch_id?.[0]} />
-                  <FormField label="Lista de precios" htmlFor="price_list_id">
-                    <SearchableSelect
-                      id="price_list_id"
-                      value={priceListId}
-                      onChange={setPriceListId}
-                      onSearch={searchPriceLists}
-                      placeholder="Sin lista de precios"
-                      clearable
-                    />
-                  </FormField>
-                </div>
-                <FormField label="Condición de pago">
-                  <div className="flex gap-2 flex-wrap">
-                    {PAYMENT_CONDITIONS.map(pc => (
-                      <button
-                        key={pc.value}
-                        type="button"
-                        onClick={() => setPaymentCondition(pc.value)}
-                        className={cn(
-                          'px-3 py-1 text-[12px] rounded-sm border transition-colors',
-                          paymentCondition === pc.value
-                            ? 'border-brand-600 bg-brand-50 text-brand-600 font-medium'
-                            : 'border-border-strong text-fg-muted hover:border-border-strong'
-                        )}
-                      >
-                        {pc.label}
-                      </button>
-                    ))}
-                  </div>
-                </FormField>
+                {!contactOnlyEdit && (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <VentasBranchField value={branchId} onChange={setBranchId} error={errors.branch_id?.[0]} />
+                      <FormField label="Lista de precios" htmlFor="price_list_id">
+                        <SearchableSelect
+                          id="price_list_id"
+                          value={priceListId}
+                          onChange={setPriceListId}
+                          onSearch={searchPriceLists}
+                          placeholder="Sin lista de precios"
+                          clearable
+                        />
+                      </FormField>
+                    </div>
+                    <FormField label="Condición de pago">
+                      <div className="flex gap-2 flex-wrap">
+                        {PAYMENT_CONDITIONS.map(pc => (
+                          <button
+                            key={pc.value}
+                            type="button"
+                            onClick={() => setPaymentCondition(pc.value)}
+                            className={cn(
+                              'px-3 py-1 text-[12px] rounded-sm border transition-colors',
+                              paymentCondition === pc.value
+                                ? 'border-brand-600 bg-brand-50 text-brand-600 font-medium'
+                                : 'border-border-strong text-fg-muted hover:border-border-strong'
+                            )}
+                          >
+                            {pc.label}
+                          </button>
+                        ))}
+                      </div>
+                    </FormField>
+                  </>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField label="Dirección de entrega" htmlFor="shipping_address_id">
                     <select
@@ -687,7 +786,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
             )}
 
             {/* Notes — always visible */}
-            {editMode ? (
+            {editMode && !contactOnlyEdit ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border">
                 <FormField label="Notas para el cliente" htmlFor="notes">
                   <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Condiciones, aclaraciones…" />
@@ -746,7 +845,15 @@ export function OrderDetail({ id }: OrderDetailProps) {
                     {relatedInvoices.map((invoice) => (
                       <div key={invoice.id} className="flex items-center justify-between gap-3 rounded-sm border border-border px-3 py-2">
                         <div>
-                          <p className="text-[13px] font-medium text-fg">{invoice.invoice_number}</p>
+                          <p className="text-[13px] font-medium text-fg">
+                            <SalesDocumentNumber
+                              internalNumber={invoice.invoice_number}
+                              afip_status={invoice.afip_status}
+                              punto_venta={invoice.punto_venta}
+                              cbte_numero={invoice.cbte_numero}
+                              className="text-[13px] font-medium text-fg"
+                            />
+                          </p>
                           <p className="text-[12px] text-fg-muted">
                             {INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status} · {new Date(invoice.issue_date ?? invoice.created_at).toLocaleDateString('es-AR')}
                           </p>
@@ -759,11 +866,38 @@ export function OrderDetail({ id }: OrderDetailProps) {
                   </div>
                 )}
               </div>
+              <div>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-1">Devoluciones y cambios</p>
+                {loadingTraceability ? (
+                  <p className="text-[13px] text-fg-muted">Cargando…</p>
+                ) : relatedReturns.length === 0 ? (
+                  <p className="text-[13px] text-fg-muted">Sin devoluciones registradas.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {relatedReturns.map(ret => (
+                      <div key={ret.id} className="flex items-center justify-between gap-3 rounded-sm border border-border px-3 py-2">
+                        <div>
+                          <p className="text-[13px] font-medium text-fg">
+                            {ret.return_number} · {ret.operation_type === 'exchange' ? 'Cambio' : 'Devolución'}
+                          </p>
+                          <p className="text-[12px] text-fg-muted">
+                            {ret.status} · {formatARS(ret.returned_total)}
+                            {ret.creditNote ? ` · NC ${ret.creditNote.credit_note_number}` : ''}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="xs" asChild>
+                          <Link href={`/ventas/devoluciones/${ret.id}`}>Ver</Link>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Items */}
-          {editMode ? (
+          {editMode && !contactOnlyEdit ? (
             <div className="bg-surface border border-border rounded-sm p-5">
               <SalesLineItemsEditor items={items} onChange={setItems} priceListId={priceListId} />
             </div>
@@ -806,7 +940,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
           )}
 
           {/* Totals */}
-          {editMode && editTotals ? (
+          {editMode && !contactOnlyEdit && editTotals ? (
             <TotalsFooter
               subtotal={String(editTotals.subtotal)}
               discountAmount={String(editTotals.discountAmount)}

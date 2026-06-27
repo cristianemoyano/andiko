@@ -2,6 +2,8 @@ import 'server-only'
 import Decimal from 'decimal.js'
 import sequelize from '@/lib/db'
 import User from '@/modules/auth/user.model'
+import Product from '@/modules/catalog/product.model'
+import ProductVariant from '@/modules/catalog/product-variant.model'
 import SalesOrder from '@/modules/sales/sales-order.model'
 import SalesOrderItem from '@/modules/sales/sales-order-item.model'
 import { nextDocumentNumber } from '@/modules/sales/sales.utils'
@@ -33,6 +35,37 @@ async function resolveVerifiedCashier(orgId: string, cashierUserId?: string | nu
     attributes: ['id'],
   })
   return cashier?.id ?? null
+}
+
+/** POS sends variant uuid as product_id — resolve to proper product + variant columns. */
+async function resolvePosOrderLineIds(
+  item: PosSaleAuthorizeInput['items'][number],
+  orgId: string,
+): Promise<{ product_id: string | null; variant_id: string | null }> {
+  if (item.variant_id && item.product_id) {
+    return { product_id: item.product_id, variant_id: item.variant_id }
+  }
+
+  const rawId = item.product_id ?? item.variant_id ?? null
+  if (!rawId) return { product_id: null, variant_id: null }
+
+  const variant = await ProductVariant.findOne({
+    where: { id: rawId, org_id: orgId },
+    attributes: ['id', 'product_id'],
+  })
+  if (variant) {
+    return { product_id: variant.product_id, variant_id: variant.id }
+  }
+
+  const product = await Product.findOne({
+    where: { id: rawId, org_id: orgId },
+    attributes: ['id'],
+  })
+  if (product) {
+    return { product_id: product.id, variant_id: null }
+  }
+
+  return { product_id: item.product_id ?? null, variant_id: item.variant_id ?? null }
 }
 
 /** Creates or returns an existing POS sales order (idempotent by pos_sale_id). */
@@ -68,14 +101,15 @@ export async function upsertPosSalesOrder(
     let docTaxAmount = new Decimal(0)
     let docTotal = new Decimal(0)
 
-    const itemRows = sale.items.map((item, idx) => {
+    const itemRows = []
+    for (const [idx, item] of sale.items.entries()) {
       const { subtotal, taxBase, taxAmount, total } = calcItem(item.qty, item.unit_price, item.iva_rate as IvaRate)
       docSubtotal = docSubtotal.add(subtotal)
       docTaxAmount = docTaxAmount.add(taxAmount)
       docTotal = docTotal.add(total)
-      return {
-        variant_id: item.variant_id ?? null,
-        product_id: null,
+      const ids = await resolvePosOrderLineIds(item, ctx.orgId)
+      itemRows.push({
+        ...ids,
         description: item.description,
         quantity: String(item.qty),
         unit_price: item.unit_price,
@@ -87,8 +121,8 @@ export async function upsertPosSalesOrder(
         tax_amount: taxAmount,
         total,
         sort_order: idx,
-      }
-    })
+      })
+    }
 
     const order = await SalesOrder.create(
       {

@@ -766,7 +766,7 @@ function CertificadoSection({ defaultCuitDigits }: { defaultCuitDigits?: string 
 
 type Emission = {
   id: string
-  document_type: 'invoice' | 'credit_note' | 'debit_note'
+  document_type: 'invoice' | 'credit_note' | 'debit_note' | 'sales_order'
   document_id: string
   status: 'pending' | 'authorized' | 'rejected' | 'error'
   retries: number
@@ -785,6 +785,7 @@ const DOC_TYPE_LABEL: Record<Emission['document_type'], string> = {
   invoice: 'Factura',
   credit_note: 'Nota de crédito',
   debit_note: 'Nota de débito',
+  sales_order: 'Pedido POS',
 }
 
 function ContingencySection() {

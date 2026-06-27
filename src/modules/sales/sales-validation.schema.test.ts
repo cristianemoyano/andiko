@@ -5,7 +5,7 @@ vi.mock('./sales-quote.model', () => ({
   QUOTE_STATUSES: ['draft', 'sent', 'accepted', 'rejected', 'expired'],
 }))
 vi.mock('./sales-order.model', () => ({
-  ORDER_STATUSES: ['draft', 'confirmed', 'in_progress', 'delivered', 'cancelled'],
+  ORDER_STATUSES: ['draft', 'confirmed', 'in_progress', 'delivered', 'partial_returned', 'returned', 'cancelled'],
 }))
 vi.mock('./invoice.model', () => ({
   INVOICE_STATUSES: ['draft', 'issued', 'partially_paid', 'paid', 'cancelled'],

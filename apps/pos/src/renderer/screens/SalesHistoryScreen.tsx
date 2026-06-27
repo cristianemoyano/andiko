@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { PosSalePayment } from '@andiko/shared'
 import { PosReceipt } from '../components/PosReceipt'
 import { usePosFiscalProfile } from '../lib/usePosFiscalProfile'
+import { randomUUID } from '../lib/uuid'
 import {
   DEFAULT_SALES_HISTORY_FILTERS,
   SalesHistoryFilters,
@@ -45,6 +46,11 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
   const [openDraftId, setOpenDraftId] = useState<string | null>(null)
   const [authorizing, setAuthorizing] = useState(false)
   const [authorizeError, setAuthorizeError] = useState<string | null>(null)
+  const [returnMode, setReturnMode] = useState(false)
+  const [returnQtys, setReturnQtys] = useState<Record<string, string>>({})
+  const [returning, setReturning] = useState(false)
+  const [returnError, setReturnError] = useState<string | null>(null)
+  const [returnSuccess, setReturnSuccess] = useState<string | null>(null)
 
   async function refresh() {
     setLoading(true)
@@ -92,6 +98,14 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
 
     window.pos.sales.get(openSaleId).then((sale) => {
       setOpenSale(sale)
+      if (sale?.items) {
+        const initial: Record<string, string> = {}
+        for (const it of sale.items) initial[it.product_id] = ''
+        setReturnQtys(initial)
+      }
+      setReturnMode(false)
+      setReturnError(null)
+      setReturnSuccess(null)
     }).catch(e => {
       setOpenSale(null)
       setError(e instanceof Error ? e.message : String(e))
@@ -159,7 +173,37 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
     })
   }, [draftRows, filters])
 
+  async function handleReturnSale() {
+    if (!openSaleId || !openSale?.sale) return
+    const items = openSale.items
+      .map(it => ({ product_id: it.product_id, quantity: parseFloat(returnQtys[it.product_id] || '0') }))
+      .filter(i => i.quantity > 0)
+    if (items.length === 0) {
+      setReturnError('Indicá la cantidad a devolver en al menos un ítem.')
+      return
+    }
+    setReturning(true)
+    setReturnError(null)
+    setReturnSuccess(null)
+    try {
+      await window.pos.sales.return({
+        pos_local_id: randomUUID(),
+        sale_id: openSaleId,
+        operation_type: 'return',
+        items,
+        refund_disposition: 'account_credit',
+      })
+      setReturnSuccess('Devolución registrada en el servidor.')
+      setReturnMode(false)
+    } catch (e) {
+      setReturnError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setReturning(false)
+    }
+  }
+
   const openSaleNeedsFiscal = openSale?.sale ? saleNeedsFiscal(openSale.sale as SaleRow) : false
+  const canReturnSale = Boolean(openSale?.sale?.cloud_id)
 
   return (
     <div className="h-full overflow-hidden flex flex-col">
@@ -308,6 +352,14 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
                       {authorizing ? 'Autorizando…' : 'Autorizar AFIP'}
                     </button>
                   )}
+                  {canReturnSale && (
+                    <button
+                      onClick={() => { setReturnMode(v => !v); setReturnError(null); setReturnSuccess(null) }}
+                      className="h-9 px-4 bg-white border border-zinc-300 text-[13px] font-medium rounded-md hover:bg-zinc-50 transition-colors"
+                    >
+                      {returnMode ? 'Cancelar devolución' : 'Devolver'}
+                    </button>
+                  )}
                   <button
                     onClick={handlePrint}
                     className="h-9 px-4 bg-brand-600 text-white text-[13px] font-semibold rounded-md hover:bg-brand-700 transition-colors"
@@ -320,6 +372,44 @@ export function SalesHistoryScreen({ onResumeDraft }: { onResumeDraft: (draftId:
               {authorizeError && (
                 <div className="shrink-0 mb-3 print:hidden text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
                   {authorizeError}
+                </div>
+              )}
+
+              {returnError && (
+                <div className="shrink-0 mb-3 print:hidden text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                  {returnError}
+                </div>
+              )}
+              {returnSuccess && (
+                <div className="shrink-0 mb-3 print:hidden text-[12px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
+                  {returnSuccess}
+                </div>
+              )}
+
+              {returnMode && (
+                <div className="shrink-0 mb-3 print:hidden rounded-md border border-zinc-200 bg-white p-3 space-y-2">
+                  <p className="text-[12px] font-semibold text-zinc-800">Cantidades a devolver</p>
+                  {openSale.items.map(it => (
+                    <label key={it.product_id} className="flex items-center justify-between gap-3 text-[12px]">
+                      <span className="truncate">{it.product_name} (máx {it.qty})</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={it.qty}
+                        step="any"
+                        value={returnQtys[it.product_id] ?? ''}
+                        onChange={e => setReturnQtys(q => ({ ...q, [it.product_id]: e.target.value }))}
+                        className="w-20 h-8 border border-zinc-300 rounded px-2 text-right"
+                      />
+                    </label>
+                  ))}
+                  <button
+                    onClick={() => void handleReturnSale()}
+                    disabled={returning}
+                    className="h-9 w-full bg-red-600 text-white text-[13px] font-semibold rounded-md hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {returning ? 'Procesando…' : 'Confirmar devolución'}
+                  </button>
                 </div>
               )}
 

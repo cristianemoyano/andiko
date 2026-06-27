@@ -6,6 +6,7 @@ import { paginate, toPaginated } from '@/lib/pagination'
 import PurchaseOrder from './purchase-order.model'
 import PurchaseOrderItem from './purchase-order-item.model'
 import type { PurchaseOrderInput, PurchaseOrderUpdateInput, PurchaseOrderQuery } from './purchase-order.schema'
+import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { nextPurchaseDocNumber, calcLineItem, calcDocumentTotals } from './purchases.utils'
 import { ensurePurchasesBranchAssociations } from './purchases-branch-associations'
 import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
@@ -140,7 +141,20 @@ export async function updatePurchaseOrder(id: string, input: PurchaseOrderUpdate
       throw new Error('PURCHASE_ORDER_LOCKED')
     }
 
-    const { items, ...fields } = input
+    const { items, branch_id: nextBranchId, ...fields } = input
+
+    const branchPatch: Record<string, unknown> = {}
+    if (nextBranchId && nextBranchId !== order.branch_id) {
+      assertDraftBranchChange(order.status)
+      Object.assign(branchPatch, await buildBranchRenumberPatch({
+        orgId,
+        currentBranchId: order.branch_id,
+        nextBranchId,
+        numberField: 'order_number',
+        resolveNextNumber: (oid, branchId, tx) => nextPurchaseDocNumber(oid, branchId, 'purchase_order', tx),
+        t,
+      }))
+    }
 
     if (items && items.length > 0) {
       await PurchaseOrderItem.destroy({ where: { order_id: id }, transaction: t })
@@ -173,9 +187,9 @@ export async function updatePurchaseOrder(id: string, input: PurchaseOrderUpdate
         ),
       )
 
-      await order.update({ ...fields, ...docTotals, updated_by: actorId }, { transaction: t })
+      await order.update({ ...fields, ...branchPatch, ...docTotals, updated_by: actorId }, { transaction: t })
     } else {
-      await order.update({ ...fields, updated_by: actorId }, { transaction: t })
+      await order.update({ ...fields, ...branchPatch, updated_by: actorId }, { transaction: t })
     }
 
     return order

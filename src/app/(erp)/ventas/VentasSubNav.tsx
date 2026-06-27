@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/ventas/presupuestos', label: 'Presupuestos' },
   { href: '/ventas/pedidos', label: 'Pedidos' },
   { href: '/ventas/facturas', label: 'Facturas' },
+  { href: '/ventas/devoluciones', label: 'Devoluciones' },
   { href: '/ventas/notas-de-credito', label: 'Notas de crédito' },
   { href: '/ventas/notas-de-debito', label: 'Notas de débito' },
   { href: '/ventas/libro-iva', label: 'Libro IVA' },
