@@ -26,7 +26,7 @@ export async function listBillingInvoices(query: BillingInvoiceQuery) {
   if (status)          where.status = status
   if (overdue) {
     where.due_date = { [Op.lt]: new Date() }
-    where.status   = { [Op.notIn]: ['paid', 'void'] }
+    if (!status) where.status = { [Op.notIn]: ['paid', 'void'] }
   }
 
   const { rows, count } = await BillingInvoice.findAndCountAll({
@@ -165,7 +165,7 @@ export async function issueBillingInvoice(id: string, actorId: string) {
 
     await invoice.update({ status: 'issued', issue_date, due_date, updated_by: actorId }, { transaction: t })
     logger.info({ invoiceId: id, actorId }, 'billing invoice issued')
-    return invoice.reload({ transaction: t })
+    return await invoice.reload({ transaction: t })
   })
 }
 
@@ -179,7 +179,7 @@ export async function voidBillingInvoice(id: string, actorId: string) {
 
     await invoice.update({ status: 'void', updated_by: actorId }, { transaction: t })
     logger.info({ invoiceId: id, actorId }, 'billing invoice voided')
-    return invoice.reload({ transaction: t })
+    return await invoice.reload({ transaction: t })
   })
 }
 
