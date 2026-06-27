@@ -16,10 +16,11 @@ type UserHit = {
   name: string
   role: string
   org_id: string | null
+  org_name: string | null
   branch_id: string | null
 }
 
-type RecentImpersonation = Pick<UserHit, 'id' | 'email' | 'name' | 'role'>
+type RecentImpersonation = Pick<UserHit, 'id' | 'email' | 'name' | 'role' | 'org_name'>
 
 const RECENT_IMPERSONATIONS_KEY = 'andiko:impersonation-recent'
 const RECENT_IMPERSONATIONS_LIMIT = 5
@@ -40,6 +41,10 @@ function readRecentImpersonations(): RecentImpersonation[] {
         && typeof (row as RecentImpersonation).name === 'string'
         && typeof (row as RecentImpersonation).role === 'string',
       )
+      .map(row => ({
+        ...row,
+        org_name: typeof row.org_name === 'string' ? row.org_name : null,
+      }))
       .slice(0, RECENT_IMPERSONATIONS_LIMIT)
   } catch {
     return []
@@ -56,27 +61,56 @@ function pushRecentImpersonation(user: RecentImpersonation): RecentImpersonation
   return next
 }
 
+function removeRecentImpersonation(userId: string): RecentImpersonation[] {
+  const next = readRecentImpersonations().filter(u => u.id !== userId)
+  try {
+    window.localStorage.setItem(RECENT_IMPERSONATIONS_KEY, JSON.stringify(next))
+  } catch {
+    // localStorage full or unavailable — ignore
+  }
+  return next
+}
+
 function UserPickRow({
   user,
   disabled,
   onPick,
+  onRemove,
 }: {
   user: RecentImpersonation
   disabled: boolean
   onPick: () => void
+  onRemove?: () => void
 }) {
   return (
-    <li>
+    <li className="flex items-stretch">
       <button
         type="button"
         disabled={disabled}
         onClick={onPick}
-        className="w-full text-left px-3 py-2 text-[13px] hover:bg-surface-muted disabled:opacity-50"
+        className="min-w-0 flex-1 text-left px-3 py-2 text-[13px] hover:bg-surface-muted disabled:opacity-50"
       >
         <div className="font-medium text-fg">{user.name}</div>
         <div className="text-[11px] text-fg-muted">{user.email}</div>
-        <div className="text-[10px] text-fg-subtle mt-0.5">{user.role}</div>
+        <div className="text-[10px] text-fg-subtle mt-0.5">
+          {user.org_name ?? 'Sin organización'}
+          {' · '}
+          {user.role}
+        </div>
       </button>
+      {onRemove && (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onRemove}
+          aria-label={`Quitar a ${user.name} de recientes`}
+          className="shrink-0 px-2.5 text-fg-muted hover:text-fg hover:bg-surface-muted disabled:opacity-50"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+            <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
+          </svg>
+        </button>
+      )}
     </li>
   )
 }
@@ -257,6 +291,7 @@ export function SysAdminImpersonation() {
                     user={u}
                     disabled={!!submittingId}
                     onPick={() => void handleImpersonate(u)}
+                    onRemove={() => setRecentUsers(removeRecentImpersonation(u.id))}
                   />
                 ))}
               </ul>

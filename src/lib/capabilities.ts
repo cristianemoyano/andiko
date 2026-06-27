@@ -44,8 +44,15 @@ function buildCapabilities(
   const modulePerms = perms.filter(isModulePermission)
   const settingsPerms = perms.filter(isSettingsPermission)
 
-  const canSettingsRead = isPlatformSysAdmin || hasSettings(perms, 'settings:read')
-  const canSettingsWrite = isPlatformSysAdmin || hasSettings(perms, 'settings:write')
+  const hasSettingsReadPerm = hasSettings(perms, 'settings:read')
+  const hasSettingsWritePerm = hasSettings(perms, 'settings:write')
+
+  /** Settings UI/API scoped to an active organization (not platform sys-admin without org). */
+  const canOrgSettingsRead = !!orgId && hasSettingsReadPerm
+  const canOrgSettingsWrite = !!orgId && hasSettingsWritePerm
+
+  const canSettingsRead = isPlatformSysAdmin || hasSettingsReadPerm
+  const canSettingsWrite = isPlatformSysAdmin || hasSettingsWritePerm
 
   const apiNamespace: 'sys-admin' | 'settings' = isPlatformSysAdmin ? 'sys-admin' : 'settings'
 
@@ -71,7 +78,7 @@ function buildCapabilities(
       organizaciones: isPlatformSysAdmin || canSettingsRead,
       organizacionesHref,
       configuracion: true,
-      facturacion: !isPlatformSysAdmin && canSettingsRead && !!orgId,
+      facturacion: !isPlatformSysAdmin && canOrgSettingsRead,
     },
     organizacion: {
       detail: isPlatformSysAdmin || (canSettingsRead && !!orgId),
@@ -98,15 +105,15 @@ function buildCapabilities(
     },
     configuracion: {
       tabs: {
-        impresion: canSettingsRead,
-        plantillasEmail: canSettingsRead,
-        emailsEnviados: canSettingsRead,
+        impresion: canOrgSettingsRead,
+        plantillasEmail: canOrgSettingsRead,
+        emailsEnviados: canOrgSettingsRead,
         apariencia: true,
-        afip: canSettingsRead,
+        afip: canOrgSettingsRead,
       },
     },
     onboarding: {
-      manage: canSettingsWrite,
+      manage: canOrgSettingsWrite,
     },
   }
 }

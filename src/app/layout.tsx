@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import { AppToaster } from '@/components/layout/AppToaster'
+import { ThemeInitScript } from '@/components/layout/ThemeInitScript'
 import { ServiceWorkerRegister } from '@/components/layout/ServiceWorkerRegister'
 import { siteConfig, siteUrl } from '@/lib/site'
 
@@ -92,6 +93,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <ThemeInitScript />
         <style dangerouslySetInnerHTML={{ __html: 'body{background:#FAFAFA}@media(prefers-color-scheme:dark){body{background:#18181B}}' }} />
         {children}
         <AppToaster />

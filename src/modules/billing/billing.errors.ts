@@ -5,6 +5,8 @@ const ERROR_MAP: Record<string, { status: number; message: string }> = {
   PLAN_NOT_FOUND:                       { status: 404, message: 'Plan no encontrado' },
   PLAN_IN_USE:                          { status: 409, message: 'El plan tiene suscripciones activas' },
   METRIC_NOT_FOUND:                     { status: 404, message: 'Métrica no encontrada' },
+  METRIC_KEY_UNKNOWN:                   { status: 422, message: 'La métrica no está registrada en el catálogo del sistema' },
+  METRIC_KEY_EXISTS:                    { status: 409, message: 'Esa métrica ya está configurada' },
   SUBSCRIPTION_NOT_FOUND:               { status: 404, message: 'Suscripción no encontrada' },
   SUBSCRIPTION_ALREADY_EXISTS:          { status: 409, message: 'La organización ya tiene una suscripción activa' },
   BILLING_INVOICE_NOT_FOUND:            { status: 404, message: 'Factura no encontrada' },

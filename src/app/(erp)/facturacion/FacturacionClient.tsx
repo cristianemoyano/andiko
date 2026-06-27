@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, type Column, StatCard, EmptyState } from '@/components/erp'
+import { DataTable, type Column, EmptyState } from '@/components/erp'
+import { BillingPeriodPreviewSection, type BillingPreview, type BillingUsageSummary } from '@/components/erp/billing/BillingPeriodPreviewSection'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Skeleton } from '@/components/primitives/Skeleton'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -44,11 +45,8 @@ interface UsageLine {
   amount: string
 }
 
-interface UsageSummary {
-  period_start: string
-  period_end: string
+interface UsageSummary extends BillingUsageSummary {
   lines: UsageLine[]
-  total: string
 }
 
 interface InvoiceRow {
@@ -88,6 +86,7 @@ export function FacturacionClient() {
   const router = useRouter()
   const [sub, setSub] = useState<Subscription | null>(null)
   const [usage, setUsage] = useState<UsageSummary | null>(null)
+  const [preview, setPreview] = useState<BillingPreview | null>(null)
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -97,15 +96,16 @@ export function FacturacionClient() {
       if (!cancelled) setLoading(true)
       try {
         const [overview, inv] = await Promise.all([
-          fetchJson<{ subscription: Subscription | null; usage: UsageSummary | null }>('/api/v1/billing/subscription'),
+          fetchJson<{ subscription: Subscription | null; usage: UsageSummary | null; preview: BillingPreview | null }>('/api/v1/billing/subscription'),
           fetchJson<{ data: InvoiceRow[] }>('/api/v1/billing/invoices?limit=100'),
         ])
         if (cancelled) return
         setSub(overview.subscription)
         setUsage(overview.usage)
+        setPreview(overview.preview)
         setInvoices(inv.data ?? [])
       } catch {
-        if (!cancelled) { setSub(null); setUsage(null); setInvoices([]) }
+        if (!cancelled) { setSub(null); setUsage(null); setPreview(null); setInvoices([]) }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -114,8 +114,9 @@ export function FacturacionClient() {
   }, [])
 
   const pendingBalance = invoices
-    .filter(i => i.status !== 'void')
+    .filter(i => i.status !== 'void' && i.status !== 'paid')
     .reduce((acc, i) => acc + Number(i.balance), 0)
+    .toFixed(2)
 
   const columns: Column<InvoiceRow>[] = [
     { key: 'invoice_number', header: 'Número', mobileRole: 'title', render: r => <span className="font-mono text-[12px] text-fg">{r.invoice_number}</span> },
@@ -174,33 +175,14 @@ export function FacturacionClient() {
               </div>
             )}
 
-            {/* Usage this period */}
             {sub && (
-              <section className="mb-4">
-                <h2 className="text-[13px] font-semibold text-fg mb-2">Consumo del período actual</h2>
-                <div className="flex flex-wrap gap-3 mb-3">
-                  <StatCard label="Costo de consumo" value={formatARS(usage?.total ?? '0.00')} />
-                  <StatCard label="Saldo pendiente" value={formatARS(pendingBalance.toFixed(2))} tone={pendingBalance > 0 ? 'warning' : 'default'} />
-                </div>
-                {usage && usage.lines.length > 0 ? (
-                  <DataTable
-                    columns={[
-                      { key: 'label', header: 'Métrica', mobileRole: 'title', render: (l: UsageLine) => <span className="text-fg">{l.label}</span> },
-                      { key: 'quantity', header: 'Cantidad', align: 'right', mobileRole: 'subtitle', render: (l: UsageLine) => <span className="tabular-nums">{l.quantity}{l.unit_label ? ` ${l.unit_label}` : ''}</span> },
-                      { key: 'unit_price', header: 'Precio unit.', align: 'right', mobileRole: 'subtitle', render: (l: UsageLine) => <span className="tabular-nums">{formatARS(l.unit_price)}</span> },
-                      { key: 'amount', header: 'Importe', align: 'right', mobileRole: 'amount', render: (l: UsageLine) => <span className="tabular-nums">{formatARS(l.amount)}</span> },
-                    ]}
-                    data={usage.lines}
-                    keyExtractor={l => l.metric_key}
-                    emptyMessage="Sin consumo registrado en el período."
-                  />
-                ) : (
-                  <p className="text-[13px] text-fg-muted">Sin consumo registrado en el período actual.</p>
-                )}
-              </section>
+              <BillingPeriodPreviewSection
+                preview={preview}
+                usage={usage}
+                pendingBalance={pendingBalance}
+              />
             )}
 
-            {/* Invoices */}
             <section>
               <h2 className="text-[13px] font-semibold text-fg mb-2">Facturas de tu suscripción</h2>
               <DataTable

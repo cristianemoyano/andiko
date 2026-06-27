@@ -52,9 +52,16 @@ export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
             </svg>
           </Link>
         ) : null}
-        <span className="text-[17px] font-semibold text-fg tracking-tight truncate">
-          {lastCrumb?.label ?? ''}
-        </span>
+        <div className="min-w-0 flex flex-col justify-center">
+          {parentCrumb && breadcrumbs.length >= 2 && (
+            <span className="text-[11px] text-fg-muted truncate leading-tight">
+              {parentCrumb.label}
+            </span>
+          )}
+          <span className="text-[17px] font-semibold text-fg tracking-tight truncate leading-tight">
+            {lastCrumb?.label ?? ''}
+          </span>
+        </div>
       </div>
 
       {/* ── Mobile: row 2 — actions (only rendered when actions prop is provided) ── */}

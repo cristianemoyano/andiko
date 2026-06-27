@@ -1,5 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
+import type { Transaction } from 'sequelize'
 import OrganizationSetting from './organization-setting.model'
 import Organization from './organization.model'
 import {
@@ -46,25 +47,27 @@ export function moduleForPermission(permission: string): OrgModuleKey | null {
 export async function updateOrganizationSettings(
   orgId: string,
   input: { enabled_modules?: OrgModuleKey[]; enabled_features?: Record<string, boolean> },
+  t?: Transaction,
 ): Promise<EffectiveOrganizationSettings> {
-  const org = await Organization.findByPk(orgId)
+  const org = await Organization.findByPk(orgId, { transaction: t })
   if (!org) throw new Error('ORG_NOT_FOUND')
 
   const existing = await OrganizationSetting.findOne({
     where: { org_id: orgId },
     attributes: ['id', 'enabled_modules', 'enabled_features'],
+    transaction: t,
   })
   if (existing) {
     const next: Partial<{ enabled_modules: OrgModuleKey[]; enabled_features: Record<string, boolean> }> = {}
     if (input.enabled_modules !== undefined) next.enabled_modules = input.enabled_modules
     if (input.enabled_features !== undefined) next.enabled_features = input.enabled_features
-    await existing.update(next)
+    await existing.update(next, { transaction: t })
   } else {
     await OrganizationSetting.create({
       org_id: orgId,
       enabled_modules: input.enabled_modules ?? [...DEFAULT_ENABLED_MODULES],
       enabled_features: input.enabled_features ?? {},
-    })
+    }, { transaction: t })
   }
   return loadEffectiveSettings(orgId)
 }

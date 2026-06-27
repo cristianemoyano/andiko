@@ -1,7 +1,7 @@
 import type { IvaRate, PaymentCondition } from '@/types'
 
 /** API path segment + registry key (lowercase). */
-export type PrintDomain = 'sales' | 'purchases'
+export type PrintDomain = 'sales' | 'purchases' | 'billing'
 
 export type PrintableDocumentKind =
   | 'sales_quote'
@@ -14,6 +14,7 @@ export type PrintableDocumentKind =
   | 'purchase_receipt'
   | 'supplier_invoice'
   | 'supplier_payment'
+  | 'billing_invoice'
 
 export type CounterpartyRole = 'customer' | 'supplier'
 

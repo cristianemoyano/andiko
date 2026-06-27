@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   next-themes@0.4.6:
-    hash: 9ab742790bc3284034400fc2d6422e596a9b3439e3dacdb030316992ec0bec6e
+    hash: 1d1a0cf0a7bb14aa9b015fb89d636a7659ee235f49c6104a5ece392c668a2bb5
     path: patches/next-themes@0.4.6.patch
 
 importers:
@@ -75,7 +75,7 @@ importers:
         version: 5.0.0-beta.31(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(nodemailer@7.0.13)(react@19.2.7)
       next-themes:
         specifier: ^0.4.6
-        version: 0.4.6(patch_hash=9ab742790bc3284034400fc2d6422e596a9b3439e3dacdb030316992ec0bec6e)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 0.4.6(patch_hash=1d1a0cf0a7bb14aa9b015fb89d636a7659ee235f49c6104a5ece392c668a2bb5)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       nodemailer:
         specifier: ^7.0.13
         version: 7.0.13
@@ -13068,7 +13068,7 @@ snapshots:
     optionalDependencies:
       nodemailer: 7.0.13
 
-  next-themes@0.4.6(patch_hash=9ab742790bc3284034400fc2d6422e596a9b3439e3dacdb030316992ec0bec6e)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+  next-themes@0.4.6(patch_hash=1d1a0cf0a7bb14aa9b015fb89d636a7659ee235f49c6104a5ece392c668a2bb5)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)

@@ -12,11 +12,12 @@ export interface UsageRecordAttributes extends Timestamps, AuditFields {
   period: string
   recorded_at: Date
   invoiced_at: Date | null
+  source_id: string | null
 }
 
 type UsageRecordCreationAttributes = Optional<
   UsageRecordAttributes,
-  | 'id' | 'subscription_id' | 'recorded_at' | 'invoiced_at'
+  | 'id' | 'subscription_id' | 'recorded_at' | 'invoiced_at' | 'source_id'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
 >
 
@@ -28,6 +29,7 @@ class UsageRecord extends AuditModel<UsageRecordAttributes, UsageRecordCreationA
   declare period: string
   declare recorded_at: Date
   declare invoiced_at: Date | null
+  declare source_id: string | null
 }
 
 UsageRecord.init(
@@ -39,6 +41,7 @@ UsageRecord.init(
     period:          { type: DataTypes.DATEONLY, allowNull: false },
     recorded_at:     { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
     invoiced_at:     { type: DataTypes.DATE },
+    source_id:       { type: DataTypes.STRING(100) },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'usage_records', paranoid: true, underscored: true }

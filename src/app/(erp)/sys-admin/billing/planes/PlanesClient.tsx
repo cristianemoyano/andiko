@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { DataTable, type Column } from '@/components/erp'
@@ -11,10 +10,10 @@ import { Skeleton } from '@/components/primitives/Skeleton'
 import { DropdownMenuItem } from '@/components/primitives/DropdownMenu'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { PlanModal, type PlanRow } from './PlanModal'
+import { BillingSubNav } from '../BillingSubNav'
 import { fetchJson } from '@/lib/fetch-json'
 
 export function PlanesClient() {
-  const router = useRouter()
   const [rows, setRows] = useState<PlanRow[]>([])
   const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(0)
@@ -45,7 +44,10 @@ export function PlanesClient() {
     { key: 'code', header: 'Código', mobileRole: 'subtitle', render: r => <span className="font-mono text-[12px] text-fg-muted">{r.code}</span> },
     { key: 'interval', header: 'Ciclo', mobileRole: 'subtitle', render: r => <span className="text-fg-muted">{r.interval === 'annual' ? 'Anual' : 'Mensual'}</span> },
     { key: 'base_price', header: 'Precio base', align: 'right', mobileRole: 'amount', render: r => <span className="tabular-nums">{formatARS(r.base_price)}</span> },
-    { key: 'per_seat_price', header: 'Por usuario', align: 'right', mobileRole: 'subtitle', render: r => <span className="tabular-nums">{formatARS(r.per_seat_price)}</span> },
+    { key: 'included_seats', header: 'Usuarios', align: 'right', mobileRole: 'subtitle', render: r => <span className="tabular-nums text-fg-muted">{r.included_seats}</span> },
+    { key: 'included_branches', header: 'Sucursales', align: 'right', mobileRole: 'subtitle', render: r => <span className="tabular-nums text-fg-muted">{r.included_branches ?? 1}</span> },
+    { key: 'per_seat_price', header: 'Extra usuario', align: 'right', mobileRole: 'subtitle', render: r => <span className="tabular-nums">{formatARS(r.per_seat_price)}</span> },
+    { key: 'per_branch_price', header: 'Extra sucursal', align: 'right', mobileRole: 'subtitle', render: r => <span className="tabular-nums">{formatARS(r.per_branch_price ?? '0.00')}</span> },
     { key: 'is_active', header: 'Estado', mobileRole: 'badge', render: r => <StatusBadge value={r.is_active ? 'Activo' : 'Inactivo'} /> },
     {
       key: '_actions',
@@ -64,7 +66,11 @@ export function PlanesClient() {
         breadcrumbs={[{ label: 'Facturación', href: '/sys-admin/billing' }, { label: 'Planes' }]}
         actions={<Button size="sm" onClick={openCreate}>+ Nuevo plan</Button>}
       />
+      <BillingSubNav />
       <PageBody>
+        <p className="text-[13px] text-fg-muted mb-4">
+          Catálogo de planes comerciales: precio base, usuarios y sucursales incluidos, y tarifas por excedente.
+        </p>
         {loading ? (
           <div className="flex flex-col gap-2">
             {Array.from({ length: 4 }, (_, i) => (
@@ -80,9 +86,6 @@ export function PlanesClient() {
             onRowClick={openEdit}
           />
         )}
-        <div className="mt-4">
-          <Button variant="ghost" size="xs" onClick={() => router.push('/sys-admin/billing')}>← Volver a suscripciones</Button>
-        </div>
       </PageBody>
 
       <PlanModal

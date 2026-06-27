@@ -46,6 +46,16 @@ import SupplierInvoice from '@/modules/purchases/supplier-invoice.model'
 import SupplierInvoiceItem from '@/modules/purchases/supplier-invoice-item.model'
 import SupplierPayment from '@/modules/purchases/supplier-payment.model'
 import { nextPurchaseDocNumber, calcLineItem as calcPurchaseLine, calcDocumentTotals as calcPurchaseTotals } from '@/modules/purchases/purchases.utils'
+import {
+  seedBillingPlans,
+  seedBillingMetrics,
+  seedMetricsSummaryLine,
+  seedOrgSubscription,
+  seedPlatformBillerSettings,
+  seedPlanSummaryLines,
+  seedBillerSummaryLine,
+  SEED_PLAN_BY_ORG_SLUG,
+} from '@/db/dev/seed-billing-plans'
 
 const MIN_PROD_PASSWORD_LENGTH = 16
 
@@ -1303,6 +1313,10 @@ async function run() {
       await sysAdmin.update({ password_hash: sysHash }, { transaction: t })
     }
 
+    const billingPlansByCode = await seedBillingPlans(sysAdmin.id, t)
+    await seedBillingMetrics(sysAdmin.id, t)
+    await seedPlatformBillerSettings(t)
+
     for (const tenant of seed.tenants) {
       const [org] = await Organization.findOrCreate({
         where: { slug: tenant.slug },
@@ -1348,6 +1362,12 @@ async function run() {
           },
           transaction: t,
         })
+      }
+
+      const planCode = SEED_PLAN_BY_ORG_SLUG[tenant.slug]
+      if (planCode) {
+        const seats = tenant.slug === 'demo' ? 8 : 3
+        await seedOrgSubscription(org.id, planCode, seats, sysAdmin.id, billingPlansByCode, t)
       }
 
       const branches: Branch[] = []
@@ -1645,11 +1665,19 @@ async function run() {
     console.log('Prod seed completed.')
     console.log('Users created/updated. Passwords loaded from SEED_* env vars (not printed).')
     console.log(`  sys-admin: ${seed.sysAdmin.email}`)
+    console.log('Billing plans:')
+    for (const line of seedPlanSummaryLines()) console.log(line)
+    console.log(seedBillerSummaryLine())
+    console.log(seedMetricsSummaryLine())
     console.log('  demo: admin@demo.local (Gerente), op@demo.local (Vendedor)')
     console.log('  premium: admin@premium.local (Gerente)')
   } else {
     console.log('Dev seed completed.')
     console.log(`Sys-admin: ${seed.sysAdmin.email} / ${seed.sysAdmin.password}`)
+    console.log('Billing plans:')
+    for (const line of seedPlanSummaryLines()) console.log(line)
+    console.log(seedBillerSummaryLine())
+    console.log(seedMetricsSummaryLine())
     console.log('Tenant demo (password demo12345 for all):')
     console.log('  admin@demo.local — Gerente')
     console.log('  op@demo.local — Vendedor')

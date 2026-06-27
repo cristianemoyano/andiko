@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.23.0](https://github.com/cristianemoyano/andiko/compare/v0.22.0...v0.23.0) (2026-06-27)
+
+### Features
+
+* **core:** complete platform SaaS billing with metric allowances ([73df494](https://github.com/cristianemoyano/andiko/commit/73df4945eabea6edc4a4d18d22510dfa020a2cad))
+
 ## [0.22.0](https://127.0.0.1/41729/git/cristianemoyano/compare/v0.17.1...v0.22.0) (2026-06-27)
 
 ### Features

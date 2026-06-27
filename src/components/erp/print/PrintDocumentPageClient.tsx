@@ -10,9 +10,11 @@ export interface PrintDocumentPageClientProps {
   domain: string
   resource: string
   id: string
+  /** Override fetch URL (e.g. sys-admin billing invoices). */
+  apiUrl?: string
 }
 
-export function PrintDocumentPageClient({ domain, resource, id }: PrintDocumentPageClientProps) {
+export function PrintDocumentPageClient({ domain, resource, id, apiUrl }: PrintDocumentPageClientProps) {
   const [doc, setDoc] = useState<PrintableDocument | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -23,9 +25,8 @@ export function PrintDocumentPageClient({ domain, resource, id }: PrintDocumentP
       setLoading(true)
       setError(null)
       try {
-        const body = await fetchJson<{ data?: PrintableDocument }>(
-          `/api/v1/printing/${domain}/${resource}/${id}`,
-        )
+        const url = apiUrl ?? `/api/v1/printing/${domain}/${resource}/${id}`
+        const body = await fetchJson<{ data?: PrintableDocument }>(url)
         if (cancelled) return
         setDoc(body.data ?? null)
       } catch (e) {
@@ -39,7 +40,7 @@ export function PrintDocumentPageClient({ domain, resource, id }: PrintDocumentP
     return () => {
       cancelled = true
     }
-  }, [domain, resource, id])
+  }, [domain, resource, id, apiUrl])
 
   function handlePrint() {
     window.print()

@@ -100,3 +100,15 @@ export function labelSalesPaymentMethod(code: string, notes?: string | null, fro
 export function labelPurchasePaymentMethod(code: string): string {
   return PURCHASE_PAYMENT_METHOD_LABEL[code] ?? code
 }
+
+export const BILLING_INVOICE_STATUS_LABEL: Record<string, string> = {
+  draft:          'Borrador',
+  issued:         'Emitida',
+  partially_paid: 'Pago parcial',
+  paid:           'Pagada',
+  void:           'Anulada',
+}
+
+export function labelBillingPaymentMethod(code: string): string {
+  return SALES_PAYMENT_METHOD_LABEL[code] ?? code
+}
