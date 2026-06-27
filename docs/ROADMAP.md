@@ -43,6 +43,7 @@ Infraestructura base sin lógica de negocio.
 - [x] Permisos `settings:read/write` para administración de org (usuarios, sucursales, matriz) sin bypass sys-admin
 - [x] Admin de organización unificado en `/organizaciones/[id]` (namespace API `settings` para Gerente)
 - [x] Impersonación sys-admin: identidad efectiva en sesión, capabilities y perfil del usuario impersonado
+- [x] Impersonación accesible en mobile: control en el menú mobile (`MenuPanel`) para sys-admin, incluso mientras impersona (iniciar/cambiar/detener sin sidebar de desktop)
 - [x] UX: componente global de error de API (banner/toast) + helper `fetchJson` para evitar duplicar manejo de errores en cada pantalla
 - [x] Dev tooling: comandos de seed/clear idempotentes creciendo con el sistema (incluye permisos, catálogo, ventas, tenancy)
 - [x] Prod DB CLI: `db:reset-prod`, `migrate:prod`, `migrate:baseline-prod`, `db:seed-prod` (local, con `.env.production.local`)
@@ -117,6 +118,7 @@ Ningún componente se usa en producción sin su story.
 - [x] PanelBarChart (Recharts BarChart con estilos Andiko, tooltip ARS, toggle período)
 - [x] PanelDonutChart (Recharts PieChart con leyenda y hover)
 - [x] PerformanceCard (tarjeta hero del panel: tabs Total/Cobrado/Pendiente, KPIs secundarios, gráfico área, link a reportes)
+- [x] AddressFields (dirección estructurada reutilizable: calle, número, piso, depto, ciudad, provincia, CP, país; controlada, con story; base para sucursales/contactos/ventas)
 
 ### Principios del design system
 - Accesibilidad primero: todos los componentes deben ser navegables por teclado y compatibles con lectores de pantalla.
@@ -215,6 +217,7 @@ Trabajo transversal para garantizar aislamiento fuerte por `org_id` y `branch_id
 - [x] `/sys-admin/organizaciones` — listado de orgs, crear/editar/eliminar
 - [x] `/sys-admin/organizaciones/[id]` — detalle con sucursales y usuarios de la org
 - [x] CRUD de sucursales por org (nombre, dirección, `branch_code`)
+- [x] Dirección estructurada de sucursales (calle/número/piso/depto/ciudad/provincia/CP/país) vía componente `AddressFields`; columna `address` legacy derivada (string compuesto) para compatibilidad con lectores existentes
 - [x] CRUD de usuarios por org: email, rol, contraseña, PIN POS, asignación de sucursales (`user_branches`), sucursal default
 - [x] `requireSysAdmin` guard en todas las rutas sys-admin
 - [x] `user_branches` ya operativo en `TenantContext` para filtrado por sucursal
@@ -304,6 +307,8 @@ Gestión de stock integrada con ventas y compras.
 ### Pendientes
 - [x] Remitos de entrega
 - [x] Trazabilidad por lotes (lote + vencimiento por cantidad) con salidas FEFO y vínculo explícito en `stock_movements`
+- [ ] Transferencias de stock entre depósitos / sucursales
+- [ ] Métodos de valuación de stock (FIFO / promedio ponderado) para costeo
 
 ---
 
@@ -398,12 +403,15 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [x] `SubscriptionModal` — patrón de formulario interno (remount en cada apertura, sin estado residual)
 - [x] Mobile UX: `mobileRender` en todas las columnas `_actions`, skeletons de carga, DataTable con roles mobile
 - [x] Entrada "Facturación" en sidebar sys-admin (desktop y mobile)
+- [x] Dashboard de facturación para Gerente (`/facturacion`, rotulado "Suscripción" para no confundir con facturas de venta): suscripción vigente, consumo del período y facturas + detalle de factura (solo lectura). Capability `nav.facturacion`; API org-scoped `/api/v1/billing/*` con guard `requireOrgBilling` (resuelve la org propia, exige `settings:read`, nunca confía un `org_id` del cliente)
+- [x] Datos del emisor de plataforma (razón social, CUIT, condición IVA, domicilio, IIBB, inicio de actividades, email, teléfono) en `platform_settings`; pantalla sys-admin `/sys-admin/billing/emisor`
+- [x] Snapshot del emisor en la factura al emitir (draft→issued), inmutable; bloque "Emisor" en el detalle de factura del Gerente
 
 ### Pendientes (fases futuras)
 - [ ] Gateway de pagos (Mercado Pago / Stripe) + webhooks para débito automático
-- [ ] Portal self-service de facturación para la org
-- [ ] Factura electrónica AFIP (CAE) de la plataforma hacia las orgs
-- [ ] Generación automática de facturas recurrentes (cron)
+- [ ] Portal self-service de facturación para la org — autogestión (cambiar plan/seats, pagar). El panel de lectura para el Gerente (suscripción, consumo, facturas) ya está implementado
+- [ ] Factura electrónica AFIP (CAE) de la plataforma hacia las orgs *(datos del emisor + snapshot en la factura ya implementados como base)*
+- [ ] Generación automática de facturas recurrentes (cron) *(hoy las facturas se generan manualmente desde sys-admin; `current_period_start/end` no los setea ningún scheduler)*
 - [ ] Dunning / suspensión automática en `past_due`
 
 ---
@@ -584,6 +592,26 @@ Hardware especializado para casos de uso específicos (retail, almacenes).
 
 ---
 
+## Tesorería, Impuestos y Cumplimiento AR (gaps identificados — sin fecha)
+
+Funcionalidades fiscales y de tesorería específicas de Argentina que hoy están
+ausentes del producto y que el resto del roadmap no cubre. Críticas para
+adopción B2B en PyMEs argentinas; relevadas en revisión de producto.
+
+### Impuestos / AFIP
+- [ ] Retenciones y percepciones (IVA, Ganancias, IIBB; SICORE, Convenio Multilateral, ARCIBA) — cálculo, certificados y reportes
+- [ ] Padrón AFIP / constancia de inscripción: autocompletar datos fiscales del contacto desde el CUIT
+- [ ] Factura de Crédito Electrónica MiPyME (FCE)
+- [ ] Remito electrónico AFIP
+
+### Tesorería / Finanzas
+- [ ] Gestión de cheques (terceros y propios, e-cheq): cartera, estados, vencimientos, aplicación a cuenta corriente
+- [ ] Conciliación bancaria + múltiples cuentas bancarias
+- [ ] Multi-moneda (operaciones en USD) + ajuste por inflación / revaluación
+- [ ] Workflow de cobranzas (recordatorios de pago, gestión de mora) sobre cuenta corriente
+
+---
+
 ## Backlog / Fases futuras
 
 Ideas validadas pero sin fecha definida.
@@ -596,6 +624,11 @@ Ideas validadas pero sin fecha definida.
 - Portal de clientes (consulta de facturas y cuenta corriente)
 - Integración con e-commerce (WooCommerce, Tiendanube)
 - BI / Dashboards ejecutivos
+- CRM básico (leads, oportunidades, pipeline comercial)
+- Adjuntos de documentos (comprobantes / PDFs) en ventas, compras y contactos
+- Bitácora de auditoría visible para el usuario (historial de cambios; hoy solo campos `created_by/updated_by`)
+- Límite de crédito por cliente (bloqueo/alerta al superar saldo en cuenta corriente)
+- Comisiones de vendedores
 - Descuentos comerciales avanzados:
   - Descuento global por documento (adicional al descuento por ítem)
   - Reglas/promociones (por cantidad, por categoría, combos)
