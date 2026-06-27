@@ -4,6 +4,7 @@ import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, BillingInvoiceStatus } from '@/types'
 import { BILLING_INVOICE_STATUSES } from '@/types'
 import OrgSubscription from './org-subscription.model'
+import Organization from '@/modules/auth/organization.model'
 
 export interface BillingInvoiceAttributes extends Timestamps, AuditFields {
   id: UUID
@@ -29,6 +30,8 @@ export interface BillingInvoiceAttributes extends Timestamps, AuditFields {
   issuer_gross_income: string | null
   issuer_email: string | null
   issuer_phone: string | null
+  billed_seats: number | null
+  billed_branches: number | null
 }
 
 type BillingInvoiceCreationAttributes = Optional<
@@ -37,6 +40,7 @@ type BillingInvoiceCreationAttributes = Optional<
   | 'currency' | 'subtotal' | 'tax_amount' | 'total' | 'paid_amount' | 'balance' | 'notes'
   | 'issuer_legal_name' | 'issuer_cuit' | 'issuer_iva_condition' | 'issuer_fiscal_address'
   | 'issuer_gross_income' | 'issuer_email' | 'issuer_phone'
+  | 'billed_seats' | 'billed_branches'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
 >
 
@@ -63,6 +67,8 @@ class BillingInvoice extends AuditModel<BillingInvoiceAttributes, BillingInvoice
   declare issuer_gross_income: string | null
   declare issuer_email: string | null
   declare issuer_phone: string | null
+  declare billed_seats: number | null
+  declare billed_branches: number | null
 }
 
 BillingInvoice.init(
@@ -89,6 +95,8 @@ BillingInvoice.init(
     issuer_gross_income:   { type: DataTypes.STRING(32) },
     issuer_email:          { type: DataTypes.STRING(320) },
     issuer_phone:          { type: DataTypes.STRING(40) },
+    billed_seats:          { type: DataTypes.INTEGER },
+    billed_branches:       { type: DataTypes.INTEGER },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'billing_invoices', paranoid: true, underscored: true }
@@ -96,5 +104,7 @@ BillingInvoice.init(
 
 BillingInvoice.belongsTo(OrgSubscription, { foreignKey: 'subscription_id', as: 'subscription' })
 OrgSubscription.hasMany(BillingInvoice, { foreignKey: 'subscription_id', as: 'invoices' })
+BillingInvoice.belongsTo(Organization, { foreignKey: 'org_id', as: 'organization' })
+Organization.hasMany(BillingInvoice, { foreignKey: 'org_id', as: 'billingInvoices' })
 
 export default BillingInvoice

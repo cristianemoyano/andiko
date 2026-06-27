@@ -18,8 +18,8 @@ export const SUBSCRIPTION_STATUSES: SubscriptionStatus[] = ['trialing', 'active'
 export type BillingInvoiceStatus = 'draft' | 'issued' | 'partially_paid' | 'paid' | 'void'
 export const BILLING_INVOICE_STATUSES: BillingInvoiceStatus[] = ['draft', 'issued', 'partially_paid', 'paid', 'void']
 
-export type BillingLineKind = 'base' | 'seat' | 'module_addon' | 'usage' | 'discount' | 'adjustment'
-export const BILLING_LINE_KINDS: BillingLineKind[] = ['base', 'seat', 'module_addon', 'usage', 'discount', 'adjustment']
+export type BillingLineKind = 'base' | 'seat' | 'branch' | 'module_addon' | 'extra_addon' | 'usage' | 'discount' | 'adjustment'
+export const BILLING_LINE_KINDS: BillingLineKind[] = ['base', 'seat', 'branch', 'module_addon', 'extra_addon', 'usage', 'discount', 'adjustment']
 
 export type BillingPaymentMethod = 'cash' | 'transfer' | 'check' | 'card' | 'other'
 export const BILLING_PAYMENT_METHODS: BillingPaymentMethod[] = ['cash', 'transfer', 'check', 'card', 'other']

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { DataTable, type Column } from '@/components/erp'
+import { BillingInvoiceItemsBreakdown } from '@/components/erp/billing/BillingInvoiceItemsBreakdown'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Skeleton } from '@/components/primitives/Skeleton'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -12,10 +13,12 @@ import type { BillingInvoiceStatus } from '@/types'
 
 interface InvoiceItem {
   id: string
+  kind?: string
   description: string
   quantity: string
   unit_price: string
   total: string
+  subtotal?: string
 }
 
 interface InvoicePayment {
@@ -99,13 +102,6 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
     return () => { cancelled = true }
   }, [invoiceId])
 
-  const itemColumns: Column<InvoiceItem>[] = [
-    { key: 'description', header: 'Descripción', mobileRole: 'title', render: r => <span className="text-fg">{r.description}</span> },
-    { key: 'quantity', header: 'Cantidad', align: 'right', mobileRole: 'subtitle', render: r => <span className="tabular-nums">{r.quantity}</span> },
-    { key: 'unit_price', header: 'Precio unit.', align: 'right', mobileRole: 'subtitle', render: r => <span className="tabular-nums">{formatARS(r.unit_price)}</span> },
-    { key: 'total', header: 'Total', align: 'right', mobileRole: 'amount', render: r => <span className="tabular-nums">{formatARS(r.total)}</span> },
-  ]
-
   const paymentColumns: Column<InvoicePayment>[] = [
     { key: 'payment_number', header: 'Número', mobileRole: 'title', render: r => <span className="font-mono text-[12px] text-fg">{r.payment_number}</span> },
     { key: 'payment_date', header: 'Fecha', mobileRole: 'subtitle', render: r => <span className="text-fg-muted tabular-nums">{formatDate(r.payment_date)}</span> },
@@ -181,13 +177,11 @@ export function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             )}
 
             <section className="mb-4">
-              <h2 className="text-[13px] font-semibold text-fg mb-2">Detalle</h2>
-              <DataTable
-                columns={itemColumns}
-                data={invoice.items ?? []}
-                keyExtractor={r => r.id}
-                emptyMessage="Sin líneas."
-              />
+              <h2 className="text-[13px] font-semibold text-fg mb-2">Detalle de facturación</h2>
+              <p className="text-[12px] text-fg-muted mb-3">
+                Plan contratado, módulos y servicios, capacidad utilizada y consumo medido del período.
+              </p>
+              <BillingInvoiceItemsBreakdown items={invoice.items ?? []} />
               <div className="mt-2 flex flex-col items-end gap-0.5 text-[13px]">
                 <div className="flex gap-6"><span className="text-fg-muted">Subtotal</span><span className="tabular-nums w-28 text-right">{formatARS(invoice.subtotal)}</span></div>
                 <div className="flex gap-6"><span className="text-fg-muted">IVA</span><span className="tabular-nums w-28 text-right">{formatARS(invoice.tax_amount)}</span></div>

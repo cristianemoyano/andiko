@@ -3,6 +3,7 @@ import { Op, fn, col } from 'sequelize'
 import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
 import UsageRecord from './usage-record.model'
+import OrgSubscription from './org-subscription.model'
 import type { UsageRecordInput, UsageQuery } from './usage.schema'
 
 export async function listUsage(query: UsageQuery) {
@@ -25,9 +26,18 @@ export async function listUsage(query: UsageQuery) {
 }
 
 export async function recordUsage(input: UsageRecordInput, actorId: string) {
+  let subscriptionId = input.subscription_id ?? null
+  if (!subscriptionId) {
+    const sub = await OrgSubscription.findOne({
+      where: { org_id: input.org_id, status: { [Op.ne]: 'cancelled' } },
+      order: [['created_at', 'DESC']],
+    })
+    subscriptionId = sub?.id ?? null
+  }
+
   const usage = await UsageRecord.create({
     org_id:          input.org_id,
-    subscription_id: input.subscription_id ?? null,
+    subscription_id: subscriptionId,
     metric_key:      input.metric_key,
     quantity:        input.quantity,
     period:          input.period,
@@ -79,6 +89,27 @@ export async function markUsageInvoiced(
       where: {
         subscription_id: subscriptionId,
         invoiced_at: null,
+        period: { [Op.gte]: toDateOnly(periodStart), [Op.lte]: toDateOnly(periodEnd) },
+      },
+      transaction: t,
+    },
+  )
+}
+
+/** Revert invoiced flag when a draft/issued invoice is voided. */
+export async function unmarkUsageInvoiced(
+  subscriptionId: string,
+  periodStart: Date | null,
+  periodEnd: Date | null,
+  t: import('sequelize').Transaction,
+) {
+  if (!periodStart || !periodEnd) return
+
+  await UsageRecord.update(
+    { invoiced_at: null },
+    {
+      where: {
+        subscription_id: subscriptionId,
         period: { [Op.gte]: toDateOnly(periodStart), [Op.lte]: toDateOnly(periodEnd) },
       },
       transaction: t,

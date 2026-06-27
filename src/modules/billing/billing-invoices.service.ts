@@ -9,12 +9,16 @@ import BillingInvoiceItem from './billing-invoice-item.model'
 import BillingPayment from './billing-payment.model'
 import OrgSubscription from './org-subscription.model'
 import SubscriptionAddon from './subscription-addon.model'
+import SubscriptionExtra from './subscription-extra.model'
+import SubscriptionMetricAllowance from './subscription-metric-allowance.model'
 import BillingPlan from './billing-plan.model'
-import BillingMetric from './billing-metric.model'
-import { calcSubscriptionCharges, calcBillingTotals } from './billing.math'
+import Organization from '@/modules/auth/organization.model'
 import { nextBillingNumber } from './billing.numbering'
-import { aggregateUsage, markUsageInvoiced } from './usage.service'
+import { markUsageInvoiced, unmarkUsageInvoiced } from './usage.service'
 import { getResolvedBillerSettings } from './platform-billing-settings.service'
+import { buildSubscriptionChargeInput, buildChargeLines } from './billing-charges.service'
+import { advanceSubscriptionPeriod, resolveSubscriptionPeriod } from './billing-period.service'
+import { reactivateSubscriptionOnPayment } from './billing-dunning.service'
 import type { GenerateInvoiceInput, BillingInvoiceQuery } from './billing-invoice.schema'
 
 export async function listBillingInvoices(query: BillingInvoiceQuery) {
@@ -41,12 +45,23 @@ export async function listBillingInvoices(query: BillingInvoiceQuery) {
   return toPaginated(rows, count, page, limit)
 }
 
+const ORG_INCLUDE = {
+  model: Organization,
+  as: 'organization',
+  attributes: ['id', 'name', 'legal_name'],
+}
+
 export async function getBillingInvoice(id: string) {
   const invoice = await BillingInvoice.findByPk(id, {
     include: [
+      ORG_INCLUDE,
       { model: BillingInvoiceItem, as: 'items' },
       { model: BillingPayment, as: 'payments', where: { deleted_at: null }, required: false },
-      { model: OrgSubscription, as: 'subscription', include: [{ model: BillingPlan, as: 'plan' }] },
+      {
+        model: OrgSubscription,
+        as: 'subscription',
+        include: [{ model: BillingPlan, as: 'plan' }],
+      },
     ],
     order: [[{ model: BillingInvoiceItem, as: 'items' }, 'sort_order', 'ASC']],
   })
@@ -60,6 +75,8 @@ export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, acto
       include: [
         { model: BillingPlan, as: 'plan' },
         { model: SubscriptionAddon, as: 'addons' },
+        { model: SubscriptionExtra, as: 'extras' },
+        { model: SubscriptionMetricAllowance, as: 'metric_allowances' },
       ],
       transaction: t,
     })
@@ -67,43 +84,13 @@ export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, acto
 
     const plan = (sub as unknown as { plan: BillingPlan | null }).plan
     if (!plan) throw new Error('PLAN_NOT_FOUND')
-    const addons = (sub as unknown as { addons: SubscriptionAddon[] }).addons ?? []
 
-    // Aggregate usage and resolve metric pricing
-    const usageTotals = await aggregateUsage(sub.id, input.period_start, input.period_end, t)
-    const metricKeys = usageTotals.map(u => u.metric_key)
-    const metrics = metricKeys.length
-      ? await BillingMetric.findAll({ where: { key: { [Op.in]: metricKeys } }, transaction: t })
-      : []
-    const metricByKey = new Map(metrics.map(m => [m.key, m]))
+    const resolved = resolveSubscriptionPeriod(sub)
+    const periodStart = input.period_start ?? resolved.periodStart
+    const periodEnd = input.period_end ?? resolved.periodEnd
 
-    const usageLines = usageTotals
-      .map(u => {
-        const m = metricByKey.get(u.metric_key)
-        if (!m) return null
-        return {
-          metric_key: u.metric_key,
-          label:      m.label,
-          unit_label: m.unit_label,
-          unit_price: m.unit_price,
-          quantity:   u.quantity,
-        }
-      })
-      .filter((u): u is NonNullable<typeof u> => u !== null)
-
-    const lines = calcSubscriptionCharges({
-      plan: {
-        name:           plan.name,
-        base_price:     plan.base_price,
-        included_seats: plan.included_seats,
-        per_seat_price: plan.per_seat_price,
-      },
-      seats:  sub.seats,
-      addons: addons.map(a => ({ module_key: a.module_key, unit_price: a.unit_price, enabled: a.enabled })),
-      usage:  usageLines,
-    })
-
-    const totals = calcBillingTotals(lines)
+    const { chargeInput, seatCount, branchCount } = await buildSubscriptionChargeInput(sub, periodStart, periodEnd, t)
+    const { lines, totals } = buildChargeLines(chargeInput)
     const invoice_number = await nextBillingNumber('invoice', t)
 
     const invoice = await BillingInvoice.create(
@@ -112,8 +99,8 @@ export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, acto
         subscription_id: sub.id,
         invoice_number,
         status:          'draft',
-        period_start:    input.period_start,
-        period_end:      input.period_end,
+        period_start:    periodStart,
+        period_end:      periodEnd,
         due_date:        input.due_date ?? null,
         currency:        plan.currency,
         subtotal:        totals.subtotal,
@@ -121,6 +108,8 @@ export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, acto
         total:           totals.total,
         paid_amount:     '0.00',
         balance:         totals.total,
+        billed_seats:    seatCount,
+        billed_branches: branchCount,
         notes:           input.notes ?? null,
         created_by:      actorId,
         updated_by:      actorId,
@@ -148,7 +137,8 @@ export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, acto
       { transaction: t },
     )
 
-    await markUsageInvoiced(sub.id, input.period_start, input.period_end, t)
+    await markUsageInvoiced(sub.id, periodStart, periodEnd, t)
+    await advanceSubscriptionPeriod(sub.id, t)
 
     logger.info({ invoiceId: invoice.id, invoice_number, subscriptionId: sub.id, orgId: sub.org_id, actorId }, 'billing invoice generated')
     return getBillingInvoiceInTransaction(invoice.id, t)
@@ -201,6 +191,9 @@ export async function voidBillingInvoice(id: string, actorId: string) {
     if (new Decimal(invoice.paid_amount).gt(0)) throw new Error('BILLING_INVOICE_HAS_PAYMENTS')
 
     await invoice.update({ status: 'void', updated_by: actorId }, { transaction: t })
+    if (invoice.subscription_id) {
+      await unmarkUsageInvoiced(invoice.subscription_id, invoice.period_start, invoice.period_end, t)
+    }
     logger.info({ invoiceId: id, actorId }, 'billing invoice voided')
     return await invoice.reload({ transaction: t })
   })
@@ -229,6 +222,10 @@ export async function recalcBillingInvoiceBalance(invoiceId: string, t: import('
     { paid_amount: paid_amount.toFixed(2), balance: balance.toFixed(2), status },
     { transaction: t },
   )
+
+  if (status === 'paid' && invoice.org_id) {
+    await reactivateSubscriptionOnPayment(invoice.org_id, invoice.subscription_id)
+  }
 }
 
 function defaultDueDate(issueDate: Date): Date {

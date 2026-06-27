@@ -5,7 +5,32 @@ import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
 import BillingPlan from './billing-plan.model'
 import BillingPlanModule from './billing-plan-module.model'
+import BillingPlanExtra from './billing-plan-extra.model'
+import BillingPlanMetricAllowance from './billing-plan-metric-allowance.model'
 import type { BillingPlanInput, BillingPlanUpdateInput, BillingPlanQuery } from './billing-plan.schema'
+
+const PLAN_INCLUDE = [
+  { model: BillingPlanModule, as: 'modules' },
+  { model: BillingPlanExtra, as: 'extras' },
+  { model: BillingPlanMetricAllowance, as: 'metric_allowances' },
+]
+
+function planMetricRowsToPersist(
+  metric_allowances: BillingPlanInput['metric_allowances'],
+  planId: string,
+  actorId: string,
+) {
+  return metric_allowances
+    .filter(a => Number(a.included_quantity) > 0 || Number(a.unit_price) > 0)
+    .map(a => ({
+      plan_id:           planId,
+      metric_key:        a.metric_key,
+      included_quantity: a.included_quantity,
+      unit_price:        a.unit_price,
+      created_by:        actorId,
+      updated_by:        actorId,
+    }))
+}
 
 export async function listPlans(query: BillingPlanQuery) {
   const { page, limit, search, is_active } = query
@@ -25,23 +50,21 @@ export async function listPlans(query: BillingPlanQuery) {
     limit,
     offset,
     order: [['name', 'ASC']],
-    include: [{ model: BillingPlanModule, as: 'modules' }],
+    include: PLAN_INCLUDE,
   })
 
   return toPaginated(rows, count, page, limit)
 }
 
 export async function getPlan(id: string) {
-  const plan = await BillingPlan.findByPk(id, {
-    include: [{ model: BillingPlanModule, as: 'modules' }],
-  })
+  const plan = await BillingPlan.findByPk(id, { include: PLAN_INCLUDE })
   if (!plan) throw new Error('PLAN_NOT_FOUND')
   return plan
 }
 
 export async function createPlan(input: BillingPlanInput, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const { modules, description, ...fields } = input
+    const { modules, extras, metric_allowances, description, ...fields } = input
     const plan = await BillingPlan.create(
       {
         ...fields,
@@ -66,6 +89,27 @@ export async function createPlan(input: BillingPlanInput, actorId: string) {
       )
     }
 
+    if (extras.length > 0) {
+      await BillingPlanExtra.bulkCreate(
+        extras.map(e => ({
+          plan_id:     plan.id,
+          extra_key:   e.extra_key,
+          included:    e.included,
+          addon_price: e.addon_price,
+          created_by:  actorId,
+          updated_by:  actorId,
+        })),
+        { transaction: t },
+      )
+    }
+
+    if (metric_allowances.length > 0) {
+      const rows = planMetricRowsToPersist(metric_allowances, plan.id, actorId)
+      if (rows.length > 0) {
+        await BillingPlanMetricAllowance.bulkCreate(rows, { transaction: t })
+      }
+    }
+
     logger.info({ planId: plan.id, code: plan.code, actorId }, 'billing plan created')
     return getPlanInTransaction(plan.id, t)
   })
@@ -76,7 +120,7 @@ export async function updatePlan(id: string, input: BillingPlanUpdateInput, acto
     const plan = await BillingPlan.findByPk(id, { transaction: t })
     if (!plan) throw new Error('PLAN_NOT_FOUND')
 
-    const { modules, ...fields } = input
+    const { modules, extras, metric_allowances, ...fields } = input
     await plan.update({ ...fields, updated_by: actorId }, { transaction: t })
 
     if (modules) {
@@ -93,6 +137,31 @@ export async function updatePlan(id: string, input: BillingPlanUpdateInput, acto
           })),
           { transaction: t },
         )
+      }
+    }
+
+    if (extras) {
+      await BillingPlanExtra.destroy({ where: { plan_id: id }, transaction: t })
+      if (extras.length > 0) {
+        await BillingPlanExtra.bulkCreate(
+          extras.map(e => ({
+            plan_id:     id,
+            extra_key:   e.extra_key,
+            included:    e.included,
+            addon_price: e.addon_price,
+            created_by:  actorId,
+            updated_by:  actorId,
+          })),
+          { transaction: t },
+        )
+      }
+    }
+
+    if (metric_allowances) {
+      await BillingPlanMetricAllowance.destroy({ where: { plan_id: id }, transaction: t })
+      const rows = planMetricRowsToPersist(metric_allowances, id, actorId)
+      if (rows.length > 0) {
+        await BillingPlanMetricAllowance.bulkCreate(rows, { transaction: t })
       }
     }
 
@@ -120,8 +189,5 @@ export async function deletePlan(id: string, actorId: string) {
 }
 
 async function getPlanInTransaction(id: string, t: import('sequelize').Transaction) {
-  return BillingPlan.findByPk(id, {
-    include: [{ model: BillingPlanModule, as: 'modules' }],
-    transaction: t,
-  })
+  return BillingPlan.findByPk(id, { include: PLAN_INCLUDE, transaction: t })
 }

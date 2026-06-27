@@ -5,12 +5,36 @@ import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
 import OrgSubscription from './org-subscription.model'
 import SubscriptionAddon from './subscription-addon.model'
+import SubscriptionExtra from './subscription-extra.model'
+import SubscriptionMetricAllowance from './subscription-metric-allowance.model'
 import BillingPlan from './billing-plan.model'
-import type { SubscriptionCreateInput, SubscriptionUpdateInput, SubscriptionQuery, SubscriptionAddonInput } from './subscription.schema'
+import BillingPlanExtra from './billing-plan-extra.model'
+import Organization from '@/modules/auth/organization.model'
+import {
+  resolveAddonsForCreate,
+  syncSubscriptionContractToOrg,
+} from './subscription-contract.service'
+import type {
+  SubscriptionCreateInput,
+  SubscriptionUpdateInput,
+  SubscriptionQuery,
+  SubscriptionAddonInput,
+  SubscriptionExtraInput,
+  SubscriptionMetricAllowanceInput,
+} from './subscription.schema'
+
+const ORG_INCLUDE = {
+  model: Organization,
+  as: 'organization',
+  attributes: ['id', 'name', 'legal_name'],
+}
 
 const SUBSCRIPTION_INCLUDE = [
   { model: BillingPlan, as: 'plan' },
   { model: SubscriptionAddon, as: 'addons' },
+  { model: SubscriptionExtra, as: 'extras' },
+  { model: SubscriptionMetricAllowance, as: 'metric_allowances' },
+  ORG_INCLUDE,
 ]
 
 export async function listSubscriptions(query: SubscriptionQuery) {
@@ -65,7 +89,12 @@ export async function createSubscription(input: SubscriptionCreateInput, actorId
       { transaction: t },
     )
 
-    await replaceAddons(sub.id, input.org_id, input.addons, actorId, t)
+    const extras = await resolveExtrasForCreate(input.plan_id, input.extras, t)
+    const addons = await resolveAddonsForCreate(input.plan_id, input.addons, t)
+    await replaceAddons(sub.id, input.org_id, addons, actorId, t)
+    await replaceExtras(sub.id, input.org_id, extras, actorId, t)
+    await replaceMetricAllowances(sub.id, input.org_id, input.metric_allowances, actorId, t)
+    await syncSubscriptionContractToOrg(input.org_id, input.plan_id, addons, t)
 
     logger.info({ subscriptionId: sub.id, orgId: input.org_id, planId: input.plan_id, actorId }, 'subscription created')
     return getSubscriptionInTransaction(sub.id, t)
@@ -82,7 +111,7 @@ export async function updateSubscription(id: string, input: SubscriptionUpdateIn
       if (!plan) throw new Error('PLAN_NOT_FOUND')
     }
 
-    const { addons, ...fields } = input
+    const { addons, extras, metric_allowances, ...fields } = input
     const updateData: Record<string, unknown> = { ...fields, updated_by: actorId }
 
     if (input.status === 'active' && !sub.started_at) updateData.started_at = new Date()
@@ -91,12 +120,48 @@ export async function updateSubscription(id: string, input: SubscriptionUpdateIn
     await sub.update(updateData, { transaction: t })
 
     if (addons) {
-      await replaceAddons(id, sub.org_id, addons, actorId, t)
+      const planIdForAddons = input.plan_id ?? sub.plan_id
+      const resolvedAddons = await resolveAddonsForCreate(planIdForAddons, addons, t)
+      await replaceAddons(id, sub.org_id, resolvedAddons, actorId, t)
+      await syncSubscriptionContractToOrg(sub.org_id!, planIdForAddons, resolvedAddons, t)
+    } else if (input.plan_id && input.plan_id !== sub.plan_id) {
+      const currentAddons = await SubscriptionAddon.findAll({ where: { subscription_id: id }, transaction: t })
+      const addonInputs = currentAddons.map(a => ({
+        module_key: a.module_key,
+        unit_price: a.unit_price,
+        enabled: a.enabled,
+      }))
+      await syncSubscriptionContractToOrg(sub.org_id!, input.plan_id, addonInputs, t)
+    }
+    if (extras) {
+      await replaceExtras(id, sub.org_id, extras, actorId, t)
+    }
+    if (metric_allowances) {
+      await replaceMetricAllowances(id, sub.org_id, metric_allowances, actorId, t)
     }
 
     logger.info({ subscriptionId: id, actorId }, 'subscription updated')
     return getSubscriptionInTransaction(id, t)
   })
+}
+
+async function resolveExtrasForCreate(
+  planId: string,
+  extras: SubscriptionExtraInput[],
+  t: import('sequelize').Transaction,
+): Promise<SubscriptionExtraInput[]> {
+  const planExtras = await BillingPlanExtra.findAll({ where: { plan_id: planId }, transaction: t })
+  const byKey = new Map<string, SubscriptionExtraInput>()
+
+  for (const pe of planExtras) {
+    if (pe.included) {
+      byKey.set(pe.extra_key, { extra_key: pe.extra_key, unit_price: '0.00', enabled: true })
+    }
+  }
+  for (const e of extras) {
+    byKey.set(e.extra_key, e)
+  }
+  return [...byKey.values()]
 }
 
 async function replaceAddons(
@@ -117,6 +182,52 @@ async function replaceAddons(
       enabled:         a.enabled,
       created_by:      actorId,
       updated_by:      actorId,
+    })),
+    { transaction: t },
+  )
+}
+
+async function replaceExtras(
+  subscriptionId: string,
+  orgId: string | null,
+  extras: SubscriptionExtraInput[],
+  actorId: string,
+  t: import('sequelize').Transaction,
+) {
+  await SubscriptionExtra.destroy({ where: { subscription_id: subscriptionId }, transaction: t })
+  if (extras.length === 0) return
+  await SubscriptionExtra.bulkCreate(
+    extras.map(e => ({
+      subscription_id: subscriptionId,
+      org_id:          orgId,
+      extra_key:       e.extra_key,
+      unit_price:      e.unit_price,
+      enabled:         e.enabled,
+      created_by:      actorId,
+      updated_by:      actorId,
+    })),
+    { transaction: t },
+  )
+}
+
+async function replaceMetricAllowances(
+  subscriptionId: string,
+  orgId: string | null,
+  allowances: SubscriptionMetricAllowanceInput[],
+  actorId: string,
+  t: import('sequelize').Transaction,
+) {
+  await SubscriptionMetricAllowance.destroy({ where: { subscription_id: subscriptionId }, transaction: t })
+  const rows = allowances.filter(a => Number(a.extra_included_quantity) > 0)
+  if (rows.length === 0) return
+  await SubscriptionMetricAllowance.bulkCreate(
+    rows.map(a => ({
+      subscription_id:         subscriptionId,
+      org_id:                  orgId,
+      metric_key:              a.metric_key,
+      extra_included_quantity: a.extra_included_quantity,
+      created_by:              actorId,
+      updated_by:              actorId,
     })),
     { transaction: t },
   )

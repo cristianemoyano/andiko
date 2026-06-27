@@ -4,6 +4,7 @@ import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, SubscriptionStatus } from '@/types'
 import { SUBSCRIPTION_STATUSES } from '@/types'
 import BillingPlan from './billing-plan.model'
+import Organization from '@/modules/auth/organization.model'
 
 export interface OrgSubscriptionAttributes extends Timestamps, AuditFields {
   id: UUID
@@ -60,5 +61,7 @@ OrgSubscription.init(
 
 OrgSubscription.belongsTo(BillingPlan, { foreignKey: 'plan_id', as: 'plan' })
 BillingPlan.hasMany(OrgSubscription, { foreignKey: 'plan_id', as: 'subscriptions' })
+OrgSubscription.belongsTo(Organization, { foreignKey: 'org_id', as: 'organization' })
+Organization.hasMany(OrgSubscription, { foreignKey: 'org_id', as: 'subscriptions' })
 
 export default OrgSubscription

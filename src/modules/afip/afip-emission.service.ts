@@ -18,6 +18,7 @@ import { buildFECAERequest, parseAfipDate, type AfipAssociatedComprobante } from
 import { FE_RESULT, type ComprobanteKind } from './afip-codes'
 import { getAfipClients } from './afip-client.factory'
 import type { WsfeClient } from './wsfe.client'
+import { AFIP_INVOICES_ISSUED_METRIC_KEY } from '@/modules/billing/billing-metrics.catalog'
 
 export type EmissionDeps = { wsfe?: WsfeClient }
 
@@ -182,6 +183,14 @@ async function authorize(params: AuthorizeParams) {
         )
       })
       logger.info({ documentType, documentId: instance.id, cae: result.cae, cbteNumero }, 'afip CAE authorized')
+      const { recordMeteredUsage } = await import('@/modules/billing/usage-meter.service')
+      void recordMeteredUsage({
+        orgId: ctx.orgId,
+        metricKey: AFIP_INVOICES_ISSUED_METRIC_KEY,
+        quantity: 1,
+        sourceId: `${documentType}:${instance.id}`,
+        actorId: ctx.userId,
+      }).catch(() => undefined)
     } else {
       await sequelize.transaction(async (t) => {
         await instance.update(

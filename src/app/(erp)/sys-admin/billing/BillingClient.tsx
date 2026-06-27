@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/primitives/Skeleton'
 import { DropdownMenuItem } from '@/components/primitives/DropdownMenu'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { SubscriptionModal } from './SubscriptionModal'
+import { BillingSubNav } from './BillingSubNav'
 import { fetchJson } from '@/lib/fetch-json'
 import type { SubscriptionStatus } from '@/types'
 
@@ -132,19 +133,13 @@ export function BillingClient() {
       <TopBar
         breadcrumbs={[{ label: 'Facturación' }]}
         actions={
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => router.push('/sys-admin/billing/emisor')}>
-              Datos del emisor
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => router.push('/sys-admin/billing/planes')}>
-              Planes
-            </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)}>
-              + Nueva suscripción
-            </Button>
-          </div>
+          <Button size="sm" onClick={() => setModalOpen(true)}>
+            + Nueva suscripción
+          </Button>
         }
       />
+
+      <BillingSubNav />
 
       <PageBody>
         <div className="flex flex-wrap gap-3 mb-4">

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/primitives/Textarea'
 import { Select } from '@/components/primitives/Select'
 import { FormField } from '@/components/primitives/FormField'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { BillingSubNav } from '../BillingSubNav'
 
 /** API shape — every field nullable. */
 interface BillerSettings {
@@ -143,6 +144,8 @@ export function EmisorClient() {
           </Button>
         }
       />
+
+      <BillingSubNav />
 
       <PageBody padding="p-6">
         {loading ? (

@@ -3,7 +3,16 @@ import type { Mock } from 'vitest'
 
 vi.mock('./org-subscription.model', () => ({ default: { findByPk: vi.fn(), findOne: vi.fn(), findAndCountAll: vi.fn(), create: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
 vi.mock('./subscription-addon.model', () => ({ default: { destroy: vi.fn(), bulkCreate: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('./subscription-extra.model', () => ({ default: { destroy: vi.fn(), bulkCreate: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('./subscription-metric-allowance.model', () => ({ default: { destroy: vi.fn(), bulkCreate: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('./billing-plan-extra.model', () => ({ default: { findAll: vi.fn().mockResolvedValue([]), belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('./billing-plan-module.model', () => ({ default: { findAll: vi.fn().mockResolvedValue([]), belongsTo: vi.fn(), hasMany: vi.fn() } }))
 vi.mock('./billing-plan.model', () => ({ default: { findByPk: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('./subscription-contract.service', () => ({
+  resolveAddonsForCreate: vi.fn(async (_planId, addons) => addons),
+  syncSubscriptionContractToOrg: vi.fn(),
+}))
+vi.mock('@/modules/auth/organization.model', () => ({ default: { belongsTo: vi.fn(), hasMany: vi.fn() } }))
 vi.mock('@/lib/db', () => ({ default: { transaction: vi.fn((cb) => cb({ lock: true })) } }))
 vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), error: vi.fn() } }))
 
@@ -21,6 +30,8 @@ const baseInput = {
   billing_day: 1,
   status: 'active' as const,
   addons: [{ module_key: 'inventory' as const, unit_price: '2000.00', enabled: true }],
+  extras: [],
+  metric_allowances: [],
 }
 
 describe('createSubscription', () => {

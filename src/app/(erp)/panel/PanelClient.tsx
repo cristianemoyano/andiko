@@ -204,22 +204,30 @@ function ActivityIcon({ type }: { type: string }) {
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function PanelClient({
+  orgName = null,
   initialHiddenWidgets = [],
   initialWidgetOrder = DEFAULT_PANEL_WIDGET_ORDER,
   lockedBranchId = null,
 }: {
+  orgName?: string | null
   initialHiddenWidgets?: PanelWidgetId[]
   initialWidgetOrder?: PanelWidgetId[]
   lockedBranchId?: string | null
 }) {
   return (
     <PanelWidgetProvider initialHidden={initialHiddenWidgets} initialOrder={initialWidgetOrder}>
-      <PanelClientContent lockedBranchId={lockedBranchId} />
+      <PanelClientContent orgName={orgName} lockedBranchId={lockedBranchId} />
     </PanelWidgetProvider>
   )
 }
 
-function PanelClientContent({ lockedBranchId = null }: { lockedBranchId?: string | null }) {
+function PanelClientContent({
+  orgName = null,
+  lockedBranchId = null,
+}: {
+  orgName?: string | null
+  lockedBranchId?: string | null
+}) {
   const { widgetOrder, isHidden } = usePanelWidgets()
   const router = useRouter()
   const pathname = usePathname()
@@ -641,6 +649,16 @@ function PanelClientContent({ lockedBranchId = null }: { lockedBranchId?: string
       />
 
       <PageBody padding="p-4 md:p-6" className="bg-surface-muted print:bg-surface print:p-4">
+        {orgName && (
+          <header className="mb-5 md:mb-6 print:mb-4">
+            <h1 className="text-[22px] md:text-[28px] font-semibold text-fg tracking-tight leading-tight">
+              {orgName}
+            </h1>
+            <p className="text-[13px] text-fg-muted mt-1">
+              Resumen de tu negocio
+            </p>
+          </header>
+        )}
         {widgetOrder.map(id => {
           const node = widgetNodes[id]
           if (!node) return null

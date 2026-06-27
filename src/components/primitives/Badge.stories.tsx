@@ -27,6 +27,27 @@ export const DocumentStatuses: Story = {
   ),
 }
 
+export const BillingStatuses: Story = {
+  render: () => (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
+        <StatusBadge value="Activa" />
+        <StatusBadge value="Prueba" />
+        <StatusBadge value="Vencida" />
+        <StatusBadge value="Pausada" />
+        <StatusBadge value="Cancelada" />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <StatusBadge value="Borrador" />
+        <StatusBadge value="Emitida" />
+        <StatusBadge value="Pago parcial" />
+        <StatusBadge value="Pagada" />
+        <StatusBadge value="Anulada" />
+      </div>
+    </div>
+  ),
+}
+
 export const TypeTags: Story = {
   render: () => (
     <div className="flex flex-wrap gap-2">

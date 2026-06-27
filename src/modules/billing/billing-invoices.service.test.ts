@@ -5,17 +5,34 @@ vi.mock('./billing-invoice.model', () => ({ default: { findByPk: vi.fn(), findAn
 vi.mock('./billing-invoice-item.model', () => ({ default: { bulkCreate: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
 vi.mock('./billing-payment.model', () => ({ default: { findAll: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
 vi.mock('./org-subscription.model', () => ({ default: { findByPk: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
-vi.mock('./subscription-addon.model', () => ({ default: { belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('./subscription-addon.model', () => ({ default: { destroy: vi.fn(), bulkCreate: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('./subscription-extra.model', () => ({ default: { destroy: vi.fn(), bulkCreate: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('./subscription-metric-allowance.model', () => ({ default: { belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('./billing-charges.service', () => ({
+  buildSubscriptionChargeInput: vi.fn(),
+  buildChargeLines: vi.fn(),
+}))
+vi.mock('./billing-period.service', () => ({
+  advanceSubscriptionPeriod: vi.fn(),
+  resolveSubscriptionPeriod: vi.fn(),
+}))
 vi.mock('./billing-plan.model', () => ({ default: { belongsTo: vi.fn(), hasMany: vi.fn() } }))
-vi.mock('./billing-metric.model', () => ({ default: { findAll: vi.fn() } }))
+vi.mock('./billing-metric.model', () => ({ default: { findAll: vi.fn(), belongsTo: vi.fn(), hasMany: vi.fn() } }))
+vi.mock('@/modules/auth/organization.model', () => ({ default: { belongsTo: vi.fn(), hasMany: vi.fn() } }))
 vi.mock('./billing.numbering', () => ({ nextBillingNumber: vi.fn().mockResolvedValue('BILL-000001') }))
-vi.mock('./usage.service', () => ({ aggregateUsage: vi.fn().mockResolvedValue([]), markUsageInvoiced: vi.fn() }))
+vi.mock('./usage.service', () => ({
+  aggregateUsage: vi.fn().mockResolvedValue([]),
+  markUsageInvoiced: vi.fn(),
+  unmarkUsageInvoiced: vi.fn(),
+}))
 vi.mock('@/lib/db', () => ({ default: { transaction: vi.fn((cb) => cb({ lock: true })) } }))
 vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 vi.mock('./platform-billing-settings.service', () => ({ getResolvedBillerSettings: vi.fn().mockResolvedValue(null) }))
+vi.mock('./billing-dunning.service', () => ({ reactivateSubscriptionOnPayment: vi.fn() }))
 
 import BillingInvoice from './billing-invoice.model'
 import BillingPayment from './billing-payment.model'
+import { unmarkUsageInvoiced } from './usage.service'
 import { getResolvedBillerSettings } from './platform-billing-settings.service'
 import { issueBillingInvoice, voidBillingInvoice, recalcBillingInvoiceBalance } from './billing-invoices.service'
 
@@ -74,14 +91,25 @@ describe('issueBillingInvoice', () => {
 })
 
 describe('voidBillingInvoice', () => {
-  it('voids an unpaid issued invoice', async () => {
-    const inv = mockInvoice({ status: 'issued' })
+  it('voids an unpaid issued invoice and unmarks usage', async () => {
+    const inv = mockInvoice({
+      status: 'issued',
+      subscription_id: 'sub-1',
+      period_start: new Date('2026-06-01'),
+      period_end: new Date('2026-06-30'),
+    })
     ;(BillingInvoice.findByPk as Mock).mockResolvedValue(inv)
 
     await voidBillingInvoice('inv-1', 'actor-1')
 
     expect(inv.update).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'void', updated_by: 'actor-1' }),
+      expect.anything(),
+    )
+    expect(unmarkUsageInvoiced).toHaveBeenCalledWith(
+      'sub-1',
+      new Date('2026-06-01'),
+      new Date('2026-06-30'),
       expect.anything(),
     )
   })

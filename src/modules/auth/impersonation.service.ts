@@ -1,6 +1,7 @@
 import 'server-only'
 import { Op } from 'sequelize'
 import User from '@/modules/auth/user.model'
+import Organization from '@/modules/auth/organization.model'
 import type { UserRole } from '@/types/roles'
 
 const UUID_RE =
@@ -43,12 +44,19 @@ export async function searchUsersForSysAdmin(query: string, limit: number) {
     order: [['email', 'ASC']],
   })
 
+  const orgIds = [...new Set(rows.map(u => u.org_id).filter((id): id is string => !!id))]
+  const orgs = orgIds.length
+    ? await Organization.findAll({ where: { id: orgIds }, attributes: ['id', 'name'] })
+    : []
+  const orgNameById = new Map(orgs.map(o => [o.id, o.name]))
+
   return rows.map((u) => ({
     id: u.id,
     email: u.email,
     name: u.name,
     role: u.role as UserRole,
     org_id: u.org_id,
+    org_name: u.org_id ? orgNameById.get(u.org_id) ?? null : null,
     branch_id: u.branch_id,
   }))
 }

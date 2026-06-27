@@ -47,11 +47,28 @@ export function Badge({ className, status, dot = false, children, ...props }: Ba
 }
 
 const STATUS_LABELS: Record<string, { status: BadgeProps['status']; label: string }> = {
-  Aprobado:    { status: 'success', label: 'Aprobado' },
-  Pendiente:   { status: 'pending', label: 'Pendiente' },
-  Anulado:     { status: 'error',   label: 'Anulado' },
-  Borrador:    { status: 'draft',   label: 'Borrador' },
-  'En proceso':{ status: 'info',    label: 'En proceso' },
+  // Documentos / contactos
+  Aprobado:     { status: 'success', label: 'Aprobado' },
+  Pendiente:    { status: 'pending', label: 'Pendiente' },
+  Anulado:      { status: 'error',   label: 'Anulado' },
+  Anulada:      { status: 'error',   label: 'Anulada' },
+  Borrador:     { status: 'draft',   label: 'Borrador' },
+  'En proceso': { status: 'info',    label: 'En proceso' },
+  // Suscripciones (billing)
+  Activa:       { status: 'success', label: 'Activa' },
+  Prueba:       { status: 'info',    label: 'Prueba' },
+  Vencida:      { status: 'pending', label: 'Vencida' },
+  Pausada:      { status: 'draft',   label: 'Pausada' },
+  Cancelada:    { status: 'error',   label: 'Cancelada' },
+  // Facturas de suscripción (billing)
+  Emitida:      { status: 'info',    label: 'Emitida' },
+  'Pago parcial': { status: 'pending', label: 'Pago parcial' },
+  Pagada:       { status: 'success', label: 'Pagada' },
+  // Planes / métricas
+  Activo:       { status: 'success', label: 'Activo' },
+  Inactivo:     { status: 'draft',   label: 'Inactivo' },
+  Inactiva:     { status: 'draft',   label: 'Inactiva' },
+  Configurada:  { status: 'success', label: 'Configurada' },
 }
 
 export function StatusBadge({ value, className }: { value: string; className?: string }) {

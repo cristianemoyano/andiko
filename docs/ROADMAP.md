@@ -394,6 +394,13 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [x] `usage.service.ts` — registro y agregación de uso metered por período
 - [x] API REST bajo `/api/v1/sys-admin/billing/` — plans, subscriptions, invoices, payments, metrics, usage — todos con `requireSysAdmin()`
 - [x] Tests unitarios: `billing.math.test.ts`, `billing-invoices.service.test.ts`, `billing-payments.service.test.ts`, `subscriptions.service.test.ts` (25 test cases)
+- [x] `billing_plan_metric_allowances` + `subscription_metric_allowances` — franquicia incluida en plan y extras contratados por suscripción
+- [x] Precio unitario de overage por métrica a nivel plan (`unit_price` en allowances del plan)
+- [x] `billing-charges.service.ts` + `billing-preview.service.ts` — preview de período con desglose de seats, sucursales, add-ons y uso metered
+- [x] `usage-meter.service.ts` — registro idempotente de uso (AFIP: `afip_invoices_issued` al aprobar CAE)
+- [x] `billing-metrics.catalog.ts` + sync de catálogo; límites de sucursales y extras (`billing_plan_extras`)
+- [x] Facturas de plataforma con snapshot de conteos facturados; impresión PDF/HTML de factura sys-admin
+- [x] Portal org `/facturacion` — vista de suscripción, facturas y advertencias de capacidad
 
 ### Frontend (completado)
 - [x] `/sys-admin/billing` — dashboard con `StatCard`s (total/activas/vencidas), tabla de suscripciones, navegación a planes
@@ -406,6 +413,12 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [x] Dashboard de facturación para Gerente (`/facturacion`, rotulado "Suscripción" para no confundir con facturas de venta): suscripción vigente, consumo del período y facturas + detalle de factura (solo lectura). Capability `nav.facturacion`; API org-scoped `/api/v1/billing/*` con guard `requireOrgBilling` (resuelve la org propia, exige `settings:read`, nunca confía un `org_id` del cliente)
 - [x] Datos del emisor de plataforma (razón social, CUIT, condición IVA, domicilio, IIBB, inicio de actividades, email, teléfono) en `platform_settings`; pantalla sys-admin `/sys-admin/billing/emisor`
 - [x] Snapshot del emisor en la factura al emitir (draft→issued), inmutable; bloque "Emisor" en el detalle de factura del Gerente
+- [x] `/sys-admin/billing/metricas` — catálogo de métricas (sin pricing global; precio en plan)
+- [x] `/sys-admin/billing/facturas/[id]` — detalle, pagos, impresión; `RecordPaymentModal` compartido
+- [x] `PlanModal` — consumo medido (cantidad incluida + precio extra por métrica)
+- [x] `SubscriptionModal` + `SubscriptionUsageSection` — allowances de métricas y registro manual de uso
+- [x] `BillingSubNav`, badges de estado de facturación, preview de período con copy de capacidad (contrato vs incluidos)
+- [x] Impersonación sys-admin: nombre de org en búsqueda/recientes; panel org con nombre en título
 
 ### Pendientes (fases futuras)
 - [ ] Gateway de pagos (Mercado Pago / Stripe) + webhooks para débito automático

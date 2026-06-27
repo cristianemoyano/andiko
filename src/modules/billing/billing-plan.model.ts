@@ -14,13 +14,15 @@ export interface BillingPlanAttributes extends Timestamps, AuditFields {
   base_price: string
   included_seats: number
   per_seat_price: string
+  included_branches: number
+  per_branch_price: string
   is_active: boolean
 }
 
 type BillingPlanCreationAttributes = Optional<
   BillingPlanAttributes,
   | 'id' | 'description' | 'currency' | 'interval' | 'base_price' | 'included_seats'
-  | 'per_seat_price' | 'is_active'
+  | 'per_seat_price' | 'included_branches' | 'per_branch_price' | 'is_active'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
 >
 
@@ -34,6 +36,8 @@ class BillingPlan extends AuditModel<BillingPlanAttributes, BillingPlanCreationA
   declare base_price: string
   declare included_seats: number
   declare per_seat_price: string
+  declare included_branches: number
+  declare per_branch_price: string
   declare is_active: boolean
 }
 
@@ -46,9 +50,11 @@ BillingPlan.init(
     currency:       { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'ARS' },
     interval:       { type: DataTypes.ENUM(...BILLING_INTERVALS), allowNull: false, defaultValue: 'monthly' },
     base_price:     { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
-    included_seats: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
-    per_seat_price: { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
-    is_active:      { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    included_seats:     { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    per_seat_price:     { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
+    included_branches:  { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
+    per_branch_price:   { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
+    is_active:          { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'billing_plans', paranoid: true, underscored: true }

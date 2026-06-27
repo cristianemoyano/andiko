@@ -79,6 +79,10 @@ describe('resolveCapabilities()', () => {
     expect(caps?.organizacion.apiNamespace).toBe('sys-admin')
     expect(caps?.nav.organizacionesHref).toBe('/organizaciones')
     expect(caps?.nav.facturacion).toBe(false)
+    expect(caps?.configuracion.tabs.apariencia).toBe(true)
+    expect(caps?.configuracion.tabs.impresion).toBe(false)
+    expect(caps?.configuracion.tabs.afip).toBe(false)
+    expect(caps?.onboarding.manage).toBe(false)
   })
 
   it('hides facturacion dashboard for branch-admin without settings', async () => {

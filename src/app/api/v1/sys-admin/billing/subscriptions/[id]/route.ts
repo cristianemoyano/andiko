@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireSysAdmin } from '@/lib/sys-admin-guard'
 import { subscriptionUpdateSchema } from '@/modules/billing/subscription.schema'
 import { getSubscription, updateSubscription } from '@/modules/billing/subscriptions.service'
+import { getSubscriptionUsageAndPreview } from '@/modules/billing/billing-preview.service'
 import { billingErrorResponse } from '@/modules/billing/billing.errors'
 
 type P = { id: string }
@@ -13,7 +14,8 @@ export async function GET(_req: Request, ctx: { params: Promise<P> }) {
   const { id } = await ctx.params
   try {
     const sub = await getSubscription(id)
-    return NextResponse.json(sub)
+    const { usage, preview } = await getSubscriptionUsageAndPreview(id)
+    return NextResponse.json({ ...sub.get({ plain: true }), usage, preview })
   } catch (err) {
     const mapped = billingErrorResponse(err)
     if (mapped) return mapped
