@@ -15,6 +15,7 @@ export const storyCapabilities: UiCapabilities = {
     organizaciones: false,
     organizacionesHref: null,
     configuracion: true,
+    facturacion: false,
   },
   organizacion: {
     detail: false,

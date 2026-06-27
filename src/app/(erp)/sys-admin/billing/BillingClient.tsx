@@ -133,6 +133,9 @@ export function BillingClient() {
         breadcrumbs={[{ label: 'Facturación' }]}
         actions={
           <div className="flex gap-2">
+            <Button variant="secondary" size="sm" onClick={() => router.push('/sys-admin/billing/emisor')}>
+              Datos del emisor
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => router.push('/sys-admin/billing/planes')}>
               Planes
             </Button>

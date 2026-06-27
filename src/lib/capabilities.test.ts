@@ -68,6 +68,7 @@ describe('resolveCapabilities()', () => {
     expect(caps?.organizacion.sections.users).toBe(true)
     expect(caps?.organizacion.sections.enabledModules).toBe(false)
     expect(caps?.nav.organizacionesHref).toBe('/organizaciones/org-1')
+    expect(caps?.nav.facturacion).toBe(true)
     expect(caps?.onboarding.manage).toBe(true)
   })
 
@@ -77,6 +78,23 @@ describe('resolveCapabilities()', () => {
     expect(caps?.platform.listOrganizations).toBe(true)
     expect(caps?.organizacion.apiNamespace).toBe('sys-admin')
     expect(caps?.nav.organizacionesHref).toBe('/organizaciones')
+    expect(caps?.nav.facturacion).toBe(false)
+  })
+
+  it('hides facturacion dashboard for branch-admin without settings', async () => {
+    mockGetPermissions.mockResolvedValue(['sales:read', 'sales:write', 'panel:read'])
+    const caps = await resolveCapabilities(session({ role: 'branch-admin', realRole: 'branch-admin' }))
+    expect(caps?.nav.facturacion).toBe(false)
+  })
+
+  it('shows facturacion dashboard for sys-admin impersonating an org admin', async () => {
+    mockGetPermissions.mockResolvedValue(['settings:read', 'contacts:read'])
+    const caps = await resolveCapabilities(session({
+      role: 'admin',
+      realRole: 'sys-admin',
+      impersonation: { userId: 'org-admin', email: 'a@test.com', name: 'Gerente', role: 'admin' as UserRole },
+    }))
+    expect(caps?.nav.facturacion).toBe(true)
   })
 
   it('hides organization nav for branch-admin without settings', async () => {

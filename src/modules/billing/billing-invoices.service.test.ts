@@ -11,10 +11,12 @@ vi.mock('./billing-metric.model', () => ({ default: { findAll: vi.fn() } }))
 vi.mock('./billing.numbering', () => ({ nextBillingNumber: vi.fn().mockResolvedValue('BILL-000001') }))
 vi.mock('./usage.service', () => ({ aggregateUsage: vi.fn().mockResolvedValue([]), markUsageInvoiced: vi.fn() }))
 vi.mock('@/lib/db', () => ({ default: { transaction: vi.fn((cb) => cb({ lock: true })) } }))
-vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), error: vi.fn() } }))
+vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
+vi.mock('./platform-billing-settings.service', () => ({ getResolvedBillerSettings: vi.fn().mockResolvedValue(null) }))
 
 import BillingInvoice from './billing-invoice.model'
 import BillingPayment from './billing-payment.model'
+import { getResolvedBillerSettings } from './platform-billing-settings.service'
 import { issueBillingInvoice, voidBillingInvoice, recalcBillingInvoiceBalance } from './billing-invoices.service'
 
 const mockInvoice = (overrides = {}) => ({
@@ -40,6 +42,22 @@ describe('issueBillingInvoice', () => {
 
     expect(inv.update).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'issued', updated_by: 'actor-1' }),
+      expect.anything(),
+    )
+  })
+
+  it('snapshots the configured issuer onto the invoice at issue time', async () => {
+    const inv = mockInvoice()
+    ;(BillingInvoice.findByPk as Mock).mockResolvedValue(inv)
+    ;(getResolvedBillerSettings as Mock).mockResolvedValueOnce({
+      legal_name: 'Andiko S.A.', cuit: '30-12345678-9', iva_condition: 'responsable_inscripto',
+      fiscal_address: 'Av. Siempreviva 742', gross_income: '901-1', email: 'f@andiko.app', phone: '+5411',
+    })
+
+    await issueBillingInvoice('inv-1', 'actor-1')
+
+    expect(inv.update).toHaveBeenCalledWith(
+      expect.objectContaining({ issuer_legal_name: 'Andiko S.A.', issuer_cuit: '30-12345678-9' }),
       expect.anything(),
     )
   })

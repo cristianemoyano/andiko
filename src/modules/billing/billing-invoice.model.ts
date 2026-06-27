@@ -21,12 +21,22 @@ export interface BillingInvoiceAttributes extends Timestamps, AuditFields {
   paid_amount: string
   balance: string
   notes: string | null
+  // Issuer ("emisor") snapshot, written once at issue time (immutable).
+  issuer_legal_name: string | null
+  issuer_cuit: string | null
+  issuer_iva_condition: string | null
+  issuer_fiscal_address: string | null
+  issuer_gross_income: string | null
+  issuer_email: string | null
+  issuer_phone: string | null
 }
 
 type BillingInvoiceCreationAttributes = Optional<
   BillingInvoiceAttributes,
   | 'id' | 'subscription_id' | 'status' | 'period_start' | 'period_end' | 'issue_date' | 'due_date'
   | 'currency' | 'subtotal' | 'tax_amount' | 'total' | 'paid_amount' | 'balance' | 'notes'
+  | 'issuer_legal_name' | 'issuer_cuit' | 'issuer_iva_condition' | 'issuer_fiscal_address'
+  | 'issuer_gross_income' | 'issuer_email' | 'issuer_phone'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
 >
 
@@ -46,6 +56,13 @@ class BillingInvoice extends AuditModel<BillingInvoiceAttributes, BillingInvoice
   declare paid_amount: string
   declare balance: string
   declare notes: string | null
+  declare issuer_legal_name: string | null
+  declare issuer_cuit: string | null
+  declare issuer_iva_condition: string | null
+  declare issuer_fiscal_address: string | null
+  declare issuer_gross_income: string | null
+  declare issuer_email: string | null
+  declare issuer_phone: string | null
 }
 
 BillingInvoice.init(
@@ -65,6 +82,13 @@ BillingInvoice.init(
     paid_amount:     { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
     balance:         { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
     notes:           { type: DataTypes.TEXT },
+    issuer_legal_name:     { type: DataTypes.STRING(255) },
+    issuer_cuit:           { type: DataTypes.STRING(13) },
+    issuer_iva_condition:  { type: DataTypes.STRING(30) },
+    issuer_fiscal_address: { type: DataTypes.STRING(500) },
+    issuer_gross_income:   { type: DataTypes.STRING(32) },
+    issuer_email:          { type: DataTypes.STRING(320) },
+    issuer_phone:          { type: DataTypes.STRING(40) },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'billing_invoices', paranoid: true, underscored: true }
