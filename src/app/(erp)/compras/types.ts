@@ -1,4 +1,4 @@
-export type PurchaseOrderStatus = 'draft' | 'sent' | 'partially_received' | 'received' | 'cancelled'
+export type PurchaseOrderStatus = 'draft' | 'sent' | 'partially_received' | 'received' | 'partial_returned' | 'returned' | 'cancelled'
 export type PurchaseReceiptStatus = 'draft' | 'confirmed' | 'cancelled'
 export type SupplierInvoiceStatus = 'draft' | 'received' | 'partially_paid' | 'paid' | 'cancelled'
 export type PaymentMethod = 'transfer' | 'check' | 'cash' | 'credit_card' | 'debit_card' | 'other'
@@ -8,6 +8,8 @@ export const PURCHASE_ORDER_STATUS_LABEL: Record<PurchaseOrderStatus, string> = 
   sent:               'Enviado',
   partially_received: 'Recibido parcial',
   received:           'Recibido',
+  partial_returned:   'Devuelto parcial',
+  returned:           'Devuelto',
   cancelled:          'Cancelado',
 }
 
@@ -54,6 +56,7 @@ export type LineItem = {
   description: string
   quantity: string
   received_qty?: string
+  returned_qty?: string
   unit_price: string
   discount_pct: string
   iva_rate: string

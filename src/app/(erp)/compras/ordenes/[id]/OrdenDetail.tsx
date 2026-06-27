@@ -93,6 +93,7 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
   const isDraft            = order.status === 'draft'
   const isSent             = order.status === 'sent'
   const isPartiallyReceived = order.status === 'partially_received'
+  const isReturnable        = ['partially_received', 'received', 'partial_returned'].includes(order.status)
 
   const subtotal = (order.items ?? []).reduce((acc, i) => acc + parseFloat(i.subtotal), 0)
   const taxAmt   = (order.items ?? []).reduce((acc, i) => acc + parseFloat(i.tax_amount), 0)
@@ -143,6 +144,24 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
               >
                 Nueva factura
               </Button>
+            )}
+            {isReturnable && (
+              <>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => router.push(`/compras/devoluciones/nueva?order_id=${order.id}`)}
+                >
+                  Registrar devolución
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => router.push(`/compras/devoluciones/nueva?order_id=${order.id}&type=exchange`)}
+                >
+                  Registrar cambio
+                </Button>
+              </>
             )}
           </div>
         }

@@ -382,6 +382,147 @@ export async function reverseStockForReturn(
   }
 }
 
+/**
+ * Deducts stock for a purchase return (devolución a proveedor): goods leave our
+ * warehouse and go back to the supplier, so each returnable line produces an
+ * outbound movement.
+ */
+export async function deductStockForPurchaseReturn(
+  returnId: string,
+  orgId: string,
+  actorId: string,
+  t: Transaction,
+): Promise<void> {
+  const PurchaseReturnItem = (await import('@/modules/purchases/purchase-return-item.model')).default
+  const PurchaseReturn     = (await import('@/modules/purchases/purchase-return.model')).default
+  const Product            = (await import('@/modules/catalog/product.model')).default
+  const ProductVariant     = (await import('@/modules/catalog/product-variant.model')).default
+
+  const purchaseReturn = await PurchaseReturn.findByPk(returnId, {
+    attributes: ['id', 'warehouse_id'],
+    transaction: t,
+  })
+  if (!purchaseReturn?.warehouse_id) return
+
+  const items = await PurchaseReturnItem.findAll({
+    where: { return_id: returnId },
+    attributes: ['id', 'variant_id', 'product_id', 'quantity'],
+    transaction: t,
+  })
+
+  for (const item of items) {
+    const variantId = await resolveVariantId(item.variant_id, item.product_id, orgId, ProductVariant, t)
+    if (!variantId) continue
+
+    const variant = await ProductVariant.findByPk(variantId, { attributes: ['manage_stock'], transaction: t })
+    if (!variant?.manage_stock) continue
+
+    const product = item.product_id
+      ? await Product.findByPk(item.product_id, { attributes: ['product_type'], transaction: t })
+      : null
+    if (product?.product_type === 'service') continue
+
+    await applyMovement({
+      variantId,
+      warehouseId:   purchaseReturn.warehouse_id,
+      orgId,
+      movementType:  'out',
+      referenceType: 'purchase_return',
+      referenceId:   returnId,
+      quantityDelta: new Decimal(item.quantity).negated(),
+      notes:         'Devolución a proveedor',
+      actorId,
+    }, t)
+  }
+}
+
+/**
+ * Adds stock for the replacement goods of a purchase exchange (cambio): the
+ * supplier ships us new units in place of what we returned, so each line lands
+ * an inbound movement.
+ */
+export async function addStockForPurchaseExchange(
+  returnId: string,
+  orgId: string,
+  actorId: string,
+  t: Transaction,
+): Promise<void> {
+  const PurchaseReturnExchangeItem = (await import('@/modules/purchases/purchase-return-exchange-item.model')).default
+  const PurchaseReturn             = (await import('@/modules/purchases/purchase-return.model')).default
+  const Product                    = (await import('@/modules/catalog/product.model')).default
+  const ProductVariant             = (await import('@/modules/catalog/product-variant.model')).default
+
+  const purchaseReturn = await PurchaseReturn.findByPk(returnId, {
+    attributes: ['id', 'warehouse_id'],
+    transaction: t,
+  })
+  if (!purchaseReturn?.warehouse_id) return
+
+  const items = await PurchaseReturnExchangeItem.findAll({
+    where: { return_id: returnId },
+    attributes: ['id', 'variant_id', 'product_id', 'quantity', 'batch_code', 'expiry_date'],
+    transaction: t,
+  })
+
+  for (const item of items) {
+    const variantId = await resolveVariantId(item.variant_id, item.product_id, orgId, ProductVariant, t)
+    if (!variantId) continue
+
+    const variant = await ProductVariant.findByPk(variantId, { attributes: ['manage_stock'], transaction: t })
+    if (!variant?.manage_stock) continue
+
+    const product = item.product_id
+      ? await Product.findByPk(item.product_id, { attributes: ['product_type'], transaction: t })
+      : null
+    if (product?.product_type === 'service') continue
+
+    await applyMovement({
+      variantId,
+      warehouseId:   purchaseReturn.warehouse_id,
+      orgId,
+      movementType:  'in',
+      referenceType: 'purchase_exchange',
+      referenceId:   returnId,
+      quantityDelta: new Decimal(item.quantity),
+      batchCode:     item.batch_code ?? null,
+      expiryDate:    item.expiry_date ?? null,
+      notes:         'Cambio de mercadería (compra)',
+      actorId,
+    }, t)
+  }
+}
+
+/** Reverses the stock movements written by a purchase return/exchange (on cancel). */
+export async function reverseStockForPurchaseReturn(
+  returnId: string,
+  orgId: string,
+  actorId: string,
+  t: Transaction,
+): Promise<void> {
+  const movements = await StockMovement.findAll({
+    where: {
+      reference_id: returnId,
+      reference_type: { [Op.in]: ['purchase_return', 'purchase_exchange'] },
+      org_id: orgId,
+    },
+    transaction: t,
+  })
+
+  for (const mv of movements) {
+    await applyMovement({
+      variantId:     mv.variant_id,
+      warehouseId:   mv.warehouse_id,
+      orgId,
+      movementType:  mv.movement_type === 'in' ? 'out' : 'in',
+      referenceType: mv.reference_type as StockReferenceType,
+      referenceId:   returnId,
+      quantityDelta: new Decimal(mv.quantity_delta).negated(),
+      notes:         'Reversión de devolución a proveedor',
+      actorId,
+    }, t)
+  }
+}
+
 export async function manualAdjustment(
   variantId:    string,
   warehouseId:  string,
