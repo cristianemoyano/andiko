@@ -102,18 +102,21 @@ export async function updatePlan(id: string, input: BillingPlanUpdateInput, acto
 }
 
 export async function deletePlan(id: string, actorId: string) {
-  const plan = await BillingPlan.findByPk(id)
-  if (!plan) throw new Error('PLAN_NOT_FOUND')
+  return sequelize.transaction(async (t) => {
+    const plan = await BillingPlan.findByPk(id, { transaction: t })
+    if (!plan) throw new Error('PLAN_NOT_FOUND')
 
-  const { default: OrgSubscription } = await import('./org-subscription.model')
-  const inUse = await OrgSubscription.count({
-    where: { plan_id: id, status: { [Op.ne]: 'cancelled' } },
+    const { default: OrgSubscription } = await import('./org-subscription.model')
+    const inUse = await OrgSubscription.count({
+      where: { plan_id: id, status: { [Op.ne]: 'cancelled' } },
+      transaction: t,
+    })
+    if (inUse > 0) throw new Error('PLAN_IN_USE')
+
+    await plan.update({ deleted_by: actorId }, { transaction: t })
+    await plan.destroy({ transaction: t })
+    logger.info({ planId: id, actorId }, 'billing plan soft-deleted')
   })
-  if (inUse > 0) throw new Error('PLAN_IN_USE')
-
-  await plan.update({ deleted_by: actorId })
-  await plan.destroy()
-  logger.info({ planId: id, actorId }, 'billing plan soft-deleted')
 }
 
 async function getPlanInTransaction(id: string, t: import('sequelize').Transaction) {

@@ -29,7 +29,7 @@ export async function listBillingPayments(query: BillingPaymentQuery) {
 
 export async function createBillingPayment(input: BillingPaymentInput, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const invoice = await BillingInvoice.findByPk(input.invoice_id, { transaction: t })
+    const invoice = await BillingInvoice.findByPk(input.invoice_id, { transaction: t, lock: true })
     if (!invoice) throw new Error('BILLING_INVOICE_NOT_FOUND')
     if (invoice.status === 'void')  throw new Error('BILLING_INVOICE_VOID')
     if (invoice.status === 'draft') throw new Error('BILLING_INVOICE_NOT_ISSUED')
