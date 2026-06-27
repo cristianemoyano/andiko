@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.22.0](https://127.0.0.1/41729/git/cristianemoyano/compare/v0.17.1...v0.22.0) (2026-06-27)
+
+### Features
+
+* **auth:** structured address for branches with reusable AddressFields ([51c6680](https://127.0.0.1/41729/git/cristianemoyano/commit/51c6680cb1193a79adf1697c605b575fce7e8c2c))
+* **billing:** add platform SaaS subscription billing module ([64d8814](https://127.0.0.1/41729/git/cristianemoyano/commit/64d881464065f12f02a881aa50fbf3c239b51045))
+* **billing:** mobile UI polish, DRY primitives, loading skeletons ([da223aa](https://127.0.0.1/41729/git/cristianemoyano/commit/da223aa8d0ad2b13a5b073a8573c5d116617cb21))
+* **core:** gerente billing dashboard and mobile impersonation access ([a7cfd98](https://127.0.0.1/41729/git/cristianemoyano/commit/a7cfd9867babd0016cfb72d68c35238daa1d7669))
+* **core:** platform issuer (emisor) details for subscription invoices ([cb38d35](https://127.0.0.1/41729/git/cristianemoyano/commit/cb38d35a9c695c44185ecc7604eec9e978a4b501))
+* **core:** snapshot platform issuer onto subscription invoices at issue time ([1385aba](https://127.0.0.1/41729/git/cristianemoyano/commit/1385aba6ff25ba92bd32578a29af4ccbef784f98))
+* **mobile:** mobile UX phase 2 — PageBody, MenuPanel, TopBar, DataTable actions ([#77](https://127.0.0.1/41729/git/cristianemoyano/issues/77)) ([96b51f8](https://127.0.0.1/41729/git/cristianemoyano/commit/96b51f8015febdf9799438aceb55fa000d1b5914))
+* **pwa:** startup perf + mobile UX improvements ([4d48246](https://127.0.0.1/41729/git/cristianemoyano/commit/4d482468737cd05d7583c5944ff4eb0a48d19443))
+
+### Bug Fixes
+
+* **auth:** re-derive branch address when all structured fields are cleared ([b3abaff](https://127.0.0.1/41729/git/cristianemoyano/commit/b3abaff666f2ac2a71b84541b16209852adff156))
+* **billing:** 5 critical bugs — missing awaits, race condition, filter overwrite, missing transaction ([95bb605](https://127.0.0.1/41729/git/cristianemoyano/commit/95bb6055eaca8fe432f7bfd7fc14b645580ad453))
+* **billing:** move setLoading inside async IIFE to satisfy react-hooks/set-state-in-effect lint rule ([33c0a33](https://127.0.0.1/41729/git/cristianemoyano/commit/33c0a332842b1cfcd303e08319fca4f67b49251a))
+* **core:** fix pre-existing lint errors (prefer-const, stale refs, unused import) ([2776718](https://127.0.0.1/41729/git/cristianemoyano/commit/27767183160be50ad9eafd64dc5816ac5c766e37))
+* **core:** show app version in mobile menu panel ([f7252c9](https://127.0.0.1/41729/git/cristianemoyano/commit/f7252c933c3a2ef0b09c42d98c44b585e18cf5e4))
+* **pwa:** fix adversarial-review findings — parallelise layout DB calls, fix PullToRefresh bugs, add mobileRender for accessible kebab menu ([5cb6ca7](https://127.0.0.1/41729/git/cristianemoyano/commit/5cb6ca7ad4f16333fb3de3e2a8839e2d2c9ee750))
+
 ## [0.21.0](https://127.0.0.1/41729/git/cristianemoyano/compare/v0.17.1...v0.21.0) (2026-06-27)
 
 ### Features
