@@ -263,7 +263,10 @@ export async function updateBranch(id: string, input: BranchUpdateInput) {
   if (touchesAddress) {
     const structured = pickAddressFields(input, branch)
     Object.assign(next, structured)
-    next.address = formatAddress(structured) || input.address?.trim() || branch.address || null
+    // Re-derive from the structured fields; fall back to a legacy free-text
+    // `address` only. Do NOT fall back to the previous value, otherwise
+    // clearing every field would leave the derived address stale.
+    next.address = formatAddress(structured) || input.address?.trim() || null
   }
 
   await branch.update(next)
