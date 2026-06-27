@@ -108,6 +108,7 @@ export function buildAuthorizePayloadFromLocalSale(saleId: string): AuthorizePos
     payments,
     sold_at: sale.sold_at,
     items: items.map((item) => ({
+      product_id: item.product_id,
       description: item.product_name,
       qty: item.qty,
       unit_price: item.unit_price,
@@ -180,7 +181,12 @@ export async function completePosCheckout(args: {
     registerError = parseCloudError(err)
     const existing = d.select().from(syncQueue).where(eq(syncQueue.sale_id, args.saleId)).get()
     if (!existing) {
-      d.insert(syncQueue).values({ sale_id: args.saleId, attempts: 0, last_error: registerError }).run()
+      d.insert(syncQueue).values({
+        sale_id: args.saleId,
+        attempts: 0,
+        last_error: registerError,
+        created_at: now,
+      }).run()
     }
   }
 

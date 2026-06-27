@@ -56,7 +56,6 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
     where:    { variant_id: variantId, warehouse_id: warehouseId },
     defaults: { variant_id: variantId, warehouse_id: warehouseId, org_id: orgId, quantity: '0' },
     transaction: t,
-    lock: true,
   })
 
   const before = new Decimal(item.quantity)
@@ -199,6 +198,190 @@ export async function restoreStockForOrder(orderId: string, orgId: string, actor
   }
 }
 
+/** Restores only quantities not already returned via sales_returns. */
+export async function restoreRemainingStockForOrder(
+  orderId: string,
+  orgId: string,
+  actorId: string,
+  t: Transaction,
+): Promise<void> {
+  const SalesOrderItem = (await import('@/modules/sales/sales-order-item.model')).default
+  const SalesOrder     = (await import('@/modules/sales/sales-order.model')).default
+  const Product        = (await import('@/modules/catalog/product.model')).default
+  const ProductVariant = (await import('@/modules/catalog/product-variant.model')).default
+
+  const order = await SalesOrder.findByPk(orderId, { attributes: ['id', 'branch_id'], transaction: t })
+  if (!order?.branch_id) return
+
+  const warehouseId = await resolveDefaultWarehouse(order.branch_id, orgId, t)
+  if (!warehouseId) return
+
+  const items = await SalesOrderItem.findAll({
+    where: { order_id: orderId },
+    attributes: ['id', 'variant_id', 'product_id', 'quantity', 'returned_qty'],
+    transaction: t,
+  })
+
+  for (const item of items) {
+    const remaining = new Decimal(item.quantity).minus(new Decimal(item.returned_qty ?? '0'))
+    if (remaining.lte(0)) continue
+
+    const variantId = await resolveVariantId(item.variant_id, item.product_id, orgId, ProductVariant, t)
+    if (!variantId) continue
+
+    const variant = await ProductVariant.findByPk(variantId, { attributes: ['manage_stock'], transaction: t })
+    if (!variant?.manage_stock) continue
+
+    const product = item.product_id
+      ? await Product.findByPk(item.product_id, { attributes: ['product_type'], transaction: t })
+      : null
+    if (product?.product_type === 'service') continue
+
+    await applyMovement({
+      variantId,
+      warehouseId,
+      orgId,
+      movementType:  'in',
+      referenceType: 'invoice_cancel',
+      referenceId:   orderId,
+      quantityDelta: remaining,
+      notes:         'Restauración por cancelación de factura',
+      actorId,
+    }, t)
+  }
+}
+
+export async function restoreStockForReturn(
+  returnId: string,
+  orgId: string,
+  actorId: string,
+  t: Transaction,
+): Promise<void> {
+  const SalesReturnItem = (await import('@/modules/sales/sales-return-item.model')).default
+  const SalesReturn     = (await import('@/modules/sales/sales-return.model')).default
+  const Product         = (await import('@/modules/catalog/product.model')).default
+  const ProductVariant  = (await import('@/modules/catalog/product-variant.model')).default
+
+  const salesReturn = await SalesReturn.findByPk(returnId, {
+    attributes: ['id', 'warehouse_id', 'order_id'],
+    transaction: t,
+  })
+  if (!salesReturn?.warehouse_id) return
+
+  const items = await SalesReturnItem.findAll({
+    where: { return_id: returnId },
+    attributes: ['id', 'variant_id', 'product_id', 'quantity', 'batch_code', 'expiry_date'],
+    transaction: t,
+  })
+
+  for (const item of items) {
+    const variantId = await resolveVariantId(item.variant_id, item.product_id, orgId, ProductVariant, t)
+    if (!variantId) continue
+
+    const variant = await ProductVariant.findByPk(variantId, { attributes: ['manage_stock'], transaction: t })
+    if (!variant?.manage_stock) continue
+
+    const product = item.product_id
+      ? await Product.findByPk(item.product_id, { attributes: ['product_type'], transaction: t })
+      : null
+    if (product?.product_type === 'service') continue
+
+    await applyMovement({
+      variantId,
+      warehouseId:   salesReturn.warehouse_id,
+      orgId,
+      movementType:  'in',
+      referenceType: 'sales_return',
+      referenceId:   returnId,
+      quantityDelta: new Decimal(item.quantity),
+      batchCode:     item.batch_code ?? null,
+      expiryDate:    item.expiry_date ?? null,
+      notes:         'Devolución de venta',
+      actorId,
+    }, t)
+  }
+}
+
+export async function deductStockForExchange(
+  returnId: string,
+  orgId: string,
+  actorId: string,
+  t: Transaction,
+): Promise<void> {
+  const SalesReturnExchangeItem = (await import('@/modules/sales/sales-return-exchange-item.model')).default
+  const SalesReturn               = (await import('@/modules/sales/sales-return.model')).default
+  const Product                   = (await import('@/modules/catalog/product.model')).default
+  const ProductVariant              = (await import('@/modules/catalog/product-variant.model')).default
+
+  const salesReturn = await SalesReturn.findByPk(returnId, {
+    attributes: ['id', 'warehouse_id'],
+    transaction: t,
+  })
+  if (!salesReturn?.warehouse_id) return
+
+  const items = await SalesReturnExchangeItem.findAll({
+    where: { return_id: returnId },
+    attributes: ['id', 'variant_id', 'product_id', 'quantity'],
+    transaction: t,
+  })
+
+  for (const item of items) {
+    const variantId = await resolveVariantId(item.variant_id, item.product_id, orgId, ProductVariant, t)
+    if (!variantId) continue
+
+    const variant = await ProductVariant.findByPk(variantId, { attributes: ['manage_stock'], transaction: t })
+    if (!variant?.manage_stock) continue
+
+    const product = item.product_id
+      ? await Product.findByPk(item.product_id, { attributes: ['product_type'], transaction: t })
+      : null
+    if (product?.product_type === 'service') continue
+
+    await applyMovement({
+      variantId,
+      warehouseId:   salesReturn.warehouse_id,
+      orgId,
+      movementType:  'out',
+      referenceType: 'sales_exchange',
+      referenceId:   returnId,
+      quantityDelta: new Decimal(item.quantity).negated(),
+      notes:         'Cambio de mercadería',
+      actorId,
+    }, t)
+  }
+}
+
+export async function reverseStockForReturn(
+  returnId: string,
+  orgId: string,
+  actorId: string,
+  t: Transaction,
+): Promise<void> {
+  const movements = await StockMovement.findAll({
+    where: {
+      reference_id: returnId,
+      reference_type: { [Op.in]: ['sales_return', 'sales_exchange'] },
+      org_id: orgId,
+    },
+    transaction: t,
+  })
+
+  for (const mv of movements) {
+    const reverseType = mv.reference_type === 'sales_return' ? 'sales_return' : 'sales_exchange'
+    await applyMovement({
+      variantId:     mv.variant_id,
+      warehouseId:   mv.warehouse_id,
+      orgId,
+      movementType:  mv.movement_type === 'in' ? 'out' : 'in',
+      referenceType: reverseType as StockReferenceType,
+      referenceId:   returnId,
+      quantityDelta: new Decimal(mv.quantity_delta).negated(),
+      notes:         'Reversión de devolución',
+      actorId,
+    }, t)
+  }
+}
+
 export async function manualAdjustment(
   variantId:    string,
   warehouseId:  string,
@@ -212,7 +395,6 @@ export async function manualAdjustment(
       where:    { variant_id: variantId, warehouse_id: warehouseId },
       defaults: { variant_id: variantId, warehouse_id: warehouseId, org_id: ctx.orgId, quantity: '0' },
       transaction: t,
-      lock: true,
     })
 
     const before = new Decimal(item.quantity)

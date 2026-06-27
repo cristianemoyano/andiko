@@ -8,6 +8,7 @@ import { paginate, toPaginated } from '@/lib/pagination'
 import DeliveryNote from './delivery-note.model'
 import DeliveryNoteItem from './delivery-note-item.model'
 import StockMovement from './stock-movement.model'
+import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { applyMovement } from './stock-movements.service'
 import { resolveDefaultWarehouse } from './warehouses.service'
 import { nextDeliveryNumber } from './delivery-notes.utils'
@@ -156,8 +157,20 @@ export async function updateDeliveryNote(id: string, input: DeliveryNoteUpdateIn
     if (!note) throw new Error('DELIVERY_NOTE_NOT_FOUND')
     if (note.status !== 'draft') throw new Error('DELIVERY_NOTE_NOT_DRAFT')
 
-    const { items, branch_id: _branch, ...fields } = input
-    void _branch
+    const { items, branch_id: nextBranchId, ...fields } = input
+
+    const branchPatch: Record<string, unknown> = {}
+    if (nextBranchId && nextBranchId !== note.branch_id) {
+      assertDraftBranchChange(note.status)
+      Object.assign(branchPatch, await buildBranchRenumberPatch({
+        orgId,
+        currentBranchId: note.branch_id,
+        nextBranchId,
+        numberField: 'delivery_number',
+        resolveNextNumber: (oid, branchId, tx) => nextDeliveryNumber(oid, branchId, tx),
+        t,
+      }))
+    }
 
     if (items && items.length > 0) {
       await DeliveryNoteItem.destroy({ where: { delivery_note_id: id }, transaction: t })
@@ -182,7 +195,7 @@ export async function updateDeliveryNote(id: string, input: DeliveryNoteUpdateIn
       )
     }
 
-    await note.update({ ...fields, updated_by: actorId }, { transaction: t })
+    await note.update({ ...fields, ...branchPatch, updated_by: actorId }, { transaction: t })
     return note
   })
 }

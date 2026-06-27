@@ -12,6 +12,7 @@ import { Textarea } from '@/components/primitives/Textarea'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
+import { PageActionBar, type PageAction } from '@/components/erp/PageActionBar'
 import { EmptyState } from '@/components/erp/EmptyState'
 import { StatusPipeline } from '@/components/erp/StatusPipeline'
 import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
@@ -325,6 +326,37 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
 
   const editTotals = editMode ? calcTotals(items) : null
 
+  const quotePrimaryAction: PageAction | null = !editMode && canConvert
+    ? { id: 'convert', label: 'Convertir en pedido', onClick: () => setConfirmConvert(true), disabled: transitioning }
+    : !editMode && transitions[0]
+      ? {
+          id: transitions[0].next,
+          label: transitions[0].label,
+          onClick: () => handleTransition(transitions[0].next),
+          disabled: transitioning,
+        }
+      : !editMode && canEdit
+        ? { id: 'edit', label: 'Editar', onClick: () => enterEditMode(quote) }
+        : null
+
+  const quoteSecondaryActions: PageAction[] = editMode
+    ? []
+    : [
+        { id: 'print', label: 'Imprimir', href: `/ventas/presupuestos/${id}/print`, openInNewTab: true },
+        ...transitions.slice(quotePrimaryAction && transitions[0] && quotePrimaryAction.id === transitions[0].next ? 1 : 0).map(t => ({
+          id: t.next,
+          label: t.label,
+          onClick: () => handleTransition(t.next),
+          disabled: transitioning,
+        })),
+        ...(canEdit && quotePrimaryAction?.id !== 'edit'
+          ? [{ id: 'edit', label: 'Editar', onClick: () => enterEditMode(quote) }]
+          : []),
+        ...(canCancel
+          ? [{ id: 'cancel', label: 'Cancelar', onClick: () => setConfirmCancel(true), disabled: transitioning, variant: 'destructive' as const }]
+          : []),
+      ]
+
   return (
     <div className="flex flex-col h-full">
       <TopBar
@@ -334,52 +366,23 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
           { label: quote.quote_number },
         ]}
         actions={
-          <div className="flex flex-wrap gap-2 justify-end">
-            <Button asChild size="sm" variant="ghost">
-              <Link href={`/ventas/presupuestos/${id}/print`} target="_blank" rel="noopener noreferrer">
-                Imprimir
-              </Link>
-            </Button>
-            <SendDocumentEmail
-              documentType="quote"
-              documentId={id}
-              documentLabel={`Presupuesto ${quote.quote_number}`}
-            />
-            {!editMode && (
-              <>
-                {transitions.map(t => (
-                  <Button key={t.next} size="sm" variant={t.variant ?? 'secondary'} onClick={() => handleTransition(t.next)} disabled={transitioning}>
-                    {t.label}
-                  </Button>
-                ))}
-                {canConvert && (
-                  <Button size="sm" onClick={() => setConfirmConvert(true)} disabled={transitioning}>
-                    Convertir en pedido
-                  </Button>
-                )}
-                {canCancel && (
-                  <Button size="sm" variant="ghost" onClick={() => setConfirmCancel(true)} disabled={transitioning}>
-                    Cancelar
-                  </Button>
-                )}
-                {canEdit && (
-                  <Button size="sm" variant="secondary" onClick={() => enterEditMode(quote)}>
-                    Editar
-                  </Button>
-                )}
-              </>
-            )}
-            {editMode && (
-              <>
-                <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saving}>
-                  Cancelar
-                </Button>
-                <Button size="sm" onClick={handleSave} disabled={saving}>
-                  {saving ? 'Guardando…' : 'Guardar cambios'}
-                </Button>
-              </>
-            )}
-          </div>
+          <PageActionBar
+            edit={editMode ? {
+              onCancel: cancelEdit,
+              onSave: handleSave,
+              saving,
+            } : undefined}
+            primary={quotePrimaryAction}
+            secondary={quoteSecondaryActions}
+            menuChildren={!editMode ? (
+              <SendDocumentEmail
+                triggerMode="menu-item"
+                documentType="quote"
+                documentId={id}
+                documentLabel={`Presupuesto ${quote.quote_number}`}
+              />
+            ) : undefined}
+          />
         }
       />
       <VentasSubNav />

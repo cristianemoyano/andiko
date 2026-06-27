@@ -5,7 +5,7 @@ import sequelize from '@/lib/db'
 export { calcLineItem, calcDocumentTotals } from './sales.math'
 export type { LineItemTotals, DocumentTotals } from './sales.math'
 
-type DocumentType = 'quote' | 'order' | 'invoice' | 'payment' | 'credit_note' | 'debit_note'
+type DocumentType = 'quote' | 'order' | 'invoice' | 'payment' | 'credit_note' | 'debit_note' | 'sales_return' | 'sales_refund'
 
 const DOC_PREFIXES: Record<DocumentType, string> = {
   quote:       'PRES',
@@ -14,6 +14,8 @@ const DOC_PREFIXES: Record<DocumentType, string> = {
   payment:     'COB',
   credit_note: 'NC',
   debit_note:  'ND',
+  sales_return: 'DEV',
+  sales_refund: 'REB',
 }
 
 /**

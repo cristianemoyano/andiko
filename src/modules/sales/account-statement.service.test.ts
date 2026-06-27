@@ -26,10 +26,29 @@ vi.mock('./credit-note.model', () => ({
   },
 }))
 
+vi.mock('./sales-order.model', () => ({
+  default: {},
+}))
+
+vi.mock('./sales-refund.model', () => ({
+  default: {
+    findAll: vi.fn(),
+  },
+}))
+
+vi.mock('./sales-return.model', () => ({
+  default: {},
+}))
+
+vi.mock('./sales-returns.service', () => ({
+  ensureSalesReturnAssociations: vi.fn(),
+}))
+
 import Contact from '@/modules/contacts/contact.model'
 import Invoice from './invoice.model'
 import Payment from './payment.model'
 import CreditNote from './credit-note.model'
+import SalesRefund from './sales-refund.model'
 import { getAccountStatement } from './account-statement.service'
 
 const tenantCtx: TenantContext = {
@@ -52,6 +71,7 @@ describe('getAccountStatement', () => {
     vi.clearAllMocks()
     mockContact()
     ;(CreditNote.findAll as Mock).mockResolvedValue([])
+    ;(SalesRefund.findAll as Mock).mockResolvedValue([])
   })
 
   it('builds summary and running balance with partial payments', async () => {

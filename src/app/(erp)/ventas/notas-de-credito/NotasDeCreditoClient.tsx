@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import Decimal from 'decimal.js'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { DataTable, TablePagination, SalesDocumentNumber, type Column } from '@/components/erp'
+import { resolveSalesDocumentDisplay } from '@/lib/fiscal-document-number'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -26,8 +27,17 @@ type CreditNoteRow = {
   total: string
   remaining: string
   reason: string | null
+  afip_status?: string | null
+  punto_venta?: number | null
+  cbte_numero?: number | null
   contact: { id: string; legal_name: string; trade_name: string | null } | null
-  invoice: { id: string; invoice_number: string } | null
+  invoice: {
+    id: string
+    invoice_number: string
+    afip_status?: string | null
+    punto_venta?: number | null
+    cbte_numero?: number | null
+  } | null
 }
 
 type InvoiceOption = {
@@ -36,6 +46,19 @@ type InvoiceOption = {
   total: string
   balance: string
   status: string
+  afip_status?: string | null
+  punto_venta?: number | null
+  cbte_numero?: number | null
+}
+
+function invoiceOptionLabel(inv: InvoiceOption): string {
+  const number = resolveSalesDocumentDisplay({
+    internalNumber: inv.invoice_number,
+    afip_status: inv.afip_status,
+    punto_venta: inv.punto_venta,
+    cbte_numero: inv.cbte_numero,
+  }).primary
+  return `${number} — Saldo: ${formatARS(inv.balance)}`
 }
 
 const STATUS_LABEL: Record<CreditNoteStatus, string> = {
@@ -57,7 +80,14 @@ const COLUMNS: Column<CreditNoteRow>[] = [
   {
     key: 'credit_note_number',
     header: 'Número',
-    render: row => <span className="font-mono text-[12px] text-fg-muted">{row.credit_note_number}</span>,
+    render: row => (
+      <SalesDocumentNumber
+        internalNumber={row.credit_note_number}
+        afip_status={row.afip_status}
+        punto_venta={row.punto_venta}
+        cbte_numero={row.cbte_numero}
+      />
+    ),
   },
   {
     key: 'status',
@@ -69,10 +99,10 @@ const COLUMNS: Column<CreditNoteRow>[] = [
     header: 'Cliente',
     render: row => row.contact
       ? (
-        <div className="min-w-0">
-          <p className="truncate font-medium text-fg">{row.contact.legal_name}</p>
-          {row.contact.trade_name ? <p className="text-[12px] text-fg-muted truncate">{row.contact.trade_name}</p> : null}
-        </div>
+        <span className="min-w-0">
+          <span className="block truncate font-medium text-fg">{row.contact.legal_name}</span>
+          {row.contact.trade_name ? <span className="block text-[12px] text-fg-muted truncate">{row.contact.trade_name}</span> : null}
+        </span>
       )
       : <span className="text-fg-subtle">—</span>,
   },
@@ -80,7 +110,14 @@ const COLUMNS: Column<CreditNoteRow>[] = [
     key: 'invoice',
     header: 'Factura orig.',
     render: row => row.invoice
-      ? <span className="font-mono text-[12px] text-fg-muted">{row.invoice.invoice_number}</span>
+      ? (
+        <SalesDocumentNumber
+          internalNumber={row.invoice.invoice_number}
+          afip_status={row.invoice.afip_status}
+          punto_venta={row.invoice.punto_venta}
+          cbte_numero={row.invoice.cbte_numero}
+        />
+      )
       : <span className="text-fg-subtle">—</span>,
   },
   {
@@ -332,7 +369,7 @@ export function NotasDeCreditoClient() {
                 <option value="">— Sin factura vinculada —</option>
                 {invoiceOptions.map(inv => (
                   <option key={inv.id} value={inv.id}>
-                    {inv.invoice_number} — Saldo: {formatARS(inv.balance)}
+                    {invoiceOptionLabel(inv)}
                   </option>
                 ))}
               </select>

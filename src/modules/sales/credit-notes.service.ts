@@ -4,12 +4,14 @@ import Decimal from 'decimal.js'
 import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
-import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
+import { whereAllowedBranches, whereBranch, type TenantContext } from '@/lib/tenancy'
+import { FISCAL_NUMBER_SOURCE_ATTRS } from '@/lib/fiscal-document-number'
 import CreditNote from './credit-note.model'
 import Invoice from './invoice.model'
 import Contact from '@/modules/contacts/contact.model'
 import Branch from '@/modules/auth/branch.model'
 import { ensureSalesBranchAssociations, BRANCH_AFIP_ATTRIBUTES } from './sales-branch-associations'
+import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { nextDocumentNumber } from './sales.utils'
 import type { CreditNoteQuery, CreateCreditNoteInput, UpdateCreditNoteInput } from './credit-note.schema'
 
@@ -38,10 +40,16 @@ export async function listCreditNotes(query: CreditNoteQuery, ctx: TenantContext
       'id', 'branch_id', 'contact_id', 'invoice_id', 'credit_note_number', 'status',
       'issue_date', 'currency', 'subtotal', 'discount_amount', 'tax_amount', 'total',
       'applied_amount', 'remaining', 'reason', 'notes', 'created_at', 'updated_at',
+      ...FISCAL_NUMBER_SOURCE_ATTRS,
     ],
     include: [
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'cuit'], required: false },
-      { model: Invoice, as: 'invoice', attributes: ['id', 'invoice_number'], required: false },
+      {
+        model: Invoice,
+        as: 'invoice',
+        attributes: ['id', 'invoice_number', ...FISCAL_NUMBER_SOURCE_ATTRS],
+        required: false,
+      },
     ],
     order: [['created_at', 'DESC']],
     limit,
@@ -59,7 +67,12 @@ export async function getCreditNote(id: string, ctx: TenantContext) {
     include: [
       { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES], required: false },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'cuit'], required: false },
-      { model: Invoice, as: 'invoice', attributes: ['id', 'invoice_number', 'status', 'total', 'balance'], required: false },
+      {
+        model: Invoice,
+        as: 'invoice',
+        attributes: ['id', 'invoice_number', 'status', 'total', 'balance', ...FISCAL_NUMBER_SOURCE_ATTRS],
+        required: false,
+      },
     ],
   })
   if (!note) throw new Error('CREDIT_NOTE_NOT_FOUND')
@@ -106,55 +119,79 @@ export async function createCreditNote(input: CreateCreditNoteInput, ctx: Tenant
 }
 
 export async function updateCreditNote(id: string, input: UpdateCreditNoteInput, ctx: TenantContext) {
-  const note = await CreditNote.findOne({ where: whereAllowedBranches(ctx, { id }) })
-  if (!note) throw new Error('CREDIT_NOTE_NOT_FOUND')
-  if (note.status !== 'draft') throw new Error('CREDIT_NOTE_NOT_EDITABLE')
+  const { orgId } = ctx
+  if (!orgId) throw new Error('ORG_CONTEXT_REQUIRED')
 
-  const total = input.total ?? note.total
-  const applied = note.applied_amount
-  const remaining = new Decimal(total).minus(new Decimal(applied)).toFixed(2)
+  return sequelize.transaction(async (t) => {
+    const note = await CreditNote.findOne({ where: whereAllowedBranches(ctx, { id }), transaction: t, lock: true })
+    if (!note) throw new Error('CREDIT_NOTE_NOT_FOUND')
+    if (note.status !== 'draft') throw new Error('CREDIT_NOTE_NOT_EDITABLE')
 
-  await note.update({
-    contact_id: input.contact_id ?? note.contact_id,
-    invoice_id: input.invoice_id ?? note.invoice_id,
-    issue_date: input.issue_date ?? note.issue_date,
-    currency: input.currency ?? note.currency,
-    subtotal: input.subtotal ?? note.subtotal,
-    discount_amount: input.discount_amount ?? note.discount_amount,
-    tax_amount: input.tax_amount ?? note.tax_amount,
-    total,
-    remaining,
-    reason: input.reason ?? note.reason,
-    notes: input.notes ?? note.notes,
-    updated_by: ctx.userId ?? null,
+    const total = input.total ?? note.total
+    const applied = note.applied_amount
+    const remaining = new Decimal(total).minus(new Decimal(applied)).toFixed(2)
+
+    const patch: Record<string, unknown> = {
+      contact_id: input.contact_id ?? note.contact_id,
+      invoice_id: input.invoice_id ?? note.invoice_id,
+      issue_date: input.issue_date ?? note.issue_date,
+      currency: input.currency ?? note.currency,
+      subtotal: input.subtotal ?? note.subtotal,
+      discount_amount: input.discount_amount ?? note.discount_amount,
+      tax_amount: input.tax_amount ?? note.tax_amount,
+      total,
+      remaining,
+      reason: input.reason ?? note.reason,
+      notes: input.notes ?? note.notes,
+      updated_by: ctx.userId ?? null,
+    }
+
+    if (input.branch_id && input.branch_id !== note.branch_id) {
+      assertDraftBranchChange(note.status)
+      void whereBranch(ctx, input.branch_id)
+      Object.assign(patch, await buildBranchRenumberPatch({
+        orgId,
+        currentBranchId: note.branch_id,
+        nextBranchId: input.branch_id,
+        numberField: 'credit_note_number',
+        resolveNextNumber: (oid, branchId, tx) => nextDocumentNumber(oid, branchId, 'credit_note', tx),
+        t,
+      }))
+    }
+
+    await note.update(patch, { transaction: t })
+    return note.reload({ transaction: t })
   })
-
-  return note.reload()
 }
 
 export async function issueCreditNote(id: string, ctx: TenantContext) {
-  return sequelize.transaction(async (t) => {
-    const note = await CreditNote.findOne({
-      where: whereAllowedBranches(ctx, { id }),
-      transaction: t,
-      lock: true,
-    })
-    if (!note) throw new Error('CREDIT_NOTE_NOT_FOUND')
-    if (note.status !== 'draft') throw new Error('CREDIT_NOTE_ALREADY_ISSUED')
+  return sequelize.transaction(async (t) => issueCreditNoteInTransaction(id, ctx, t))
+}
 
-    await note.update(
-      { status: 'issued', issue_date: note.issue_date ?? new Date(), updated_by: ctx.userId ?? null },
-      { transaction: t },
-    )
-
-    // If linked to an invoice, apply the credit note amount against the invoice balance
-    if (note.invoice_id) {
-      await applyCreditNoteToInvoice(note, t, ctx)
-    }
-
-    logger.info({ creditNoteId: note.id }, 'credit note issued')
-    return note.reload({ transaction: t })
+export async function issueCreditNoteInTransaction(
+  id: string,
+  ctx: TenantContext,
+  t: import('sequelize').Transaction,
+) {
+  const note = await CreditNote.findOne({
+    where: whereAllowedBranches(ctx, { id }),
+    transaction: t,
+    lock: true,
   })
+  if (!note) throw new Error('CREDIT_NOTE_NOT_FOUND')
+  if (note.status !== 'draft') throw new Error('CREDIT_NOTE_ALREADY_ISSUED')
+
+  await note.update(
+    { status: 'issued', issue_date: note.issue_date ?? new Date(), updated_by: ctx.userId ?? null },
+    { transaction: t },
+  )
+
+  if (note.invoice_id) {
+    await applyCreditNoteToInvoice(note, t, ctx)
+  }
+
+  logger.info({ creditNoteId: note.id }, 'credit note issued')
+  return note.reload({ transaction: t })
 }
 
 export async function cancelCreditNote(id: string, ctx: TenantContext) {

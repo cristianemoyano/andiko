@@ -29,7 +29,8 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
   }
   try {
     const ctxTenant = await makeTenantContext(session.user)
-    const order = await updateOrder(id, parsed.data, ctxTenant, resolveActorId(session))
+    const submittedKeys = Object.keys(body)
+    const order = await updateOrder(id, parsed.data, ctxTenant, resolveActorId(session), submittedKeys)
     return NextResponse.json(order)
   } catch (err: unknown) {
     if (err instanceof TenancyError) {
@@ -39,7 +40,18 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     }
     if (err instanceof Error) {
       if (err.message === 'ORDER_NOT_FOUND')    return NextResponse.json({ error: 'Pedido no encontrado', code: 'NOT_FOUND' }, { status: 404 })
-      if (err.message === 'ORDER_NOT_EDITABLE') return NextResponse.json({ error: 'El pedido no es editable', code: 'NOT_EDITABLE' }, { status: 409 })
+      if (err.message === 'ORDER_NOT_EDITABLE') {
+        return NextResponse.json(
+          { error: 'El pedido no admite esta modificación. Si solo querés asignar cliente, usá «Asignar cliente».', code: 'NOT_EDITABLE' },
+          { status: 409 },
+        )
+      }
+      if (err.message === 'ORDER_BRANCH_NOT_CHANGEABLE' || err.message === 'DOCUMENT_BRANCH_NOT_CHANGEABLE') {
+        return NextResponse.json(
+          { error: 'La sucursal solo se puede cambiar en pedidos en borrador.', code: 'BRANCH_NOT_CHANGEABLE' },
+          { status: 409 },
+        )
+      }
     }
     throw err
   }

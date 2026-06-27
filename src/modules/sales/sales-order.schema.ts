@@ -35,11 +35,16 @@ export const salesOrderSchema = z.object({
   items:             z.array(lineItemSchema).min(1),
 })
 
-export const salesOrderUpdateSchema = salesOrderSchema.partial().extend({
-  status:         z.enum(ORDER_STATUSES).optional(),
-  delivered_date: z.string().datetime({ offset: true }).transform(s => new Date(s)).nullable().optional(),
-  items:          z.array(lineItemSchema).min(1).optional(),
-})
+export const salesOrderUpdateSchema = salesOrderSchema
+  .omit({ payment_condition: true, currency: true })
+  .partial()
+  .extend({
+    payment_condition: paymentConditionEnum.optional(),
+    currency:          z.string().length(3).optional(),
+    status:            z.enum(ORDER_STATUSES).optional(),
+    delivered_date:    z.string().datetime({ offset: true }).transform(s => new Date(s)).nullable().optional(),
+    items:             z.array(lineItemSchema).min(1).optional(),
+  })
 
 export const salesOrderQuerySchema = paginationSchema.extend({
   search:     z.string().optional(),

@@ -34,12 +34,36 @@ const navLinks = [
   { label: 'Contacto', href: '#sec-contacto' },
 ] as const
 
-const trustItems = ['Sin tarjeta de crédito', 'Implementación guiada', 'Soporte en español'] as const
+const trustItems = ['Sin tarjeta de crédito', 'Onboarding guiado', 'Instalable en el celular'] as const
 
 const modules = [
   {
-    title: 'Facturación y cobranzas',
-    body: 'Emití facturas A, B y C con ARCA en segundos. Seguí cobranzas, vencimientos y la cuenta corriente de cada cliente.',
+    title: 'Contactos',
+    body: 'Clientes y proveedores con datos fiscales, cuenta corriente e historial de operaciones en un solo lugar.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Catálogo y precios',
+    body: 'Productos, categorías, listas de precios y etiquetas. Un catálogo central que alimenta ventas, stock y POS.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <rect width="18" height="5" x="3" y="4" rx="1" />
+        <rect width="18" height="5" x="3" y="12" rx="1" />
+        <path d="M7 7h.01" />
+        <path d="M7 15h.01" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Ventas y facturación',
+    body: 'Presupuestos, pedidos y facturas A, B y C con ARCA. Notas de crédito, débito, devoluciones y cobranzas.',
     icon: (
       <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -52,7 +76,7 @@ const modules = [
   },
   {
     title: 'Stock e inventario',
-    body: 'Control de stock por depósito y sucursal, con alertas de punto de pedido y trazabilidad de cada movimiento.',
+    body: 'Control de stock por depósito y sucursal, remitos, movimientos y alertas de reposición con trazabilidad completa.',
     icon: (
       <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" />
@@ -73,8 +97,8 @@ const modules = [
     ),
   },
   {
-    title: 'Contabilidad y documentos fiscales',
-    body: 'Libro diario, IVA y reportes fiscales listos para tu contador. Sin exportar a planillas ni rehacer la carga.',
+    title: 'Contabilidad y fiscal',
+    body: 'Libro diario, plan de cuentas, balance e IVA listos para tu contador. Sin exportar a planillas ni rehacer la carga.',
     icon: (
       <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <rect width="16" height="20" x="4" y="2" rx="2" />
@@ -85,6 +109,18 @@ const modules = [
         <path d="M8 14h.01" />
         <path d="M12 18h.01" />
         <path d="M8 18h.01" />
+      </svg>
+    ),
+  },
+  {
+    title: 'POS (punto de venta)',
+    body: 'Cajas, medios de pago y emisión fiscal en mostrador. Misma base de productos, clientes y stock que el resto del sistema.',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <rect width="20" height="14" x="2" y="5" rx="2" />
+        <path d="M2 10h20" />
+        <path d="M6 15h.01" />
+        <path d="M10 15h4" />
       </svg>
     ),
   },
@@ -103,7 +139,7 @@ const reasons = [
   },
   {
     title: 'Un solo sistema',
-    body: 'Basta de planillas e integraciones frágiles. Ventas, stock, compras y contabilidad comparten los mismos datos, siempre.',
+    body: 'Basta de planillas e integraciones frágiles. Los siete módulos comparten clientes, productos y comprobantes, siempre.',
     icon: (
       <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
@@ -113,18 +149,22 @@ const reasons = [
     ),
   },
   {
-    title: 'Rápido de operar',
-    body: 'Pensado para teclado y flujos cortos. Tu equipo administrativo carga comprobantes sin fricción ni clics de más.',
+    title: 'Oficina y mostrador',
+    body: 'Operá desde el navegador o instalá la app en el celular. Misma data, mismos permisos, en escritorio y en el piso de venta.',
     icon: (
       <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
+        <rect width="20" height="14" x="2" y="3" rx="2" />
+        <path d="M8 21h8" />
+        <path d="M12 17v4" />
+        <rect width="8" height="14" x="15" y="5" rx="1.5" />
+        <path d="M19 17h.01" />
       </svg>
     ),
   },
 ] as const
 
 const metrics = [
-  { value: '4', label: 'módulos integrados' },
+  { value: '7', label: 'módulos integrados' },
   { value: '100%', label: 'operativo en ARS' },
   { value: 'Multi', label: 'sucursal y depósito' },
   { value: 'ARCA', label: 'facturación nativa' },
@@ -254,16 +294,16 @@ export default async function LandingPage() {
                 </div>
 
                 <h1 className="mt-[22px] text-[clamp(34px,4.6vw,55px)] font-semibold leading-[1.04] tracking-[-0.025em] text-zinc-900 text-balance">
-                  El ERP hecho para{' '}
+                  Software de gestión hecho para{' '}
                   <span className="bg-gradient-to-r from-brand-700 via-brand-500 to-brand-400 bg-clip-text text-transparent">
                     las pymes argentinas
                   </span>
                 </h1>
 
                 <p className="mt-5 max-w-[30em] text-base leading-relaxed text-zinc-600">
-                  Ventas, stock, compras y finanzas en un solo flujo. Facturación electrónica con
-                  ARCA, multisucursal y pensado para cómo trabaja tu pyme — sin planillas ni
-                  integraciones frágiles.
+                  Contactos, catálogo, ventas, stock, compras, contabilidad y POS en un solo flujo.
+                  Facturación electrónica con ARCA, multisucursal y pensado para cómo trabaja tu
+                  pyme — sin planillas ni integraciones frágiles.
                 </p>
 
                 <div className="mt-[30px] flex flex-wrap gap-3">
@@ -312,7 +352,7 @@ export default async function LandingPage() {
                 Un módulo para cada parte de tu operación
               </h2>
               <p className="mt-3.5 text-base leading-relaxed text-zinc-600">
-                Cuatro módulos integrados que comparten clientes, productos y comprobantes. Activás
+                Siete módulos integrados que comparten clientes, productos y comprobantes. Activás
                 lo que necesitás y todo conversa entre sí.
               </p>
             </div>

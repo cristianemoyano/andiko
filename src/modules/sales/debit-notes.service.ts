@@ -3,12 +3,14 @@ import { Op } from 'sequelize'
 import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
-import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
+import { whereAllowedBranches, whereBranch, type TenantContext } from '@/lib/tenancy'
+import { FISCAL_NUMBER_SOURCE_ATTRS } from '@/lib/fiscal-document-number'
 import DebitNote from './debit-note.model'
 import Invoice from './invoice.model'
 import Contact from '@/modules/contacts/contact.model'
 import Branch from '@/modules/auth/branch.model'
 import { ensureSalesBranchAssociations, BRANCH_AFIP_ATTRIBUTES } from './sales-branch-associations'
+import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { nextDocumentNumber } from './sales.utils'
 import type { DebitNoteQuery, CreateDebitNoteInput, UpdateDebitNoteInput } from './debit-note.schema'
 
@@ -34,11 +36,17 @@ export async function listDebitNotes(query: DebitNoteQuery, ctx: TenantContext) 
     attributes: [
       'id', 'branch_id', 'contact_id', 'invoice_id', 'debit_note_number', 'status',
       'issue_date', 'currency', 'subtotal', 'discount_amount', 'tax_amount', 'total',
-      'reason', 'notes', 'cae', 'afip_status', 'created_at', 'updated_at',
+      'reason', 'notes', 'created_at', 'updated_at',
+      ...FISCAL_NUMBER_SOURCE_ATTRS,
     ],
     include: [
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'cuit'], required: false },
-      { model: Invoice, as: 'invoice', attributes: ['id', 'invoice_number'], required: false },
+      {
+        model: Invoice,
+        as: 'invoice',
+        attributes: ['id', 'invoice_number', ...FISCAL_NUMBER_SOURCE_ATTRS],
+        required: false,
+      },
     ],
     order: [['created_at', 'DESC']],
     limit,
@@ -56,7 +64,12 @@ export async function getDebitNote(id: string, ctx: TenantContext) {
     include: [
       { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES], required: false },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'cuit'], required: false },
-      { model: Invoice, as: 'invoice', attributes: ['id', 'invoice_number', 'status', 'total', 'balance'], required: false },
+      {
+        model: Invoice,
+        as: 'invoice',
+        attributes: ['id', 'invoice_number', 'status', 'total', 'balance', ...FISCAL_NUMBER_SOURCE_ATTRS],
+        required: false,
+      },
     ],
   })
   if (!note) throw new Error('DEBIT_NOTE_NOT_FOUND')
@@ -101,41 +114,66 @@ export async function createDebitNote(input: CreateDebitNoteInput, ctx: TenantCo
 }
 
 export async function updateDebitNote(id: string, input: UpdateDebitNoteInput, ctx: TenantContext) {
-  const note = await DebitNote.findOne({ where: whereAllowedBranches(ctx, { id }) })
-  if (!note) throw new Error('DEBIT_NOTE_NOT_FOUND')
-  if (note.status !== 'draft') throw new Error('DEBIT_NOTE_NOT_EDITABLE')
+  const { orgId } = ctx
+  if (!orgId) throw new Error('ORG_CONTEXT_REQUIRED')
 
-  await note.update({
-    contact_id: input.contact_id ?? note.contact_id,
-    invoice_id: input.invoice_id ?? note.invoice_id,
-    issue_date: input.issue_date ?? note.issue_date,
-    currency: input.currency ?? note.currency,
-    subtotal: input.subtotal ?? note.subtotal,
-    discount_amount: input.discount_amount ?? note.discount_amount,
-    tax_amount: input.tax_amount ?? note.tax_amount,
-    total: input.total ?? note.total,
-    reason: input.reason ?? note.reason,
-    notes: input.notes ?? note.notes,
-    updated_by: ctx.userId ?? null,
-  })
-
-  return note.reload()
-}
-
-export async function issueDebitNote(id: string, ctx: TenantContext) {
   return sequelize.transaction(async (t) => {
     const note = await DebitNote.findOne({ where: whereAllowedBranches(ctx, { id }), transaction: t, lock: true })
     if (!note) throw new Error('DEBIT_NOTE_NOT_FOUND')
-    if (note.status !== 'draft') throw new Error('DEBIT_NOTE_ALREADY_ISSUED')
+    if (note.status !== 'draft') throw new Error('DEBIT_NOTE_NOT_EDITABLE')
 
-    await note.update(
-      { status: 'issued', issue_date: note.issue_date ?? new Date(), updated_by: ctx.userId ?? null },
-      { transaction: t },
-    )
+    const patch: Record<string, unknown> = {
+      contact_id: input.contact_id ?? note.contact_id,
+      invoice_id: input.invoice_id ?? note.invoice_id,
+      issue_date: input.issue_date ?? note.issue_date,
+      currency: input.currency ?? note.currency,
+      subtotal: input.subtotal ?? note.subtotal,
+      discount_amount: input.discount_amount ?? note.discount_amount,
+      tax_amount: input.tax_amount ?? note.tax_amount,
+      total: input.total ?? note.total,
+      reason: input.reason ?? note.reason,
+      notes: input.notes ?? note.notes,
+      updated_by: ctx.userId ?? null,
+    }
 
-    logger.info({ debitNoteId: note.id }, 'debit note issued')
+    if (input.branch_id && input.branch_id !== note.branch_id) {
+      assertDraftBranchChange(note.status)
+      void whereBranch(ctx, input.branch_id)
+      Object.assign(patch, await buildBranchRenumberPatch({
+        orgId,
+        currentBranchId: note.branch_id,
+        nextBranchId: input.branch_id,
+        numberField: 'debit_note_number',
+        resolveNextNumber: (oid, branchId, tx) => nextDocumentNumber(oid, branchId, 'debit_note', tx),
+        t,
+      }))
+    }
+
+    await note.update(patch, { transaction: t })
     return note.reload({ transaction: t })
   })
+}
+
+export async function issueDebitNote(id: string, ctx: TenantContext) {
+  return sequelize.transaction(async (t) => issueDebitNoteInTransaction(id, ctx, t))
+}
+
+export async function issueDebitNoteInTransaction(
+  id: string,
+  ctx: TenantContext,
+  t: import('sequelize').Transaction,
+) {
+  const note = await DebitNote.findOne({ where: whereAllowedBranches(ctx, { id }), transaction: t, lock: true })
+  if (!note) throw new Error('DEBIT_NOTE_NOT_FOUND')
+  if (note.status !== 'draft') throw new Error('DEBIT_NOTE_ALREADY_ISSUED')
+
+  await note.update(
+    { status: 'issued', issue_date: note.issue_date ?? new Date(), updated_by: ctx.userId ?? null },
+    { transaction: t },
+  )
+
+  logger.info({ debitNoteId: note.id }, 'debit note issued')
+  return note.reload({ transaction: t })
 }
 
 export async function cancelDebitNote(id: string, ctx: TenantContext) {

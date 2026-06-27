@@ -29,6 +29,22 @@ export type TenantContext = {
   allowedBranchIds: string[]
 }
 
+export function tenantContextFromPosDevice(device: {
+  orgId: string
+  branchId: string | null
+  deviceRowId: string
+}): TenantContext {
+  if (!device.orgId) throw new TenancyError(TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED)
+  const allowedBranchIds = device.branchId ? [device.branchId] : []
+  return {
+    orgId: device.orgId,
+    // Device row id is not a user — resolve actor per operation (e.g. order.salesperson_id).
+    userId: '',
+    defaultBranchId: device.branchId,
+    allowedBranchIds,
+  }
+}
+
 function resolveEffectiveIdentity(sessionUser: AuthedSession['user']): {
   userId: string | null
   orgId: string | null

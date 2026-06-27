@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('pos', {
     list: (args?: { limit?: number }) => ipcRenderer.invoke('sales:list', args),
     get: (saleId: string) => ipcRenderer.invoke('sales:get', saleId),
     authorizeFiscal: (saleId: string) => ipcRenderer.invoke('sales:authorizeFiscal', saleId),
+    return: (payload: import('@andiko/shared').PosSaleReturnPayload) => ipcRenderer.invoke('sales:return', payload),
     closingReport: (date?: string) => ipcRenderer.invoke('sales:closingReport', date),
   },
   paymentMethods: {

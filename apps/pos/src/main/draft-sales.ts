@@ -228,6 +228,7 @@ export function registerDraftSalesHandlers(ipc: IpcMain) {
           payments: args.payments,
           sold_at: soldAt,
           items: items.map((item) => ({
+            product_id: item.product_id,
             description: item.product_name,
             qty: item.qty,
             unit_price: item.unit_price,

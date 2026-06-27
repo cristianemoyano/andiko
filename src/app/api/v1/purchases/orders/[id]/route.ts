@@ -39,6 +39,9 @@ export const PATCH = withPermission('purchases:write', async (req, ctx, session)
     if (err instanceof Error) {
       if (err.message === 'PURCHASE_ORDER_NOT_FOUND') return NextResponse.json({ error: 'Orden de compra no encontrada', code: 'NOT_FOUND' }, { status: 404 })
       if (err.message === 'PURCHASE_ORDER_LOCKED')    return NextResponse.json({ error: 'La orden está bloqueada y no puede editarse', code: 'PURCHASE_ORDER_LOCKED' }, { status: 409 })
+      if (err.message === 'DOCUMENT_BRANCH_NOT_CHANGEABLE') {
+        return NextResponse.json({ error: 'La sucursal solo se puede cambiar en órdenes de compra en borrador.', code: 'BRANCH_NOT_CHANGEABLE' }, { status: 409 })
+      }
     }
     throw err
   }

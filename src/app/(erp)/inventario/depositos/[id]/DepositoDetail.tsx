@@ -91,6 +91,8 @@ const REFERENCE_TYPE_LABEL: Record<StockReferenceType, string> = {
   initial:          'Stock inicial',
   purchase_receipt: 'Recepción compra',
   delivery_note:    'Remito de entrega',
+  sales_return:     'Devolución venta',
+  sales_exchange:   'Cambio venta',
 }
 
 function movementBadgeStatus(type: StockMovementType): 'success' | 'error' | 'neutral' {

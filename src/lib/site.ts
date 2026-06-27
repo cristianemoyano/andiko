@@ -5,10 +5,10 @@ export const siteUrl = env.AUTH_URL.replace(/\/$/, '')
 
 export const siteConfig = {
   name: 'Andiko',
-  title: 'Andiko — ERP para pymes argentinas',
-  tagline: 'Próximamente',
+  title: 'Andiko — Software de gestión para pymes argentinas',
+  tagline: 'Gestión integral',
   description:
-    'ERP para pymes argentinas. Ventas, inventario, compras y contabilidad en un solo lugar, con facturación electrónica vía ARCA.',
+    'Software de gestión para pymes argentinas. Contactos, catálogo, ventas, inventario, compras, contabilidad y POS en un solo lugar, con facturación electrónica vía ARCA.',
   locale: 'es_AR',
   language: 'es-AR',
 } as const

@@ -31,6 +31,9 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     if (err instanceof Error) {
       if (err.message === 'INVOICE_NOT_FOUND')    return NextResponse.json({ error: 'Factura no encontrada', code: 'NOT_FOUND' }, { status: 404 })
       if (err.message === 'INVOICE_NOT_EDITABLE') return NextResponse.json({ error: 'Solo se pueden editar facturas en borrador', code: 'NOT_EDITABLE' }, { status: 409 })
+      if (err.message === 'DOCUMENT_BRANCH_NOT_CHANGEABLE') {
+        return NextResponse.json({ error: 'La sucursal solo se puede cambiar en facturas en borrador.', code: 'BRANCH_NOT_CHANGEABLE' }, { status: 409 })
+      }
     }
     throw err
   }

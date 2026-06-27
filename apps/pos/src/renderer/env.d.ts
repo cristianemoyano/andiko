@@ -1,4 +1,4 @@
-import type { PosSale, PosProduct, PosCustomer, PosSalePayment, PosPaymentMethod } from '@andiko/shared'
+import type { PosSale, PosProduct, PosCustomer, PosSalePayment, PosPaymentMethod, PosSaleReturnPayload } from '@andiko/shared'
 
 interface CashSession {
   id: string
@@ -132,6 +132,7 @@ interface PosAPI {
       afip_status: string
       fiscal_pending: boolean
     }>
+    return: (payload: PosSaleReturnPayload) => Promise<Record<string, unknown>>
     listToday: () => Promise<unknown[]>
     list: (args?: { limit?: number }) => Promise<Array<{
       id: string

@@ -66,7 +66,25 @@ function dispatch(documentType: string, documentId: string, ctx: TenantContext, 
       return requestCAEForCreditNote(documentId, ctx, deps)
     case 'debit_note':
       return requestCAEForDebitNote(documentId, ctx, deps)
+    case 'sales_order':
+      return retryPosOrderEmission(documentId, ctx)
     default:
       throw new Error('UNKNOWN_DOCUMENT_TYPE')
   }
+}
+
+/** Re-runs ERP finalize for a POS order that got CAE but failed stock/invoice creation. */
+async function retryPosOrderEmission(orderId: string, ctx: TenantContext) {
+  const SalesOrder = (await import('@/modules/sales/sales-order.model')).default
+  const order = await SalesOrder.findOne({
+    where: { id: orderId, org_id: ctx.orgId, source: 'pos' },
+    attributes: ['id', 'cae', 'afip_status'],
+  })
+  if (!order) throw new Error('DOCUMENT_NOT_FOUND')
+  if (!order.cae) throw new Error('AFIP_DOCUMENT_NOT_ISSUED')
+
+  const { finalizePosSaleInErp } = await import('@/modules/pos/pos-sales-finalize.service')
+  await finalizePosSaleInErp(orderId, ctx.orgId, { requireAfip: true })
+  await order.reload()
+  return order
 }

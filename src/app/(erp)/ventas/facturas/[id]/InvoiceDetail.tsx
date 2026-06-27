@@ -13,14 +13,17 @@ import { FormField } from '@/components/primitives/FormField'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
+import { PageActionBar, type PageAction } from '@/components/erp/PageActionBar'
 import { EmptyState } from '@/components/erp/EmptyState'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { CurrencyInput, formatARS } from '@/components/primitives/CurrencyInput'
 import { StatusPipeline } from '@/components/erp/StatusPipeline'
 import { AfipDocumentPanel } from '@/components/erp/AfipDocumentPanel'
+import { SalesDocumentNumber } from '@/components/erp/SalesDocumentNumber'
 import { VentasSubNav } from '../../VentasSubNav'
 import type { Invoice, Payment, PaymentMethod } from '../../types'
 import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL, formatSalesPaymentMedium } from '../../types'
+import { resolveSalesDocumentDisplay } from '@/lib/fiscal-document-number'
 import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
 import { notifyApiError, notifyInfo, notifySuccess } from '@/lib/notify'
@@ -248,6 +251,37 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
   const canAuthorizeAfip = showAfip && invoice.status !== 'cancelled' && invoice.afip_status !== 'authorized'
 
   const balanceNum = parseFloat(invoice.balance)
+  const canReturn = invoice.order_id && invoice.order?.status
+    ? ['delivered', 'partial_returned'].includes(invoice.order.status)
+    : false
+
+  const invoiceActions: PageAction[] = [
+    {
+      id: 'print',
+      label: 'Imprimir',
+      href: `/ventas/facturas/${id}/print`,
+      openInNewTab: true,
+    },
+    ...(canReturn
+      ? [
+          { id: 'return', label: 'Registrar devolución', onClick: () => router.push(`/ventas/devoluciones/nuevo?order_id=${invoice.order_id}`) },
+          { id: 'exchange', label: 'Registrar cambio', onClick: () => router.push(`/ventas/devoluciones/nuevo?order_id=${invoice.order_id}&type=exchange`) },
+        ]
+      : []),
+    ...(canIssue
+      ? [{ id: 'delete', label: 'Eliminar', onClick: () => setConfirmDeleteInv(true), variant: 'destructive' as const }]
+      : []),
+    ...(canCancel
+      ? [{ id: 'cancel', label: 'Anular', onClick: () => setConfirmCancel(true), variant: 'destructive' as const }]
+      : []),
+  ]
+
+  const displayNumber = resolveSalesDocumentDisplay({
+    internalNumber: invoice.invoice_number,
+    afip_status: invoice.afip_status,
+    punto_venta: invoice.punto_venta,
+    cbte_numero: invoice.cbte_numero,
+  })
 
   return (
     <div className="flex flex-col h-full">
@@ -255,36 +289,21 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
         breadcrumbs={[
           { label: 'Ventas', href: '/ventas/presupuestos' },
           { label: 'Facturas', href: '/ventas/facturas' },
-          { label: invoice.invoice_number },
+          { label: displayNumber.primary },
         ]}
         actions={
-          <div className="flex flex-wrap gap-2 justify-end">
-            <Button asChild size="sm" variant="ghost">
-              <Link href={`/ventas/facturas/${id}/print`} target="_blank" rel="noopener noreferrer">
-                Imprimir
-              </Link>
-            </Button>
-            <SendDocumentEmail
-              documentType="invoice"
-              documentId={id}
-              documentLabel={`Factura ${invoice.invoice_number}`}
-            />
-            {canIssue && (
-              <>
-                <Button size="sm" variant="secondary" onClick={() => setConfirmIssue(true)}>
-                  Emitir factura
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteInv(true)}>
-                  Eliminar
-                </Button>
-              </>
+          <PageActionBar
+            primary={canIssue ? { id: 'issue', label: 'Emitir factura', onClick: () => setConfirmIssue(true) } : null}
+            secondary={invoiceActions}
+            menuChildren={(
+              <SendDocumentEmail
+                triggerMode="menu-item"
+                documentType="invoice"
+                documentId={id}
+                documentLabel={`Factura ${displayNumber.primary}`}
+              />
             )}
-            {canCancel && (
-              <Button size="sm" variant="ghost" onClick={() => setConfirmCancel(true)}>
-                Anular
-              </Button>
-            )}
-          </div>
+          />
         }
       />
       <VentasSubNav />
@@ -295,7 +314,16 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
           <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">Factura</p>
-              <h1 className="text-[20px] font-bold text-fg tracking-tight">{invoice.invoice_number}</h1>
+              <h1 className="text-[20px] font-bold text-fg tracking-tight">
+                <SalesDocumentNumber
+                  variant="heading"
+                  internalNumber={invoice.invoice_number}
+                  afip_status={invoice.afip_status}
+                  punto_venta={invoice.punto_venta}
+                  cbte_numero={invoice.cbte_numero}
+                  className="text-[20px] font-bold text-fg tracking-tight"
+                />
+              </h1>
             </div>
             <StatusPipeline type="invoice" status={invoice.status} />
           </div>

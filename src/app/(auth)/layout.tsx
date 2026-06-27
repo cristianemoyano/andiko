@@ -47,7 +47,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         <div className="relative landing-enter landing-enter-delay-1">
           <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-100 backdrop-blur-sm">
-            ERP para pymes
+            Software de gestión
           </p>
           <h1 className="max-w-md text-3xl font-semibold leading-tight tracking-tight xl:text-4xl">
             Tu negocio,{' '}

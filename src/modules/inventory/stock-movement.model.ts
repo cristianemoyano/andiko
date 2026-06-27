@@ -5,7 +5,7 @@ import Warehouse from './warehouse.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
 
 export type StockMovementType = 'in' | 'out' | 'adjustment' | 'transfer_in' | 'transfer_out'
-export type StockReferenceType = 'order' | 'invoice_cancel' | 'manual' | 'initial' | 'purchase_receipt' | 'delivery_note'
+export type StockReferenceType = 'order' | 'invoice_cancel' | 'manual' | 'initial' | 'purchase_receipt' | 'delivery_note' | 'sales_return' | 'sales_exchange'
 
 export interface StockMovementAttributes {
   id: UUID

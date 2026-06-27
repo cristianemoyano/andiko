@@ -10,6 +10,7 @@ const ERROR_MAP: Record<string, [string, number]> = {
   CREDIT_NOTE_NOT_FOUND:      ['Nota de crédito no encontrada', 404],
   CREDIT_NOTE_NOT_EDITABLE:   ['La nota de crédito no se puede editar en su estado actual', 409],
   CREDIT_NOTE_NOT_DELETABLE:  ['Solo se pueden eliminar notas de crédito en borrador', 409],
+  DOCUMENT_BRANCH_NOT_CHANGEABLE: ['La sucursal solo se puede cambiar en notas de crédito en borrador.', 409],
 }
 
 function handleError(err: unknown) {

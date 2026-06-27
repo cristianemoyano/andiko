@@ -39,6 +39,9 @@ export const PATCH = withPermission('purchases:write', async (req, ctx, session)
     if (err instanceof Error) {
       if (err.message === 'SUPPLIER_INVOICE_NOT_FOUND') return NextResponse.json({ error: 'Factura de proveedor no encontrada', code: 'NOT_FOUND' }, { status: 404 })
       if (err.message === 'SUPPLIER_INVOICE_LOCKED')    return NextResponse.json({ error: 'La factura está bloqueada y no puede editarse', code: 'SUPPLIER_INVOICE_LOCKED' }, { status: 409 })
+      if (err.message === 'DOCUMENT_BRANCH_NOT_CHANGEABLE') {
+        return NextResponse.json({ error: 'La sucursal solo se puede cambiar en facturas de proveedor en borrador.', code: 'BRANCH_NOT_CHANGEABLE' }, { status: 409 })
+      }
     }
     throw err
   }

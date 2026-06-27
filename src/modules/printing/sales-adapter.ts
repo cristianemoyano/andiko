@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 import type { PaymentCondition } from '@/types'
 import type { PrintableAfip, PrintableBranch, PrintableCounterparty, PrintableDocument, PrintableLineItem, PrintablePaymentRow, PrintableTotals } from '@/types/printing'
 import type { TenantContext } from '@/lib/tenancy'
+import { resolveSalesDocumentDisplay } from '@/lib/fiscal-document-number'
 import { getQuote } from '@/modules/sales/sales-quotes.service'
 import { getOrder } from '@/modules/sales/sales-orders.service'
 import { getInvoice } from '@/modules/sales/invoices.service'
@@ -314,6 +315,24 @@ export async function buildDeliveryNotePrintable(id: string, ctx: TenantContext)
   }
 }
 
+function printableDocumentNumber(
+  internalNumber: string,
+  doc: { afip_status?: string | null; punto_venta?: number | null; cbte_numero?: number | null },
+): string {
+  return resolveSalesDocumentDisplay({
+    internalNumber,
+    afip_status: doc.afip_status,
+    punto_venta: doc.punto_venta,
+    cbte_numero: doc.cbte_numero,
+  }).primary
+}
+
+function printableLinkedInvoiceNumber(
+  invoice: { invoice_number: string; afip_status?: string | null; punto_venta?: number | null; cbte_numero?: number | null },
+): string {
+  return printableDocumentNumber(String(invoice.invoice_number), invoice)
+}
+
 const COMPROBANTE_TIPO_LABEL: Record<number, string> = {
   1: 'Factura A', 6: 'Factura B', 11: 'Factura C',
   2: 'Nota de Débito A', 7: 'Nota de Débito B', 12: 'Nota de Débito C',
@@ -413,7 +432,7 @@ export async function buildSalesInvoicePrintable(id: string, ctx: TenantContext)
     issuer,
     template,
     title: 'Factura',
-    document_number: invoice.invoice_number,
+    document_number: printableDocumentNumber(invoice.invoice_number, invoice),
     status_code: invoice.status,
     status_label: INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status,
     currency: invoice.currency,
@@ -446,7 +465,7 @@ export async function buildSalesCreditNotePrintable(id: string, ctx: TenantConte
     { label: 'Fecha emisión', value: formatDateArg(note.issue_date) },
   ]
   if (note.invoice?.invoice_number) {
-    meta_dates.push({ label: 'Factura asociada', value: note.invoice.invoice_number })
+    meta_dates.push({ label: 'Factura asociada', value: printableLinkedInvoiceNumber(note.invoice) })
   }
   if (note.reason) {
     meta_dates.push({ label: 'Motivo', value: note.reason })
@@ -458,7 +477,7 @@ export async function buildSalesCreditNotePrintable(id: string, ctx: TenantConte
     issuer,
     template,
     title: 'Nota de crédito',
-    document_number: note.credit_note_number,
+    document_number: printableDocumentNumber(note.credit_note_number, note),
     status_code: note.status,
     status_label: CREDIT_NOTE_STATUS_LABEL[note.status] ?? note.status,
     currency: note.currency,
@@ -487,7 +506,7 @@ export async function buildSalesDebitNotePrintable(id: string, ctx: TenantContex
     { label: 'Fecha emisión', value: formatDateArg(note.issue_date) },
   ]
   if (note.invoice?.invoice_number) {
-    meta_dates.push({ label: 'Factura asociada', value: note.invoice.invoice_number })
+    meta_dates.push({ label: 'Factura asociada', value: printableLinkedInvoiceNumber(note.invoice) })
   }
   if (note.reason) {
     meta_dates.push({ label: 'Motivo', value: note.reason })
@@ -499,7 +518,7 @@ export async function buildSalesDebitNotePrintable(id: string, ctx: TenantContex
     issuer,
     template,
     title: 'Nota de débito',
-    document_number: note.debit_note_number,
+    document_number: printableDocumentNumber(note.debit_note_number, note),
     status_code: note.status,
     status_label: DEBIT_NOTE_STATUS_LABEL[note.status] ?? note.status,
     currency: note.currency,

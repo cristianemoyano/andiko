@@ -12,6 +12,7 @@ import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
 import User from '@/modules/auth/user.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
+import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
 import type { TenantContext } from '@/lib/tenancy'
@@ -160,9 +161,22 @@ export async function updateQuote(id: string, input: SalesQuoteUpdateInput, ctx:
       Object.assign(updateData, docTotals)
     }
 
-    const { items: discardedItems, branch_id: discardedBranch, ...rest } = input
+    const { items: discardedItems, branch_id: nextBranchId, ...rest } = input
     void discardedItems
-    void discardedBranch
+
+    if (nextBranchId && nextBranchId !== quote.branch_id) {
+      assertDraftBranchChange(quote.status)
+      void whereBranch(ctx, nextBranchId)
+      Object.assign(updateData, await buildBranchRenumberPatch({
+        orgId: ctx.orgId!,
+        currentBranchId: quote.branch_id,
+        nextBranchId,
+        numberField: 'quote_number',
+        resolveNextNumber: (orgId, branchId, tx) => nextDocumentNumber(orgId, branchId, 'quote', tx),
+        t,
+      }))
+    }
+
     await quote.update({ ...rest, ...updateData }, { transaction: t })
 
     logger.info({ quoteId: id, actorId }, 'quote updated')

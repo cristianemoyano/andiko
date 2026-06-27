@@ -268,6 +268,7 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] Rediseño UX Ventas — fase 4: `SalesLineItemsEditor` (búsqueda de producto con autocomplete de precio/IVA) + `StatusPipeline` (stepper horizontal por tipo de documento)
 - [x] Rediseño UX Ventas — fase 5: formularios de página completa para nuevo presupuesto y nuevo pedido; vistas de detalle rediseñadas con `StatusPipeline` + edición in-place + transiciones de estado; listas navegan a `/[id]` al hacer click; eliminación de InvoiceModal/OrderModal/QuoteModal
 - [x] Notas de crédito internas — NC-XX-NNNN, borrador → emitida → anulada; aplica automáticamente al saldo de factura vinculada; aparece en cuenta corriente del cliente
+- [x] **Devoluciones y cambios de venta** — `sales_returns` (parcial/total, múltiples por pedido); stock IN/OUT; NC con ítems + AFIP; reembolsos (`sales_refunds`) o saldo a favor; estados de pedido `partial_returned` / `returned`; UI `/ventas/devoluciones`; flujo POS post-venta
 - [x] Listado de cuentas corrientes por cliente
 - [x] Reportes: ventas por período, por cliente, por producto
 - [x] **Impresión y exportación de documentos (MVP)** — Módulo `printing` (registro por dominio/recurso), API `GET /api/v1/printing/[domain]/[resource]/[id]`, vistas print bajo `/ventas/...` y `/compras/...` (layout A4, PDF vía `window.print()` + `@media print`). Borradores imprimibles con marca **BORRADOR** (uso interno).
@@ -288,7 +289,7 @@ Gestión de stock integrada con ventas y compras.
 - [x] `warehouses.service.ts`: CRUD + `resolveDefaultWarehouse` (fallback sucursal → org)
 - [x] `stock-movements.service.ts`: `applyMovement` (ledger atómico con lock), `deductStockForOrder`, `restoreStockForOrder`, `manualAdjustment`, `listMovements`
 - [x] `stock-items.service.ts`: `getStockLevels` (paginado + filtros de alertas), `getVariantStock`, `updateStockItemAlerts`
-- [x] Integración con ventas: descuento automático al confirmar pedido, restauración al cancelar pedido y al anular factura
+- [x] Integración con ventas: descuento automático al confirmar pedido, restauración al cancelar pedido y al anular factura; devoluciones (`sales_return` / `sales_exchange`) con stock IN/OUT parcial
 - [x] `variant_id` propagado en `SalesOrderItem`, `SalesQuoteItem`, `InvoiceItem` (modelos + schemas Zod + tipos frontend)
 - [x] API REST: `GET/POST /api/v1/inventory/warehouses`, `GET/PATCH/DELETE /api/v1/inventory/warehouses/[id]`, `GET` + `PATCH /api/v1/inventory/stock`, `GET/POST /api/v1/inventory/movements`
 - [x] Tests unitarios: `applyMovement` (happy path, stock insuficiente, ítem nuevo), `restoreStockForOrder`, `manualAdjustment` (delta positivo, negativo y cero), `getStockLevels` / `updateStockItemAlerts`
@@ -437,6 +438,7 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 
 - [x] Plan de cuentas (adaptado a PyMEs argentinas) — sembrado por defecto, editable
 - [ ] Asientos automáticos desde ventas, compras y pagos
+- [x] Asiento automático al completar devolución de venta (`sales_return` → NC / reembolso)
 - [x] Asientos manuales — partida doble, débito/haber balanceado, estados borrador/contabilizado
 - [x] Balance de sumas y saldos — con filtro por sucursal (centro de costo)
 - [ ] Estado de resultados

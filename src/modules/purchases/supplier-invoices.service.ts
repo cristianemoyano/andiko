@@ -8,6 +8,7 @@ import SupplierInvoice from './supplier-invoice.model'
 import SupplierInvoiceItem from './supplier-invoice-item.model'
 import SupplierPayment from './supplier-payment.model'
 import type { SupplierInvoiceInput, SupplierInvoiceUpdateInput, SupplierInvoiceQuery } from './supplier-invoice.schema'
+import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { nextPurchaseDocNumber, calcLineItem, calcDocumentTotals, calcDueDate } from './purchases.utils'
 import { ensurePurchasesBranchAssociations } from './purchases-branch-associations'
 import type { IvaRate } from '@/types'
@@ -154,7 +155,20 @@ export async function updateSupplierInvoice(id: string, input: SupplierInvoiceUp
       throw new Error('SUPPLIER_INVOICE_LOCKED')
     }
 
-    const { items, ...fields } = input
+    const { items, branch_id: nextBranchId, ...fields } = input
+
+    const branchPatch: Record<string, unknown> = {}
+    if (nextBranchId && nextBranchId !== invoice.branch_id) {
+      assertDraftBranchChange(invoice.status)
+      Object.assign(branchPatch, await buildBranchRenumberPatch({
+        orgId,
+        currentBranchId: invoice.branch_id,
+        nextBranchId,
+        numberField: 'invoice_number',
+        resolveNextNumber: (oid, branchId, tx) => nextPurchaseDocNumber(oid, branchId, 'supplier_invoice', tx),
+        t,
+      }))
+    }
 
     if (items && items.length > 0) {
       await SupplierInvoiceItem.destroy({ where: { invoice_id: id }, transaction: t })
@@ -188,11 +202,11 @@ export async function updateSupplierInvoice(id: string, input: SupplierInvoiceUp
       )
 
       await invoice.update(
-        { ...fields, ...docTotals, balance: new Decimal(docTotals.total).minus(invoice.paid_amount).toFixed(2), updated_by: actorId },
+        { ...fields, ...branchPatch, ...docTotals, balance: new Decimal(docTotals.total).minus(invoice.paid_amount).toFixed(2), updated_by: actorId },
         { transaction: t },
       )
     } else {
-      await invoice.update({ ...fields, updated_by: actorId }, { transaction: t })
+      await invoice.update({ ...fields, ...branchPatch, updated_by: actorId }, { transaction: t })
     }
 
     return invoice
