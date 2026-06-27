@@ -12,6 +12,7 @@ export interface PurchaseOrderItemAttributes extends Timestamps, AuditFields {
   description: string
   quantity: string
   received_qty: string
+  returned_qty: string
   unit_price: string
   discount_pct: string
   iva_rate: IvaRate
@@ -24,7 +25,7 @@ export interface PurchaseOrderItemAttributes extends Timestamps, AuditFields {
 
 type PurchaseOrderItemCreationAttributes = Optional<
   PurchaseOrderItemAttributes,
-  | 'id' | 'product_id' | 'variant_id' | 'received_qty' | 'discount_pct' | 'iva_rate'
+  | 'id' | 'product_id' | 'variant_id' | 'received_qty' | 'returned_qty' | 'discount_pct' | 'iva_rate'
   | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total' | 'sort_order'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
@@ -37,6 +38,7 @@ class PurchaseOrderItem extends AuditModel<PurchaseOrderItemAttributes, Purchase
   declare description: string
   declare quantity: string
   declare received_qty: string
+  declare returned_qty: string
   declare unit_price: string
   declare discount_pct: string
   declare iva_rate: IvaRate
@@ -56,6 +58,7 @@ PurchaseOrderItem.init(
     description:     { type: DataTypes.STRING(500), allowNull: false },
     quantity:        { type: DataTypes.DECIMAL(15, 4), allowNull: false },
     received_qty:    { type: DataTypes.DECIMAL(15, 4), allowNull: false, defaultValue: '0' },
+    returned_qty:    { type: DataTypes.DECIMAL(15, 4), allowNull: false, defaultValue: '0' },
     unit_price:      { type: DataTypes.DECIMAL(15, 2), allowNull: false },
     discount_pct:    { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: '0' },
     iva_rate:        { type: DataTypes.STRING(10), allowNull: false, defaultValue: '21' },

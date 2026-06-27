@@ -291,10 +291,28 @@ export async function recalcSupplierInvoiceBalance(invoiceId: string, t: import(
     transaction: t,
   })
 
-  const paid    = payments.reduce((acc, p) => acc.plus(p.amount), new Decimal(0))
-  const total   = new Decimal(invoice.total)
-  const balance = total.minus(paid)
+  // Completed purchase returns reduce what we owe the supplier (like a credit
+  // note in their favour), so they lower the outstanding balance. For an
+  // exchange, only the net merchandise credited back counts (returned minus the
+  // replacement goods); replacements that cost more are invoiced separately, so
+  // each return's credit is floored at zero.
+  const PurchaseReturn = (await import('./purchase-return.model')).default
+  const returns = await PurchaseReturn.findAll({
+    where: { invoice_id: invoiceId, status: 'completed', deleted_at: null },
+    attributes: ['returned_total', 'exchange_total'],
+    transaction: t,
+  })
 
+  const paid     = payments.reduce((acc, p) => acc.plus(p.amount), new Decimal(0))
+  const returned = returns.reduce(
+    (acc, r) => acc.plus(Decimal.max(new Decimal(r.returned_total).minus(r.exchange_total), new Decimal(0))),
+    new Decimal(0),
+  )
+  const total    = new Decimal(invoice.total)
+  const balance  = Decimal.max(total.minus(paid).minus(returned), new Decimal(0))
+
+  // Status reflects payment progress only — returns settle the balance without
+  // marking the invoice as "paid".
   const status =
     paid.gte(total) ? 'paid' :
     paid.gt(0)      ? 'partially_paid' :
