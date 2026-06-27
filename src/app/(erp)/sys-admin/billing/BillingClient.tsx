@@ -55,8 +55,8 @@ export function BillingClient() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
     void (async () => {
+      if (!cancelled) setLoading(true)
       try {
         const [subs, orgs] = await Promise.all([
           fetchJson<{ data: SubscriptionRow[] }>('/api/v1/sys-admin/billing/subscriptions?limit=100'),

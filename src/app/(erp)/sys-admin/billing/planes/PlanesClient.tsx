@@ -23,8 +23,8 @@ export function PlanesClient() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
     void (async () => {
+      if (!cancelled) setLoading(true)
       try {
         const j = await fetchJson<{ data: PlanRow[] }>('/api/v1/sys-admin/billing/plans?limit=100')
         if (!cancelled) setRows(j.data ?? [])

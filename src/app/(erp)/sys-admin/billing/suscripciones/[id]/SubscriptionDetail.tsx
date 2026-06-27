@@ -65,8 +65,8 @@ export function SubscriptionDetail({ subscriptionId }: { subscriptionId: string 
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
     void (async () => {
+      if (!cancelled) setLoading(true)
       try {
         const [s, inv] = await Promise.all([
           fetchJson<Subscription>(`/api/v1/sys-admin/billing/subscriptions/${subscriptionId}`),
