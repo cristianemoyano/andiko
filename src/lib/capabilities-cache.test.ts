@@ -35,7 +35,7 @@ const sampleCaps = {
   permissions: [],
   settingsPermissions: [],
   platform: { listOrganizations: false, sysAdminEmail: false, impersonation: false },
-  nav: { panel: true, panelBranchId: null, organizaciones: true, organizacionesHref: '/organizaciones/org-1', configuracion: true },
+  nav: { panel: true, panelBranchId: null, organizaciones: true, organizacionesHref: '/organizaciones/org-1', configuracion: true, facturacion: true },
   organizacion: {
     detail: true,
     apiNamespace: 'settings' as const,

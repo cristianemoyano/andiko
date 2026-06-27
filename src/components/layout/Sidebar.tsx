@@ -244,6 +244,21 @@ export function Sidebar({
             active={pathname.startsWith('/organizaciones')}
           />
         )}
+        {navCapabilities?.facturacion && (
+          <NavLink
+            item={{
+              id: 'facturacion',
+              label: 'Facturación',
+              href: '/facturacion',
+              icon: (
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12M5 10h3"/>
+                </svg>
+              ),
+            }}
+            active={pathname.startsWith('/facturacion')}
+          />
+        )}
         {NAV_SYSTEM.filter(item => item.id !== 'configuracion' || navCapabilities?.configuracion !== false).map(item => (
           <NavLink key={item.id} item={item} active={pathname.startsWith(item.href)} />
         ))}

@@ -9,6 +9,7 @@ import { useSidebar } from './SidebarContext'
 import { NAV_MAIN, NAV_MODULES, NAV_SYSTEM, isModuleNavVisible, type NavItem } from './nav-items'
 import { type OrgModuleKey } from '@/modules/auth/organization-modules'
 import { useCapabilities } from './CapabilitiesContext'
+import { SysAdminImpersonation } from './SysAdminImpersonation'
 import { AppVersion } from './AppVersion'
 
 interface MenuPanelProps {
@@ -106,51 +107,59 @@ export function MenuPanel({
           <ChevronRight />
         </Link>
 
-        {/* Admin section */}
-        {isRealSysAdmin && showSysAdminNavigation && (
+        {/* Admin section — real sys-admin only. Nav links hide while impersonating,
+            but the impersonation control stays so it can be switched/stopped on mobile. */}
+        {isRealSysAdmin && (
           <MenuSection label="Administración">
-            <MenuRow
-              item={{
-                id: 'sys-admin-orgs',
-                label: 'Organizaciones',
-                href: '/organizaciones',
-                icon: (
-                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <path d="M3 14h10M3 10h10M5 6h6M5 2h6M2 14V6l6-4 6 4v8"/>
-                  </svg>
-                ),
-              }}
-              active={pathname.startsWith('/organizaciones')}
-              onNavigate={close}
-            />
-            <MenuRow
-              item={{
-                id: 'sys-admin-email',
-                label: 'Email (SMTP)',
-                href: '/sys-admin/email',
-                icon: (
-                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <rect x="1.5" y="3" width="13" height="10" rx="1"/><path d="m2 4 6 5 6-5"/>
-                  </svg>
-                ),
-              }}
-              active={pathname.startsWith('/sys-admin/email')}
-              onNavigate={close}
-            />
-            <MenuRow
-              item={{
-                id: 'sys-admin-billing',
-                label: 'Facturación',
-                href: '/sys-admin/billing',
-                icon: (
-                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12M5 10h3"/>
-                  </svg>
-                ),
-              }}
-              active={pathname.startsWith('/sys-admin/billing')}
-              onNavigate={close}
-            />
+            {showSysAdminNavigation && (
+              <>
+                <MenuRow
+                  item={{
+                    id: 'sys-admin-orgs',
+                    label: 'Organizaciones',
+                    href: '/organizaciones',
+                    icon: (
+                      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                        <path d="M3 14h10M3 10h10M5 6h6M5 2h6M2 14V6l6-4 6 4v8"/>
+                      </svg>
+                    ),
+                  }}
+                  active={pathname.startsWith('/organizaciones')}
+                  onNavigate={close}
+                />
+                <MenuRow
+                  item={{
+                    id: 'sys-admin-email',
+                    label: 'Email (SMTP)',
+                    href: '/sys-admin/email',
+                    icon: (
+                      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                        <rect x="1.5" y="3" width="13" height="10" rx="1"/><path d="m2 4 6 5 6-5"/>
+                      </svg>
+                    ),
+                  }}
+                  active={pathname.startsWith('/sys-admin/email')}
+                  onNavigate={close}
+                />
+                <MenuRow
+                  item={{
+                    id: 'sys-admin-billing',
+                    label: 'Facturación',
+                    href: '/sys-admin/billing',
+                    icon: (
+                      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12M5 10h3"/>
+                      </svg>
+                    ),
+                  }}
+                  active={pathname.startsWith('/sys-admin/billing')}
+                  onNavigate={close}
+                />
+              </>
+            )}
+            <div className="px-4 py-2">
+              <SysAdminImpersonation />
+            </div>
           </MenuSection>
         )}
 
@@ -273,6 +282,22 @@ export function MenuPanel({
                 ),
               }}
               active={pathname.startsWith('/organizaciones')}
+              onNavigate={close}
+            />
+          )}
+          {navCapabilities?.facturacion && (
+            <MenuRow
+              item={{
+                id: 'facturacion',
+                label: 'Facturación',
+                href: '/facturacion',
+                icon: (
+                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12M5 10h3"/>
+                  </svg>
+                ),
+              }}
+              active={pathname.startsWith('/facturacion')}
               onNavigate={close}
             />
           )}

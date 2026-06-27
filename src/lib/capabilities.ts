@@ -71,6 +71,7 @@ function buildCapabilities(
       organizaciones: isPlatformSysAdmin || canSettingsRead,
       organizacionesHref,
       configuracion: true,
+      facturacion: !isPlatformSysAdmin && canSettingsRead && !!orgId,
     },
     organizacion: {
       detail: isPlatformSysAdmin || (canSettingsRead && !!orgId),
