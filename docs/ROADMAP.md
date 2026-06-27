@@ -203,7 +203,7 @@ Productos y servicios. Requisito mínimo para facturar.
 - [x] Alícuota IVA por producto (0%, 10.5%, 21%, 27%)
 - [x] Listas de precios (múltiples listas por cliente/canal)
 - [x] Historial de precios
-- [x] Etiquetas de góndola — pantalla de selección masiva por categoría, impresión browser-native (CSS @media print)
+- [x] Etiquetas de góndola — pantalla de selección masiva por categoría, impresión browser-native (CSS @media print); listado paginado (100 variantes/pág) con DataTable
 - [x] Ajustes masivos de precios (por categoría / % / canal) y reglas
 - [x] Datos de logística / shipping por SKU (peso, dimensiones, bultos/presentaciones)
 - [x] Importación CSV de productos con progreso en tiempo real (stream NDJSON)

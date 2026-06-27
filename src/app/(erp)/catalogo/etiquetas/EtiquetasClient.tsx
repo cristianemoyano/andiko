@@ -1,42 +1,34 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { Button } from '@/components/primitives/Button'
+import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { CatalogoSubNav } from '../CatalogoSubNav'
-
-type Variant = {
-  id: string
-  sku: string | null
-  barcode: string | null
-  name: string | null
-  base_price: string | null
-  is_default: boolean
-}
-
-type Product = {
-  id: string
-  name: string
-  status: string
-  category_id: string | null
-  category?: { id: string; name: string } | null
-  variants: Variant[]
-}
 
 type Category = { id: string; name: string }
 
 type LabelRow = {
-  variantId: string
+  variant_id: string
+  product_name: string
+  variant_name: string | null
+  sku: string | null
+  barcode: string | null
+  price: string | null
+}
+
+type LabelSelection = {
   productName: string
   variantName: string | null
   sku: string | null
   barcode: string | null
   price: string | null
   copies: number
-  selected: boolean
 }
+
+const PAGE_SIZE = 100
 
 const formatArs = (v: string | null) =>
   v == null
@@ -45,85 +37,120 @@ const formatArs = (v: string | null) =>
 
 export function EtiquetasClient() {
   const [categories, setCategories] = useState<Category[]>([])
-  const [, setProducts] = useState<Product[]>([])
+  const [rows, setRows] = useState<LabelRow[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [categoryFilter, setCategoryFilter] = useState('')
   const [search, setSearch] = useState('')
-  const [rows, setRows] = useState<LabelRow[]>([])
   const [size, setSize] = useState<'small' | 'large'>('small')
+  const [selection, setSelection] = useState<Map<string, LabelSelection>>(() => new Map())
 
   useEffect(() => {
     void fetchJson<{ data: Category[] }>('/api/v1/catalog/categories?limit=100')
-      .then(r => setCategories(r.data ?? []))
+      .then((r) => setCategories(r.data ?? []))
       .catch(() => {})
   }, [])
 
   useEffect(() => {
     let cancelled = false
 
-    const fetchAllPages = async () => {
+    ;(async () => {
       setLoading(true)
       setError(null)
-      const all: Product[] = []
-      let page = 1
-      const limit = 100
-      while (true) {
-        const params = new URLSearchParams({ limit: String(limit), page: String(page), status: 'active' })
-        if (categoryFilter) params.set('category_id', categoryFilter)
-        if (search.trim()) params.set('search', search.trim())
-        const r = await fetchJson<{ data: Product[]; total: number; pages: number }>(`/api/v1/catalog/products?${params.toString()}`)
-        all.push(...(r.data ?? []))
-        if (page >= (r.pages ?? 1)) break
-        page++
-      }
-      return all
-    }
-
-    fetchAllPages()
-      .then(fetched => {
-        if (cancelled) return
-        setProducts(fetched)
-        setRows(
-          fetched.flatMap(p =>
-            p.variants.map(v => ({
-              variantId: v.id,
-              productName: p.name,
-              variantName: v.name && v.name !== p.name ? v.name : null,
-              sku: v.sku,
-              barcode: v.barcode,
-              price: v.base_price,
-              copies: 1,
-              selected: false,
-            }))
-          )
-        )
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        page: String(page),
       })
-      .catch(e => { if (!cancelled) setError(getApiErrorMessage(e)) })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      if (categoryFilter) params.set('category_id', categoryFilter)
+      if (search.trim()) params.set('search', search.trim())
+
+      try {
+        const r = await fetchJson<{ data: LabelRow[]; total: number }>(
+          `/api/v1/catalog/products/labels?${params.toString()}`,
+        )
+        if (cancelled) return
+        setRows(r.data ?? [])
+        setTotal(r.total ?? 0)
+      } catch (e) {
+        if (!cancelled) setError(getApiErrorMessage(e))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
 
     return () => { cancelled = true }
-  }, [categoryFilter, search])
+  }, [categoryFilter, search, page])
 
-  const allSelected = rows.length > 0 && rows.every(r => r.selected)
-  const selectedCount = rows.filter(r => r.selected).length
+  const selectedCount = selection.size
 
-  function toggleAll() {
-    setRows(prev => prev.map(r => ({ ...r, selected: !allSelected })))
-  }
+  const allPageSelected = rows.length > 0 && rows.every((r) => selection.has(r.variant_id))
 
-  function toggleRow(variantId: string) {
-    setRows(prev => prev.map(r => r.variantId === variantId ? { ...r, selected: !r.selected } : r))
-  }
+  const toggleRow = useCallback((row: LabelRow) => {
+    setSelection((prev) => {
+      const next = new Map(prev)
+      if (next.has(row.variant_id)) {
+        next.delete(row.variant_id)
+      } else {
+        next.set(row.variant_id, {
+          productName: row.product_name,
+          variantName: row.variant_name,
+          sku: row.sku,
+          barcode: row.barcode,
+          price: row.price,
+          copies: prev.get(row.variant_id)?.copies ?? 1,
+        })
+      }
+      return next
+    })
+  }, [])
 
-  function setCopies(variantId: string, val: number) {
-    setRows(prev => prev.map(r => r.variantId === variantId ? { ...r, copies: Math.max(1, val) } : r))
-  }
+  const toggleAllPage = useCallback(() => {
+    setSelection((prev) => {
+      const next = new Map(prev)
+      if (allPageSelected) {
+        for (const row of rows) next.delete(row.variant_id)
+      } else {
+        for (const row of rows) {
+          next.set(row.variant_id, {
+            productName: row.product_name,
+            variantName: row.variant_name,
+            sku: row.sku,
+            barcode: row.barcode,
+            price: row.price,
+            copies: prev.get(row.variant_id)?.copies ?? 1,
+          })
+        }
+      }
+      return next
+    })
+  }, [allPageSelected, rows])
+
+  const setCopies = useCallback((variantId: string, val: number, row: LabelRow) => {
+    const copies = Math.max(1, Math.min(99, val))
+    setSelection((prev) => {
+      const next = new Map(prev)
+      const existing = next.get(variantId)
+      if (existing) {
+        next.set(variantId, { ...existing, copies })
+      } else {
+        next.set(variantId, {
+          productName: row.product_name,
+          variantName: row.variant_name,
+          sku: row.sku,
+          barcode: row.barcode,
+          price: row.price,
+          copies,
+        })
+      }
+      return next
+    })
+  }, [])
 
   function handlePrint() {
-    const selected = rows.filter(r => r.selected)
-    if (!selected.length) return
-    const labels = selected.map(r => ({
+    if (selectedCount === 0) return
+    const labels = Array.from(selection.values()).map((r) => ({
       name: r.productName,
       variantName: r.variantName ?? '',
       sku: r.sku ?? '',
@@ -136,112 +163,163 @@ export function EtiquetasClient() {
     window.open(`/etiquetas/print?key=${key}&size=${size}`, '_blank')
   }
 
+  const columns = useMemo((): Column<LabelRow>[] => [
+    {
+      key: '_select',
+      header: '',
+      className: 'w-10',
+      mobileRole: 'hidden',
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={selection.has(row.variant_id)}
+          onChange={() => toggleRow(row)}
+          aria-label={`Seleccionar ${row.product_name}`}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+    },
+    {
+      key: 'product_name',
+      header: 'Producto',
+      sortable: true,
+      mobileRole: 'title',
+      render: (row) => (
+        <span>
+          <span className="font-medium text-fg">{row.product_name}</span>
+          {row.variant_name && (
+            <span className="ml-1 text-fg-muted">— {row.variant_name}</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'sku',
+      header: 'SKU',
+      sortable: true,
+      mobileRole: 'subtitle',
+      render: (row) => <span className="text-fg-muted">{row.sku ?? '—'}</span>,
+    },
+    {
+      key: 'price',
+      header: 'Precio',
+      align: 'right',
+      sortable: true,
+      mobileRole: 'amount',
+      render: (row) => <span className="font-mono tabular-nums">{formatArs(row.price)}</span>,
+    },
+    {
+      key: 'copies',
+      header: 'Copias',
+      align: 'right',
+      className: 'w-24',
+      mobileRole: 'hidden',
+      render: (row) => (
+        <input
+          type="number"
+          min={1}
+          max={99}
+          value={selection.get(row.variant_id)?.copies ?? 1}
+          onChange={(e) => setCopies(row.variant_id, parseInt(e.target.value, 10) || 1, row)}
+          onClick={(e) => e.stopPropagation()}
+          className="w-16 rounded-sm border border-border-strong px-2 py-1 text-sm text-center bg-surface focus:outline-none focus:border-ring"
+        />
+      ),
+    },
+  ], [selection, toggleRow, setCopies])
+
   return (
     <div className="flex h-full flex-col">
       <TopBar breadcrumbs={[{ label: 'Catálogo', href: '/catalogo/productos' }, { label: 'Etiquetas de góndola' }]} />
       <CatalogoSubNav />
 
-      <div className="flex items-center gap-3 border-b border-border bg-surface px-5 py-3 print:hidden flex-wrap">
-        <select
-          className="rounded border border-border-strong px-2 py-1.5 text-sm text-fg-muted"
-          value={categoryFilter}
-          onChange={e => setCategoryFilter(e.target.value)}
-        >
-          <option value="">Todas las categorías</option>
-          {categories.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-
-        <input
-          type="text"
-          placeholder="Buscar producto o SKU…"
-          className="rounded border border-border-strong px-2 py-1.5 text-sm text-fg-muted w-56"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-
-        <div className="flex items-center gap-2 ml-auto">
-          <span className="text-xs text-fg-muted">Tamaño:</span>
-          <select
-            className="rounded border border-border-strong px-2 py-1.5 text-sm text-fg-muted"
-            value={size}
-            onChange={e => setSize(e.target.value as 'small' | 'large')}
-          >
-            <option value="small">Pequeña (5×3 cm)</option>
-            <option value="large">Grande (10×5 cm)</option>
-          </select>
-          <Button
-            type="button"
-            variant="primary"
-            onClick={handlePrint}
-            disabled={selectedCount === 0}
-          >
-            Imprimir selección ({selectedCount})
-          </Button>
-        </div>
-      </div>
-
       <PageBody padding="p-0">
         {error && (
-          <p className="m-5 text-sm text-danger">{error}</p>
+          <div className="m-5 rounded-md border border-danger bg-danger-bg px-3 py-2 text-sm text-danger">
+            {error}
+          </div>
         )}
 
         {!error && (
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-surface-muted text-left text-xs text-fg-muted border-b border-border">
-              <tr>
-                <th className="px-4 py-2 w-8">
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll} />
-                </th>
-                <th className="px-4 py-2">Producto</th>
-                <th className="px-4 py-2">SKU</th>
-                <th className="px-4 py-2">Precio</th>
-                <th className="px-4 py-2 w-24">Copias</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {loading && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-fg-subtle">Cargando…</td></tr>
-              )}
-              {!loading && rows.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-fg-subtle">Sin productos</td></tr>
-              )}
-              {!loading && rows.map(row => (
-                <tr
-                  key={row.variantId}
-                  className={row.selected ? 'bg-blue-50' : 'hover:bg-surface-muted'}
-                  onClick={() => toggleRow(row.variantId)}
+          <DataTable
+            columns={columns}
+            data={loading ? [] : rows}
+            keyExtractor={(row) => row.variant_id}
+            onRowClick={toggleRow}
+            stickyFirstColumn
+            emptyMessage={loading ? 'Cargando…' : 'Sin productos'}
+            toolbar={
+              <>
+                <select
+                  className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
+                  value={categoryFilter}
+                  onChange={(e) => { setCategoryFilter(e.target.value); setPage(1) }}
                 >
-                  <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={row.selected}
-                      onChange={() => toggleRow(row.variantId)}
-                    />
-                  </td>
-                  <td className="px-4 py-2">
-                    <span className="font-medium text-fg">{row.productName}</span>
-                    {row.variantName && (
-                      <span className="ml-1 text-fg-muted">— {row.variantName}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2 text-fg-muted">{row.sku ?? '—'}</td>
-                  <td className="px-4 py-2 font-mono">{formatArs(row.price)}</td>
-                  <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
-                    <input
-                      type="number"
-                      min={1}
-                      max={99}
-                      value={row.copies}
-                      onChange={e => setCopies(row.variantId, parseInt(e.target.value) || 1)}
-                      className="w-16 rounded border border-border-strong px-2 py-1 text-sm text-center"
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  <option value="">Todas las categorías</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+
+                <div className="relative flex items-center w-full sm:w-auto">
+                  <svg className="absolute left-2 text-fg-subtle pointer-events-none" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5l3 3" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Buscar producto o SKU…"
+                    className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-56 bg-surface focus:outline-none focus:border-ring"
+                    value={search}
+                    onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+                  />
+                </div>
+
+                <label className="flex items-center gap-1.5 text-[12px] text-fg-muted cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    onChange={toggleAllPage}
+                    className="rounded border-border-strong"
+                  />
+                  Página
+                </label>
+
+                <select
+                  className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
+                  value={size}
+                  onChange={(e) => setSize(e.target.value as 'small' | 'large')}
+                >
+                  <option value="small">Pequeña (5×3 cm)</option>
+                  <option value="large">Grande (10×5 cm)</option>
+                </select>
+
+                <span className="flex-1" />
+                <span className="text-[12px] text-fg-muted hidden sm:inline">
+                  {selectedCount > 0 ? `${selectedCount} seleccionada${selectedCount !== 1 ? 's' : ''} · ` : ''}
+                  {total} variante{total !== 1 ? 's' : ''}
+                </span>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={handlePrint}
+                  disabled={selectedCount === 0}
+                >
+                  Imprimir ({selectedCount})
+                </Button>
+              </>
+            }
+            footer={
+              total > 0 ? (
+                <TablePagination
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  total={total}
+                  onPageChange={setPage}
+                />
+              ) : undefined
+            }
+          />
         )}
       </PageBody>
     </div>
