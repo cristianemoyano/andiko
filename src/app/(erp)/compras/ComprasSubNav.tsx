@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 const LINKS = [
   { href: '/compras/ordenes',    label: 'Órdenes de compra' },
   { href: '/compras/recepciones', label: 'Recepciones' },
+  { href: '/compras/devoluciones', label: 'Devoluciones' },
   { href: '/compras/facturas',   label: 'Facturas proveedor' },
   { href: '/compras/pagos',            label: 'Pagos' },
   { href: '/compras/cuenta-corriente', label: 'Cuenta corriente' },

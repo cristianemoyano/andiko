@@ -4,6 +4,7 @@ import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
 import PurchaseOrder from './purchase-order.model'
+import type { PurchaseOrderStatus } from './purchase-order.model'
 import PurchaseOrderItem from './purchase-order-item.model'
 import type { PurchaseOrderInput, PurchaseOrderUpdateInput, PurchaseOrderQuery } from './purchase-order.schema'
 import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
@@ -275,5 +276,57 @@ export async function recalcOrderReceiptStatus(orderId: string, orgId: string, t
 
   if (newStatus !== order.status) {
     await order.update({ status: newStatus }, { transaction: t })
+  }
+}
+
+/** Order statuses from which goods can be returned to the supplier. */
+export const RETURNABLE_PURCHASE_ORDER_STATUSES: PurchaseOrderStatus[] = [
+  'partially_received', 'received', 'partial_returned', 'returned',
+]
+
+/**
+ * Recalculates a purchase order's status after a return is completed or cancelled,
+ * based on returned quantities relative to received quantities across all items.
+ * Only acts on orders that have already received goods.
+ */
+export async function recalcOrderReturnStatus(orderId: string, orgId: string, t: import('sequelize').Transaction) {
+  const order = await PurchaseOrder.findOne({
+    where: { id: orderId, org_id: orgId },
+    transaction: t,
+    lock: true,
+  })
+  if (!order || order.status === 'cancelled' || order.status === 'draft' || order.status === 'sent') return
+
+  const items = await PurchaseOrderItem.findAll({
+    where: { order_id: orderId },
+    attributes: ['quantity', 'received_qty', 'returned_qty'],
+    transaction: t,
+  })
+  if (items.length === 0) return
+
+  let anyReturned       = false
+  let allReceivedReturned = true
+  let hasReceived       = false
+
+  for (const item of items) {
+    const received = parseFloat(item.received_qty ?? '0')
+    const returned = parseFloat(item.returned_qty ?? '0')
+    if (received <= 0) continue
+    hasReceived = true
+    if (returned > 0) anyReturned = true
+    if (returned < received) allReceivedReturned = false
+  }
+
+  const allReceived  = items.every(i => parseFloat(i.received_qty) >= parseFloat(i.quantity))
+
+  let nextStatus: PurchaseOrderStatus
+  if (hasReceived && anyReturned) {
+    nextStatus = allReceivedReturned ? 'returned' : 'partial_returned'
+  } else {
+    nextStatus = allReceived ? 'received' : 'partially_received'
+  }
+
+  if (nextStatus !== order.status) {
+    await order.update({ status: nextStatus }, { transaction: t })
   }
 }

@@ -4,7 +4,7 @@ import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, PaymentCondition } from '@/types'
 import User from '@/modules/auth/user.model'
 
-export const PURCHASE_ORDER_STATUSES = ['draft', 'sent', 'partially_received', 'received', 'cancelled'] as const
+export const PURCHASE_ORDER_STATUSES = ['draft', 'sent', 'partially_received', 'received', 'partial_returned', 'returned', 'cancelled'] as const
 export type PurchaseOrderStatus = typeof PURCHASE_ORDER_STATUSES[number]
 
 export interface PurchaseOrderAttributes extends Timestamps, AuditFields {

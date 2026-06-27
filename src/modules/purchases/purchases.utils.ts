@@ -6,13 +6,14 @@ import type { IvaRate } from '@/types'
 
 // ─── Document numbering ──────────────────────────────────────────────────────
 
-type PurchaseDocType = 'purchase_order' | 'receipt' | 'supplier_invoice' | 'supplier_payment'
+type PurchaseDocType = 'purchase_order' | 'receipt' | 'supplier_invoice' | 'supplier_payment' | 'purchase_return'
 
 const DOC_PREFIXES: Record<PurchaseDocType, string> = {
   purchase_order:   'OC',
   receipt:          'REC',
   supplier_invoice: 'FP',
   supplier_payment: 'PP',
+  purchase_return:  'DEV',
 }
 
 /**

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { Button } from '@/components/primitives/Button'
 import { parseCsvText } from '@/lib/csv'
 import type { CsvHeader } from '@/lib/csv'
+import { formatImportEtaRemaining, readImportStream } from '@/lib/import-progress'
 
 export type ImportAction = 'create' | 'update' | 'upsert'
 
@@ -47,9 +48,11 @@ export interface ImportModalProps {
    * El servidor solo aplica claves válidas para ese módulo (p. ej. allowlist de catálogo).
    */
   defaultFillFields?: ImportDefaultFieldConfig[]
+  /** Si true, pide progreso en tiempo real vía NDJSON (`stream=1`). */
+  supportsStreamProgress?: boolean
 }
 
-type Step = 'upload' | 'mapping' | 'confirm' | 'result'
+type Step = 'upload' | 'mapping' | 'confirm' | 'importing' | 'result'
 const ACTION_LABELS: Record<ImportAction, string> = {
   create: 'Solo crear nuevos',
   update: 'Solo actualizar existentes',
@@ -95,6 +98,7 @@ export function ImportModal({
   savedFieldMaps = [],
   importSource = 'catalog_csv',
   defaultFillFields = [],
+  supportsStreamProgress = false,
 }: ImportModalProps) {
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -112,6 +116,9 @@ export function ImportModal({
   const [serverError, setServerError] = useState<string | null>(null)
   /** Valores por defecto cuando la celda CSV está vacía (claves según defaultFillFields). */
   const [fillDefaults, setFillDefaults] = useState<Record<string, string>>({})
+  const [importProgress, setImportProgress] = useState<{ processed: number; total: number } | null>(null)
+  const [progressEta, setProgressEta] = useState<string | null>(null)
+  const importEstimateTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   /** Lleva el asistente al paso inicial (archivo). No notifica al padre. */
   const resetWizard = useCallback(() => {
@@ -123,6 +130,12 @@ export function ImportModal({
     setMapping({})
     setMappingErrors({})
     setFillDefaults({})
+    setImportProgress(null)
+    setProgressEta(null)
+    if (importEstimateTimerRef.current) {
+      clearInterval(importEstimateTimerRef.current)
+      importEstimateTimerRef.current = null
+    }
     setResult(null)
     setServerError(null)
     setLoading(false)
@@ -198,10 +211,47 @@ export function ImportModal({
     return Object.keys(errs).length === 0
   }
 
+  function stopImportEstimateTimer() {
+    if (importEstimateTimerRef.current) {
+      clearInterval(importEstimateTimerRef.current)
+      importEstimateTimerRef.current = null
+    }
+  }
+
+  function updateImportProgress(processed: number, total: number, startedAt: number | null) {
+    setImportProgress({ processed, total })
+    if (startedAt != null) {
+      setProgressEta(formatImportEtaRemaining(processed, total, Date.now() - startedAt))
+    }
+  }
+
+  function startImportEstimateTimer(total: number): number {
+    stopImportEstimateTimer()
+    const startedAt = Date.now()
+    updateImportProgress(0, total, startedAt)
+    if (supportsStreamProgress) return startedAt
+    importEstimateTimerRef.current = setInterval(() => {
+      setImportProgress((prev) => {
+        if (!prev) return prev
+        const elapsed = Date.now() - startedAt
+        const estimatedMsPerRow = Math.max(elapsed / Math.max(prev.total, 1), 8)
+        const estimatedProcessed = Math.min(
+          prev.total - 1,
+          Math.floor(elapsed / estimatedMsPerRow),
+        )
+        setProgressEta(formatImportEtaRemaining(estimatedProcessed, prev.total, elapsed))
+        return { processed: estimatedProcessed, total: prev.total }
+      })
+    }, 400)
+    return startedAt
+  }
+
   async function handleSubmit() {
     if (!file) return
     setLoading(true)
     setServerError(null)
+    setStep('importing')
+    const importStartedAtMs = startImportEstimateTimer(rowCount)
 
     const effectiveMapping: Record<string, string> = {}
     for (const [key, col] of Object.entries(mapping)) {
@@ -222,24 +272,52 @@ export function ImportModal({
     if (Object.keys(defaultsPayload).length > 0) {
       fd.append('import_defaults', JSON.stringify(defaultsPayload))
     }
+    if (supportsStreamProgress) fd.append('stream', '1')
 
     try {
       const res = await fetch(importUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+
+      if (supportsStreamProgress && res.ok && res.headers.get('content-type')?.includes('application/x-ndjson')) {
+        const streamResult = await readImportStream(res, (processed, total) => {
+          updateImportProgress(processed, total, importStartedAtMs)
+        })
+        const data = streamResult
+        updateImportProgress(rowCount, rowCount, importStartedAtMs)
+        setResult(data)
+        setStep('result')
+        if (data.errors.length === 0) onImported?.(data, effectiveMapping)
+        return
+      }
+
       const data = await res.json() as ImportResult & { error?: string }
+      setImportProgress({ processed: rowCount, total: rowCount })
       if (!res.ok) {
         setServerError(data.error ?? 'Error al importar')
         if (data.errors?.length) {
           setResult(data)
           setStep('result')
+        } else {
+          setStep('confirm')
         }
       } else {
         setResult(data)
         setStep('result')
         if (data.errors.length === 0) onImported?.(data, effectiveMapping)
       }
-    } catch {
-      setServerError('Error de red al importar')
+    } catch (err) {
+      const importErrors = (err as Error & { importErrors?: ImportResult['errors'] }).importErrors
+      if (importErrors?.length) {
+        setResult({ created: 0, updated: 0, skipped: 0, errors: importErrors })
+        setStep('result')
+      } else if (err instanceof Error && err.message.startsWith('IMPORT_STREAM')) {
+        setServerError('No se pudo leer el progreso de la importación')
+        setStep('confirm')
+      } else {
+        setServerError(err instanceof Error ? err.message : 'Error de red al importar')
+        setStep('confirm')
+      }
     } finally {
+      stopImportEstimateTimer()
       setLoading(false)
     }
   }
@@ -247,6 +325,10 @@ export function ImportModal({
   if (!open) return null
 
   const mappedCount = Object.values(mapping).filter(v => v && v !== IGNORE).length
+  const progressPct = importProgress && importProgress.total > 0
+    ? Math.min(100, Math.round((importProgress.processed / importProgress.total) * 100))
+    : 0
+  const stepOrder: Step[] = ['upload', 'mapping', 'confirm', 'importing', 'result']
 
   return createPortal(
     <div className="fixed inset-0 z-[100]">
@@ -277,10 +359,16 @@ export function ImportModal({
 
       {/* Step indicator */}
       <div className="flex gap-0 border-b border-border bg-surface-muted px-5 py-2">
-        {(['upload', 'mapping', 'confirm', 'result'] as Step[]).map((s, idx) => {
-          const labels: Record<Step, string> = { upload: '1. Archivo', mapping: '2. Columnas', confirm: '3. Acción', result: '4. Resultado' }
+        {stepOrder.map((s, idx) => {
+          const labels: Record<Step, string> = {
+            upload: '1. Archivo',
+            mapping: '2. Columnas',
+            confirm: '3. Acción',
+            importing: '4. Importando',
+            result: '5. Resultado',
+          }
           const active = s === step
-          const done   = ['upload', 'mapping', 'confirm', 'result'].indexOf(step) > idx
+          const done = stepOrder.indexOf(step) > idx
           return (
             <span
               key={s}
@@ -444,6 +532,37 @@ export function ImportModal({
           </div>
         )}
 
+        {step === 'importing' && (
+          <div className="flex flex-col gap-4 py-2">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[13px]">
+                <span className="font-medium text-fg">Importando…</span>
+                {importProgress && (
+                  <span className="text-fg-muted tabular-nums">
+                    {importProgress.processed.toLocaleString('es-AR')} / {importProgress.total.toLocaleString('es-AR')} filas ({progressPct}%)
+                  </span>
+                )}
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                <div
+                  className="h-full rounded-full bg-brand-600 transition-[width] duration-300 ease-out"
+                  style={{ width: `${Math.max(progressPct, loading ? 3 : 0)}%` }}
+                />
+              </div>
+              <p className="text-[12px] text-fg-muted">
+                {supportsStreamProgress
+                  ? 'Procesando filas en el servidor. No cierres esta ventana.'
+                  : 'Procesando archivo. El avance es estimado hasta que termine la importación.'}
+                {progressEta ? ` ${progressEta}.` : ''}
+              </p>
+            </div>
+            <div className="rounded border border-border bg-surface-muted px-4 py-3 text-[13px] text-fg-muted space-y-1">
+              <div><span className="font-medium">Archivo:</span> {file?.name}</div>
+              <div><span className="font-medium">Acción:</span> {ACTION_LABELS[action]}</div>
+            </div>
+          </div>
+        )}
+
         {step === 'result' && result && (
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -490,7 +609,7 @@ export function ImportModal({
 
       {/* Footer */}
       <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-surface-muted">
-        <Button variant="secondary" size="sm" onClick={handleClose} disabled={loading}>
+        <Button variant="secondary" size="sm" onClick={handleClose} disabled={loading || step === 'importing'}>
           {step === 'result' ? 'Cerrar' : 'Cancelar'}
         </Button>
         <div className="flex gap-2">
@@ -506,17 +625,9 @@ export function ImportModal({
             </Button>
           )}
           {step === 'confirm' && (
-            <div className="flex items-center gap-2">
-              {loading && (
-                <div className="flex items-center gap-2 text-[12px] text-fg-muted">
-                  <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-border-strong border-t-zinc-700" aria-hidden />
-                  Importando…
-                </div>
-              )}
-              <Button size="sm" onClick={handleSubmit} disabled={loading}>
-                Importar
-              </Button>
-            </div>
+            <Button size="sm" onClick={handleSubmit} disabled={loading}>
+              Importar
+            </Button>
           )}
           {step === 'result' && result && result.errors.length === 0 && (
             <Button size="sm" onClick={handleClose}>Listo</Button>

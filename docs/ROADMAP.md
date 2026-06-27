@@ -206,6 +206,8 @@ Productos y servicios. Requisito mínimo para facturar.
 - [x] Etiquetas de góndola — pantalla de selección masiva por categoría, impresión browser-native (CSS @media print)
 - [x] Ajustes masivos de precios (por categoría / % / canal) y reglas
 - [x] Datos de logística / shipping por SKU (peso, dimensiones, bultos/presentaciones)
+- [x] Importación CSV de productos con progreso en tiempo real (stream NDJSON)
+- [x] Script de conversión WooCommerce → Andiko (`scripts/convert-wc-products-to-andiko.mjs`)
 
 ---
 
@@ -345,6 +347,7 @@ Ciclo de compras: orden → recepción → factura proveedor → pago.
 - [x] Cuenta corriente proveedor — `/compras/cuenta-corriente` con historial de facturas + pagos, saldo, vencido y filtros por período (mismo patrón que ventas CC)
 - [x] Conciliación orden → recepción → factura (alertas de diferencias de precio/cantidad)
 - [x] Reportes: compras por período, por proveedor, por categoría de producto
+- [x] **Devoluciones y cambios de compra** — `purchase_returns` (devolución/cambio a proveedor, parcial/total); stock OUT para lo devuelto e IN para el cambio; reduce el saldo de la factura proveedor (neto del cambio); estados de orden `partial_returned` / `returned`; asiento contable automático; filas negativas en Libro IVA Compras; UI `/compras/devoluciones`
 
 ---
 
@@ -439,6 +442,7 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 - [x] Plan de cuentas (adaptado a PyMEs argentinas) — sembrado por defecto, editable
 - [ ] Asientos automáticos desde ventas, compras y pagos
 - [x] Asiento automático al completar devolución de venta (`sales_return` → NC / reembolso)
+- [x] Asiento automático al completar devolución de compra (`purchase_return` → reverso Mercaderías / IVA crédito / Proveedores, + cambio)
 - [x] Asientos manuales — partida doble, débito/haber balanceado, estados borrador/contabilizado
 - [x] Balance de sumas y saldos — con filtro por sucursal (centro de costo)
 - [ ] Estado de resultados
