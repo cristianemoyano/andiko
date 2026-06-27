@@ -106,6 +106,8 @@ export async function createPurchaseReturn(input: CreatePurchaseReturnInput, ctx
     }
     if (!order.branch_id) throw new Error('ORDER_BRANCH_REQUIRED')
 
+    // An order may have several supplier invoices; pick the most recent open one
+    // deterministically so the return credits a stable payable.
     const invoice = await SupplierInvoice.findOne({
       where: {
         order_id: order.id,
@@ -113,6 +115,7 @@ export async function createPurchaseReturn(input: CreatePurchaseReturnInput, ctx
         status: { [Op.notIn]: ['cancelled', 'draft'] },
       },
       attributes: ['id'],
+      order: [['created_at', 'DESC']],
       transaction: t,
     })
 
