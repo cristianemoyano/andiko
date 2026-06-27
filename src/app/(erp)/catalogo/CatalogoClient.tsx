@@ -493,6 +493,7 @@ export function CatalogoClient() {
         requiredFields={['name']}
         importUrl="/api/v1/catalog/products/import"
         importSource="catalog_csv"
+        supportsStreamProgress
         defaultFillFields={CATALOG_IMPORT_DEFAULT_FIELDS}
         onImported={async (_result, effectiveMapping) => {
           notifySuccess('Productos importados correctamente')

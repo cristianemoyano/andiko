@@ -206,6 +206,8 @@ Productos y servicios. Requisito mínimo para facturar.
 - [x] Etiquetas de góndola — pantalla de selección masiva por categoría, impresión browser-native (CSS @media print)
 - [x] Ajustes masivos de precios (por categoría / % / canal) y reglas
 - [x] Datos de logística / shipping por SKU (peso, dimensiones, bultos/presentaciones)
+- [x] Importación CSV de productos con progreso en tiempo real (stream NDJSON)
+- [x] Script de conversión WooCommerce → Andiko (`scripts/convert-wc-products-to-andiko.mjs`)
 
 ---
 

@@ -18,6 +18,8 @@ import { productSchema, productUpdateSchema } from './product.schema'
 import type { UUID } from '@/types'
 import type { TenantContext } from '@/lib/tenancy'
 import { whereOrg } from '@/lib/tenancy'
+import type { ImportProgressCallback } from '@/lib/import-progress'
+import { createImportProgressReporter } from '@/lib/import-progress'
 import {
   applyRowImportDefaults,
   mappedRowToNormalizedProductRow,
@@ -303,10 +305,12 @@ export async function importProducts(
   actorId: string,
   importSource = 'catalog_csv',
   importDefaults: Record<string, string> = {},
+  onProgress?: ImportProgressCallback,
 ): Promise<ImportResult> {
   const IMPORT_BATCH_SIZE = 1000
   const enriched = enrichMappedRowsFromCommonExports(rawRows, mappedRows)
   const mappedRowsEffective = enriched.map((row) => applyRowImportDefaults(row, importDefaults))
+  const total = mappedRowsEffective.length
 
   if (usesHierarchicalProductImport(mappedRowsEffective)) {
     return importProductsHierarchical(
@@ -317,6 +321,7 @@ export async function importProducts(
       ctx,
       actorId,
       importSource,
+      onProgress,
     )
   }
 
@@ -333,10 +338,13 @@ export async function importProducts(
     categories.map((category) => [category.name.trim().toLowerCase(), category.id]),
   )
 
+  let processedRows = 0
+  const progress = createImportProgressReporter(total, onProgress)
   for (let start = 0; start < mappedRowsEffective.length; start += IMPORT_BATCH_SIZE) {
     const end = Math.min(start + IMPORT_BATCH_SIZE, mappedRowsEffective.length)
     await sequelize.transaction(async (t) => {
       for (let i = start; i < end; i++) {
+        try {
         const rowNum = i + 2
         const mapped = mappedRowsEffective[i]!
         const raw = rawRows[i]!
@@ -452,10 +460,15 @@ export async function importProducts(
           created++
           await persistUnmappedCsvColumns(raw, columnMapping, importSource, ctx.orgId, rowKey, productId, variantId, t)
         }
+        } finally {
+          processedRows++
+          progress.tick(processedRows)
+        }
       }
     })
   }
 
+  progress.finish()
   logger.info({ created, updated, skipped, actorId }, 'products imported')
   return { created, updated, skipped, errors }
 }

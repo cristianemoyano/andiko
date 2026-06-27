@@ -14,6 +14,8 @@ import type { TenantContext } from '@/lib/tenancy'
 import { whereOrg } from '@/lib/tenancy'
 import logger from '@/lib/logger'
 import type { ImportAction, ImportResult } from './products.service'
+import type { ImportProgressCallback } from '@/lib/import-progress'
+import { createImportProgressReporter } from '@/lib/import-progress'
 import {
   mappedRowToNormalizedProductRow,
   parseProductCsvImages,
@@ -159,11 +161,20 @@ export async function importProductsHierarchical(
   ctx: TenantContext,
   actorId: string,
   importSource: string,
+  onProgress?: ImportProgressCallback,
 ): Promise<ImportResult> {
   const errors: ImportResult['errors'] = []
   let created = 0
   let updated = 0
   let skipped = 0
+  const total = mappedRows.length
+  const progress = createImportProgressReporter(total, onProgress)
+  const completedRows = new Set<number>()
+  const completeRow = (index: number) => {
+    if (index < 0 || index >= total || completedRows.has(index)) return
+    completedRows.add(index)
+    progress.tick(completedRows.size)
+  }
 
   const categories = await ProductCategory.findAll({
     where: whereOrg(ctx),
@@ -174,8 +185,8 @@ export async function importProductsHierarchical(
   )
 
   await sequelize.transaction(async (t) => {
-    const byExternalId = new Map<string, { mapped: Record<string, string>; raw: Record<string, string>; rowNum: number }>()
-    const variationsByParent = new Map<string, { mapped: Record<string, string>; raw: Record<string, string>; rowNum: number }[]>()
+    const byExternalId = new Map<string, { mapped: Record<string, string>; raw: Record<string, string>; rowNum: number; index: number }>()
+    const variationsByParent = new Map<string, { mapped: Record<string, string>; raw: Record<string, string>; rowNum: number; index: number }[]>()
 
     for (let i = 0; i < mappedRows.length; i++) {
       const mapped = mappedRows[i]!
@@ -184,18 +195,20 @@ export async function importProductsHierarchical(
       const ext = (mapped.catalog_external_id ?? '').trim()
       if (!ext) {
         errors.push({ row: rowNum, message: 'catalog_external_id: requerido en importación jerárquica' })
+        completeRow(i)
         continue
       }
-      byExternalId.set(ext, { mapped, raw, rowNum })
+      byExternalId.set(ext, { mapped, raw, rowNum, index: i })
       const typ = importRowCatalogKind(mapped)
       if (typ === 'variation') {
         const parent = (mapped.catalog_parent_id ?? '').trim()
         if (!parent) {
           errors.push({ row: rowNum, message: 'catalog_parent_id: requerido para filas variation' })
+          completeRow(i)
           continue
         }
         const list = variationsByParent.get(parent) ?? []
-        list.push({ mapped, raw, rowNum })
+        list.push({ mapped, raw, rowNum, index: i })
         variationsByParent.set(parent, list)
       }
     }
@@ -298,7 +311,7 @@ export async function importProductsHierarchical(
       parentRaw: Record<string, string>,
       parentRowNum: number,
       parentExt: string,
-      children: { mapped: Record<string, string>; raw: Record<string, string>; rowNum: number }[],
+      children: { mapped: Record<string, string>; raw: Record<string, string>; rowNum: number; index: number }[],
     ) {
       children.sort((a, b) => {
         const pa = Number.parseInt((a.mapped.catalog_position ?? '').trim(), 10)
@@ -503,7 +516,10 @@ export async function importProductsHierarchical(
       const rowNum = i + 2
       const ext = (mapped.catalog_external_id ?? '').trim()
       const typ = importRowCatalogKind(mapped)
-      if (!ext || processedExtIds.has(ext)) continue
+      if (!ext || processedExtIds.has(ext)) {
+        completeRow(i)
+        continue
+      }
       if (typ === 'variation') continue
 
       if (typ === 'variable') {
@@ -513,11 +529,14 @@ export async function importProductsHierarchical(
         } else {
           await upsertVariableGroup(mapped, raw, rowNum, ext, children)
         }
+        completeRow(i)
+        for (const ch of children) completeRow(ch.index)
         continue
       }
 
       if (typ === 'simple' || typ === '') {
         await upsertOneProductOneDefaultVariant(mapped, raw, rowNum, ext, ext)
+        completeRow(i)
       }
     }
 
@@ -527,14 +546,22 @@ export async function importProductsHierarchical(
       const rowNum = i + 2
       const ext = (mapped.catalog_external_id ?? '').trim()
       const typ = importRowCatalogKind(mapped)
-      if (typ !== 'variation' || processedExtIds.has(ext)) continue
+      if (typ !== 'variation' || processedExtIds.has(ext)) {
+        completeRow(i)
+        continue
+      }
       const parent = (mapped.catalog_parent_id ?? '').trim()
       const parentEntry = parent ? byExternalId.get(parent) : undefined
-      if (parentEntry && importRowCatalogKind(parentEntry.mapped) === 'variable') continue
+      if (parentEntry && importRowCatalogKind(parentEntry.mapped) === 'variable') {
+        completeRow(i)
+        continue
+      }
       await upsertOneProductOneDefaultVariant(mapped, raw, rowNum, ext, ext)
+      completeRow(i)
     }
   })
 
+  progress.finish()
   logger.info({ created, updated, skipped, actorId }, 'products imported (hierarchical)')
   return { created, updated, skipped, errors }
 }
