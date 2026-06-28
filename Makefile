@@ -1,6 +1,6 @@
 .PHONY: up down reset logs db shell dev \
 	prod-push prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-migrate prod-migrate-status \
-	prod-health prod-backup prod-logs prod-renew-certs
+	prod-create-sysadmin prod-health prod-backup prod-logs prod-renew-certs
 
 # Start Colima and all services
 up:
@@ -63,6 +63,12 @@ prod-migrate:
 prod-migrate-status:
 	@test -n "$(TAG)" || (echo "TAG is required: make prod-migrate-status TAG=v0.26.0" && exit 1)
 	TAG=$(TAG) bash infra/scripts/migrate.sh status
+
+prod-create-sysadmin:
+	@test -n "$(TAG)" || (echo "TAG is required: make prod-create-sysadmin TAG=v0.26.0 EMAIL=... PASSWORD=..." && exit 1)
+	@test -n "$(EMAIL)" || (echo "EMAIL is required: make prod-create-sysadmin TAG=... EMAIL=admin@andiko.cloud PASSWORD=..." && exit 1)
+	@test -n "$(PASSWORD)" || (echo "PASSWORD is required (min 16 chars)" && exit 1)
+	TAG=$(TAG) EMAIL=$(EMAIL) PASSWORD=$(PASSWORD) NAME="$(NAME)" bash infra/scripts/create-sysadmin.sh
 
 prod-health:
 	@curl -sf "$${HEALTH_URL:-https://andiko.cloud/api/health}" | cat

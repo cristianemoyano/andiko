@@ -241,6 +241,7 @@ make prod-health
 | `prod-ssl` | VPS (once) | Certbot certificate + enable HTTPS |
 | `prod-migrate TAG=…` | VPS | Run pending Umzug migrations |
 | `prod-migrate-status TAG=…` | VPS | List executed vs pending migrations |
+| `prod-create-sysadmin TAG=… EMAIL=… PASSWORD=…` | VPS | Create or reset platform sys-admin user |
 | `prod-health` | VPS | `curl https://andiko.cloud/api/health` |
 | `prod-backup` | VPS | pg_dump + optional rclone → Google Drive |
 | `prod-logs` | VPS | Follow app service logs |
@@ -256,6 +257,22 @@ make prod-migrate-status TAG=v0.27.0
 ```
 
 Emergency fallback: `POST /api/admin/migrate` with `Authorization: Bearer $MIGRATION_SECRET` if configured.
+
+## Platform sys-admin
+
+Create the first sys-admin (or reset password) on the VPS:
+
+```bash
+make prod-create-sysadmin \
+  TAG=v0.25.3 \
+  EMAIL=admin@andiko.cloud \
+  PASSWORD='your-secure-password-min-16-chars' \
+  NAME='Sys Admin'
+```
+
+`PASSWORD` must be at least 16 characters. If the email already exists, the user is updated to `sys-admin` with the new password. Login at `https://andiko.cloud/login`.
+
+Generate a password: `openssl rand -base64 24`
 
 ## SSL / Certbot
 
