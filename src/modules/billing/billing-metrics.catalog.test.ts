@@ -25,8 +25,14 @@ describe('billing-metrics.catalog', () => {
 
   it('builds catalog status from configured keys', () => {
     const status = buildTrackedMetricsCatalog(new Set(['afip_invoices_issued']))
-    expect(status).toHaveLength(3)
+    expect(status).toHaveLength(4)
     expect(status.find(s => s.key === 'afip_invoices_issued')?.configured).toBe(true)
     expect(status.find(s => s.key === 'pos_tickets')?.configured).toBe(false)
+  })
+
+  it('includes the storage metrics', () => {
+    expect(isTrackedBillingMetricKey('storage_gb')).toBe(true)
+    expect(isTrackedBillingMetricKey('storage_files')).toBe(true)
+    expect(getTrackedBillingMetric('storage_files')?.unit_label).toBe('archivo')
   })
 })
