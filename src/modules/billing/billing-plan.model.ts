@@ -16,13 +16,16 @@ export interface BillingPlanAttributes extends Timestamps, AuditFields {
   per_seat_price: string
   included_branches: number
   per_branch_price: string
+  included_sites: number
+  per_site_price: string
   is_active: boolean
 }
 
 type BillingPlanCreationAttributes = Optional<
   BillingPlanAttributes,
   | 'id' | 'description' | 'currency' | 'interval' | 'base_price' | 'included_seats'
-  | 'per_seat_price' | 'included_branches' | 'per_branch_price' | 'is_active'
+  | 'per_seat_price' | 'included_branches' | 'per_branch_price'
+  | 'included_sites' | 'per_site_price' | 'is_active'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
 >
 
@@ -38,6 +41,8 @@ class BillingPlan extends AuditModel<BillingPlanAttributes, BillingPlanCreationA
   declare per_seat_price: string
   declare included_branches: number
   declare per_branch_price: string
+  declare included_sites: number
+  declare per_site_price: string
   declare is_active: boolean
 }
 
@@ -54,6 +59,8 @@ BillingPlan.init(
     per_seat_price:     { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
     included_branches:  { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
     per_branch_price:   { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
+    included_sites:     { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    per_site_price:     { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
     is_active:          { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     ...auditColumnDefs,
   },

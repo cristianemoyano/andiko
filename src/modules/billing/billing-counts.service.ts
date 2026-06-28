@@ -18,3 +18,12 @@ export async function countActiveBranches(orgId: string, t?: Transaction): Promi
     transaction: t,
   })
 }
+
+export async function countActiveSites(orgId: string, t?: Transaction): Promise<number> {
+  const WoocommerceSite = (await import('@/modules/integrations/woocommerce/woocommerce-site.model')).default
+  return WoocommerceSite.count({
+    where: { org_id: orgId, is_active: true },
+    paranoid: true,
+    transaction: t,
+  })
+}
