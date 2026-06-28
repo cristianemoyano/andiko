@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.29.1](https://github.com/cristianemoyano/andiko/compare/v0.29.0...v0.29.1) (2026-06-28)
+
+### Bug Fixes
+
+* **sales:** use 24-hour format for order list datetimes ([92d6a5a](https://github.com/cristianemoyano/andiko/commit/92d6a5ab7aa758e51f2f9ecf3412aacb735917bb))
+
 ## [0.29.0](https://github.com/cristianemoyano/andiko/compare/v0.28.0...v0.29.0) (2026-06-28)
 
 ### Features
