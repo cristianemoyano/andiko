@@ -58,14 +58,36 @@ async function resolveContact(site: WoocommerceSite, order: WooOrder, t: Transac
   }
 
   const b = order.billing
+  const email = b?.email?.trim() || null
   const legalName =
     b?.company?.trim() ||
     [b?.first_name, b?.last_name].filter(Boolean).join(' ').trim() ||
-    b?.email ||
+    email ||
     `Cliente WooCommerce #${order.id}`
 
-  // Guests with no useful billing data fall back to the site's default contact.
-  if ((!wooCustomerId || wooCustomerId <= 0) && site.default_contact_id) {
+  // Reuse an existing contact with the same email before creating a new one,
+  // so repeat buyers (especially guests) don't accumulate duplicate contacts.
+  if (email) {
+    const Contact = (await import('@/modules/contacts/contact.model')).default
+    const existingByEmail = await Contact.findOne({
+      where: { org_id: site.org_id, email },
+      attributes: ['id'],
+      transaction: t,
+    })
+    if (existingByEmail) {
+      if (wooCustomerId && wooCustomerId > 0) {
+        await WoocommerceCustomerLink.findOrCreate({
+          where: { site_id: site.id, woo_customer_id: String(wooCustomerId) },
+          defaults: { org_id: site.org_id!, site_id: site.id, woo_customer_id: String(wooCustomerId), contact_id: existingByEmail.id },
+          transaction: t,
+        })
+      }
+      return existingByEmail.id
+    }
+  }
+
+  // Guests with no email/identity fall back to the site's default contact.
+  if (!email && (!wooCustomerId || wooCustomerId <= 0) && site.default_contact_id) {
     return site.default_contact_id
   }
 
@@ -121,6 +143,27 @@ export async function ingestWooOrder(
   }
 
   return sequelize.transaction(async (t) => {
+    // Authoritative idempotency guard inside the transaction: claim the
+    // (site, woo_order_id) link first. The unique constraint means only one
+    // concurrent ingest wins the INSERT; the loser gets created=false and
+    // returns without creating a duplicate SalesOrder.
+    const [link, created] = await WoocommerceOrderLink.findOrCreate({
+      where: { site_id: site.id, woo_order_id: String(order.id) },
+      defaults: {
+        org_id: site.org_id!,
+        site_id: site.id,
+        woo_order_id: String(order.id),
+        sales_order_id: null,
+        woo_status: order.status,
+        sync_status: 'pending',
+      },
+      transaction: t,
+    })
+    if (!created) {
+      await link.update({ woo_status: order.status }, { transaction: t })
+      return link
+    }
+
     const contactId = await resolveContact(site, order, t)
     const orderNumber = await nextDocumentNumber(site.org_id!, site.branch_id, 'order', t)
 
@@ -139,8 +182,10 @@ export async function ingestWooOrder(
       const ivaRate = (product?.iva_rate ?? '21') as IvaRate
 
       const qty = line.quantity
-      // Woo `total` is the post-discount line amount; treated as gross (tax-incl).
-      const grossLine = new Decimal(line.total ?? '0')
+      // Woo stores `total` excluding tax and `total_tax` separately; the gross
+      // the customer paid is their sum. We then re-derive IVA from that gross so
+      // ERP totals match the storefront regardless of the store's tax settings.
+      const grossLine = new Decimal(line.total ?? '0').plus(line.total_tax ?? '0')
       const grossUnit = qty > 0 ? grossLine.div(qty) : new Decimal(0)
       const totals = calcInclusive(qty, grossUnit, ivaRate)
 
@@ -210,11 +255,8 @@ export async function ingestWooOrder(
       }
     }
 
-    const [link] = await WoocommerceOrderLink.upsert(
+    await link.update(
       {
-        org_id: site.org_id!,
-        site_id: site.id,
-        woo_order_id: String(order.id),
         sales_order_id: newOrder.id,
         woo_status: order.status,
         sync_status: syncStatus,

@@ -20,9 +20,19 @@ function backoffSeconds(attempts: number): number {
  * to its kind's handler. Successes are marked `done`; failures are retried with
  * exponential backoff up to MAX_ATTEMPTS, then parked as `error`.
  */
+const STUCK_PROCESSING_MS = 10 * 60 * 1000
+
 export async function drainQueue(limit = 100): Promise<{ processed: number; failed: number }> {
+  const now = new Date()
+  const staleBefore = new Date(now.getTime() - STUCK_PROCESSING_MS)
   const jobs = await WoocommerceSyncQueue.findAll({
-    where: { status: 'pending', next_attempt_at: { [Op.lte]: new Date() } },
+    where: {
+      [Op.or]: [
+        { status: 'pending', next_attempt_at: { [Op.lte]: now } },
+        // Reclaim jobs left 'processing' by a crashed worker.
+        { status: 'processing', updated_at: { [Op.lte]: staleBefore } },
+      ],
+    },
     order: [['created_at', 'ASC']],
     limit,
   })
@@ -32,6 +42,16 @@ export async function drainQueue(limit = 100): Promise<{ processed: number; fail
   const siteCache = new Map<string, WoocommerceSite | null>()
 
   for (const job of jobs) {
+    // Atomically claim the job with optimistic concurrency: the UPDATE only
+    // succeeds if the row is still exactly as we read it (same status and
+    // updated_at). Concurrent ticks see 0 rows affected and skip, so a job is
+    // never processed twice and active jobs are never stolen.
+    const [claimed] = await WoocommerceSyncQueue.update(
+      { status: 'processing' },
+      { where: { id: job.id, status: job.status, updated_at: job.updated_at } },
+    )
+    if (claimed === 0) continue
+
     try {
       let site = siteCache.get(job.site_id)
       if (site === undefined) {

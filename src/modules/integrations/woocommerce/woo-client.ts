@@ -23,8 +23,10 @@ export interface WooLineItem {
   quantity: number
   /** Line subtotal excluding tax, as a decimal string. */
   subtotal?: string
-  /** Line total excluding tax, as a decimal string. */
+  /** Line total after discounts, excluding tax, as a decimal string. */
   total?: string
+  /** Tax on the line total, as a decimal string. */
+  total_tax?: string
   price?: number
 }
 

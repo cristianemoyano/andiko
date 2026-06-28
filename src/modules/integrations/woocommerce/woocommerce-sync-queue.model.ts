@@ -5,7 +5,7 @@ import type { UUID } from '@/types'
 export const WOO_SYNC_KINDS = ['stock', 'product', 'order_ingest'] as const
 export type WooSyncKind = typeof WOO_SYNC_KINDS[number]
 
-export const WOO_SYNC_STATUSES = ['pending', 'done', 'error'] as const
+export const WOO_SYNC_STATUSES = ['pending', 'processing', 'done', 'error'] as const
 export type WooSyncStatus = typeof WOO_SYNC_STATUSES[number]
 
 export interface WoocommerceSyncQueueAttributes {

@@ -6,7 +6,7 @@ vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error:
 vi.mock('@/lib/db', () => ({ default: { transaction: vi.fn(async (fn: unknown) => (fn as (t: unknown) => unknown)({})) } }))
 
 vi.mock('./woocommerce-site.model', () => ({ default: { findByPk: vi.fn() } }))
-vi.mock('./woocommerce-order-link.model', () => ({ default: { findOne: vi.fn(), upsert: vi.fn() } }))
+vi.mock('./woocommerce-order-link.model', () => ({ default: { findOne: vi.fn(), findOrCreate: vi.fn() } }))
 vi.mock('./woocommerce-customer-link.model', () => ({ default: { findOne: vi.fn(), create: vi.fn() } }))
 vi.mock('@/modules/sales/sales-order.model', () => ({ default: { create: vi.fn(), findByPk: vi.fn() } }))
 vi.mock('@/modules/sales/sales-order-item.model', () => ({ default: { bulkCreate: vi.fn() } }))
@@ -40,13 +40,18 @@ const order = {
   shipping: {},
 } as never
 
+// Shared link instance whose .update we assert on (set fresh per test).
+let linkInstance: { update: Mock }
+
 beforeEach(() => {
   vi.clearAllMocks()
+  linkInstance = { update: vi.fn() }
   ;(WoocommerceSite.findByPk as Mock).mockResolvedValue(site)
   ;(ProductVariant.findOne as Mock).mockResolvedValue({ id: 'v1', product_id: 'p1' })
   ;(Product.findByPk as Mock).mockResolvedValue({ id: 'p1', iva_rate: '21' })
   ;(SalesOrder.create as Mock).mockResolvedValue({ id: 'so1' })
-  ;(WoocommerceOrderLink.upsert as Mock).mockImplementation(async (vals: unknown) => [vals])
+  // Default: we win the idempotency race (created = true).
+  ;(WoocommerceOrderLink.findOrCreate as Mock).mockResolvedValue([linkInstance, true])
 })
 
 describe('ingestWooOrder', () => {
@@ -69,10 +74,21 @@ describe('ingestWooOrder', () => {
       expect.anything(),
     )
     expect(deductStockForOrder).toHaveBeenCalled()
-    expect(WoocommerceOrderLink.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ sync_status: 'synced', sales_order_id: 'so1', woo_order_id: '100' }),
+    expect(linkInstance.update).toHaveBeenCalledWith(
+      expect.objectContaining({ sync_status: 'synced', sales_order_id: 'so1' }),
       expect.anything(),
     )
+  })
+
+  it('returns the existing link without creating an order when it loses the idempotency race', async () => {
+    ;(WoocommerceOrderLink.findOne as Mock).mockResolvedValue(null)
+    // created = false → another concurrent ingest already claimed this order.
+    ;(WoocommerceOrderLink.findOrCreate as Mock).mockResolvedValue([linkInstance, false])
+
+    await ingestWooOrder('s1', order)
+
+    expect(SalesOrder.create).not.toHaveBeenCalled()
+    expect(deductStockForOrder).not.toHaveBeenCalled()
   })
 
   it('flags needs_review (but still creates the order) when stock is insufficient', async () => {
@@ -82,7 +98,7 @@ describe('ingestWooOrder', () => {
     await ingestWooOrder('s1', order)
 
     expect(SalesOrder.create).toHaveBeenCalled()
-    expect(WoocommerceOrderLink.upsert).toHaveBeenCalledWith(
+    expect(linkInstance.update).toHaveBeenCalledWith(
       expect.objectContaining({ sync_status: 'needs_review', sales_order_id: 'so1' }),
       expect.anything(),
     )
@@ -94,7 +110,7 @@ describe('ingestWooOrder', () => {
     await ingestWooOrder('s1', order, { deductStock: false })
 
     expect(deductStockForOrder).not.toHaveBeenCalled()
-    expect(WoocommerceOrderLink.upsert).toHaveBeenCalledWith(
+    expect(linkInstance.update).toHaveBeenCalledWith(
       expect.objectContaining({ sync_status: 'synced' }),
       expect.anything(),
     )

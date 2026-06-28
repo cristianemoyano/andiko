@@ -9,6 +9,7 @@ import type { TenantContext } from '@/lib/tenancy'
 import Branch from '@/modules/auth/branch.model'
 import WoocommerceSite from './woocommerce-site.model'
 import { WooClient } from './woo-client'
+import { invalidateSiteCache } from './woo-stock.service'
 import type { WoocommerceSiteInput, WoocommerceSiteUpdateInput, WoocommerceSiteQuery } from './woocommerce.schema'
 
 /** API-safe projection: never expose encrypted secrets. */
@@ -84,6 +85,7 @@ export async function createSite(input: WoocommerceSiteInput, ctx: TenantContext
     updated_by: actorId,
   })
 
+  invalidateSiteCache(ctx.orgId)
   logger.info({ siteId: site.id, orgId: ctx.orgId, actorId }, 'woocommerce site created')
 
   // Best-effort: register the webhooks WooCommerce will call back on. Failure
@@ -113,6 +115,7 @@ export async function updateSite(
   if (input.webhook_secret) patch.webhook_secret_encrypted = encryptSecret(input.webhook_secret)
 
   await site.update(patch)
+  invalidateSiteCache(ctx.orgId)
   logger.info({ siteId: id, orgId: ctx.orgId, actorId }, 'woocommerce site updated')
   return toPublicSite(site)
 }
@@ -121,6 +124,7 @@ export async function deleteSite(id: string, ctx: TenantContext, actorId: string
   const site = await getSite(id, ctx.orgId)
   await site.update({ deleted_by: actorId })
   await site.destroy()
+  invalidateSiteCache(ctx.orgId)
   logger.info({ siteId: id, orgId: ctx.orgId, actorId }, 'woocommerce site soft-deleted')
 }
 

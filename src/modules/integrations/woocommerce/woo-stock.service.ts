@@ -9,6 +9,18 @@ import WoocommerceProductLink from './woocommerce-product-link.model'
 import { buildClientForSite } from './woo-sites.service'
 import { enqueue } from './woo-queue'
 
+// Short-lived per-org cache of "has any active site". This hook runs on every
+// stock movement across all channels; the vast majority of orgs have no
+// WooCommerce site, so we skip the query for them. Invalidated on site CUD and
+// bounded by TTL so a new site starts syncing within a minute regardless.
+const HAS_SITES_TTL_MS = 60 * 1000
+const hasSitesCache = new Map<string, { value: boolean; expires: number }>()
+
+/** Drops the cached "has sites" flag for an org (call on site create/update/delete). */
+export function invalidateSiteCache(orgId: string): void {
+  hasSitesCache.delete(orgId)
+}
+
 /**
  * Enqueues a stock push to every active site that shares the warehouse a
  * movement just touched (i.e. whose linked branch resolves to that warehouse).
@@ -20,11 +32,15 @@ export async function enqueueStockSync(
   orgId: string,
   t: Transaction,
 ): Promise<void> {
+  const cached = hasSitesCache.get(orgId)
+  if (cached && cached.expires > Date.now() && !cached.value) return
+
   const sites = await WoocommerceSite.findAll({
     where: { org_id: orgId, is_active: true },
     attributes: ['id', 'org_id', 'branch_id'],
     transaction: t,
   })
+  hasSitesCache.set(orgId, { value: sites.length > 0, expires: Date.now() + HAS_SITES_TTL_MS })
   for (const site of sites) {
     const siteWarehouse = await resolveDefaultWarehouse(site.branch_id, orgId, t)
     if (siteWarehouse !== warehouseId) continue

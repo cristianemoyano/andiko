@@ -1,11 +1,13 @@
 import 'server-only'
+import Decimal from 'decimal.js'
 import logger from '@/lib/logger'
-import type { TenantContext } from '@/lib/tenancy'
+import sequelize from '@/lib/db'
 import Product from '@/modules/catalog/product.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
+import StockItem from '@/modules/inventory/stock-item.model'
 import { slugForImportedProduct } from '@/modules/catalog/product.utils'
 import { resolveDefaultWarehouse } from '@/modules/inventory/warehouses.service'
-import { manualAdjustment } from '@/modules/inventory/stock-movements.service'
+import { applyMovement } from '@/modules/inventory/stock-movements.service'
 import WoocommerceSite from './woocommerce-site.model'
 import WoocommerceProductLink from './woocommerce-product-link.model'
 import { buildClientForSite } from './woo-sites.service'
@@ -191,20 +193,41 @@ export async function applyImport(site: WoocommerceSite, options: WoocommerceImp
   return { products_linked: linked, products_imported: imported, orders_imported: ordersImported, baseline: options.stock_baseline }
 }
 
-/** Seeds ERP stock from Woo's current quantities via manual adjustments. */
+/**
+ * Seeds ERP stock from Woo's current quantities. All adjustments run in a single
+ * transaction (one round-trip group, not one per SKU) using `applyMovement`
+ * directly so the inventory ledger stays consistent.
+ */
 async function seedErpStockFromWoo(site: WoocommerceSite, units: WooUnit[]): Promise<void> {
   const warehouseId = await resolveDefaultWarehouse(site.branch_id, site.org_id!)
   if (!warehouseId) return
-  const ctx: TenantContext = {
-    orgId: site.org_id!,
-    userId: actorFor(site),
-    defaultBranchId: site.branch_id,
-    allowedBranchIds: [site.branch_id],
-  }
-  for (const u of units) {
-    if (!u.sku || u.stock === null) continue
-    const variant = await ProductVariant.findOne({ where: { sku: u.sku, org_id: site.org_id }, attributes: ['id'] })
-    if (!variant) continue
-    await manualAdjustment(variant.id, warehouseId, u.stock, 'Stock inicial importado de WooCommerce', ctx)
-  }
+  const actor = actorFor(site)
+
+  await sequelize.transaction(async (t) => {
+    for (const u of units) {
+      if (!u.sku || u.stock === null) continue
+      const variant = await ProductVariant.findOne({ where: { sku: u.sku, org_id: site.org_id }, attributes: ['id'], transaction: t })
+      if (!variant) continue
+
+      const [item] = await StockItem.findOrCreate({
+        where: { variant_id: variant.id, warehouse_id: warehouseId },
+        defaults: { variant_id: variant.id, warehouse_id: warehouseId, org_id: site.org_id!, quantity: '0' },
+        transaction: t,
+      })
+      const delta = new Decimal(u.stock).minus(item.quantity)
+      if (delta.isZero()) continue
+
+      await applyMovement({
+        variantId: variant.id,
+        warehouseId,
+        orgId: site.org_id!,
+        movementType: 'adjustment',
+        referenceType: 'manual',
+        referenceId: null,
+        quantityDelta: delta,
+        notes: 'Stock inicial importado de WooCommerce',
+        actorId: actor,
+      }, t)
+    }
+  })
 }
