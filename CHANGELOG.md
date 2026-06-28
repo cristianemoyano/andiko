@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.26.1](https://github.com/cristianemoyano/andiko/compare/v0.26.0...v0.26.1) (2026-06-28)
+
+### Bug Fixes
+
+* **core:** use CHECK constraint for woocommerce sales order source ([5f3ed84](https://github.com/cristianemoyano/andiko/commit/5f3ed846350aeb41aa30193284aa9a1f47366ad0))
+
 ## [0.26.0](https://127.0.0.1/41729/git/cristianemoyano/compare/v0.25.2...v0.26.0) (2026-06-28)
 
 ### Features
