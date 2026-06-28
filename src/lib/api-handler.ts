@@ -113,6 +113,28 @@ export function withTenantPermission<P extends Record<string, string> = Record<s
   })
 }
 
+/**
+ * Authenticated + tenant-scoped, but WITHOUT a fixed module permission gate.
+ *
+ * For cross-cutting resources whose authorization is relationship-based rather than
+ * matrix-based (the file service: access is derived from linked records + explicit shares).
+ * Gating these with a single module `Permission` would wrongly block users who legitimately
+ * have access via a linked record. The per-resource decision is made in the service (ReBAC).
+ */
+export function withTenantAuth<P extends Record<string, string> = Record<string, string>>(
+  handler: TenantRouteHandler<P>,
+): (req: NextRequest, ctx: RouteContext<P>) => Promise<NextResponse> {
+  return async (req: NextRequest, ctx: RouteContext<P>): Promise<NextResponse> => {
+    const session = await auth()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
+    }
+    const tenant = await resolveTenantContext((session as AuthedSession).user)
+    if ('error' in tenant) return tenant.error
+    return handler(req, ctx, session as AuthedSession, tenant.ctx)
+  }
+}
+
 /** Like `withPermission`, but resolves org id (without branch allow-list) before the handler. */
 export function withOrgPermission<P extends Record<string, string> = Record<string, string>>(
   permission: Permission,

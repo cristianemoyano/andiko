@@ -11,7 +11,35 @@ const envSchema = z.object({
   // `homologacion`/`produccion` the certificate + key are stored per-organization
   // (see afip-credentials.service). This only selects the target environment.
   AFIP_MODE: z.enum(['stub', 'homologacion', 'produccion']).default('stub'),
+
+  // File storage. The service is vendor-agnostic; `s3` is the only backend today.
+  // The platform uses a single bucket and isolates tenants by key prefix (org_id/...).
+  // S3_* credentials/bucket are required in production; in dev/test they can be omitted
+  // (e.g. when pointing at MinIO via S3_ENDPOINT, or when storage is not exercised).
+  FILE_STORAGE_PROVIDER: z.enum(['s3']).default('s3'),
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  // Optional override for S3-compatible stores (MinIO, Cloudflare R2, etc.).
+  S3_ENDPOINT: z.string().url().optional(),
+  // Hard cap on a single upload, enforced at request validation and re-checked on complete.
+  FILE_MAX_BYTES: z.coerce.number().int().positive().default(26_214_400), // 25 MiB
 })
+  .superRefine((val, ctx) => {
+    if (val.NODE_ENV === 'production' && val.FILE_STORAGE_PROVIDER === 's3') {
+      const required = ['S3_BUCKET', 'S3_REGION', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'] as const
+      for (const key of required) {
+        if (!val[key]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `${key} is required when FILE_STORAGE_PROVIDER=s3 in production`,
+          })
+        }
+      }
+    }
+  })
 
 const parsed = envSchema.safeParse(process.env)
 
