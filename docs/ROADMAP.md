@@ -15,6 +15,7 @@ Infraestructura base sin lógica de negocio.
 - [x] AGENTS.md + skills de Claude (ship-feature, release, setup-tooling)
 - [x] Docker Compose con PostgreSQL 16 + pgAdmin (Colima como engine)
 - [x] Makefile con comandos de entorno local (up, down, reset, shell, dev)
+- [x] Despliegue producción VPS: Docker Swarm + nginx + Certbot — ver [docs/deployment/production.md](deployment/production.md)
 - [x] PostgreSQL + Sequelize setup (`src/lib/db.ts`, pool, paranoid, underscored)
 - [x] Estructura de módulos (`src/modules/` con contacts, sales, inventory, purchases, accounting, auth)
 - [x] Variables de entorno y configuración por ambiente (`src/config/env.ts` con Zod)

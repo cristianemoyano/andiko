@@ -4,7 +4,7 @@ import { env } from '@/config/env'
 
 // In serverless environments (Vercel) each function invocation is isolated,
 // so min:0 avoids holding idle connections across cold starts.
-const isServerless = env.NODE_ENV === 'production'
+const isServerless = process.env.VERCEL === '1'
 
 const sequelize = new Sequelize(env.DATABASE_URL, {
   dialect: 'postgres',
