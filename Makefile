@@ -1,4 +1,6 @@
-.PHONY: up down reset logs db shell dev
+.PHONY: up down reset logs db shell dev \
+	prod-push prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-migrate prod-migrate-status \
+	prod-create-sysadmin prod-health prod-backup prod-logs prod-renew-certs
 
 # Start Colima and all services
 up:
@@ -31,3 +33,52 @@ shell:
 # Start Next.js dev server (infra must be up first)
 dev: up
 	pnpm dev
+
+# --- Production (VPS / laptop) — see docs/deployment/production.md ---
+
+prod-push:
+	@test -n "$(TAG)" || (echo "TAG is required: make prod-push TAG=v0.26.0" && exit 1)
+	TAG=$(TAG) bash infra/scripts/push-image.sh
+
+prod-bootstrap-vps:
+	sudo bash infra/scripts/bootstrap-vps.sh
+
+prod-init:
+	bash infra/scripts/init-swarm.sh
+
+prod-secrets:
+	bash infra/scripts/rotate-secrets.sh
+
+prod-deploy:
+	@test -n "$(TAG)" || (echo "TAG is required: make prod-deploy TAG=v0.26.0" && exit 1)
+	TAG=$(TAG) bash infra/scripts/deploy.sh
+
+prod-ssl:
+	bash infra/scripts/init-ssl.sh
+
+prod-migrate:
+	@test -n "$(TAG)" || (echo "TAG is required: make prod-migrate TAG=v0.26.0" && exit 1)
+	TAG=$(TAG) bash infra/scripts/migrate.sh up
+
+prod-migrate-status:
+	@test -n "$(TAG)" || (echo "TAG is required: make prod-migrate-status TAG=v0.26.0" && exit 1)
+	TAG=$(TAG) bash infra/scripts/migrate.sh status
+
+prod-create-sysadmin:
+	@test -n "$(TAG)" || (echo "TAG is required: make prod-create-sysadmin TAG=v0.26.0 EMAIL=... PASSWORD=..." && exit 1)
+	@test -n "$(EMAIL)" || (echo "EMAIL is required: make prod-create-sysadmin TAG=... EMAIL=admin@andiko.cloud PASSWORD=..." && exit 1)
+	@test -n "$(PASSWORD)" || (echo "PASSWORD is required (min 16 chars)" && exit 1)
+	TAG=$(TAG) EMAIL=$(EMAIL) PASSWORD=$(PASSWORD) NAME="$(NAME)" bash infra/scripts/create-sysadmin.sh
+
+prod-health:
+	@curl -sf "$${HEALTH_URL:-https://andiko.cloud/api/health}" | cat
+	@echo ""
+
+prod-backup:
+	bash infra/scripts/backup-db.sh
+
+prod-logs:
+	docker service logs -f andiko_app
+
+prod-renew-certs:
+	bash infra/certbot/renew.sh

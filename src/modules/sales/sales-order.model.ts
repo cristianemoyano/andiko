@@ -17,9 +17,10 @@ export interface SalesOrderAttributes extends Timestamps, AuditFields {
   quote_id: UUID | null
   price_list_id: UUID | null
   salesperson_id: UUID | null
-  source: 'erp' | 'pos'
+  source: 'erp' | 'pos' | 'woocommerce'
   pos_device_id: string | null
   pos_sale_id: string | null
+  channel_site_id: UUID | null
   order_number: string
   status: OrderStatus
   payment_condition: PaymentCondition
@@ -62,7 +63,7 @@ export interface SalesOrderAttributes extends Timestamps, AuditFields {
 type SalesOrderCreationAttributes = Optional<
   SalesOrderAttributes,
   | 'id' | 'org_id' | 'branch_id' | 'contact_id' | 'quote_id' | 'price_list_id' | 'salesperson_id'
-  | 'source' | 'pos_device_id' | 'pos_sale_id'
+  | 'source' | 'pos_device_id' | 'pos_sale_id' | 'channel_site_id'
   | 'status' | 'payment_condition' | 'currency'
   | 'promised_date' | 'delivered_date'
   | 'shipping_street' | 'shipping_number' | 'shipping_floor' | 'shipping_apartment' | 'shipping_city' | 'shipping_province' | 'shipping_postal_code' | 'shipping_country'
@@ -83,9 +84,10 @@ class SalesOrder extends AuditModel<SalesOrderAttributes, SalesOrderCreationAttr
   declare quote_id: UUID | null
   declare price_list_id: UUID | null
   declare salesperson_id: UUID | null
-  declare source: 'erp' | 'pos'
+  declare source: 'erp' | 'pos' | 'woocommerce'
   declare pos_device_id: string | null
   declare pos_sale_id: string | null
+  declare channel_site_id: UUID | null
   declare order_number: string
   declare status: OrderStatus
   declare payment_condition: PaymentCondition
@@ -133,9 +135,10 @@ SalesOrder.init(
     quote_id:          { type: DataTypes.UUID },
     price_list_id:     { type: DataTypes.UUID },
     salesperson_id:    { type: DataTypes.UUID },
-    source:            { type: DataTypes.ENUM('erp', 'pos'), allowNull: false, defaultValue: 'erp' },
+    source:            { type: DataTypes.ENUM('erp', 'pos', 'woocommerce'), allowNull: false, defaultValue: 'erp' },
     pos_device_id:     { type: DataTypes.STRING(128) },
     pos_sale_id:       { type: DataTypes.STRING(128) },
+    channel_site_id:   { type: DataTypes.UUID },
     order_number:      { type: DataTypes.STRING(20), allowNull: false },
     status:            { type: DataTypes.ENUM(...ORDER_STATUSES), allowNull: false, defaultValue: 'draft' },
     payment_condition: { type: DataTypes.ENUM('cash', 'net_30', 'net_60', 'net_90'), allowNull: false, defaultValue: 'cash' },

@@ -25,6 +25,8 @@ export interface PlanRow {
   per_seat_price: string
   included_branches: number
   per_branch_price: string
+  included_sites?: number
+  per_site_price?: string
   is_active: boolean
   modules?: { module_key: OrgModuleKey; included: boolean; addon_price: string }[]
   extras?: { extra_key: BillingExtraKey; included: boolean; addon_price: string }[]
@@ -103,6 +105,8 @@ function PlanModalForm({ plan, onClose, onSaved }: Omit<PlanModalProps, 'open'>)
   const [perSeatPrice, setPerSeatPrice] = useState(() => plan?.per_seat_price ?? '0.00')
   const [includedBranches, setIncludedBranches] = useState(() => String(plan?.included_branches ?? 1))
   const [perBranchPrice, setPerBranchPrice] = useState(() => plan?.per_branch_price ?? '0.00')
+  const [includedSites, setIncludedSites] = useState(() => String(plan?.included_sites ?? 0))
+  const [perSitePrice, setPerSitePrice] = useState(() => plan?.per_site_price ?? '0.00')
   const [isActive, setIsActive] = useState(() => plan?.is_active ?? true)
   const [modules, setModules] = useState<ModuleState>(() => initialModuleState(plan))
   const [extras, setExtras] = useState<ExtraState>(() => initialExtraState(plan))
@@ -121,6 +125,8 @@ function PlanModalForm({ plan, onClose, onSaved }: Omit<PlanModalProps, 'open'>)
       per_seat_price: perSeatPrice || '0.00',
       included_branches: Number(includedBranches),
       per_branch_price: perBranchPrice || '0.00',
+      included_sites: Number(includedSites),
+      per_site_price: perSitePrice || '0.00',
       is_active: isActive,
       modules: ORG_MODULE_DEFS.map(d => ({
         module_key: d.key,
@@ -206,6 +212,12 @@ function PlanModalForm({ plan, onClose, onSaved }: Omit<PlanModalProps, 'open'>)
             </FormField>
             <FormField label="Precio por sucursal extra (ARS)" htmlFor="plan_perbranch" error={errors.per_branch_price?.[0]}>
               <CurrencyInput id="plan_perbranch" value={perBranchPrice} onChange={setPerBranchPrice} error={!!errors.per_branch_price} />
+            </FormField>
+            <FormField label="Sitios WooCommerce incluidos" htmlFor="plan_sites" error={errors.included_sites?.[0]}>
+              <Input id="plan_sites" type="number" min={0} value={includedSites} onChange={e => setIncludedSites(e.target.value)} error={!!errors.included_sites} />
+            </FormField>
+            <FormField label="Precio por sitio extra (ARS)" htmlFor="plan_persite" error={errors.per_site_price?.[0]}>
+              <CurrencyInput id="plan_persite" value={perSitePrice} onChange={setPerSitePrice} error={!!errors.per_site_price} />
             </FormField>
           </div>
         </div>

@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.26.0](https://127.0.0.1/41729/git/cristianemoyano/compare/v0.25.2...v0.26.0) (2026-06-28)
+
+### Features
+
+* **core:** add prod-create-sysadmin for VPS bootstrap ([d7d6518](https://127.0.0.1/41729/git/cristianemoyano/commit/d7d6518583f2cae407cb5ec6e162b22fe95fe6e4))
+* **core:** add VPS bootstrap script for fresh Debian hosts ([1ee8346](https://127.0.0.1/41729/git/cristianemoyano/commit/1ee8346d2fb553651e9ab7cf761f63b8aee4438f))
+* **core:** add VPS Docker Swarm production deployment ([390e5b0](https://127.0.0.1/41729/git/cristianemoyano/commit/390e5b005b4917f6a62d4344fc4bbc51197037f6))
+* **sales:** add WooCommerce as a stock-sharing sales channel ([7af703e](https://127.0.0.1/41729/git/cristianemoyano/commit/7af703e1ddfd68f552d7ac1b251faa06bff51ecd))
+
+### Bug Fixes
+
+* **core:** copy src/modules into Docker image for prod migrations ([c907488](https://127.0.0.1/41729/git/cristianemoyano/commit/c90748822012731e2309d8ebc88529a891960883))
+* **core:** fix Docker build for prod-push ([5fdeb49](https://127.0.0.1/41729/git/cristianemoyano/commit/5fdeb491dc43cf62977271e89f86f7577a7b1ffd))
+* **core:** fix python heredoc in build_database_url helper ([4c7e517](https://127.0.0.1/41729/git/cristianemoyano/commit/4c7e5178ae5726c347c2d8db359a6d6901f3b2b2))
+* **core:** move nginx SSL templates out of conf.d ([0d6e213](https://127.0.0.1/41729/git/cristianemoyano/commit/0d6e213b046244d851d950cafca04a623ed8f59c))
+* **core:** quote-safe BACKUP_GDRIVE_FOLDER in prod env template ([72239be](https://127.0.0.1/41729/git/cristianemoyano/commit/72239be15702ba3be581d83129a80bc52a8dc6c2))
+* **core:** url-encode database url for prod migrate and secrets ([1bd5e29](https://127.0.0.1/41729/git/cristianemoyano/commit/1bd5e293ee9751bc90e23ee7410cd7625ee4cf4a))
+* **sales:** harden WooCommerce sync against races and waste ([46278b1](https://127.0.0.1/41729/git/cristianemoyano/commit/46278b17d377935ae5c5c081ef162b26239cac7e))
+
 ## [0.25.2](https://github.com/cristianemoyano/andiko/compare/v0.25.1...v0.25.2) (2026-06-28)
 
 ### Bug Fixes

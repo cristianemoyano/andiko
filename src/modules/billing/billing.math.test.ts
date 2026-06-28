@@ -8,6 +8,8 @@ const basePlan = {
   per_seat_price: '1500.00',
   included_branches: 1,
   per_branch_price: '2500.00',
+  included_sites: 0,
+  per_site_price: '4000.00',
 }
 
 const baseInput = {
@@ -15,6 +17,7 @@ const baseInput = {
   seats: 1,
   contracted_seats: 0,
   branches: 1,
+  sites: 0,
   addons: [] as { module_key: string; unit_price: string; enabled: boolean }[],
   extras: [] as { extra_key: string; unit_price: string; enabled: boolean }[],
   usage: [] as { metric_key: string; label: string; unit_label: string | null; unit_price: string; quantity: string; included_quantity: string }[],
@@ -24,9 +27,20 @@ describe('calcSubscriptionCharges', () => {
   it('includes base and capacity summary lines when within plan limits', () => {
     const lines = calcSubscriptionCharges({ ...baseInput, seats: 2 })
     expect(lines.find(l => l.kind === 'base')).toBeDefined()
-    expect(lines.filter(l => l.kind === 'adjustment')).toHaveLength(2)
+    expect(lines.filter(l => l.kind === 'adjustment')).toHaveLength(3)
     expect(lines.find(l => l.kind === 'seat')).toBeUndefined()
+    expect(lines.find(l => l.kind === 'site')).toBeUndefined()
     expect(calcBillingTotals(lines).subtotal).toBe('10000.00')
+  })
+
+  it('adds a site-overage line for WooCommerce sites beyond included_sites', () => {
+    const lines = calcSubscriptionCharges({ ...baseInput, sites: 2 })
+    const site = lines.find(l => l.kind === 'site')
+    expect(site).toBeDefined()
+    expect(site!.quantity).toBe('2.0000')        // 2 - 0 included
+    expect(site!.subtotal).toBe('8000.00')       // 2 * 4000
+    expect(site!.total).toBe('9680.00')          // +21%
+    expect(site!.description).toContain('2 activos')
   })
 
   it('adds a seat-overage line for seats beyond included_seats', () => {

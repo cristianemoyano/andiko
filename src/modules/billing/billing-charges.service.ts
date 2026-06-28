@@ -11,7 +11,7 @@ import BillingPlanMetricAllowance from './billing-plan-metric-allowance.model'
 import SubscriptionMetricAllowance from './subscription-metric-allowance.model'
 import { getTrackedBillingMetric } from './billing-metrics.catalog'
 import { aggregateUsage } from './usage.service'
-import { countActiveUsers, countActiveBranches } from './billing-counts.service'
+import { countActiveUsers, countActiveBranches, countActiveSites } from './billing-counts.service'
 import { calcSubscriptionCharges, calcBillingTotals, type BillingChargeInput } from './billing.math'
 import type { BillingLineKind } from '@/types'
 
@@ -38,6 +38,7 @@ export async function buildSubscriptionChargeInput(
   chargeInput: BillingChargeInput
   seatCount: number
   branchCount: number
+  siteCount: number
   contractedSeats: number
   usageLines: UsageLineInput[]
   warnings: BillingChargeWarning[]
@@ -116,6 +117,7 @@ export async function buildSubscriptionChargeInput(
 
   const seatCount = sub.org_id ? await countActiveUsers(sub.org_id, t) : 0
   const branchCount = sub.org_id ? await countActiveBranches(sub.org_id, t) : 0
+  const siteCount = sub.org_id ? await countActiveSites(sub.org_id, t) : 0
   const contractedSeats = sub.seats
 
   const chargeInput: BillingChargeInput = {
@@ -126,16 +128,19 @@ export async function buildSubscriptionChargeInput(
       per_seat_price: plan.per_seat_price,
       included_branches: plan.included_branches,
       per_branch_price: plan.per_branch_price,
+      included_sites: plan.included_sites,
+      per_site_price: plan.per_site_price,
     },
     seats: seatCount,
     contracted_seats: contractedSeats,
     branches: branchCount,
+    sites: siteCount,
     addons: addons.map(a => ({ module_key: a.module_key, unit_price: a.unit_price, enabled: a.enabled })),
     extras: subscriptionExtras.map(e => ({ extra_key: e.extra_key, unit_price: e.unit_price, enabled: e.enabled })),
     usage: usageLines,
   }
 
-  return { chargeInput, seatCount, branchCount, contractedSeats, usageLines, warnings }
+  return { chargeInput, seatCount, branchCount, siteCount, contractedSeats, usageLines, warnings }
 }
 
 function trimQty(qty: string): string {
@@ -153,7 +158,7 @@ export function buildChargeLines(chargeInput: BillingChargeInput) {
   return { lines, totals }
 }
 
-const PREVIEW_KINDS = new Set<BillingLineKind>(['base', 'adjustment', 'seat', 'branch', 'module_addon', 'extra_addon', 'usage'])
+const PREVIEW_KINDS = new Set<BillingLineKind>(['base', 'adjustment', 'seat', 'branch', 'site', 'module_addon', 'extra_addon', 'usage'])
 
 export function chargeLinesToPreviewLines(
   lines: ReturnType<typeof calcSubscriptionCharges>,
@@ -161,7 +166,7 @@ export function chargeLinesToPreviewLines(
   return lines
     .filter(l => PREVIEW_KINDS.has(l.kind))
     .map(l => ({
-      kind: l.kind as 'base' | 'adjustment' | 'seat' | 'branch' | 'module_addon' | 'extra_addon' | 'usage',
+      kind: l.kind as 'base' | 'adjustment' | 'seat' | 'branch' | 'site' | 'module_addon' | 'extra_addon' | 'usage',
       label: l.description,
       quantity: l.quantity,
       unit_price: l.unit_price,
