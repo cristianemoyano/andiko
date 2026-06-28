@@ -43,7 +43,7 @@ if [ "${BACKUP_ENCRYPT:-no}" = "yes" ] && [ -n "${BACKUP_AGE_PUBLIC_KEY:-}" ]; t
 fi
 
 if [ -n "${BACKUP_GDRIVE_REMOTE:-}" ] && command -v rclone >/dev/null 2>&1; then
-  REMOTE="${BACKUP_GDRIVE_REMOTE}:${BACKUP_GDRIVE_FOLDER:-Andiko Prod Backups}"
+  REMOTE="${BACKUP_GDRIVE_REMOTE}:${BACKUP_GDRIVE_FOLDER:-andiko-prod-backups}"
   echo "Uploading to ${REMOTE} ..."
   rclone copy "$UPLOAD_FILE" "$REMOTE"
   echo "Upload complete."

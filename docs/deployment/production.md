@@ -61,6 +61,8 @@ openssl rand -base64 32   # AUTH_SECRET, CRON_SECRET, POSTGRES_PASSWORD
 | `CERTBOT_EMAIL` | Let's Encrypt notifications |
 | `BACKUP_GDRIVE_*` | rclone remote for off-site backups |
 
+Values with spaces must be quoted in `infra/.env.production`, e.g. `BACKUP_GDRIVE_FOLDER="my folder"`.
+
 ## VPS from zero (Hostinger Debian)
 
 Fresh VPS with nothing installed — follow in order.
