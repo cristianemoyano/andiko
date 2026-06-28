@@ -4,7 +4,7 @@ import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/t
 import { salesReportQuerySchema } from '@/modules/sales/sales-reports.schema'
 import { getSalesReport } from '@/modules/sales/sales-reports.service'
 
-export const GET = withPermission('sales:read', async (req, _ctx, session) => {
+export const GET = withPermission('accounting:read', async (req, _ctx, session) => {
   const parsed = salesReportQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })

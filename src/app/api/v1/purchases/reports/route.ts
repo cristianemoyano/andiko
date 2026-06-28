@@ -4,7 +4,7 @@ import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/t
 import { purchasesReportQuerySchema } from '@/modules/purchases/purchases-reports.schema'
 import { getPurchasesReport } from '@/modules/purchases/purchases-reports.service'
 
-export const GET = withPermission('purchases:read', async (req, _ctx, session) => {
+export const GET = withPermission('accounting:read', async (req, _ctx, session) => {
   const parsed = purchasesReportQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
   if (!parsed.success) {
     return NextResponse.json(

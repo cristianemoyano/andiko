@@ -11,9 +11,10 @@ import { EmailTemplatesTab } from './EmailTemplatesTab'
 import { EmailLogsTab } from './EmailLogsTab'
 import { AppearanceTab } from './AppearanceTab'
 import { AfipConfigTab } from './AfipConfigTab'
+import { IntegracionesTab } from './IntegracionesTab'
 import { useCapabilities } from '@/components/layout/CapabilitiesContext'
 
-type Section = 'impresion' | 'plantillas-email' | 'emails-enviados' | 'apariencia' | 'afip'
+type Section = 'impresion' | 'plantillas-email' | 'emails-enviados' | 'apariencia' | 'afip' | 'integraciones'
 
 const SECTION_LABEL: Record<Section, string> = {
   impresion: 'Plantilla de impresión',
@@ -21,10 +22,19 @@ const SECTION_LABEL: Record<Section, string> = {
   'emails-enviados': 'Emails enviados',
   apariencia: 'Apariencia',
   afip: 'AFIP',
+  integraciones: 'Integraciones',
 }
 
 function parseSection(value: string | null): Section {
-  if (value === 'plantillas-email' || value === 'emails-enviados' || value === 'apariencia' || value === 'afip') return value
+  if (
+    value === 'plantillas-email'
+    || value === 'emails-enviados'
+    || value === 'apariencia'
+    || value === 'afip'
+    || value === 'integraciones'
+  ) {
+    return value
+  }
   return 'impresion'
 }
 
@@ -48,20 +58,23 @@ export function ConfiguracionClient({
     ? 'apariencia'
     : tabs.impresion
       ? 'impresion'
-      : tabs.plantillasEmail
-        ? 'plantillas-email'
-        : tabs.emailsEnviados
-          ? 'emails-enviados'
-          : tabs.afip
-            ? 'afip'
-            : 'apariencia'
+      : tabs.integraciones
+        ? 'integraciones'
+        : tabs.plantillasEmail
+          ? 'plantillas-email'
+          : tabs.emailsEnviados
+            ? 'emails-enviados'
+            : tabs.afip
+              ? 'afip'
+              : 'apariencia'
 
   const section = (
     (requested === 'impresion' && tabs.impresion) ||
     (requested === 'plantillas-email' && tabs.plantillasEmail) ||
     (requested === 'emails-enviados' && tabs.emailsEnviados) ||
     (requested === 'apariencia' && tabs.apariencia) ||
-    (requested === 'afip' && tabs.afip)
+    (requested === 'afip' && tabs.afip) ||
+    (requested === 'integraciones' && tabs.integraciones)
   ) ? requested : defaultSection
 
   function handleSectionChange(next: string) {
@@ -96,6 +109,7 @@ export function ConfiguracionClient({
             {tabs.emailsEnviados && <TabsTrigger value="emails-enviados">Emails enviados</TabsTrigger>}
             {tabs.apariencia && <TabsTrigger value="apariencia">Apariencia</TabsTrigger>}
             {tabs.afip && <TabsTrigger value="afip">AFIP</TabsTrigger>}
+            {tabs.integraciones && <TabsTrigger value="integraciones">Integraciones</TabsTrigger>}
           </TabsList>
 
           {tabs.impresion && (
@@ -121,6 +135,11 @@ export function ConfiguracionClient({
           {tabs.afip && (
             <TabsContent value="afip">
               <AfipConfigTab />
+            </TabsContent>
+          )}
+          {tabs.integraciones && (
+            <TabsContent value="integraciones">
+              <IntegracionesTab />
             </TabsContent>
           )}
         </Tabs>

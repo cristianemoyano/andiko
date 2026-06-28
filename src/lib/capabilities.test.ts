@@ -2,7 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/session-org', () => ({
-  resolveOrgIdForMutation: vi.fn(async () => 'org-1'),
+  resolveOrgIdForMutation: vi.fn(async (user: {
+    orgId: string | null
+    actingOrgId?: string | null
+    role: string
+    realRole?: string
+  }) => {
+    if (user.orgId) return user.orgId
+    const isRealSysAdmin = (user.realRole ?? user.role) === 'sys-admin'
+    if (isRealSysAdmin && user.actingOrgId) return user.actingOrgId
+    return null
+  }),
 }))
 vi.mock('@/lib/permissions', () => ({
   getPermissionsForUser: vi.fn(),
@@ -25,6 +35,7 @@ function session(overrides: Partial<{
   realRole: UserRole
   orgId: string | null
   orgRoleId: string | null
+  actingOrgId: string | null
   impersonation: { userId: string; email: string; name: string; role: UserRole } | null
 }> = {}): Session {
   const role = overrides.role ?? 'admin'
@@ -40,7 +51,7 @@ function session(overrides: Partial<{
       orgId,
       branchId: null,
       orgRoleId: overrides.orgRoleId ?? null,
-      actingOrgId: null,
+      actingOrgId: overrides.actingOrgId ?? null,
       realRole,
       realOrgId: orgId,
       realBranchId: null,
@@ -69,6 +80,10 @@ describe('resolveCapabilities()', () => {
     expect(caps?.organizacion.sections.enabledModules).toBe(false)
     expect(caps?.nav.organizacionesHref).toBe('/organizaciones/org-1')
     expect(caps?.nav.facturacion).toBe(true)
+    expect(caps?.nav.integraciones).toBe(true)
+    expect(caps?.integraciones.read).toBe(true)
+    expect(caps?.integraciones.write).toBe(true)
+    expect(caps?.configuracion.tabs.integraciones).toBe(true)
     expect(caps?.onboarding.manage).toBe(true)
   })
 
@@ -79,16 +94,32 @@ describe('resolveCapabilities()', () => {
     expect(caps?.organizacion.apiNamespace).toBe('sys-admin')
     expect(caps?.nav.organizacionesHref).toBe('/organizaciones')
     expect(caps?.nav.facturacion).toBe(false)
+    expect(caps?.nav.integraciones).toBe(false)
+    expect(caps?.configuracion.tabs.integraciones).toBe(false)
     expect(caps?.configuracion.tabs.apariencia).toBe(true)
     expect(caps?.configuracion.tabs.impresion).toBe(false)
     expect(caps?.configuracion.tabs.afip).toBe(false)
     expect(caps?.onboarding.manage).toBe(false)
   })
 
+  it('shows integraciones for sys-admin with acting org context', async () => {
+    mockGetPermissions.mockResolvedValue(['contacts:read'])
+    const caps = await resolveCapabilities(session({
+      role: 'sys-admin',
+      realRole: 'sys-admin',
+      orgId: null,
+      actingOrgId: 'org-1',
+    }))
+    expect(caps?.nav.integraciones).toBe(true)
+    expect(caps?.integraciones.write).toBe(true)
+    expect(caps?.configuracion.tabs.integraciones).toBe(true)
+  })
+
   it('hides facturacion dashboard for branch-admin without settings', async () => {
     mockGetPermissions.mockResolvedValue(['sales:read', 'sales:write', 'panel:read'])
     const caps = await resolveCapabilities(session({ role: 'branch-admin', realRole: 'branch-admin' }))
     expect(caps?.nav.facturacion).toBe(false)
+    expect(caps?.nav.integraciones).toBe(false)
   })
 
   it('shows facturacion dashboard for sys-admin impersonating an org admin', async () => {
@@ -134,6 +165,7 @@ describe('resolveCapabilities()', () => {
     expect(caps?.configuracion.tabs.apariencia).toBe(true)
     expect(caps?.configuracion.tabs.impresion).toBe(false)
     expect(caps?.configuracion.tabs.afip).toBe(false)
+    expect(caps?.configuracion.tabs.integraciones).toBe(false)
     expect(caps?.onboarding.manage).toBe(false)
   })
 

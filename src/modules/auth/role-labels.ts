@@ -6,13 +6,39 @@ export type AssignableBuiltinRole = 'admin' | 'branch-admin'
 
 export const ASSIGNABLE_BUILTIN_ROLES: AssignableBuiltinRole[] = ['admin', 'branch-admin']
 
+/** DB `users.role` for custom org roles (Vendedor, Contador, etc.). Not shown as "Operativo" in UI. */
+export const CUSTOM_ORG_ROLE_CARRIER: UserRole = 'operator'
+
+/** Built-in roles deprecated for new users; kept for existing rows and update flows. */
+export const LEGACY_BUILTIN_ROLES = ['operator'] as const
+export type LegacyBuiltinRole = (typeof LEGACY_BUILTIN_ROLES)[number]
+
+export function isLegacyBuiltinRole(role: UserRole | string): role is LegacyBuiltinRole {
+  return (LEGACY_BUILTIN_ROLES as readonly string[]).includes(role)
+}
+
+export function isCustomOrgRoleCarrier(
+  role: UserRole | string,
+  orgRoleId: string | null | undefined,
+): boolean {
+  return role === CUSTOM_ORG_ROLE_CARRIER && !!orgRoleId
+}
+
+/** Standalone legacy Operativo (`operator` without `org_role_id`). */
+export function isStandaloneLegacyOperator(
+  role: UserRole | string,
+  orgRoleId: string | null | undefined,
+): boolean {
+  return role === CUSTOM_ORG_ROLE_CARRIER && !orgRoleId
+}
+
 /** Built-in columns shown in the permission matrix (reference defaults). */
 export const BUILTIN_MATRIX_ROLES: UserRole[] = ['admin', 'branch-admin', 'readonly']
 
 export const BUILTIN_ROLE_LABEL: Record<UserRole, string | null> = {
   'sys-admin': 'Sys-admin',
   admin: 'Gerente',
-  operator: 'Operativo',
+  operator: 'Operativo (legacy)',
   readonly: 'Solo lectura',
   'branch-admin': 'Encargado de sucursal',
 }
@@ -106,4 +132,15 @@ export function resolveUserRoleLabel(
   if (orgRoleName) return orgRoleName
   const label = BUILTIN_ROLE_LABEL[builtinRole as UserRole]
   return label ?? String(builtinRole)
+}
+
+export function resolveUserRoleBadgeStatus(
+  role: UserRole | string,
+  orgRoleId: string | null | undefined,
+): 'info' | 'success' | 'pending' | 'neutral' {
+  if (isStandaloneLegacyOperator(role, orgRoleId)) return 'neutral'
+  if (role === 'sys-admin') return 'info'
+  if (role === 'admin' || role === 'branch-admin') return 'success'
+  if (role === 'readonly') return 'neutral'
+  return 'neutral'
 }

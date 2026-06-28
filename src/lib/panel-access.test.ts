@@ -13,7 +13,12 @@ const baseCaps = (overrides: Partial<UiCapabilities['nav']> = {}): UiCapabilitie
     organizacionesHref: null,
     configuracion: true,
     facturacion: false,
+    integraciones: false,
     ...overrides,
+  },
+  integraciones: {
+    read: false,
+    write: false,
   },
   organizacion: {
     detail: false,
@@ -45,6 +50,7 @@ const baseCaps = (overrides: Partial<UiCapabilities['nav']> = {}): UiCapabilitie
       emailsEnviados: false,
       apariencia: true,
       afip: false,
+      integraciones: false,
     },
   },
   onboarding: {

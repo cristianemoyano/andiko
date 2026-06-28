@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { validateCuit } from './contact.utils'
 import { paginationSchema } from '@/lib/pagination'
+import { listSourceQuerySchema } from '@/modules/integrations/woocommerce/woo-list-filters'
 
 export const contactSchema = z.object({
   type:          z.enum(['customer', 'supplier', 'both']),
@@ -27,6 +28,7 @@ export const contactUpdateSchema = contactSchema.partial().extend({
 export const contactQuerySchema = paginationSchema.extend({
   search: z.string().optional(),
   type:   z.enum(['customer', 'supplier', 'both']).optional(),
+  source: listSourceQuerySchema,
 })
 
 export type ContactInput = z.infer<typeof contactSchema>

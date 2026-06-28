@@ -1,11 +1,15 @@
 import 'server-only'
 import { Op } from 'sequelize'
+import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
 import WoocommerceSite from './woocommerce-site.model'
 import WoocommerceSyncQueue from './woocommerce-sync-queue.model'
 import { buildClientForSite } from './woo-sites.service'
 import { enqueue } from './woo-queue'
 import { processProductJob } from './woo-catalog.service'
+import { isCatalogPublishRunCancelled, isCatalogPublishCancelledForSite } from './woo-catalog-publish.service'
+import { isImportRunCancelled, isImportCancelledForSite, recordImportItemProcessed } from './woo-import-run.service'
+import { processImportJob } from './woo-import-jobs.service'
 import { processStockJob } from './woo-stock.service'
 import { processOrderIngestJob } from './woo-orders.service'
 
@@ -63,9 +67,24 @@ export async function drainQueue(limit = 100): Promise<{ processed: number; fail
         continue
       }
 
+      const runId = job.payload?.catalog_publish_run_id as string | undefined
+      if (runId && isCatalogPublishRunCancelled(job.site_id, runId)) {
+        await job.update({ status: 'done', last_error: 'catalog publish cancelled' })
+        continue
+      }
+
       if (job.kind === 'product') await processProductJob(site, job.payload)
       else if (job.kind === 'stock') await processStockJob(site, job.payload)
       else if (job.kind === 'order_ingest') await processOrderIngestJob(site, job.payload)
+      else if (job.kind === 'import') {
+        const importRunId = job.payload?.import_run_id as string | undefined
+        if (importRunId && isImportRunCancelled(job.site_id, importRunId)) {
+          await job.update({ status: 'done', last_error: 'import cancelled' })
+          continue
+        }
+        await processImportJob(site, job.payload)
+        if (importRunId) recordImportItemProcessed(job.site_id, importRunId)
+      }
 
       await job.update({ status: 'done', last_error: null })
       processed += 1
@@ -80,6 +99,234 @@ export async function drainQueue(limit = 100): Promise<{ processed: number; fail
       })
       failed += 1
       logger.warn({ jobId: job.id, kind: job.kind, attempts, parked, err: String(err) }, 'woocommerce sync job failed')
+    }
+  }
+
+  return { processed, failed }
+}
+
+/** Drains pending jobs for one site (catalog publish ticks from the UI). */
+export async function drainQueueForSite(siteId: string, limit = 20): Promise<{ processed: number; failed: number }> {
+  const now = new Date()
+  const staleBefore = new Date(now.getTime() - STUCK_PROCESSING_MS)
+  const jobs = await WoocommerceSyncQueue.findAll({
+    where: {
+      site_id: siteId,
+      [Op.or]: [
+        { status: 'pending', next_attempt_at: { [Op.lte]: now } },
+        { status: 'processing', updated_at: { [Op.lte]: staleBefore } },
+      ],
+    },
+    order: [['created_at', 'ASC']],
+    limit,
+  })
+
+  let processed = 0
+  let failed = 0
+  const site = await WoocommerceSite.findByPk(siteId)
+
+  for (const job of jobs) {
+    const [claimed] = await WoocommerceSyncQueue.update(
+      { status: 'processing' },
+      { where: { id: job.id, status: job.status, updated_at: job.updated_at } },
+    )
+    if (claimed === 0) continue
+
+    try {
+      if (!site || !site.is_active) {
+        await job.update({ status: 'done', last_error: 'site inactive or missing' })
+        continue
+      }
+
+      const runId = job.payload?.catalog_publish_run_id as string | undefined
+      if (runId && isCatalogPublishRunCancelled(siteId, runId)) {
+        await job.update({ status: 'done', last_error: 'catalog publish cancelled' })
+        continue
+      }
+
+      if (job.kind === 'product') await processProductJob(site, job.payload)
+      else if (job.kind === 'stock') await processStockJob(site, job.payload)
+      else if (job.kind === 'order_ingest') await processOrderIngestJob(site, job.payload)
+      else if (job.kind === 'import') {
+        const importRunId = job.payload?.import_run_id as string | undefined
+        if (importRunId && isImportRunCancelled(job.site_id, importRunId)) {
+          await job.update({ status: 'done', last_error: 'import cancelled' })
+          continue
+        }
+        await processImportJob(site, job.payload)
+        if (importRunId) recordImportItemProcessed(job.site_id, importRunId)
+      }
+
+      await job.update({ status: 'done', last_error: null })
+      processed += 1
+    } catch (err) {
+      const attempts = job.attempts + 1
+      const parked = attempts >= MAX_ATTEMPTS
+      await job.update({
+        attempts,
+        status: parked ? 'error' : 'pending',
+        last_error: String(err).slice(0, 1000),
+        next_attempt_at: new Date(Date.now() + backoffSeconds(attempts) * 1000),
+      })
+      failed += 1
+      logger.warn({ jobId: job.id, siteId, kind: job.kind, attempts, parked, err: String(err) }, 'woocommerce sync job failed')
+    }
+  }
+
+  return { processed, failed }
+}
+
+/** Drains catalog-publish jobs for one site (one small batch per UI tick). */
+export async function drainCatalogPublishQueueForSite(
+  siteId: string,
+  jobLimit = 1,
+): Promise<{ processed: number; failed: number }> {
+  if (isCatalogPublishCancelledForSite(siteId)) {
+    return { processed: 0, failed: 0 }
+  }
+
+  const now = new Date()
+  const staleBefore = new Date(now.getTime() - STUCK_PROCESSING_MS)
+  const jobs = await WoocommerceSyncQueue.findAll({
+    where: {
+      site_id: siteId,
+      kind: 'product',
+      [Op.and]: [
+        sequelize.literal("payload->>'catalog_publish_run_id' IS NOT NULL"),
+        {
+          [Op.or]: [
+            { status: 'pending', next_attempt_at: { [Op.lte]: now } },
+            { status: 'processing', updated_at: { [Op.lte]: staleBefore } },
+          ],
+        },
+      ],
+    },
+    order: [['created_at', 'ASC']],
+    limit: jobLimit,
+  })
+
+  let processed = 0
+  let failed = 0
+  const site = await WoocommerceSite.findByPk(siteId)
+
+  for (const job of jobs) {
+    const [claimed] = await WoocommerceSyncQueue.update(
+      { status: 'processing' },
+      { where: { id: job.id, status: job.status, updated_at: job.updated_at } },
+    )
+    if (claimed === 0) continue
+
+    try {
+      if (isCatalogPublishCancelledForSite(siteId)) {
+        await job.update({ status: 'done', last_error: 'catalog publish cancelled' })
+        continue
+      }
+
+      if (!site || !site.is_active) {
+        await job.update({ status: 'done', last_error: 'site inactive or missing' })
+        continue
+      }
+
+      const runId = job.payload?.catalog_publish_run_id as string | undefined
+      if (runId && isCatalogPublishRunCancelled(siteId, runId)) {
+        await job.update({ status: 'done', last_error: 'catalog publish cancelled' })
+        continue
+      }
+
+      await processProductJob(site, job.payload)
+      await job.update({ status: 'done', last_error: null })
+      processed += 1
+    } catch (err) {
+      const attempts = job.attempts + 1
+      const parked = attempts >= MAX_ATTEMPTS
+      await job.update({
+        attempts,
+        status: parked ? 'error' : 'pending',
+        last_error: String(err).slice(0, 1000),
+        next_attempt_at: new Date(Date.now() + backoffSeconds(attempts) * 1000),
+      })
+      failed += 1
+      logger.warn({ jobId: job.id, siteId, kind: job.kind, attempts, parked, err: String(err) }, 'woocommerce sync job failed')
+    }
+  }
+
+  return { processed, failed }
+}
+
+/** Drains import jobs for one site (batched per UI tick; cancel checked between jobs). */
+export async function drainImportQueueForSite(
+  siteId: string,
+  jobLimit = 20,
+): Promise<{ processed: number; failed: number }> {
+  if (isImportCancelledForSite(siteId)) {
+    return { processed: 0, failed: 0 }
+  }
+
+  const now = new Date()
+  const staleBefore = new Date(now.getTime() - STUCK_PROCESSING_MS)
+  const jobs = await WoocommerceSyncQueue.findAll({
+    where: {
+      site_id: siteId,
+      kind: 'import',
+      [Op.and]: [
+        sequelize.literal("payload->>'import_run_id' IS NOT NULL"),
+        {
+          [Op.or]: [
+            { status: 'pending', next_attempt_at: { [Op.lte]: now } },
+            { status: 'processing', updated_at: { [Op.lte]: staleBefore } },
+          ],
+        },
+      ],
+    },
+    order: [['created_at', 'ASC']],
+    limit: jobLimit,
+  })
+
+  let processed = 0
+  let failed = 0
+  const site = await WoocommerceSite.findByPk(siteId)
+
+  for (const job of jobs) {
+    if (isImportCancelledForSite(siteId)) break
+
+    const [claimed] = await WoocommerceSyncQueue.update(
+      { status: 'processing' },
+      { where: { id: job.id, status: job.status, updated_at: job.updated_at } },
+    )
+    if (claimed === 0) continue
+
+    try {
+      if (isImportCancelledForSite(siteId)) {
+        await job.update({ status: 'done', last_error: 'import cancelled' })
+        continue
+      }
+
+      if (!site || !site.is_active) {
+        await job.update({ status: 'done', last_error: 'site inactive or missing' })
+        continue
+      }
+
+      const runId = job.payload?.import_run_id as string | undefined
+      if (runId && isImportRunCancelled(siteId, runId)) {
+        await job.update({ status: 'done', last_error: 'import cancelled' })
+        continue
+      }
+
+      await processImportJob(site, job.payload)
+      if (runId) recordImportItemProcessed(siteId, runId)
+      await job.update({ status: 'done', last_error: null })
+      processed += 1
+    } catch (err) {
+      const attempts = job.attempts + 1
+      const parked = attempts >= MAX_ATTEMPTS
+      await job.update({
+        attempts,
+        status: parked ? 'error' : 'pending',
+        last_error: String(err).slice(0, 1000),
+        next_attempt_at: new Date(Date.now() + backoffSeconds(attempts) * 1000),
+      })
+      failed += 1
+      logger.warn({ jobId: job.id, siteId, kind: job.kind, attempts, parked, err: String(err) }, 'woocommerce sync job failed')
     }
   }
 

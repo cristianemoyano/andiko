@@ -17,22 +17,40 @@ import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.ut
 import type { IvaRate } from '@/types'
 import type { TenantContext } from '@/lib/tenancy'
 import { whereAllowedBranches, whereBranch } from '@/lib/tenancy'
+import { atEndOfDay, atStartOfDay } from '@/lib/date-only'
+import { combineListWhere, wooOrderStatusListWhere } from '@/modules/integrations/woocommerce/woo-list-filters'
+import {
+  getWooOrderChannelForSalesOrder,
+  getWooOrderChannelSummariesForSalesOrders,
+} from '@/modules/integrations/woocommerce/woo-order-channel.utils'
 
 export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
 
-  const { page, limit, search, status, contact_id, quote_id } = query
+  const { page, limit, search, status, contact_id, quote_id, source, woo_status, branch_id, from, to } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = whereAllowedBranches(ctx)
-  if (status)     where.status     = status
-  if (contact_id) where.contact_id = contact_id
-  if (quote_id)   where.quote_id   = quote_id
-  if (search) {
-    where[Op.or as unknown as string] = [
-      { order_number: { [Op.iLike]: `%${search}%` } },
-    ]
-  }
+  const createdAtWhere =
+    from || to
+      ? {
+          created_at: {
+            ...(from ? { [Op.gte]: atStartOfDay(from) } : {}),
+            ...(to ? { [Op.lte]: atEndOfDay(to) } : {}),
+          },
+        }
+      : {}
+
+  const where = combineListWhere(
+    whereAllowedBranches(ctx),
+    branch_id ? { branch_id } : {},
+    createdAtWhere,
+    status ? { status } : {},
+    woo_status ? wooOrderStatusListWhere(ctx.orgId, woo_status) : {},
+    contact_id ? { contact_id } : {},
+    quote_id ? { quote_id } : {},
+    source ? { source } : {},
+    search ? { [Op.or]: [{ order_number: { [Op.iLike]: `%${search}%` } }] } : {},
+  )
 
   const { rows, count } = await SalesOrder.findAndCountAll({
     where,
@@ -40,7 +58,7 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
     offset,
     order: [['created_at', 'DESC']],
     attributes: [
-      'id', 'branch_id', 'order_number', 'status', 'contact_id', 'quote_id', 'salesperson_id',
+      'id', 'branch_id', 'order_number', 'status', 'source', 'contact_id', 'quote_id', 'salesperson_id',
       'payment_condition', 'currency', 'promised_date', 'delivered_date',
       'shipping_street', 'shipping_number', 'shipping_floor', 'shipping_apartment', 'shipping_city', 'shipping_province', 'shipping_postal_code', 'shipping_country',
       'billing_street', 'billing_number', 'billing_floor', 'billing_apartment', 'billing_city', 'billing_province', 'billing_postal_code', 'billing_country',
@@ -53,7 +71,18 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
     ],
   })
 
-  return toPaginated(rows, count, page, limit)
+  const wooOrderIds = rows.filter((row) => row.source === 'woocommerce').map((row) => row.id)
+  const wooChannels = await getWooOrderChannelSummariesForSalesOrders(wooOrderIds, ctx.orgId)
+
+  const data = rows.map((row) => {
+    const json = row.get({ plain: true }) as unknown as Record<string, unknown>
+    if (row.source === 'woocommerce') {
+      json.woo_channel = wooChannels.get(row.id) ?? null
+    }
+    return json
+  })
+
+  return toPaginated(data, count, page, limit)
 }
 
 export async function getOrder(id: string, ctx: TenantContext) {
@@ -72,7 +101,15 @@ export async function getOrder(id: string, ctx: TenantContext) {
   if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(order.branch_id as string)) {
     throw new Error('ORDER_NOT_FOUND')
   }
-  return order
+  return serializeSalesOrderDetail(order, ctx.orgId)
+}
+
+async function serializeSalesOrderDetail(order: SalesOrder, orgId: string) {
+  const json = order.get({ plain: true }) as unknown as Record<string, unknown>
+  if (order.source === 'woocommerce') {
+    json.woo_channel = await getWooOrderChannelForSalesOrder(order.id, orgId, order.channel_site_id)
+  }
+  return json
 }
 
 export async function createOrder(input: SalesOrderInput, ctx: TenantContext, actorId: string) {

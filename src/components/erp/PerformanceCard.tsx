@@ -112,7 +112,7 @@ export function PerformanceCard({
   clientes,
   lastUpdated,
   loading = false,
-  footerHref = '/ventas/reportes',
+  footerHref = '/contabilidad/reportes/ventas',
   footerLabel = 'Ver reportes de ventas',
   color = BRAND_CHART_COLOR,
   className,

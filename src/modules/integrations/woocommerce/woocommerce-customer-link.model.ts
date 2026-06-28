@@ -8,13 +8,14 @@ export interface WoocommerceCustomerLinkAttributes {
   site_id: UUID
   woo_customer_id: string
   contact_id: UUID
+  last_synced_at: Date | null
   created_at: Date
   updated_at: Date
 }
 
 type WoocommerceCustomerLinkCreationAttributes = Optional<
   WoocommerceCustomerLinkAttributes,
-  'id' | 'created_at' | 'updated_at'
+  'id' | 'last_synced_at' | 'created_at' | 'updated_at'
 >
 
 class WoocommerceCustomerLink extends Model<
@@ -26,6 +27,7 @@ class WoocommerceCustomerLink extends Model<
   declare site_id: UUID
   declare woo_customer_id: string
   declare contact_id: UUID
+  declare last_synced_at: Date | null
   declare created_at: Date
   declare updated_at: Date
 }
@@ -37,6 +39,7 @@ WoocommerceCustomerLink.init(
     site_id:         { type: DataTypes.UUID, allowNull: false },
     woo_customer_id: { type: DataTypes.BIGINT, allowNull: false },
     contact_id:      { type: DataTypes.UUID, allowNull: false },
+    last_synced_at:  { type: DataTypes.DATE },
     created_at:      { type: DataTypes.DATE, allowNull: false },
     updated_at:      { type: DataTypes.DATE, allowNull: false },
   },

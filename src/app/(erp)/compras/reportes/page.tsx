@@ -1,8 +1,5 @@
-import type { Metadata } from 'next'
-import { ReportesClient } from './ReportesClient'
-
-export const metadata: Metadata = { title: 'Reportes — Compras' }
+import { redirect } from 'next/navigation'
 
 export default function ReportesComprasPage() {
-  return <ReportesClient />
+  redirect('/contabilidad/reportes/compras')
 }

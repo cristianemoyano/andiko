@@ -17,6 +17,12 @@ export type UiCapabilities = {
     configuracion: boolean
     /** Panel de facturación de la propia organización (Gerente); no para sys-admin de plataforma. */
     facturacion: boolean
+    /** Integraciones de canal (WooCommerce, etc.) con org en contexto. */
+    integraciones: boolean
+  }
+  integraciones: {
+    read: boolean
+    write: boolean
   }
   organizacion: {
     detail: boolean
@@ -48,6 +54,7 @@ export type UiCapabilities = {
       emailsEnviados: boolean
       apariencia: boolean
       afip: boolean
+      integraciones: boolean
     }
   }
   /** Configuración inicial de la org (wizard). Mismo alcance que settings:write. */

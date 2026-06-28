@@ -173,7 +173,7 @@ export function PanelAnalyticsRevenueSection({
   const revenue = analytics?.revenue
   const compare = comparePeriodLabel ?? analytics?.compare_period_label
   return (
-    <AnalyticsSection title="Ingresos" widgetId="analytics_revenue" reportHref="/ventas/reportes" reportLabel="Ver reporte">
+    <AnalyticsSection title="Ingresos" widgetId="analytics_revenue" reportHref="/contabilidad/reportes/ventas" reportLabel="Ver reporte">
       <MetricCell
         label="Ventas totales"
         info={KPI_INFO.total_sales}
@@ -287,7 +287,7 @@ export function PanelAnalyticsProductsSection({
             Actualizado: {formatUpdatedAt(lastUpdated)}
           </div>
         )}
-        <SectionLink href="/ventas/reportes?group_by=product" label="Ver reportes de ventas" />
+        <SectionLink href="/contabilidad/reportes/ventas?group_by=product" label="Ver reportes de ventas" />
       </div>
     </PanelWidgetSlot>
   )

@@ -21,6 +21,12 @@ import { whereOrg } from '@/lib/tenancy'
 import type { ImportProgressCallback } from '@/lib/import-progress'
 import { createImportProgressReporter } from '@/lib/import-progress'
 import {
+  combineListWhere,
+  importSourceListWhere,
+  resolveListSource,
+} from '@/modules/integrations/woocommerce/woo-list-filters'
+import WoocommerceProductLink from '@/modules/integrations/woocommerce/woocommerce-product-link.model'
+import {
   applyRowImportDefaults,
   mappedRowToNormalizedProductRow,
   parseProductCsvImages,
@@ -62,21 +68,25 @@ function enrichMappedRowsFromCommonExports(
 }
 
 export async function listProducts(query: ProductQuery, ctx: TenantContext) {
-  const { page, limit, search, category_id, status, product_type } = query
+  const { page, limit, search, category_id, status, product_type, source } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = whereOrg(ctx)
-  if (status)       where.status       = status
-  if (product_type) where.product_type = product_type
-  if (category_id)  where.category_id  = category_id
-  if (search) {
-    where[Op.or as unknown as string] = [
-      { name:   { [Op.iLike]: `%${search}%` } },
-      { vendor: { [Op.iLike]: `%${search}%` } },
-      // allow SKU search (joined via variants)
-      { '$variants.sku$': { [Op.iLike]: `%${search}%` } },
-    ]
-  }
+  const where = combineListWhere(
+    whereOrg(ctx),
+    status ? { status } : {},
+    product_type ? { product_type } : {},
+    category_id ? { category_id } : {},
+    source ? importSourceListWhere(source, ctx.orgId, 'product') : {},
+    search
+      ? {
+          [Op.or]: [
+            { name: { [Op.iLike]: `%${search}%` } },
+            { vendor: { [Op.iLike]: `%${search}%` } },
+            { '$variants.sku$': { [Op.iLike]: `%${search}%` } },
+          ],
+        }
+      : {},
+  )
 
   const { rows, count } = await Product.findAndCountAll({
     where,
@@ -87,7 +97,10 @@ export async function listProducts(query: ProductQuery, ctx: TenantContext) {
     // Needed when filtering by joined columns (e.g. variants.sku).
     // Otherwise Sequelize places the WHERE in a subquery that doesn't include the JOIN.
     subQuery: false,
-    attributes: ['id', 'name', 'slug', 'product_type', 'status', 'iva_rate', 'unit_of_measure', 'vendor', 'category_id', 'images', 'created_at'],
+    attributes: [
+      'id', 'name', 'slug', 'product_type', 'status', 'iva_rate', 'unit_of_measure', 'vendor',
+      'category_id', 'images', 'created_at', 'import_source', 'import_external_id',
+    ],
     include: [
       {
         model: ProductVariant,
@@ -104,7 +117,32 @@ export async function listProducts(query: ProductQuery, ctx: TenantContext) {
     ],
   })
 
-  return toPaginated(rows, count, page, limit)
+  const variantIds = rows.flatMap((row) => {
+    const variants = row.get('variants') as ProductVariant[] | undefined
+    return (variants ?? []).map((variant) => variant.id)
+  })
+  const linkedVariantIds = variantIds.length
+    ? new Set(
+        (
+          await WoocommerceProductLink.findAll({
+            where: { org_id: ctx.orgId, variant_id: { [Op.in]: variantIds } },
+            attributes: ['variant_id'],
+            raw: true,
+          })
+        ).map((link) => link.variant_id as string),
+      )
+    : new Set<string>()
+
+  const data = rows.map((row) => {
+    const variants = row.get('variants') as ProductVariant[] | undefined
+    const wooLinked = (variants ?? []).some((variant) => linkedVariantIds.has(variant.id))
+    return {
+      ...row.toJSON(),
+      source: resolveListSource(row.import_source, wooLinked),
+    }
+  })
+
+  return toPaginated(data, count, page, limit)
 }
 
 export async function getProduct(id: UUID, ctx: TenantContext) {

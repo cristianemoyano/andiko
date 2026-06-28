@@ -83,6 +83,17 @@ export const NAV_MODULES: NavItem[] = [
   },
 ]
 
+export const NAV_WOOCOMMERCE: NavItem = {
+  id: 'integraciones-woocommerce',
+  label: 'WooCommerce',
+  href: '/integraciones/woocommerce',
+  icon: (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3h12v10H2z"/><path d="M2 6h12M5 9h2M9 9h2"/>
+    </svg>
+  ),
+}
+
 export const NAV_SYSTEM: NavItem[] = [
   {
     id: 'configuracion',

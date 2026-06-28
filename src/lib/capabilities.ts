@@ -54,6 +54,9 @@ function buildCapabilities(
   const canSettingsRead = isPlatformSysAdmin || hasSettingsReadPerm
   const canSettingsWrite = isPlatformSysAdmin || hasSettingsWritePerm
 
+  const canIntegracionesRead = !!orgId && (hasSettingsReadPerm || isPlatformSysAdmin)
+  const canIntegracionesWrite = !!orgId && (hasSettingsWritePerm || isPlatformSysAdmin)
+
   const apiNamespace: 'sys-admin' | 'settings' = isPlatformSysAdmin ? 'sys-admin' : 'settings'
 
   const organizacionesHref = isPlatformSysAdmin
@@ -79,6 +82,11 @@ function buildCapabilities(
       organizacionesHref,
       configuracion: true,
       facturacion: !isPlatformSysAdmin && canOrgSettingsRead,
+      integraciones: canIntegracionesRead,
+    },
+    integraciones: {
+      read: canIntegracionesRead,
+      write: canIntegracionesWrite,
     },
     organizacion: {
       detail: isPlatformSysAdmin || (canSettingsRead && !!orgId),
@@ -110,6 +118,7 @@ function buildCapabilities(
         emailsEnviados: canOrgSettingsRead,
         apariencia: true,
         afip: canOrgSettingsRead,
+        integraciones: canIntegracionesRead,
       },
     },
     onboarding: {

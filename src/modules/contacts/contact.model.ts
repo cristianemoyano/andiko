@@ -20,11 +20,14 @@ export interface ContactAttributes extends Timestamps, AuditFields {
   phone: string | null
   notes: string | null
   is_active: boolean
+  import_source: string | null
+  import_external_id: string | null
 }
 
 type ContactCreationAttributes = Optional<
   ContactAttributes,
   'id' | 'trade_name' | 'first_name' | 'last_name' | 'job_title' | 'cuit' | 'email' | 'phone' | 'notes' | 'is_active' |
+  'import_source' | 'import_external_id' |
   'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -42,6 +45,8 @@ class Contact extends AuditModel<ContactAttributes, ContactCreationAttributes> {
   declare phone: string | null
   declare notes: string | null
   declare is_active: boolean
+  declare import_source: string | null
+  declare import_external_id: string | null
 }
 
 Contact.init(
@@ -59,6 +64,8 @@ Contact.init(
     phone:         { type: DataTypes.STRING(50) },
     notes:         { type: DataTypes.TEXT },
     is_active:     { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    import_source:     { type: DataTypes.STRING(32) },
+    import_external_id: { type: DataTypes.STRING(64) },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'contacts', paranoid: true, underscored: true }

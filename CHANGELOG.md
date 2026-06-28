@@ -1,6 +1,22 @@
 # Changelog
 
+## [0.28.0](https://github.com/cristianemoyano/andiko/compare/v0.26.1...v0.28.0) (2026-06-28)
+
+### Features
+
+* **core:** woocommerce sync, pedidos UX, and ERP capabilities ([fe8b957](https://github.com/cristianemoyano/andiko/commit/fe8b957742c79c831b775c95db1f2d4af978c3f1))
+
+## [](https://github.com/cristianemoyano/andiko/compare/v0.26.1...vnull) (2026-06-28)
+
+### Features
+
+* **core:** woocommerce sync, pedidos UX, and ERP capabilities ([fe8b957](https://github.com/cristianemoyano/andiko/commit/fe8b957742c79c831b775c95db1f2d4af978c3f1))
+
 ## [0.26.1](https://github.com/cristianemoyano/andiko/compare/v0.26.0...v0.26.1) (2026-06-28)
+
+### Features
+
+* **accounting:** move Libro IVA and fiscal reports under Contabilidad; unify fiscal access under `accounting:read`
 
 ### Bug Fixes
 

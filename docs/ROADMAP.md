@@ -378,7 +378,7 @@ detrás de un adaptador mockeable (`AFIP_MODE=stub|homologacion|produccion`).
 - [x] Componentes de diseño `AfipStatusBadge` y `AfipDocumentPanel` (con Storybook)
 - [x] Acción "Autorizar AFIP" + panel CAE/estado en detalle de factura, nota de crédito y nota de débito
 - [x] Pantallas de notas de débito (listado, alta, detalle)
-- [x] Páginas Libro IVA Ventas (`/ventas/libro-iva`) y Compras (`/compras/libro-iva`) con filtro por período
+- [x] Páginas Libro IVA Ventas (`/contabilidad/libro-iva/ventas`) y Compras (`/contabilidad/libro-iva/compras`) con filtro por período; links legacy en Ventas/Compras redirigen
 - [x] Pestaña de configuración AFIP: punto de venta por sucursal, carga de certificado ARCA (PEM) y cola de contingencia
 - [x] Reimpresión de comprobantes con CAE + QR (RG 4291) en plantilla de impresión
 

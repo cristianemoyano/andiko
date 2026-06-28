@@ -42,7 +42,47 @@ export const woocommerceImportApplySchema = z.object({
   stock_baseline:            z.enum(['push_erp', 'seed_from_woo', 'none']).default('none'),
 })
 
+export const woocommerceImportPreviewSchema = paginationSchema.extend({
+  section: z.enum(['matched', 'to_import', 'needs_mapping']).default('needs_mapping'),
+  refresh: z.boolean().default(false),
+})
+
+export const woocommercePublishSchema = z.object({
+  action: z.enum(['start', 'tick', 'cancel']).default('start'),
+  limit: z.number().int().positive().max(50).default(15).optional(),
+})
+
+export const woocommerceOrderImportPreviewSchema = paginationSchema.extend({
+  open_orders_only: z.boolean().default(true),
+  orders_since: z.string().datetime().nullable().optional(),
+  section: z.enum(['to_import', 'already_imported', 'skipped']).default('to_import'),
+  refresh: z.boolean().default(false),
+})
+
+export const woocommerceCustomerImportPreviewSchema = paginationSchema.extend({
+  section: z.enum(['to_import', 'matched_by_email', 'already_linked', 'skipped']).default('to_import'),
+  refresh: z.boolean().default(false),
+})
+
+export const woocommerceImportRunScopeSchema = z.enum(['products', 'orders', 'customers'])
+
+export const woocommerceImportRunSchema = z.object({
+  action: z.enum(['start', 'tick', 'cancel']).default('start'),
+  scope: woocommerceImportRunScopeSchema.optional(),
+  limit: z.number().int().positive().max(50).optional(),
+  import_unmatched_products: z.boolean().default(true).optional(),
+  open_orders_only: z.boolean().default(true).optional(),
+  orders_since: z.string().datetime().nullable().optional(),
+  stock_baseline: z.enum(['push_erp', 'seed_from_woo', 'none']).default('none').optional(),
+})
+
 export type WoocommerceSiteInput = z.infer<typeof woocommerceSiteSchema>
 export type WoocommerceSiteUpdateInput = z.infer<typeof woocommerceSiteUpdateSchema>
 export type WoocommerceSiteQuery = z.infer<typeof woocommerceSiteQuerySchema>
 export type WoocommerceImportApplyInput = z.infer<typeof woocommerceImportApplySchema>
+export type WoocommerceImportPreviewInput = z.infer<typeof woocommerceImportPreviewSchema>
+export type WoocommercePublishInput = z.infer<typeof woocommercePublishSchema>
+export type WoocommerceOrderImportPreviewInput = z.infer<typeof woocommerceOrderImportPreviewSchema>
+export type WoocommerceCustomerImportPreviewInput = z.infer<typeof woocommerceCustomerImportPreviewSchema>
+export type WoocommerceImportRunScope = z.infer<typeof woocommerceImportRunScopeSchema>
+export type WoocommerceImportRunInput = z.infer<typeof woocommerceImportRunSchema>

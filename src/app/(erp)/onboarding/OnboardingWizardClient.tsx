@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { fetchLandingPath } from '@/lib/landing-path-client'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
@@ -284,7 +285,7 @@ const INTEGRATIONS = [
   { id: 'email',         label: 'Servidor de email (SMTP)',   desc: 'Enviá facturas y presupuestos directamente por email.',            category: 'Comunicación',   recommended: false, available: true },
   { id: 'mercadolibre',  label: 'Mercado Libre',              desc: 'Sincronización de catálogo, stock y pedidos.',                     category: 'E-commerce',     recommended: false, available: false },
   { id: 'tiendanube',    label: 'Tienda Nube',                desc: 'Integración bidireccional de inventario, órdenes y clientes.',     category: 'E-commerce',     recommended: false, available: false },
-  { id: 'woocommerce',   label: 'WooCommerce',                desc: 'Conectá tu tienda WordPress a través de API REST.',                category: 'E-commerce',     recommended: false, available: false },
+  { id: 'woocommerce',   label: 'WooCommerce',                desc: 'Conectá tu tienda WordPress a través de API REST.',                category: 'E-commerce',     recommended: false, available: true },
   { id: 'mercadopago',   label: 'Mercado Pago',               desc: 'Conciliación automática de cobros y link de pago en facturas.',    category: 'Pagos',          recommended: false, available: false },
 ] as const
 
@@ -1921,6 +1922,19 @@ function IntegrationRow({
                 <input type="password" className={inputCls()} placeholder="••••••••" />
               </FormField>
             </div>
+          )}
+          {intg.id === 'woocommerce' && (
+            <p className="text-[12px] text-fg-muted">
+              Después del asistente, configurá tus tiendas en{' '}
+              <Link href="/integraciones/woocommerce" className="font-medium text-teal-700 hover:underline">
+                Integraciones → WooCommerce
+              </Link>
+              {' '}o desde{' '}
+              <Link href="/configuracion?section=integraciones" className="font-medium text-teal-700 hover:underline">
+                Configuración → Integraciones
+              </Link>
+              .
+            </p>
           )}
         </div>
       )}

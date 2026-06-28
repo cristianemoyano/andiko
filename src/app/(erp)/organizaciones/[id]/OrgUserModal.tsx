@@ -16,6 +16,7 @@ import { orgApiPaths, type OrgApiNamespace } from '@/lib/org-api-paths'
 import {
   ASSIGNABLE_BUILTIN_ROLES,
   getBuiltinRoleLabel,
+  isLegacyBuiltinRole,
   type AssignableBuiltinRole,
 } from '@/modules/auth/role-labels'
 import type { UserRole } from '@/types/roles'
@@ -97,8 +98,8 @@ function initialRoleSelection(user: OrgUserRow | null): RoleSelection {
   if (
     user.role === 'admin'
     || user.role === 'branch-admin'
-    || user.role === 'operator'
     || user.role === 'readonly'
+    || isLegacyBuiltinRole(user.role)
   ) {
     return { kind: 'builtin', role: user.role as BuiltinRole }
   }
@@ -178,7 +179,7 @@ function OrgUserForm({ orgId, apiNamespace, branches, user, onClose, onSaved }: 
           }
           return null
         }).filter((o): o is { value: string; label: string } => o !== null)
-        if (isEdit && user && !user.org_role_id && (user.role === 'operator' || user.role === 'readonly')) {
+        if (isEdit && user && !user.org_role_id && isLegacyBuiltinRole(user.role)) {
           const legacyValue = `builtin:${user.role}`
           if (!opts.some(o => o.value === legacyValue)) {
             opts.push({ value: legacyValue, label: getBuiltinRoleLabel(user.role) })

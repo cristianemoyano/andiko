@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { AppVersion } from './AppVersion'
 import { SysAdminImpersonation } from './SysAdminImpersonation'
 import { useSidebar } from './SidebarContext'
-import { NAV_MAIN, NAV_MODULES, NAV_SYSTEM, isModuleNavVisible, type NavItem } from './nav-items'
+import { NAV_MAIN, NAV_MODULES, NAV_SYSTEM, NAV_WOOCOMMERCE, isModuleNavVisible, type NavItem } from './nav-items'
 import { type OrgModuleKey } from '@/modules/auth/organization-modules'
 import { useCapabilities } from './CapabilitiesContext'
 
@@ -257,6 +257,12 @@ export function Sidebar({
               ),
             }}
             active={pathname.startsWith('/facturacion')}
+          />
+        )}
+        {navCapabilities?.integraciones && (
+          <NavLink
+            item={NAV_WOOCOMMERCE}
+            active={pathname.startsWith('/integraciones/woocommerce')}
           />
         )}
         {NAV_SYSTEM.filter(item => item.id !== 'configuracion' || navCapabilities?.configuracion !== false).map(item => (

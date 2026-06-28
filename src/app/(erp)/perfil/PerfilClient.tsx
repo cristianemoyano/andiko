@@ -12,14 +12,7 @@ import { Input } from '@/components/primitives/Input'
 import { PasswordInput } from '@/components/primitives/PasswordInput'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import type { ProfileView } from '@/modules/auth/profile.service'
-
-const ROLE_STATUS: Record<string, 'info' | 'success' | 'pending' | 'neutral'> = {
-  'sys-admin': 'info',
-  admin: 'success',
-  operator: 'pending',
-  readonly: 'neutral',
-  'branch-admin': 'success',
-}
+import { resolveUserRoleBadgeStatus } from '@/modules/auth/role-labels'
 
 type Props = {
   initial: ProfileView
@@ -156,7 +149,7 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
               <div className="text-xs text-fg-muted truncate">{profile.email}</div>
             </div>
             <div className="ml-auto">
-              <Badge status={ROLE_STATUS[profile.role] ?? 'neutral'}>
+              <Badge status={resolveUserRoleBadgeStatus(profile.role, profile.orgRoleId)}>
                 {profile.roleLabel}
               </Badge>
             </div>

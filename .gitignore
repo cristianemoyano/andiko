@@ -38,6 +38,9 @@ yarn-error.log*
 !.env.example
 !infra/.env.production.example
 
+# WooCommerce local bootstrap output
+infra/docker/woocommerce/dev-output/credentials.env
+
 # vercel
 .vercel
 

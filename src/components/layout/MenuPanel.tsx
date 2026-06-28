@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { useSidebar } from './SidebarContext'
-import { NAV_MAIN, NAV_MODULES, NAV_SYSTEM, isModuleNavVisible, type NavItem } from './nav-items'
+import { NAV_MAIN, NAV_MODULES, NAV_SYSTEM, NAV_WOOCOMMERCE, isModuleNavVisible, type NavItem } from './nav-items'
 import { type OrgModuleKey } from '@/modules/auth/organization-modules'
 import { useCapabilities } from './CapabilitiesContext'
 import { SysAdminImpersonation } from './SysAdminImpersonation'
@@ -298,6 +298,20 @@ export function MenuPanel({
                 ),
               }}
               active={pathname.startsWith('/facturacion')}
+              onNavigate={close}
+            />
+          )}
+          {navCapabilities?.integraciones && (
+            <MenuRow
+              item={{
+                ...NAV_WOOCOMMERCE,
+                icon: (
+                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 3h12v10H2z"/><path d="M2 6h12M5 9h2M9 9h2"/>
+                  </svg>
+                ),
+              }}
+              active={pathname.startsWith('/integraciones/woocommerce')}
               onNavigate={close}
             />
           )}

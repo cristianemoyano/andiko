@@ -9,6 +9,7 @@ import WoocommerceSite from './woocommerce-site.model'
 import WoocommerceProductLink from './woocommerce-product-link.model'
 import { buildClientForSite } from './woo-sites.service'
 import { enqueue } from './woo-queue'
+import { isCatalogPublishCancelledForSite, isCatalogPublishRunCancelled, recordCatalogPublishVariantProcessed } from './woo-catalog-publish.service'
 
 /** Resolves the price to publish for a variant on a site (price list → base price). */
 export async function resolveVariantPrice(site: WoocommerceSite, variant: ProductVariant): Promise<string> {
@@ -94,13 +95,17 @@ export async function enqueueProductSync(
 
 /** Worker handler: publishes every variant referenced by a 'product' job. */
 export async function processProductJob(site: WoocommerceSite, payload: Record<string, unknown>): Promise<void> {
+  const runId = payload.catalog_publish_run_id as string | undefined
+  if (runId && isCatalogPublishCancelledForSite(site.id)) return
   const variantIds = Array.isArray(payload.variant_ids) ? (payload.variant_ids as string[]) : []
   for (const variantId of variantIds) {
+    if (runId && isCatalogPublishRunCancelled(site.id, runId)) return
     const variant = await ProductVariant.findOne({ where: { id: variantId, org_id: site.org_id } })
     if (!variant) continue
     const product = await Product.findByPk(variant.product_id)
     if (!product || product.product_type === 'service') continue
     await publishVariant(site, variant, product)
+    if (runId) recordCatalogPublishVariantProcessed(site.id, runId)
     logger.info({ siteId: site.id, variantId }, 'woocommerce product published')
   }
 }

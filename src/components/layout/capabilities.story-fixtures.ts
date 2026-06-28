@@ -16,6 +16,11 @@ export const storyCapabilities: UiCapabilities = {
     organizacionesHref: null,
     configuracion: true,
     facturacion: false,
+    integraciones: false,
+  },
+  integraciones: {
+    read: false,
+    write: false,
   },
   organizacion: {
     detail: false,
@@ -47,6 +52,7 @@ export const storyCapabilities: UiCapabilities = {
       emailsEnviados: false,
       apariencia: true,
       afip: false,
+      integraciones: false,
     },
   },
   onboarding: {

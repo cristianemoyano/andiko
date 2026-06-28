@@ -1,8 +1,9 @@
 import { z } from 'zod'
 import { paginationSchema } from '@/lib/pagination'
 import { PAYMENT_CONDITIONS, type PaymentCondition } from '@/types'
-import { ORDER_STATUSES } from './sales-order.model'
+import { ORDER_STATUSES, SALES_ORDER_SOURCES } from './sales-order.model'
 import { lineItemSchema } from './sales-quote.schema'
+import { WOO_ORDER_STATUS_SLUGS } from '@/modules/integrations/woocommerce/woo-order-status.utils'
 
 const paymentConditionEnum = z.enum([...PAYMENT_CONDITIONS] as [PaymentCondition, ...PaymentCondition[]])
 
@@ -51,6 +52,19 @@ export const salesOrderQuerySchema = paginationSchema.extend({
   status:     z.enum(ORDER_STATUSES).optional(),
   contact_id: z.string().uuid().optional(),
   quote_id:   z.string().uuid().optional(),
+  source:     z.enum(SALES_ORDER_SOURCES).optional(),
+  woo_status: z.enum(WOO_ORDER_STATUS_SLUGS).optional(),
+  branch_id:  z.string().uuid().optional(),
+  from:       z.coerce.date().optional(),
+  to:         z.coerce.date().optional(),
+}).superRefine((value, ctx) => {
+  if (value.from && value.to && value.from > value.to) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'from must be <= to',
+      path: ['from'],
+    })
+  }
 })
 
 export type SalesOrderInput       = z.infer<typeof salesOrderSchema>

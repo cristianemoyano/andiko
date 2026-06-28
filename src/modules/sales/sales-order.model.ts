@@ -9,6 +9,9 @@ import User from '@/modules/auth/user.model'
 export const ORDER_STATUSES = ['draft', 'confirmed', 'in_progress', 'delivered', 'partial_returned', 'returned', 'cancelled'] as const
 export type OrderStatus = typeof ORDER_STATUSES[number]
 
+export const SALES_ORDER_SOURCES = ['erp', 'pos', 'woocommerce'] as const
+export type SalesOrderSource = typeof SALES_ORDER_SOURCES[number]
+
 export interface SalesOrderAttributes extends Timestamps, AuditFields {
   id: UUID
   org_id: UUID | null

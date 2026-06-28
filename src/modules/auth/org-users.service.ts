@@ -10,6 +10,7 @@ import { invalidateCapabilitiesIdentity } from '@/lib/capabilities-cache'
 import { orgUserManagementPeerKey } from '@/lib/org-user-management-access'
 import type { OrgUserMutationActor } from '@/lib/org-user-mutation-actor'
 import type { OrgUserCreateInput, OrgUserUpdateInput } from '@/modules/auth/org-users.schema'
+import { CUSTOM_ORG_ROLE_CARRIER } from '@/modules/auth/role-labels'
 import { formatUserDisplayName, resolveUserNameParts } from '@/modules/auth/user.utils'
 import type { UserRole } from '@/types/roles'
 
@@ -147,7 +148,7 @@ export async function createOrgUser(orgId: string, input: OrgUserCreateInput) {
 
   if (input.roleKind === 'custom') {
     await assertOrgRoleBelongsToOrg(orgId, input.orgRoleId)
-    role = 'operator'
+    role = CUSTOM_ORG_ROLE_CARRIER
     org_role_id = input.orgRoleId
   } else {
     role = input.role
@@ -283,7 +284,7 @@ export async function updateOrgUser(
 
     if (input.roleKind === 'custom') {
       await assertOrgRoleBelongsToOrg(orgId, input.orgRoleId)
-      patch.role = 'operator'
+      patch.role = CUSTOM_ORG_ROLE_CARRIER
       patch.org_role_id = input.orgRoleId
     } else if (input.roleKind === 'builtin' && input.role !== undefined) {
       patch.role = input.role

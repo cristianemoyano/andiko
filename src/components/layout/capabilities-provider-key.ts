@@ -36,6 +36,7 @@ export function capabilitiesProviderKey(
   return `${identity}:${JSON.stringify({
     nav: caps.nav,
     platform: caps.platform,
+    integraciones: caps.integraciones,
     orgSections: caps.organizacion.sections,
     orgActions: caps.organizacion.actions,
     orgApi: caps.organizacion.apiNamespace,

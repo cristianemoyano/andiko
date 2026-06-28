@@ -1,7 +1,9 @@
 import 'server-only'
 import Decimal from 'decimal.js'
+import { Op } from 'sequelize'
 import logger from '@/lib/logger'
 import sequelize from '@/lib/db'
+import { paginate } from '@/lib/pagination'
 import Product from '@/modules/catalog/product.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
 import StockItem from '@/modules/inventory/stock-item.model'
@@ -10,11 +12,31 @@ import { resolveDefaultWarehouse } from '@/modules/inventory/warehouses.service'
 import { applyMovement } from '@/modules/inventory/stock-movements.service'
 import WoocommerceSite from './woocommerce-site.model'
 import WoocommerceProductLink from './woocommerce-product-link.model'
+import SalesOrder from '@/modules/sales/sales-order.model'
+import WoocommerceOrderLink from './woocommerce-order-link.model'
 import { buildClientForSite } from './woo-sites.service'
 import { ingestWooOrder } from './woo-orders.service'
 import { pushAllStockForSite } from './woo-resync.service'
-import type { WoocommerceImportApplyInput } from './woocommerce.schema'
-import type { WooClient, WooProduct } from './woo-client'
+import { activeImportedWooOrderIds, findOrRestoreVariantBySku } from './woo-sync-links.service'
+import {
+  getImportPreviewSnapshot,
+  getOrderImportPreviewSnapshot,
+  importPreviewCacheKey,
+  invalidateImportPreviewSnapshot,
+  invalidateOrderImportPreviewSnapshots,
+  orderImportPreviewCacheKey,
+  setImportPreviewSnapshot,
+  setOrderImportPreviewSnapshot,
+  type ImportPreviewSnapshot,
+  type OrderImportPreviewItem,
+  type OrderImportPreviewSnapshot,
+} from './woo-import-preview.cache'
+import type {
+  WoocommerceImportApplyInput,
+  WoocommerceImportPreviewInput,
+  WoocommerceOrderImportPreviewInput,
+} from './woocommerce.schema'
+import type { WooClient, WooOrder, WooProduct } from './woo-client'
 
 /** A single sellable unit on the Woo side (a simple product or one variation). */
 interface WooUnit {
@@ -64,22 +86,37 @@ async function collectUnits(client: WooClient, products: WooProduct[]): Promise<
 
 export interface ImportPreview {
   woo_total: number
-  matched: { sku: string; name: string }[]
-  to_import: { sku: string; name: string }[]
-  needs_mapping: { name: string; reason: string }[]
+  matched_count: number
+  to_import_count: number
+  needs_mapping_count: number
+  section: WoocommerceImportPreviewInput['section']
+  items: ImportPreviewSnapshot['matched'] | ImportPreviewSnapshot['to_import'] | ImportPreviewSnapshot['needs_mapping']
+  page: number
+  limit: number
+  total: number
+  pages: number
 }
 
-/** Dry-run reconciliation report for connecting an existing store. No writes. */
-export async function previewImport(site: WoocommerceSite): Promise<ImportPreview> {
+async function buildImportPreviewSnapshot(site: WoocommerceSite): Promise<ImportPreviewSnapshot> {
   const client = buildClientForSite(site)
   const units = await collectUnits(client, await client.listProducts())
 
   const seen = new Map<string, number>()
   for (const u of units) if (u.sku) seen.set(u.sku, (seen.get(u.sku) ?? 0) + 1)
 
-  const matched: { sku: string; name: string }[] = []
-  const toImport: { sku: string; name: string }[] = []
-  const needsMapping: { name: string; reason: string }[] = []
+  const skuList = [...new Set(units.map((u) => u.sku).filter((sku): sku is string => Boolean(sku)))]
+  const erpSkus = new Set<string>()
+  if (skuList.length > 0) {
+    const variants = await ProductVariant.findAll({
+      where: { sku: { [Op.in]: skuList }, org_id: site.org_id },
+      attributes: ['sku'],
+    })
+    for (const v of variants) erpSkus.add(v.sku)
+  }
+
+  const matched: ImportPreviewSnapshot['matched'] = []
+  const toImport: ImportPreviewSnapshot['to_import'] = []
+  const needsMapping: ImportPreviewSnapshot['needs_mapping'] = []
 
   for (const u of units) {
     if (!u.sku) {
@@ -90,12 +127,192 @@ export async function previewImport(site: WoocommerceSite): Promise<ImportPrevie
       needsMapping.push({ name: u.name, reason: `SKU duplicado en WooCommerce (${u.sku})` })
       continue
     }
-    const variant = await ProductVariant.findOne({ where: { sku: u.sku, org_id: site.org_id }, attributes: ['id'] })
-    if (variant) matched.push({ sku: u.sku, name: u.name })
+    if (erpSkus.has(u.sku)) matched.push({ sku: u.sku, name: u.name })
     else toImport.push({ sku: u.sku, name: u.name })
   }
 
   return { woo_total: units.length, matched, to_import: toImport, needs_mapping: needsMapping }
+}
+
+/** Dry-run reconciliation report for connecting an existing store. No writes. */
+export async function previewImport(
+  site: WoocommerceSite,
+  opts: WoocommerceImportPreviewInput,
+): Promise<ImportPreview> {
+  const cacheKey = importPreviewCacheKey(site.org_id!, site.id)
+  if (opts.refresh) invalidateImportPreviewSnapshot(cacheKey)
+
+  let snapshot = getImportPreviewSnapshot(cacheKey)
+  if (!snapshot) {
+    snapshot = await buildImportPreviewSnapshot(site)
+    setImportPreviewSnapshot(cacheKey, snapshot)
+  }
+
+  const sectionItems = snapshot[opts.section]
+  const total = sectionItems.length
+  const { offset, limit } = paginate(opts.page, opts.limit)
+  const items = sectionItems.slice(offset, offset + limit)
+
+  return {
+    woo_total: snapshot.woo_total,
+    matched_count: snapshot.matched.length,
+    to_import_count: snapshot.to_import.length,
+    needs_mapping_count: snapshot.needs_mapping.length,
+    section: opts.section,
+    items,
+    page: opts.page,
+    limit,
+    total,
+    pages: Math.max(1, Math.ceil(total / opts.limit)),
+  }
+}
+
+export interface OrderImportPreview {
+  fetched_total: number
+  to_import_count: number
+  already_imported_count: number
+  skipped_count: number
+  open_orders_only: boolean
+  section: WoocommerceOrderImportPreviewInput['section']
+  items: OrderImportPreviewItem[]
+  page: number
+  limit: number
+  total: number
+  pages: number
+}
+
+function orderCustomerLabel(order: WooOrder): string {
+  const billing = order.billing
+  const name = [billing?.first_name, billing?.last_name].filter(Boolean).join(' ').trim()
+  if (name) return name
+  if (billing?.email) return billing.email
+  return 'Invitado'
+}
+
+function toOrderPreviewItem(order: WooOrder): OrderImportPreviewItem {
+  return {
+    woo_order_id: order.id,
+    number: order.number ?? String(order.id),
+    status: order.status,
+    total: order.total ?? null,
+    date: order.date_created ?? null,
+    customer: orderCustomerLabel(order),
+  }
+}
+
+function isEligibleOrderForBackfill(status: string): boolean {
+  return OPEN_STATUSES.includes(status) || status === 'completed'
+}
+
+async function fetchOrdersForBackfillPreview(
+  client: WooClient,
+  openOrdersOnly: boolean,
+  ordersSince?: string,
+): Promise<WooOrder[]> {
+  if (openOrdersOnly) {
+    return (await Promise.all(
+      OPEN_STATUSES.map((status) => client.listOrders({ status, after: ordersSince })),
+    )).flat()
+  }
+  return client.listOrders({ after: ordersSince })
+}
+
+async function buildOrderImportPreviewSnapshot(
+  site: WoocommerceSite,
+  opts: Pick<WoocommerceOrderImportPreviewInput, 'open_orders_only' | 'orders_since'>,
+): Promise<OrderImportPreviewSnapshot> {
+  const client = buildClientForSite(site)
+  const ordersSince = opts.orders_since ?? undefined
+  const fetched = await fetchOrdersForBackfillPreview(client, opts.open_orders_only, ordersSince)
+
+  const eligible = opts.open_orders_only
+    ? fetched
+    : fetched.filter((order) => isEligibleOrderForBackfill(order.status))
+
+  const skipped = opts.open_orders_only
+    ? []
+    : fetched.filter((order) => !isEligibleOrderForBackfill(order.status)).map(toOrderPreviewItem)
+
+  const importedIds = new Set<string>()
+  if (eligible.length > 0) {
+    const links = await WoocommerceOrderLink.findAll({
+      where: {
+        site_id: site.id,
+        woo_order_id: { [Op.in]: eligible.map((order) => String(order.id)) },
+      },
+      attributes: ['woo_order_id', 'sales_order_id'],
+    })
+
+    const salesOrderIds = links
+      .map((link) => link.sales_order_id)
+      .filter((id): id is string => Boolean(id))
+
+    if (salesOrderIds.length > 0) {
+      const liveOrders = await SalesOrder.findAll({
+        where: { org_id: site.org_id, id: { [Op.in]: salesOrderIds } },
+        attributes: ['id'],
+      })
+      const liveSalesOrderIds = new Set(liveOrders.map((row) => row.id))
+      for (const id of activeImportedWooOrderIds(links, liveSalesOrderIds)) {
+        importedIds.add(id)
+      }
+    }
+  }
+
+  const toImport: OrderImportPreviewItem[] = []
+  const alreadyImported: OrderImportPreviewItem[] = []
+  for (const order of eligible) {
+    const item = toOrderPreviewItem(order)
+    if (importedIds.has(String(order.id))) alreadyImported.push(item)
+    else toImport.push(item)
+  }
+
+  return {
+    fetched_total: fetched.length,
+    open_orders_only: opts.open_orders_only,
+    to_import: toImport,
+    already_imported: alreadyImported,
+    skipped,
+  }
+}
+
+/** Dry-run report for historical order backfill. No writes. */
+export async function previewOrderImport(
+  site: WoocommerceSite,
+  opts: WoocommerceOrderImportPreviewInput,
+): Promise<OrderImportPreview> {
+  const cacheKey = orderImportPreviewCacheKey(
+    site.org_id!,
+    site.id,
+    opts.open_orders_only,
+    opts.orders_since ?? null,
+  )
+  if (opts.refresh) invalidateOrderImportPreviewSnapshots(site.org_id!, site.id)
+
+  let snapshot = getOrderImportPreviewSnapshot(cacheKey)
+  if (!snapshot) {
+    snapshot = await buildOrderImportPreviewSnapshot(site, opts)
+    setOrderImportPreviewSnapshot(cacheKey, snapshot)
+  }
+
+  const sectionItems = snapshot[opts.section]
+  const total = sectionItems.length
+  const { offset, limit } = paginate(opts.page, opts.limit)
+  const items = sectionItems.slice(offset, offset + limit)
+
+  return {
+    fetched_total: snapshot.fetched_total,
+    to_import_count: snapshot.to_import.length,
+    already_imported_count: snapshot.already_imported.length,
+    skipped_count: snapshot.skipped.length,
+    open_orders_only: snapshot.open_orders_only,
+    section: opts.section,
+    items,
+    page: opts.page,
+    limit,
+    total,
+    pages: Math.max(1, Math.ceil(total / opts.limit)),
+  }
 }
 
 export interface ImportResult {
@@ -107,6 +324,9 @@ export interface ImportResult {
 
 /** Applies the onboarding import: links/imports products, backfills orders, sets baseline. */
 export async function applyImport(site: WoocommerceSite, options: WoocommerceImportApplyInput): Promise<ImportResult> {
+  invalidateImportPreviewSnapshot(importPreviewCacheKey(site.org_id!, site.id))
+  invalidateOrderImportPreviewSnapshots(site.org_id!, site.id)
+
   const client = buildClientForSite(site)
   const units = await collectUnits(client, await client.listProducts())
 
@@ -122,7 +342,7 @@ export async function applyImport(site: WoocommerceSite, options: WoocommerceImp
   for (const u of units) {
     if (!u.sku || dupSkus.has(u.sku)) continue
 
-    let variant = await ProductVariant.findOne({ where: { sku: u.sku, org_id: site.org_id } })
+    let variant = await findOrRestoreVariantBySku(site.org_id!, u.sku)
 
     if (!variant) {
       if (!options.import_unmatched_products) continue
