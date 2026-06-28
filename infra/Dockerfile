@@ -5,13 +5,19 @@ RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json pnpm-lock.yaml .npmrc pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY package.json pnpm-lock.yaml .npmrc ./
+COPY patches ./patches
+# Web app only — exclude POS workspace packages (native deps like better-sqlite3).
+RUN printf 'packages:\n  - .\n' > pnpm-workspace.yaml \
+  && pnpm install --frozen-lockfile
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Placeholders for Zod validation during `next build` — runtime uses Swarm secrets.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+ENV AUTH_SECRET=build-time-placeholder-not-used-at-runtime
 RUN pnpm build
 
 FROM base AS runner
