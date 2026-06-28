@@ -1,5 +1,5 @@
 .PHONY: up down reset logs db shell dev \
-	prod-push prod-init prod-secrets prod-deploy prod-ssl prod-migrate prod-migrate-status \
+	prod-push prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-migrate prod-migrate-status \
 	prod-health prod-backup prod-logs prod-renew-certs
 
 # Start Colima and all services
@@ -39,6 +39,9 @@ dev: up
 prod-push:
 	@test -n "$(TAG)" || (echo "TAG is required: make prod-push TAG=v0.26.0" && exit 1)
 	TAG=$(TAG) bash infra/scripts/push-image.sh
+
+prod-bootstrap-vps:
+	sudo bash infra/scripts/bootstrap-vps.sh
 
 prod-init:
 	bash infra/scripts/init-swarm.sh

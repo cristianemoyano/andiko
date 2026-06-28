@@ -61,7 +61,104 @@ openssl rand -base64 32   # AUTH_SECRET, CRON_SECRET, POSTGRES_PASSWORD
 | `CERTBOT_EMAIL` | Let's Encrypt notifications |
 | `BACKUP_GDRIVE_*` | rclone remote for off-site backups |
 
+## VPS from zero (Hostinger Debian)
+
+Fresh VPS with nothing installed — follow in order.
+
+### A. Before touching the VPS
+
+1. **DNS** (Hostinger hPanel or your registrar): `andiko.cloud` and `www.andiko.cloud` → IP pública del VPS.
+2. **Hostinger firewall** (panel): permitir TCP **22**, **80**, **443**.
+3. **GitHub PAT (laptop):** `write:packages` + `read:packages` → push image.
+4. **GitHub PAT (VPS):** solo `read:packages` → pull image.
+5. **Laptop — push image** (cuando GHCR login funcione):
+
+```bash
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u cristianemoyano --password-stdin
+make prod-push TAG=v0.25.2
+```
+
+### B. Conectar al VPS
+
+```bash
+ssh root@TU_IP_VPS
+# o el usuario que te dio Hostinger
+```
+
+### C. Bootstrap del sistema (una sola vez)
+
+Opción rápida — clonar solo el script y ejecutarlo:
+
+```bash
+apt-get update && apt-get install -y git
+git clone git@github.com:cristianemoyano/andiko.git /root/andiko
+cd /root/andiko && git checkout develop
+sudo bash infra/scripts/bootstrap-vps.sh
+```
+
+Si el repo es **privado** y `git clone` falla, primero creá una SSH key en el VPS:
+
+```bash
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub
+# Pegar en https://github.com/settings/keys → New SSH key
+```
+
+Instala: `git`, `make`, `curl`, `docker`, `ufw` (22/80/443), e inicializa **Docker Swarm**.
+
+### D. Configurar Andiko en el VPS
+
+```bash
+cd ~/andiko   # o /root/andiko
+git checkout develop
+cp infra/.env.production.example infra/.env.production
+nano infra/.env.production
+```
+
+Generar secrets (en el VPS o en la laptop):
+
+```bash
+openssl rand -base64 32   # repetir para AUTH_SECRET, POSTGRES_PASSWORD, CRON_SECRET
+```
+
+Completar en `infra/.env.production`:
+- `POSTGRES_PASSWORD` y `DATABASE_URL` (host = `postgres`, no `localhost`)
+- `AUTH_SECRET`, `AUTH_URL=https://andiko.cloud`
+- `AFIP_MODE=produccion`
+- `CERTBOT_EMAIL=tu@email.com`
+- `GHCR_IMAGE=ghcr.io/cristianemoyano/andiko`
+
+Login GHCR (PAT de **solo lectura**):
+
+```bash
+export GITHUB_TOKEN=ghp_xxxx
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u cristianemoyano --password-stdin
+```
+
+### E. Deploy inicial
+
+```bash
+make prod-init
+make prod-deploy TAG=v0.25.2
+make prod-migrate TAG=v0.25.2
+make prod-health                    # HTTP (antes del certificado)
+make prod-ssl                       # HTTPS
+make prod-health                    # https://andiko.cloud/api/health
+```
+
+### F. Verificar
+
+```bash
+docker stack services andiko
+docker service logs andiko_app --tail 50
+curl -sf http://localhost/api/health    # desde el VPS, antes de SSL
+```
+
+---
+
 ## First-time bootstrap
+
+(If bootstrap script already ran — start here after `prod-bootstrap-vps`.)
 
 Clone anywhere on the VPS (e.g. `~/andiko`):
 
@@ -112,6 +209,7 @@ make prod-health
 
 | Target | Where | Description |
 |--------|-------|-------------|
+| `prod-bootstrap-vps` | VPS (once) | Install Docker, git, make, ufw, swarm init (fresh Debian) |
 | `prod-push TAG=…` | Laptop | Build + push Docker image to GHCR |
 | `prod-init` | VPS (once) | Swarm init, data dirs, Docker secrets |
 | `prod-secrets` | VPS | Rotate Swarm secrets (then redeploy) |
