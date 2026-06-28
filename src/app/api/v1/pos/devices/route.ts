@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { randomBytes } from 'crypto'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import PosDevice from '@/modules/pos/pos-device.model'
 
 const createDeviceSchema = z.object({
@@ -13,7 +13,9 @@ const createDeviceSchema = z.object({
 
 export const GET = withPermission('contacts:read', async (req, _ctx, session) => {
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const devices = await PosDevice.findAll({
       where: { org_id: ctx.orgId, deleted_at: null },
       attributes: [
@@ -39,7 +41,9 @@ export const POST = withPermission('contacts:write', async (req, _ctx, session) 
   }
 
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const apiToken = randomBytes(32).toString('hex')
 
     const initialLicense = new Date()

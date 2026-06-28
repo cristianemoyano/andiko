@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { resolveOrgIdForMutation } from '@/lib/session-org'
+import { resolveOrgScope } from '@/lib/session-org'
 import { issueDeliveryNote } from '@/modules/inventory/delivery-notes.service'
 
 export const POST = withPermission('inventory:write', async (_req, ctx, session) => {
   const { id } = await ctx.params
-  const orgId  = await resolveOrgIdForMutation(session.user)
-  if (!orgId) {
-    return NextResponse.json({ error: 'No hay organización en contexto', code: 'ORG_CONTEXT_REQUIRED' }, { status: 422 })
-  }
-
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
   try {
     const note = await issueDeliveryNote(id, orgId, resolveActorId(session))
     return NextResponse.json(note)

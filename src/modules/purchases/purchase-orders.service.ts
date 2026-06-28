@@ -52,7 +52,7 @@ export async function listPurchaseOrders(query: PurchaseOrderQuery, ctx: TenantC
   return toPaginated(rows, count, page, limit)
 }
 
-export async function getPurchaseOrder(id: string) {
+export async function getPurchaseOrder(id: string, orgId: string) {
   ensurePurchasesBranchAssociations()
 
   const { default: Branch }          = await import('@/modules/auth/branch.model')
@@ -61,7 +61,8 @@ export async function getPurchaseOrder(id: string) {
   const { default: PurchaseReceipt } = await import('./purchase-receipt.model')
   const { default: SupplierInvoice } = await import('./supplier-invoice.model')
 
-  const order = await PurchaseOrder.findByPk(id, {
+  const order = await PurchaseOrder.findOne({
+    where: { id, org_id: orgId },
     include: [
       { model: Branch,          as: 'branch',           attributes: ['id', 'name', 'branch_code'] },
       { model: Contact,         as: 'contact',          attributes: ['id', 'legal_name', 'trade_name'], required: false },

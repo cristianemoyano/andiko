@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { productLabelsQuerySchema } from '@/modules/catalog/product-labels.schema'
 import { listProductLabels } from '@/modules/catalog/product-labels.service'
 
@@ -14,7 +14,9 @@ export const GET = withPermission('products:read', async (req, _ctx, session) =>
   }
 
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const result = await listProductLabels(parsed.data, ctx)
     return NextResponse.json(result)
   } catch (err: unknown) {

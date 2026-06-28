@@ -1,18 +1,16 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { resolveOrgIdForMutation } from '@/lib/session-org'
+import { resolveOrgScope } from '@/lib/session-org'
 import { supplierInvoiceUpdateSchema } from '@/modules/purchases/supplier-invoice.schema'
 import { getSupplierInvoice, updateSupplierInvoice, deleteSupplierInvoice } from '@/modules/purchases/supplier-invoices.service'
 
-const ORG_REQUIRED_RESPONSE = {
-  error: 'No hay organización en contexto. Como sys-admin, elegí una en la barra lateral (Contexto ERP). El resto de los usuarios necesita una organización asignada en su cuenta.',
-  code:  'ORG_CONTEXT_REQUIRED',
-}
-
-export const GET = withPermission('purchases:read', async (_req, ctx) => {
+export const GET = withPermission('purchases:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+
   try {
-    const invoice = await getSupplierInvoice(id)
+    const invoice = await getSupplierInvoice(id, orgScope.orgId)
     return NextResponse.json(invoice)
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'SUPPLIER_INVOICE_NOT_FOUND') {
@@ -29,9 +27,9 @@ export const PATCH = withPermission('purchases:write', async (req, ctx, session)
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
-
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
   try {
     const invoice = await updateSupplierInvoice(id, parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(invoice)
@@ -49,9 +47,9 @@ export const PATCH = withPermission('purchases:write', async (req, ctx, session)
 
 export const DELETE = withPermission('purchases:delete', async (_req, ctx, session) => {
   const { id } = await ctx.params
-  const orgId  = await resolveOrgIdForMutation(session.user)
-  if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
-
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
   try {
     await deleteSupplierInvoice(id, orgId, resolveActorId(session))
     return new NextResponse(null, { status: 204 })

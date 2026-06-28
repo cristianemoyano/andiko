@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import PosCashSession from '@/modules/pos/pos-cash-session.model'
 import { Op } from 'sequelize'
 
@@ -20,7 +20,9 @@ export const GET = withPermission('inventory:read', async (req: NextRequest, _ct
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR' }, { status: 400 })
   }
 
-  const ctx = await makeTenantContext(session.user)
+  const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
   const { page, limit, branch_id, status, from, to } = parsed.data
   const offset = (page - 1) * limit
 

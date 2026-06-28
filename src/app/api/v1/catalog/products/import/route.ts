@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { parseCsvText } from '@/lib/csv'
 import { encodeImportStreamEvent } from '@/lib/import-progress'
 import { sanitizeImportDefaultsFromClient } from '@/modules/catalog/products-csv-adapter'
@@ -59,7 +59,11 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
   })
 
   const runImport = async (onProgress?: (processed: number, total: number) => void) => {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) {
+      throw new TenancyError(TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED)
+    }
+    const ctx = ctxResult.ctx
     const importSource = parsed.data.import_source?.trim() || 'catalog_csv'
     const importDefaults = sanitizeImportDefaultsFromClient(
       typeof import_defaults === 'string' ? import_defaults : undefined,
@@ -85,7 +89,13 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
           const result = await runImport((processed, total) => {
             enqueue(encodeImportStreamEvent({ type: 'progress', processed, total }))
           })
-          enqueue(encodeImportStreamEvent({ type: 'done', ...result }))
+          enqueue(encodeImportStreamEvent({
+            type: 'done',
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+            errors: result.errors,
+          }))
         } catch (err: unknown) {
           if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
             enqueue(encodeImportStreamEvent({ type: 'error', error: 'No hay organización en contexto.' }))

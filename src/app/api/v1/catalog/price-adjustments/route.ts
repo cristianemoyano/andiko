@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { bulkPriceAdjustmentSchema } from '@/modules/catalog/bulk-price-adjustment.schema'
 import { applyBulkPriceAdjustment } from '@/modules/catalog/bulk-price-adjustment.service'
 
@@ -10,8 +11,11 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
 
+  const tenantResult = await resolveTenantContext(session.user)
+  if ('error' in tenantResult) return tenantResult.error
+
   try {
-    const result = await applyBulkPriceAdjustment(parsed.data, session.user.orgId, resolveActorId(session))
+    const result = await applyBulkPriceAdjustment(parsed.data, tenantResult.ctx.orgId, resolveActorId(session))
     return NextResponse.json(result, { status: parsed.data.dry_run ? 200 : 201 })
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'PRICE_LIST_NOT_FOUND') {

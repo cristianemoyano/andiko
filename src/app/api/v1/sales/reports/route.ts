@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { salesReportQuerySchema } from '@/modules/sales/sales-reports.schema'
 import { getSalesReport } from '@/modules/sales/sales-reports.service'
 
@@ -11,7 +11,9 @@ export const GET = withPermission('sales:read', async (req, _ctx, session) => {
   }
 
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const report = await getSalesReport(parsed.data, tenantCtx)
     return NextResponse.json(report)
   } catch (err: unknown) {

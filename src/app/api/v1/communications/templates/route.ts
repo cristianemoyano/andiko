@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { resolveOrgIdForMutation } from '@/lib/session-org'
+import { resolveOrgScope } from '@/lib/session-org'
 import {
   DEFAULT_EMAIL_TEMPLATES,
   EMAIL_DOCUMENT_LABEL,
@@ -12,14 +12,10 @@ import {
   updateEmailTemplates,
 } from '@/modules/communications/email-templates.service'
 
-const ORG_REQUIRED_RESPONSE = {
-  error: 'No hay organización en contexto. Como sys-admin, elegí una en la barra lateral (Contexto ERP). El resto de los usuarios necesita una organización asignada en su cuenta.',
-  code: 'ORG_CONTEXT_REQUIRED',
-}
-
 export const GET = withPermission('settings:read', async (_req, _ctx, session) => {
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
   const templates = await getEffectiveEmailTemplates(orgId)
   return NextResponse.json({
     templates,
@@ -30,9 +26,9 @@ export const GET = withPermission('settings:read', async (_req, _ctx, session) =
 })
 
 export const PUT = withPermission('settings:write', async (req, _ctx, session) => {
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
-
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
   let json: unknown
   try {
     json = await req.json()

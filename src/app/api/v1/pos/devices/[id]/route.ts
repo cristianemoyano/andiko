@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import PosDevice from '@/modules/pos/pos-device.model'
 
 const patchSchema = z.object({
@@ -27,7 +27,9 @@ export const PATCH = withPermission(
     }
 
     try {
-      const tenantCtx = await makeTenantContext(session.user)
+      const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
       const device = await resolveDevice(id, tenantCtx.orgId)
       if (!device) return NextResponse.json({ error: 'Dispositivo no encontrado', code: 'NOT_FOUND' }, { status: 404 })
 
@@ -68,7 +70,9 @@ export const DELETE = withPermission(
     const { id } = await ctx.params
 
     try {
-      const tenantCtx = await makeTenantContext(session.user)
+      const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
       const device = await resolveDevice(id, tenantCtx.orgId)
       if (!device) return NextResponse.json({ error: 'Dispositivo no encontrado', code: 'NOT_FOUND' }, { status: 404 })
 

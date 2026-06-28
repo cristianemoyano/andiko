@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.25.2](https://github.com/cristianemoyano/andiko/compare/v0.25.1...v0.25.2) (2026-06-28)
+
+### Bug Fixes
+
+* **core:** enforce tenant org scope across all API routes ([95fed58](https://github.com/cristianemoyano/andiko/commit/95fed58d9d53312f166c33788ab562ac8e0a274f))
+
 ## [0.25.1](https://github.com/cristianemoyano/andiko/compare/v0.25.0...v0.25.1) (2026-06-27)
 
 ### Features

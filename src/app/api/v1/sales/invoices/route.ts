@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { resolveOrgIdForMutation } from '@/lib/session-org'
-import { makeTenantContext } from '@/lib/tenancy'
+import { resolveOrgScope } from '@/lib/session-org'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { invoiceSchema, invoiceQuerySchema } from '@/modules/sales/invoice.schema'
 import { listInvoices, createInvoice } from '@/modules/sales/invoices.service'
 
@@ -10,19 +10,11 @@ export const GET = withPermission('sales:read', async (req, _ctx, session) => {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
   }
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) {
-    return NextResponse.json(
-      {
-        error:
-          'No hay organización en contexto. Como sys-admin, elegí una en la barra lateral (Contexto ERP). El resto de los usuarios necesita una organización asignada en su cuenta.',
-        code: 'ORG_CONTEXT_REQUIRED',
-      },
-      { status: 422 },
-    )
-  }
-  const tenantCtx = await makeTenantContext(session.user)
-  const result = await listInvoices(parsed.data, tenantCtx)
+
+  const tenantResult = await resolveTenantContext(session.user)
+  if ('error' in tenantResult) return tenantResult.error
+
+  const result = await listInvoices(parsed.data, tenantResult.ctx)
   return NextResponse.json(result)
 })
 
@@ -32,19 +24,12 @@ export const POST = withPermission('sales:write', async (req, _ctx, session) => 
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) {
-    return NextResponse.json(
-      {
-        error:
-          'No hay organización en contexto. Como sys-admin, elegí una en la barra lateral (Contexto ERP). El resto de los usuarios necesita una organización asignada en su cuenta.',
-        code: 'ORG_CONTEXT_REQUIRED',
-      },
-      { status: 422 },
-    )
-  }
+
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+
   try {
-    const invoice = await createInvoice(parsed.data, orgId, resolveActorId(session))
+    const invoice = await createInvoice(parsed.data, orgScope.orgId, resolveActorId(session))
     return NextResponse.json(invoice, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof Error) {

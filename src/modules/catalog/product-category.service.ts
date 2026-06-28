@@ -7,11 +7,11 @@ import logger from '@/lib/logger'
 import type { ProductCategoryInput, ProductCategoryUpdateInput, ProductCategoryQuery } from './product-category.schema'
 import type { UUID } from '@/types'
 
-function orgWhere(orgId: string | null) {
-  return { org_id: orgId ?? null }
+function orgWhere(orgId: string) {
+  return { org_id: orgId }
 }
 
-export async function listCategories(query: ProductCategoryQuery, orgId: string | null) {
+export async function listCategories(query: ProductCategoryQuery, orgId: string) {
   const { page, limit, search, parent_id, status } = query
   const { offset } = paginate(page, limit)
 
@@ -35,18 +35,18 @@ export async function listCategories(query: ProductCategoryQuery, orgId: string 
   return toPaginated(rows, count, page, limit)
 }
 
-export async function getCategory(id: UUID, orgId: string | null) {
+export async function getCategory(id: UUID, orgId: string) {
   const category = await ProductCategory.findOne({ where: { id, ...orgWhere(orgId) } })
   if (!category) throw new Error('CATEGORY_NOT_FOUND')
   return category
 }
 
-export async function createCategory(input: ProductCategoryInput, actorId: UUID, orgId: string | null) {
+export async function createCategory(input: ProductCategoryInput, actorId: UUID, orgId: string) {
   const slug = generateSlug(input.name)
   const category = await ProductCategory.create({
     ...input,
     slug,
-    org_id: orgId ?? null,
+    org_id: orgId,
     created_by: actorId,
     updated_by: actorId,
   })
@@ -54,7 +54,7 @@ export async function createCategory(input: ProductCategoryInput, actorId: UUID,
   return category
 }
 
-export async function updateCategory(id: UUID, input: ProductCategoryUpdateInput, actorId: UUID, orgId: string | null) {
+export async function updateCategory(id: UUID, input: ProductCategoryUpdateInput, actorId: UUID, orgId: string) {
   const category = await getCategory(id, orgId)
   const slug = input.name ? generateSlug(input.name) : undefined
   await category.update({ ...input, ...(slug ? { slug } : {}), updated_by: actorId })
@@ -62,7 +62,7 @@ export async function updateCategory(id: UUID, input: ProductCategoryUpdateInput
   return category
 }
 
-export async function deleteCategory(id: UUID, actorId: UUID, orgId: string | null) {
+export async function deleteCategory(id: UUID, actorId: UUID, orgId: string) {
   const category = await getCategory(id, orgId)
   await category.update({ deleted_by: actorId })
   await category.destroy()

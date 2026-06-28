@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { can, type Permission } from '@/lib/permissions'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import {
   listDocumentEmailLogs,
   listEmailLogs,
@@ -30,23 +30,14 @@ export async function GET(req: Request) {
   }
 
   const role = session.user.role as UserRole
-  const orgId = session.user.orgId ?? undefined
   const { searchParams } = new URL(req.url)
   const documentType = searchParams.get('document_type') ?? ''
   const documentId = searchParams.get('document_id') ?? ''
 
-  let ctx
-  try {
-    ctx = await makeTenantContext(session.user as AuthedSession['user'])
-  } catch (err: unknown) {
-    if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
-      return NextResponse.json(
-        { error: 'No hay organización en contexto.', code: TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED },
-        { status: 422 },
-      )
-    }
-    throw err
-  }
+  const tenantResult = await resolveTenantContext(session.user as AuthedSession['user'])
+  if ('error' in tenantResult) return tenantResult.error
+  const orgId = tenantResult.ctx.orgId
+  const ctx = tenantResult.ctx
 
   // Per-document history (SendDocumentEmail modal).
   if (documentType || documentId) {

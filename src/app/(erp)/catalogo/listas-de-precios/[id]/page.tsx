@@ -14,9 +14,12 @@ export default async function PriceListDetailPage({ params }: { params: Promise<
   if (!session?.user) notFound()
   const authed = session as AuthedSession
 
+  const orgId = authed.user.orgId
+  if (!orgId) notFound()
+
   let priceList: Awaited<ReturnType<typeof getPriceList>> | null = null
   try {
-    priceList = await getPriceList(id, authed.user.orgId ?? null)
+    priceList = await getPriceList(id, orgId)
   } catch {
     priceList = null
   }

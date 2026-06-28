@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { resolveOrgIdForMutation } from '@/lib/session-org'
+import { resolveOrgScope } from '@/lib/session-org'
 import { getCachedPanelData, panelCacheKey, PANEL_CACHE_TTL_MS } from '@/modules/panel/panel-cache'
 import { getPanelRecentInvoices, parsePanelFilters } from '@/modules/panel/panel.service'
 import { applyPanelBranchScope, withPanelAccess } from '@/modules/panel/panel-guard'
@@ -9,11 +9,9 @@ const CACHE_HEADERS = {
 }
 
 export const GET = withPanelAccess(async (req, _ctx, session) => {
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) {
-    return NextResponse.json({ error: 'No hay organización en contexto', code: 'ORG_CONTEXT_REQUIRED' }, { status: 422 })
-  }
-
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
   const filters = applyPanelBranchScope(session, parsePanelFilters(req.nextUrl.searchParams))
   const cacheKey = panelCacheKey(orgId, 'recent-invoices', filters)
   const invoices = await getCachedPanelData(cacheKey, () => getPanelRecentInvoices(orgId, filters))

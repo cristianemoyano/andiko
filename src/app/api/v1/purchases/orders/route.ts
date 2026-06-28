@@ -1,25 +1,18 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { resolveOrgIdForMutation } from '@/lib/session-org'
-import { makeTenantContext } from '@/lib/tenancy'
+import { resolveOrgScope } from '@/lib/session-org'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { purchaseOrderSchema, purchaseOrderQuerySchema } from '@/modules/purchases/purchase-order.schema'
 import { listPurchaseOrders, createPurchaseOrder } from '@/modules/purchases/purchase-orders.service'
-
-const ORG_REQUIRED_RESPONSE = {
-  error: 'No hay organización en contexto. Como sys-admin, elegí una en la barra lateral (Contexto ERP). El resto de los usuarios necesita una organización asignada en su cuenta.',
-  code:  'ORG_CONTEXT_REQUIRED',
-}
 
 export const GET = withPermission('purchases:read', async (req, _ctx, session) => {
   const parsed = purchaseOrderQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
   }
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
-
-  const tenantCtx = await makeTenantContext(session.user)
-  const result = await listPurchaseOrders(parsed.data, tenantCtx)
+  const tenantCtxResult = await resolveTenantContext(session.user)
+  if ('error' in tenantCtxResult) return tenantCtxResult.error
+  const result = await listPurchaseOrders(parsed.data, tenantCtxResult.ctx)
   return NextResponse.json(result)
 })
 
@@ -29,17 +22,16 @@ export const POST = withPermission('purchases:write', async (req, _ctx, session)
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
-
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
   try {
     const order = await createPurchaseOrder(parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(order, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof Error) {
       if (err.message === 'BRANCH_NOT_FOUND')    return NextResponse.json({ error: 'Sucursal no encontrada o inactiva', code: 'BRANCH_NOT_FOUND' }, { status: 404 })
-      if (err.message === 'ORG_CONTEXT_REQUIRED') return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
-    }
+          }
     throw err
   }
 })

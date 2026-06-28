@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { getReconciliationDetail } from '@/modules/purchases/purchase-reconciliation.service'
 
 type P = { id: string }
@@ -9,7 +9,9 @@ export const GET = withPermission<P>('purchases:read', async (_req, ctx, session
   const { id } = await ctx.params
 
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const detail = await getReconciliationDetail(id, tenantCtx)
     return NextResponse.json(detail)
   } catch (err: unknown) {

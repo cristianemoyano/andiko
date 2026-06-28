@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { balanzaConfigSchema } from '@/modules/pos/pos-config.schema'
 import { getBalanzaConfig, updateBalanzaConfig } from '@/modules/pos/pos-config.service'
 
 export const GET = withPermission('contacts:read', async (_req, _ctx, session) => {
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const balanza = await getBalanzaConfig(ctx.orgId)
     return NextResponse.json({ data: balanza })
   } catch (err) {
@@ -27,7 +29,9 @@ export const PUT = withPermission('contacts:write', async (req, _ctx, session) =
     )
   }
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const result = await updateBalanzaConfig(ctx.orgId, parsed.data)
     return NextResponse.json({ data: result.balanza })
   } catch (err) {

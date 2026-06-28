@@ -1,13 +1,17 @@
 import 'server-only'
 
+import { NextResponse } from 'next/server'
 import { Op } from 'sequelize'
-import type { AuthedSession } from '@/lib/api-handler'
+import type { AuthedSession } from '@/lib/session-actor'
 
 export const TENANCY_ERROR_CODES = {
   ORG_CONTEXT_REQUIRED: 'ORG_CONTEXT_REQUIRED',
   BRANCH_REQUIRED: 'BRANCH_REQUIRED',
   BRANCH_NOT_ALLOWED: 'BRANCH_NOT_ALLOWED',
 } as const
+
+export const ORG_CONTEXT_REQUIRED_MESSAGE =
+  'No hay organización en contexto. Como sys-admin, elegí una en la barra lateral (Contexto ERP). El resto de los usuarios necesita una organización asignada en su cuenta.'
 
 export type TenancyErrorCode = (typeof TENANCY_ERROR_CODES)[keyof typeof TENANCY_ERROR_CODES]
 
@@ -27,6 +31,48 @@ export type TenantContext = {
   defaultBranchId: string | null
   /** Branches allowed for reads+writes. */
   allowedBranchIds: string[]
+}
+
+export function orgContextRequiredResponse(): NextResponse {
+  return NextResponse.json(
+    { error: ORG_CONTEXT_REQUIRED_MESSAGE, code: TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED },
+    { status: 422 },
+  )
+}
+
+const TENANCY_ERROR_RESPONSES: Record<TenancyErrorCode, { error: string; status: number }> = {
+  [TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED]: {
+    error: ORG_CONTEXT_REQUIRED_MESSAGE,
+    status: 422,
+  },
+  [TENANCY_ERROR_CODES.BRANCH_REQUIRED]: {
+    error: 'La sucursal es obligatoria.',
+    status: 422,
+  },
+  [TENANCY_ERROR_CODES.BRANCH_NOT_ALLOWED]: {
+    error: 'No tenés acceso a la sucursal indicada.',
+    status: 403,
+  },
+}
+
+/** Maps tenancy errors to structured API responses, or null when not a TenancyError. */
+export function tenancyErrorResponse(err: unknown): NextResponse | null {
+  if (!(err instanceof TenancyError)) return null
+  const mapped = TENANCY_ERROR_RESPONSES[err.code]
+  if (!mapped) return null
+  return NextResponse.json({ error: mapped.error, code: err.code }, { status: mapped.status })
+}
+
+export async function resolveTenantContext(
+  user: AuthedSession['user'],
+): Promise<{ ctx: TenantContext } | { error: NextResponse }> {
+  try {
+    return { ctx: await makeTenantContext(user) }
+  } catch (err) {
+    const resp = tenancyErrorResponse(err)
+    if (resp) return { error: resp }
+    throw err
+  }
 }
 
 export function tenantContextFromPosDevice(device: {

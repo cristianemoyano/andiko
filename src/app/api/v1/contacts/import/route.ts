@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { parseCsvText } from '@/lib/csv'
 import { importContacts, type ImportAction } from '@/modules/contacts/contacts.service'
 
@@ -47,7 +47,9 @@ export const POST = withPermission('contacts:write', async (req, _ctx, session) 
   })
 
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const result = await importContacts(mappedRows, importAction as ImportAction, ctx, resolveActorId(session))
     return NextResponse.json(result)
   } catch (err: unknown) {

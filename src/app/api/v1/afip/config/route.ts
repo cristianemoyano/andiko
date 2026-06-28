@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { afipConfigSchema } from '@/modules/afip/afip.schema'
 import { getAfipConfig, setBranchesPuntoVenta } from '@/modules/afip/afip-config.service'
 import { mapAfipErrorResponse } from '@/modules/afip/afip-http-errors'
 
 export const GET = withPermission('settings:read', async (_req, _ctx, session) => {
-  const ctx = await makeTenantContext(session.user)
+  const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
   const config = await getAfipConfig(ctx)
   return NextResponse.json(config)
 })
@@ -20,7 +22,9 @@ export const PUT = withPermission('settings:write', async (req, _ctx, session) =
     return NextResponse.json({ error: 'Validation error', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const branches = await setBranchesPuntoVenta(parsed.data, ctx)
     return NextResponse.json({ branches })
   } catch (err) {

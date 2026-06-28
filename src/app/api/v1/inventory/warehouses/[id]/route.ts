@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { warehouseUpdateSchema } from '@/modules/inventory/warehouse.schema'
 import { getWarehouse, updateWarehouse, deleteWarehouse } from '@/modules/inventory/warehouses.service'
 
@@ -9,7 +9,9 @@ type P = { id: string }
 export const GET = withPermission<P>('inventory:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const tenant = await makeTenantContext(session.user)
+    const tenantResult = await resolveTenantContext(session.user)
+    if ('error' in tenantResult) return tenantResult.error
+    const tenant = tenantResult.ctx
     const warehouse = await getWarehouse(id, tenant.orgId)
     return NextResponse.json(warehouse)
   } catch (err: unknown) {
@@ -31,7 +33,9 @@ export const PATCH = withPermission<P>('inventory:write', async (req, ctx, sessi
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const tenant = await makeTenantContext(session.user)
+    const tenantResult = await resolveTenantContext(session.user)
+    if ('error' in tenantResult) return tenantResult.error
+    const tenant = tenantResult.ctx
     const warehouse = await updateWarehouse(id, parsed.data, tenant, resolveActorId(session))
     return NextResponse.json(warehouse)
   } catch (err: unknown) {
@@ -48,7 +52,9 @@ export const PATCH = withPermission<P>('inventory:write', async (req, ctx, sessi
 export const DELETE = withPermission<P>('inventory:delete', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const tenant = await makeTenantContext(session.user)
+    const tenantResult = await resolveTenantContext(session.user)
+    if ('error' in tenantResult) return tenantResult.error
+    const tenant = tenantResult.ctx
     await deleteWarehouse(id, tenant, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {

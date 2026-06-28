@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { contactSchema, contactQuerySchema } from '@/modules/contacts/contact.schema'
 import { listContacts, createContact } from '@/modules/contacts/contacts.service'
 
@@ -11,7 +11,9 @@ export const GET = withPermission('contacts:read', async (req, _ctx, session) =>
   }
 
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     const result = await listContacts(parsed.data, ctxTenant)
     return NextResponse.json(result)
   } catch (err: unknown) {
@@ -30,7 +32,9 @@ export const POST = withPermission('contacts:write', async (req, _ctx, session) 
   }
 
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     const contact = await createContact(parsed.data, ctxTenant, resolveActorId(session))
     return NextResponse.json(contact, { status: 201 })
   } catch (err: unknown) {
