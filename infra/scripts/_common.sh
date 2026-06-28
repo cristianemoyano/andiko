@@ -49,14 +49,22 @@ build_database_url() {
     exit 1
   fi
 
-  POSTGRES_USER="$user" POSTGRES_PASSWORD="$password" POSTGRES_HOST="$host" POSTGRES_PORT="$port" POSTGRES_DB="$db" \
-    python3 -c 'import os, urllib.parse
+  export POSTGRES_USER="$user" POSTGRES_PASSWORD="$password" POSTGRES_HOST="$host" POSTGRES_PORT="$port" POSTGRES_DB="$db"
+  python3 <<'PY'
+import os
+import urllib.parse
+
 u = os.environ["POSTGRES_USER"]
 p = os.environ["POSTGRES_PASSWORD"]
 h = os.environ["POSTGRES_HOST"]
 port = os.environ["POSTGRES_PORT"]
 d = os.environ["POSTGRES_DB"]
-print(f"postgresql://{urllib.parse.quote(u, safe=\"\")}:{urllib.parse.quote(p, safe=\"\")}@{h}:{port}/{urllib.parse.quote(d, safe=\"\")}")'
+print(
+    "postgresql://"
+    f"{urllib.parse.quote(u, safe='')}:{urllib.parse.quote(p, safe='')}"
+    f"@{h}:{port}/{urllib.parse.quote(d, safe='')}"
+)
+PY
 }
 
 # Prefer POSTGRES_* (encoded) over a raw DATABASE_URL line in .env.production.
