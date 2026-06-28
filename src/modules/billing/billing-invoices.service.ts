@@ -89,7 +89,7 @@ export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, acto
     const periodStart = input.period_start ?? resolved.periodStart
     const periodEnd = input.period_end ?? resolved.periodEnd
 
-    const { chargeInput, seatCount, branchCount } = await buildSubscriptionChargeInput(sub, periodStart, periodEnd, t)
+    const { chargeInput, seatCount, branchCount, siteCount } = await buildSubscriptionChargeInput(sub, periodStart, periodEnd, t)
     const { lines, totals } = buildChargeLines(chargeInput)
     const invoice_number = await nextBillingNumber('invoice', t)
 
@@ -110,6 +110,7 @@ export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, acto
         balance:         totals.total,
         billed_seats:    seatCount,
         billed_branches: branchCount,
+        billed_sites:    siteCount,
         notes:           input.notes ?? null,
         created_by:      actorId,
         updated_by:      actorId,

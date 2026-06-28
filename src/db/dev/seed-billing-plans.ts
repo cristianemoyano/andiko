@@ -26,6 +26,8 @@ type BillingPlanSeed = {
   per_seat_price: string
   included_branches: number
   per_branch_price: string
+  included_sites: number
+  per_site_price: string
   modules: PlanModuleSeed[]
   extras: PlanExtraSeed[]
   metric_allowances: PlanMetricAllowanceSeed[]
@@ -41,6 +43,8 @@ const BILLING_PLAN_SEEDS: BillingPlanSeed[] = [
     per_seat_price: '3500.00',
     included_branches: 1,
     per_branch_price: '8000.00',
+    included_sites: 0,
+    per_site_price: '6000.00',
     modules: ORG_MODULE_DEFS.map(d => ({
       module_key: d.key,
       included: d.tier === 'base',
@@ -71,6 +75,8 @@ const BILLING_PLAN_SEEDS: BillingPlanSeed[] = [
     per_seat_price: '4500.00',
     included_branches: 3,
     per_branch_price: '6000.00',
+    included_sites: 1,
+    per_site_price: '5000.00',
     modules: ORG_MODULE_DEFS.map(d => ({
       module_key: d.key,
       included: true,

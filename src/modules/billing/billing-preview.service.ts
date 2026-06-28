@@ -14,7 +14,7 @@ import { resolveSubscriptionPeriod } from './billing-period.service'
 import { getOrgCurrentUsage } from './org-billing.service'
 
 export type BillingPreviewLine = {
-  kind: 'base' | 'adjustment' | 'seat' | 'branch' | 'module_addon' | 'extra_addon' | 'usage'
+  kind: 'base' | 'adjustment' | 'seat' | 'branch' | 'site' | 'module_addon' | 'extra_addon' | 'usage'
   label: string
   quantity: string
   unit_price: string
@@ -36,6 +36,8 @@ export type BillingPreview = {
     contracted_seats: number
     included_seats: number
     included_branches: number
+    active_sites: number
+    included_sites: number
   }
   warnings: BillingChargeWarning[]
 }
@@ -55,7 +57,7 @@ export async function getSubscriptionBillingPreview(subscriptionId: string): Pro
   if (!plan) throw new Error('PLAN_NOT_FOUND')
 
   const { periodStart, periodEnd } = resolveSubscriptionPeriod(sub)
-  const { chargeInput, seatCount, branchCount, contractedSeats, warnings } = await buildSubscriptionChargeInput(
+  const { chargeInput, seatCount, branchCount, siteCount, contractedSeats, warnings } = await buildSubscriptionChargeInput(
     sub,
     periodStart,
     periodEnd,
@@ -68,6 +70,8 @@ export async function getSubscriptionBillingPreview(subscriptionId: string): Pro
     contracted_seats: contractedSeats,
     included_seats: plan.included_seats,
     included_branches: plan.included_branches,
+    active_sites: siteCount,
+    included_sites: plan.included_sites,
   }
 
   return {

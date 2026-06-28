@@ -1,4 +1,5 @@
 import 'server-only'
+import type { Transaction } from 'sequelize'
 import sequelize from '@/lib/db'
 import ProductVariant from './product-variant.model'
 import Product from './product.model'
@@ -33,6 +34,7 @@ export async function createProductVariant(input: ProductVariantInput, actorId: 
     )
 
     logger.info({ variantId: created.id, productId: input.product_id, actorId }, 'product variant created')
+    await enqueueWoocommercePublish(ctx.orgId, created.id, t)
     return created
   })
 }
@@ -53,8 +55,23 @@ export async function updateProductVariant(id: UUID, input: ProductVariantUpdate
 
     await variant.update(payload as Parameters<typeof variant.update>[0], { transaction: t })
     logger.info({ variantId: id, actorId }, 'product variant updated')
+    await enqueueWoocommercePublish(ctx.orgId, variant.id, t)
     return variant
   })
+}
+
+/**
+ * Best-effort: enqueue a WooCommerce catalog publish for this variant on any
+ * auto-publishing site. Runs inside the caller's transaction (transactional
+ * outbox) and never blocks the catalog write if the integration is absent.
+ */
+async function enqueueWoocommercePublish(orgId: string, variantId: UUID, t: Transaction): Promise<void> {
+  try {
+    const mod = await import('@/modules/integrations/woocommerce/woo-catalog.service')
+    await mod.enqueueProductSync(orgId, [variantId], t)
+  } catch (err) {
+    logger.warn({ variantId, err: String(err) }, 'woocommerce publish enqueue skipped')
+  }
 }
 
 export async function deleteProductVariant(id: UUID, actorId: UUID, ctx: TenantContext) {

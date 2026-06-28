@@ -32,6 +32,7 @@ export interface BillingInvoiceAttributes extends Timestamps, AuditFields {
   issuer_phone: string | null
   billed_seats: number | null
   billed_branches: number | null
+  billed_sites: number | null
 }
 
 type BillingInvoiceCreationAttributes = Optional<
@@ -40,7 +41,7 @@ type BillingInvoiceCreationAttributes = Optional<
   | 'currency' | 'subtotal' | 'tax_amount' | 'total' | 'paid_amount' | 'balance' | 'notes'
   | 'issuer_legal_name' | 'issuer_cuit' | 'issuer_iva_condition' | 'issuer_fiscal_address'
   | 'issuer_gross_income' | 'issuer_email' | 'issuer_phone'
-  | 'billed_seats' | 'billed_branches'
+  | 'billed_seats' | 'billed_branches' | 'billed_sites'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
 >
 
@@ -69,6 +70,7 @@ class BillingInvoice extends AuditModel<BillingInvoiceAttributes, BillingInvoice
   declare issuer_phone: string | null
   declare billed_seats: number | null
   declare billed_branches: number | null
+  declare billed_sites: number | null
 }
 
 BillingInvoice.init(
@@ -97,6 +99,7 @@ BillingInvoice.init(
     issuer_phone:          { type: DataTypes.STRING(40) },
     billed_seats:          { type: DataTypes.INTEGER },
     billed_branches:       { type: DataTypes.INTEGER },
+    billed_sites:          { type: DataTypes.INTEGER },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'billing_invoices', paranoid: true, underscored: true }

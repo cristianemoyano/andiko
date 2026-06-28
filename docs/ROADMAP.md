@@ -278,6 +278,7 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] **Impresión y exportación de documentos (MVP)** — Módulo `printing` (registro por dominio/recurso), API `GET /api/v1/printing/[domain]/[resource]/[id]`, vistas print bajo `/ventas/...` y `/compras/...` (layout A4, PDF vía `window.print()` + `@media print`). Borradores imprimibles con marca **BORRADOR** (uso interno).
 - [x] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página. *(Editor en `/configuracion`, link en sidebar, validación Zod + merge sobre defaults.)*
 - [x] Editor visual de template (tipografía, paleta, secciones visibles). *(Vista previa en vivo del documento mientras se edita.)*
+- [x] **Canal de venta WooCommerce** — módulo `integrations/woocommerce`: múltiples sitios por organización, cada uno vinculado a una sucursal y compartiendo su stock; pedidos ingresan como `SalesOrder` (`source='woocommerce'`, idempotente por `(sitio, woo_order_id)`, `needs_review` ante stock insuficiente); ingestión por webhooks (HMAC) + reconciliación por cron; catálogo bidireccional (publica productos/precios por lista, vincula por SKU); stock ERP→Woo vía outbox transaccional en cada movimiento + buffer de seguridad; onboarding de tiendas existentes (preview/apply con backfill de pedidos y baseline de stock). UI `/integraciones/woocommerce`. **Toca flujos de stock y ventas.**
 
 ---
 
@@ -425,6 +426,7 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [x] `SubscriptionModal` + `SubscriptionUsageSection` — allowances de métricas y registro manual de uso
 - [x] `BillingSubNav`, badges de estado de facturación, preview de período con copy de capacidad (contrato vs incluidos)
 - [x] Impersonación sys-admin: nombre de org en búsqueda/recientes; panel org con nombre en título
+- [x] **Monetización por sitio (WooCommerce)** — `included_sites` / `per_site_price` en planes, conteo de sitios activos, línea de cargo `site` (espejo de sucursales), snapshot `billed_sites` en factura, campos en `PlanModal` y seed
 
 ### Pendientes (fases futuras)
 - [ ] Gateway de pagos (Mercado Pago / Stripe) + webhooks para débito automático

@@ -30,12 +30,16 @@ export interface BillingChargeInput {
     per_seat_price: string
     included_branches: number
     per_branch_price: string
+    included_sites: number
+    per_site_price: string
   }
   /** Active users in the org at billing time. */
   seats: number
   /** Minimum seats committed on the subscription contract (billing floor). */
   contracted_seats: number
   branches: number
+  /** Active WooCommerce sites in the org at billing time. */
+  sites: number
   addons: { module_key: string; unit_price: string; enabled: boolean }[]
   extras: { extra_key: string; unit_price: string; enabled: boolean }[]
   usage: {
@@ -111,6 +115,13 @@ export function calcSubscriptionCharges(input: BillingChargeInput): BillingLineT
     0,
     ivaRate,
   ))
+  lines.push(makeLine(
+    'adjustment',
+    `Capacidad — Sitios WooCommerce: ${input.sites} activos · ${input.plan.included_sites} incluidos en plan`,
+    1,
+    0,
+    ivaRate,
+  ))
 
   // Per-seat overage beyond included seats (uses contractual floor)
   const seatOverage = Math.max(0, billableSeats - input.plan.included_seats)
@@ -136,6 +147,18 @@ export function calcSubscriptionCharges(input: BillingChargeInput): BillingLineT
       `Sucursales adicionales (${branchOverage} facturadas de ${input.branches} activas)`,
       branchOverage,
       input.plan.per_branch_price,
+      ivaRate,
+    ))
+  }
+
+  // Per-site overage beyond included WooCommerce sites
+  const siteOverage = Math.max(0, input.sites - input.plan.included_sites)
+  if (siteOverage > 0) {
+    lines.push(makeLine(
+      'site',
+      `Sitios WooCommerce adicionales (${siteOverage} facturados de ${input.sites} activos)`,
+      siteOverage,
+      input.plan.per_site_price,
       ivaRate,
     ))
   }

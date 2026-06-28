@@ -40,6 +40,8 @@ export const billingPlanSchema = z.object({
   per_seat_price:    moneyString.default('0.00'),
   included_branches: z.coerce.number().int().min(0).default(1),
   per_branch_price:  moneyString.default('0.00'),
+  included_sites:    z.coerce.number().int().min(0).default(0),
+  per_site_price:    moneyString.default('0.00'),
   is_active:         z.boolean().default(true),
   modules:            z.array(planModuleSchema).default([]),
   extras:             z.array(planExtraSchema).default([]),

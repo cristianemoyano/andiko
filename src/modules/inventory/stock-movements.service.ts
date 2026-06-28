@@ -124,6 +124,16 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
     { stock_quantity: Math.max(0, Math.round((totalStock ?? 0) * 10000) / 10000) },
     { where: { id: variantId }, transaction: t },
   )
+
+  // Best-effort: queue a stock push to any WooCommerce site sharing this
+  // warehouse. Written to the transactional outbox inside this transaction, so
+  // it's atomic with the movement and never fires for a rolled-back change.
+  try {
+    const woo = await import('@/modules/integrations/woocommerce/woo-stock.service')
+    await woo.enqueueStockSync(variantId, warehouseId, orgId, t)
+  } catch (err) {
+    logger.warn({ variantId, warehouseId, err: String(err) }, 'woocommerce stock enqueue skipped')
+  }
 }
 
 export async function deductStockForOrder(orderId: string, orgId: string, actorId: string, t: Transaction): Promise<void> {
