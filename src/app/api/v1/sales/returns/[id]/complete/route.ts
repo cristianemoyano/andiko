@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { completeSalesReturnSchema } from '@/modules/sales/sales-return.schema'
 import { completeReturn } from '@/modules/sales/sales-returns.service'
 
@@ -17,7 +17,9 @@ export const POST = withPermission<P>('sales:write', async (req, ctx, session) =
   }
 
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const row = await completeReturn(id, parsed.data, tenantCtx)
     return NextResponse.json(row)
   } catch (err) {

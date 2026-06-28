@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { resolveActorId, type AuthedSession } from '@/lib/api-handler'
+import { requireAuthedSession, resolveActorId } from '@/lib/api-handler'
 import { getUserProfile, updateUserProfile } from '@/modules/auth/profile.service'
 import { profileUpdateSchema } from '@/modules/auth/profile.schema'
 import type { UserRole } from '@/types/roles'
@@ -24,12 +24,12 @@ function profileError(code: string) {
 }
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const session = requireAuthedSession(await auth())
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
   }
 
-  const userId = resolveActorId(session as AuthedSession)
+  const userId = resolveActorId(session)
   const profile = await getUserProfile(userId)
   if (!profile) {
     return profileError('NOT_FOUND')
@@ -39,8 +39,8 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const session = requireAuthedSession(await auth())
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
   }
 
@@ -59,13 +59,12 @@ export async function PATCH(req: Request) {
     )
   }
 
-  const user = session.user as AuthedSession['user']
-  const userId = resolveActorId(session as AuthedSession)
+  const userId = resolveActorId(session)
 
   try {
     const profile = await updateUserProfile(userId, parsed.data, {
-      actorRealRole: user.realRole as UserRole,
-      isImpersonating: !!user.impersonation,
+      actorRealRole: session.user.realRole as UserRole,
+      isImpersonating: !!session.user.impersonation,
     })
     return NextResponse.json({ profile })
   } catch (e) {

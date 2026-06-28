@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { accountStatementQuerySchema } from '@/modules/sales/account-statement.schema'
 import { getSupplierAccountStatement } from '@/modules/purchases/supplier-account-statement.service'
 
@@ -14,7 +14,9 @@ export const GET = withPermission<P>('purchases:read', async (req, ctx, session)
   }
 
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const statement = await getSupplierAccountStatement(id, parsed.data, tenantCtx)
     return NextResponse.json(statement)
   } catch (err: unknown) {

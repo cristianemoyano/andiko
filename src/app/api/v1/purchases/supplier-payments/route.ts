@@ -1,22 +1,17 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { resolveOrgIdForMutation } from '@/lib/session-org'
+import { resolveOrgScope } from '@/lib/session-org'
 import { supplierPaymentSchema, supplierPaymentQuerySchema } from '@/modules/purchases/supplier-payment.schema'
 import { listSupplierPayments, createSupplierPayment } from '@/modules/purchases/supplier-payments.service'
-
-const ORG_REQUIRED_RESPONSE = {
-  error: 'No hay organización en contexto. Como sys-admin, elegí una en la barra lateral (Contexto ERP). El resto de los usuarios necesita una organización asignada en su cuenta.',
-  code:  'ORG_CONTEXT_REQUIRED',
-}
 
 export const GET = withPermission('purchases:read', async (req, _ctx, session) => {
   const parsed = supplierPaymentQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
   }
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
-
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
   const result = await listSupplierPayments(parsed.data, orgId)
   return NextResponse.json(result)
 })
@@ -27,9 +22,9 @@ export const POST = withPermission('purchases:write', async (req, _ctx, session)
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) return NextResponse.json(ORG_REQUIRED_RESPONSE, { status: 422 })
-
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
   try {
     const payment = await createSupplierPayment(parsed.data, orgId, resolveActorId(session))
     return NextResponse.json(payment, { status: 201 })

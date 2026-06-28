@@ -10,8 +10,8 @@ import type { UUID } from '@/types'
 
 const PREVIEW_SAMPLE_SIZE = 5
 
-function orgWhere(orgId: string | null) {
-  return { org_id: orgId ?? null }
+function orgWhere(orgId: string) {
+  return { org_id: orgId }
 }
 
 function applyAdjustment(current: string, input: BulkPriceAdjustmentInput): string {
@@ -36,7 +36,7 @@ function applyAdjustment(current: string, input: BulkPriceAdjustmentInput): stri
 
 async function loadVariantsWithPrices(
   input: BulkPriceAdjustmentInput,
-  orgId: string | null,
+  orgId: string,
 ): Promise<Array<{ id: UUID; sku: string; current_price: string }>> {
   const productWhere: Record<string, unknown> = { ...orgWhere(orgId), status: 'active' }
   if (input.category_id) productWhere.category_id = input.category_id
@@ -80,7 +80,7 @@ async function loadVariantsWithPrices(
 
 export async function previewBulkPriceAdjustment(
   input: BulkPriceAdjustmentInput,
-  orgId: string | null,
+  orgId: string,
 ): Promise<BulkPriceAdjustmentPreview> {
   const rows = await loadVariantsWithPrices(input, orgId)
   const sample = rows.slice(0, PREVIEW_SAMPLE_SIZE).map(r => ({
@@ -94,7 +94,7 @@ export async function previewBulkPriceAdjustment(
 
 export async function applyBulkPriceAdjustment(
   input: BulkPriceAdjustmentInput,
-  orgId: string | null,
+  orgId: string,
   actorId: UUID,
 ): Promise<BulkPriceAdjustmentResult> {
   if (input.dry_run) {
@@ -138,7 +138,7 @@ export async function applyBulkPriceAdjustment(
           {
             price_list_id: priceListId,
             product_variant_id: row.id,
-            org_id: orgId ?? null,
+            org_id: orgId,
             price: row.new_price,
             created_by: actorId,
             updated_by: actorId,

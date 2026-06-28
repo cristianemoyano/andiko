@@ -1,5 +1,5 @@
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { listContacts } from '@/modules/contacts/contacts.service'
@@ -21,7 +21,9 @@ export const GET = withPermission('contacts:read', async (req, _ctx, session) =>
   }
 
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const result = await listContacts({ ...parsed.data, page: 1, limit: EXPORT_LIMIT }, ctx)
     const csv = toCsvText(
       result.data.map(c => contactToRow(c as Parameters<typeof contactToRow>[0])),

@@ -171,7 +171,7 @@ function totalsFrom(subtotal: unknown, discount: unknown | null, tax: unknown, t
 }
 
 export async function buildPurchaseOrderPrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
-  const order = (await getPurchaseOrder(id)) as unknown as PurchaseOrderLoaded
+  const order = (await getPurchaseOrder(id, ctx.orgId)) as unknown as PurchaseOrderLoaded
   assertPrintAccess({ org_id: order.org_id, branch_id: order.branch_id }, ctx)
   const { issuer, template } = await getPrintHeader(ctx.orgId)
   const pc = order.payment_condition as PaymentCondition
@@ -204,7 +204,7 @@ export async function buildPurchaseOrderPrintable(id: string, ctx: TenantContext
 }
 
 export async function buildPurchaseReceiptPrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
-  const receipt = (await getPurchaseReceipt(id)) as unknown as PurchaseReceiptLoaded
+  const receipt = (await getPurchaseReceipt(id, ctx.orgId)) as unknown as PurchaseReceiptLoaded
   assertPrintAccess({ org_id: receipt.org_id, branch_id: receipt.branch_id }, ctx)
   const { issuer, template } = await getPrintHeader(ctx.orgId)
   const isDraft = receipt.status === 'draft'
@@ -244,7 +244,7 @@ export async function buildPurchaseReceiptPrintable(id: string, ctx: TenantConte
 }
 
 export async function buildSupplierInvoicePrintable(id: string, ctx: TenantContext): Promise<PrintableDocument> {
-  const invoice = (await getSupplierInvoice(id)) as unknown as SupplierInvoiceLoaded
+  const invoice = (await getSupplierInvoice(id, ctx.orgId)) as unknown as SupplierInvoiceLoaded
   assertPrintAccess({ org_id: invoice.org_id, branch_id: invoice.branch_id }, ctx)
   const { issuer, template } = await getPrintHeader(ctx.orgId)
   const pc = invoice.payment_condition as PaymentCondition

@@ -1,21 +1,14 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { resolveOrgIdForMutation } from '@/lib/session-org'
+import { resolveOrgScope } from '@/lib/session-org'
 import { listActiveBranchesForOrg, listActiveBranchesForUser } from '@/modules/auth/branches.service'
 
 /** Sucursales activas de la organización en contexto (selectores en ventas, etc.). */
 export const GET = withPermission('sales:write', async (_req, _ctx, session) => {
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) {
-    return NextResponse.json(
-      {
-        error:
-          'No hay organización en contexto. Como sys-admin, elegí una en la barra lateral (Contexto ERP). El resto de los usuarios necesita una organización asignada en su cuenta.',
-        code: 'ORG_CONTEXT_REQUIRED',
-      },
-      { status: 422 },
-    )
-  }
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
+
   const isRealSysAdmin = session.user.realRole === 'sys-admin'
   const effectiveUserId = session.user.impersonation?.userId ?? session.user.id ?? null
 

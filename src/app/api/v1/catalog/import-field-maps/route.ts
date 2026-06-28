@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import {
   listCatalogImportFieldMaps,
   replaceCatalogImportFieldMaps,
@@ -20,7 +20,9 @@ export const GET = withPermission('products:read', async (req, _ctx, session) =>
     )
   }
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const profile =
       parsed.data.profile === undefined || parsed.data.profile === '' ? null : parsed.data.profile
     const rows = await listCatalogImportFieldMaps(ctx.orgId, profile)
@@ -59,7 +61,9 @@ export const PUT = withPermission('products:write', async (req, _ctx, session) =
     )
   }
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const prof =
       parsed.data.profile === undefined || parsed.data.profile === null || parsed.data.profile === ''
         ? null

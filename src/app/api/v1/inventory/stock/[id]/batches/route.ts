@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { getStockItemBatches } from '@/modules/inventory/stock-items.service'
 
 export const GET = withPermission('inventory:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const tenant = await makeTenantContext(session.user)
+    const tenantResult = await resolveTenantContext(session.user)
+    if ('error' in tenantResult) return tenantResult.error
+    const tenant = tenantResult.ctx
     const data = await getStockItemBatches(id, tenant.orgId)
     return NextResponse.json({ data })
   } catch (err: unknown) {

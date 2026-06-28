@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { posTicketFiscalSchema } from '@/modules/pos/pos-config.schema'
 import { getPosConfig, updatePosTicketConfig } from '@/modules/pos/pos-config.service'
 
 export const GET = withPermission('settings:read', async (_req, _ctx, session) => {
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const config = await getPosConfig(ctx.orgId)
     return NextResponse.json({ data: config.ticket ?? {} })
   } catch (err) {
@@ -34,7 +36,9 @@ export const PUT = withPermission('settings:write', async (req, _ctx, session) =
   }
 
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const result = await updatePosTicketConfig(ctx.orgId, parsed.data ?? {})
     return NextResponse.json({ data: result.ticket ?? {} })
   } catch (err) {

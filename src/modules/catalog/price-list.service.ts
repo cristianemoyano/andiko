@@ -9,11 +9,11 @@ import logger from '@/lib/logger'
 import type { PriceListInput, PriceListUpdateInput, PriceListQuery, PriceListItemInput } from './price-list.schema'
 import type { UUID } from '@/types'
 
-function orgWhere(orgId: string | null) {
-  return { org_id: orgId ?? null }
+function orgWhere(orgId: string) {
+  return { org_id: orgId }
 }
 
-export async function listPriceLists(query: PriceListQuery, orgId: string | null) {
+export async function listPriceLists(query: PriceListQuery, orgId: string) {
   const { page, limit, search, is_active } = query
   const { offset } = paginate(page, limit)
 
@@ -34,13 +34,13 @@ export async function listPriceLists(query: PriceListQuery, orgId: string | null
   return toPaginated(rows, count, page, limit)
 }
 
-export async function getPriceList(id: UUID, orgId: string | null) {
+export async function getPriceList(id: UUID, orgId: string) {
   const priceList = await PriceList.findOne({ where: { id, ...orgWhere(orgId) } })
   if (!priceList) throw new Error('PRICE_LIST_NOT_FOUND')
   return priceList
 }
 
-export async function createPriceList(input: PriceListInput, actorId: UUID, orgId: string | null) {
+export async function createPriceList(input: PriceListInput, actorId: UUID, orgId: string) {
   const priceList = await sequelize.transaction(async (t) => {
     if (input.is_default) {
       await PriceList.update(
@@ -52,7 +52,7 @@ export async function createPriceList(input: PriceListInput, actorId: UUID, orgI
     return PriceList.create(
       {
         ...input,
-        org_id: orgId ?? null,
+        org_id: orgId,
         created_by: actorId,
         updated_by: actorId,
       },
@@ -63,7 +63,7 @@ export async function createPriceList(input: PriceListInput, actorId: UUID, orgI
   return priceList
 }
 
-export async function updatePriceList(id: UUID, input: PriceListUpdateInput, actorId: UUID, orgId: string | null) {
+export async function updatePriceList(id: UUID, input: PriceListUpdateInput, actorId: UUID, orgId: string) {
   const priceList = await getPriceList(id, orgId)
 
   await sequelize.transaction(async (t) => {
@@ -79,7 +79,7 @@ export async function updatePriceList(id: UUID, input: PriceListUpdateInput, act
   return priceList
 }
 
-export async function deletePriceList(id: UUID, actorId: UUID, orgId: string | null) {
+export async function deletePriceList(id: UUID, actorId: UUID, orgId: string) {
   const priceList = await getPriceList(id, orgId)
   if (priceList.is_default) throw new Error('CANNOT_DELETE_DEFAULT_PRICE_LIST')
   await priceList.update({ deleted_by: actorId })
@@ -87,7 +87,7 @@ export async function deletePriceList(id: UUID, actorId: UUID, orgId: string | n
   logger.info({ priceListId: id, actorId }, 'price list deleted')
 }
 
-export async function listPriceListItems(priceListId: UUID, orgId: string | null) {
+export async function listPriceListItems(priceListId: UUID, orgId: string) {
   await getPriceList(priceListId, orgId)
   return PriceListItem.findAll({
     where: { price_list_id: priceListId, ...orgWhere(orgId) },
@@ -96,7 +96,7 @@ export async function listPriceListItems(priceListId: UUID, orgId: string | null
   })
 }
 
-export async function setPriceListItem(priceListId: UUID, input: PriceListItemInput, actorId: UUID, orgId: string | null) {
+export async function setPriceListItem(priceListId: UUID, input: PriceListItemInput, actorId: UUID, orgId: string) {
   await getPriceList(priceListId, orgId)
 
   return sequelize.transaction(async (t) => {
@@ -114,7 +114,7 @@ export async function setPriceListItem(priceListId: UUID, input: PriceListItemIn
       {
         price_list_id:      priceListId,
         product_variant_id: input.product_variant_id,
-        org_id:             orgId ?? null,
+        org_id:             orgId,
         price:              input.price,
         created_by:         actorId,
         updated_by:         actorId,
@@ -127,7 +127,7 @@ export async function setPriceListItem(priceListId: UUID, input: PriceListItemIn
   })
 }
 
-export async function removePriceListItem(itemId: UUID, actorId: UUID, orgId: string | null) {
+export async function removePriceListItem(itemId: UUID, actorId: UUID, orgId: string) {
   const item = await PriceListItem.findOne({ where: { id: itemId, ...orgWhere(orgId) } })
   if (!item) throw new Error('PRICE_LIST_ITEM_NOT_FOUND')
   await item.update({ deleted_by: actorId })
@@ -135,7 +135,7 @@ export async function removePriceListItem(itemId: UUID, actorId: UUID, orgId: st
   logger.info({ itemId, actorId }, 'price list item removed')
 }
 
-export async function getEffectivePrice(priceListId: UUID, variantId: UUID, orgId: string | null): Promise<string | null> {
+export async function getEffectivePrice(priceListId: UUID, variantId: UUID, orgId: string): Promise<string | null> {
   const item = await PriceListItem.findOne({
     where: { price_list_id: priceListId, product_variant_id: variantId, ...orgWhere(orgId) },
   })

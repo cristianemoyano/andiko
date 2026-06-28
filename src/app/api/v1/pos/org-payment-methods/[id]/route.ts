@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { UniqueConstraintError } from 'sequelize'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { PosPaymentMethod, PosBranchPaymentMethod, POS_PAYMENT_METHOD_TYPES } from '@/modules/pos/pos-payment-method.model'
 
 const updateSchema = z.object({
@@ -24,7 +24,9 @@ export const PATCH = withPermission('contacts:write', async (req: NextRequest, {
   }
 
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const method = await PosPaymentMethod.findOne({ where: { id, org_id: ctx.orgId } })
     if (!method) return NextResponse.json({ error: 'No encontrado', code: 'NOT_FOUND' }, { status: 404 })
 
@@ -62,7 +64,9 @@ export const DELETE = withPermission('contacts:write', async (_req: NextRequest,
   const { id } = await params
 
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const method = await PosPaymentMethod.findOne({ where: { id, org_id: ctx.orgId } })
     if (!method) return NextResponse.json({ error: 'No encontrado', code: 'NOT_FOUND' }, { status: 404 })
 

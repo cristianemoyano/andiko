@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { completePurchaseReturnSchema } from '@/modules/purchases/purchase-return.schema'
 import { completePurchaseReturn } from '@/modules/purchases/purchase-returns.service'
 
@@ -17,7 +17,9 @@ export const POST = withPermission<P>('purchases:write', async (req, ctx, sessio
   }
 
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const row = await completePurchaseReturn(id, parsed.data, tenantCtx)
     return NextResponse.json(row)
   } catch (err) {

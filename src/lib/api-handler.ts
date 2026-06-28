@@ -3,19 +3,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { can, type Permission } from '@/lib/permissions'
 import { isModuleEnabled, moduleForPermission } from '@/modules/auth/organization-settings.service'
+import { resolveOrgScope } from '@/lib/session-org'
+import {
+  orgContextRequiredResponse,
+  resolveTenantContext,
+  type TenantContext,
+} from '@/lib/tenancy'
 import type { UserRole } from '@/types/roles'
 import type { Session } from 'next-auth'
+import {
+  type AuthedSession,
+} from '@/lib/session-actor'
 
-export type AuthedSession = Session & {
-  user: NonNullable<Session['user']> & {
-    role: UserRole
-    orgId: string | null
-    branchId: string | null
-    orgRoleId: string | null
-    actingOrgId: string | null
-    realRole: UserRole
-  }
-}
+export type { AuthedSession } from '@/lib/session-actor'
+export { resolveActorId, requireAuthedSession } from '@/lib/session-actor'
 
 export type RouteContext<P extends Record<string, string> = Record<string, string>> = {
   params: Promise<P>
@@ -27,17 +28,28 @@ export type RouteHandler<P extends Record<string, string>> = (
   session: AuthedSession,
 ) => Promise<NextResponse>
 
-/**
- * Returns the effective actor user ID for the current session.
- * When a sys-admin is impersonating, returns the impersonated user's ID.
- * Otherwise returns the real authenticated user's ID.
- *
- * Use this everywhere instead of `session.user.id` so that audit trails
- * (created_by, updated_by) and ownership fields (salesperson_id, buyer_id)
- * are always stamped with the impersonated identity, not the sysadmin's UUID.
- */
-export function resolveActorId(session: AuthedSession): string {
-  return session.user.impersonation?.userId ?? session.user.id!
+export type TenantRouteHandler<P extends Record<string, string>> = (
+  req: NextRequest,
+  ctx: RouteContext<P>,
+  session: AuthedSession,
+  tenant: TenantContext,
+) => Promise<NextResponse>
+
+export type OrgRouteHandler<P extends Record<string, string>> = (
+  req: NextRequest,
+  ctx: RouteContext<P>,
+  session: AuthedSession,
+  orgId: string,
+) => Promise<NextResponse>
+
+function isRealSysAdmin(session: Session): boolean {
+  const user = session.user as AuthedSession['user']
+  return (user.realRole ?? user.role) === 'sys-admin'
+}
+
+function effectiveOrgId(session: Session): string | null {
+  const user = session.user as AuthedSession['user']
+  return user.orgId ?? (isRealSysAdmin(session) ? user.actingOrgId : null) ?? null
 }
 
 /**
@@ -61,19 +73,14 @@ export function withPermission<P extends Record<string, string> = Record<string,
       )
     }
 
-    const role  = session.user.role as UserRole
-    const orgId = (session.user as AuthedSession['user']).orgId ?? undefined
-    const orgRoleId = (session.user as AuthedSession['user']).orgRoleId ?? null
-
-    if (!(await can(role, permission, orgId, orgRoleId))) {
-      return NextResponse.json(
-        { error: 'Forbidden', code: 'FORBIDDEN' },
-        { status: 403 },
-      )
-    }
+    const user = session.user as AuthedSession['user']
+    const role = user.role as UserRole
+    const orgId = effectiveOrgId(session)
+    const orgRoleId = user.orgRoleId ?? null
 
     const moduleKey = moduleForPermission(permission)
-    if (moduleKey && orgId && role !== 'sys-admin') {
+    if (moduleKey && !isRealSysAdmin(session)) {
+      if (!orgId) return orgContextRequiredResponse()
       const enabled = await isModuleEnabled(orgId, moduleKey)
       if (!enabled) {
         return NextResponse.json(
@@ -83,6 +90,37 @@ export function withPermission<P extends Record<string, string> = Record<string,
       }
     }
 
+    if (!(await can(role, permission, orgId ?? undefined, orgRoleId))) {
+      return NextResponse.json(
+        { error: 'Forbidden', code: 'FORBIDDEN' },
+        { status: 403 },
+      )
+    }
+
     return handler(req, ctx, session as AuthedSession)
   }
+}
+
+/** Like `withPermission`, but resolves tenant context (org + branch scope) before the handler. */
+export function withTenantPermission<P extends Record<string, string> = Record<string, string>>(
+  permission: Permission,
+  handler: TenantRouteHandler<P>,
+): (req: NextRequest, ctx: RouteContext<P>) => Promise<NextResponse> {
+  return withPermission(permission, async (req, ctx, session) => {
+    const tenant = await resolveTenantContext(session.user)
+    if ('error' in tenant) return tenant.error
+    return await handler(req, ctx, session, tenant.ctx)
+  })
+}
+
+/** Like `withPermission`, but resolves org id (without branch allow-list) before the handler. */
+export function withOrgPermission<P extends Record<string, string> = Record<string, string>>(
+  permission: Permission,
+  handler: OrgRouteHandler<P>,
+): (req: NextRequest, ctx: RouteContext<P>) => Promise<NextResponse> {
+  return withPermission(permission, async (req, ctx, session) => {
+    const orgScope = await resolveOrgScope(session.user)
+    if ('error' in orgScope) return orgScope.error
+    return handler(req, ctx, session, orgScope.orgId)
+  })
 }

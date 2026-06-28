@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { productVariantSchema } from '@/modules/catalog/product-variant.schema'
 import { createProductVariant } from '@/modules/catalog/product-variants.service'
 
@@ -12,7 +12,9 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
   }
 
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     const variant = await createProductVariant(parsed.data, resolveActorId(session), ctxTenant)
     return NextResponse.json(variant, { status: 201 })
   } catch (err) {

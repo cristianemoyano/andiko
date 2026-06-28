@@ -230,6 +230,7 @@ Trabajo transversal para garantizar aislamiento fuerte por `org_id` y `branch_id
 - [x] Policy de lecturas: enforzar `user_branches` también en lecturas (no solo en writes)
 - [x] Enforcements DB: índices/uniques scoped (`UNIQUE(org_id, ...)`) en entidades relevantes
 - [x] Definir mapa base vs premium e integrarlo con `organization_settings`
+- [x] Estandarización de contexto tenant en APIs: `resolveTenantContext` / `resolveOrgScope`, scoping en compras/ventas/catálogo, 422 coherente sin org
 
 ---
 

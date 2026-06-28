@@ -43,16 +43,19 @@ export async function getPayment(id: string, ctx: TenantContext) {
   return payment
 }
 
-export async function createPayment(input: PaymentInput, orgId: string, actorId: string) {
+export async function createPayment(input: PaymentInput, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const invoice = await Invoice.findByPk(input.invoice_id, { transaction: t })
+    const invoice = await Invoice.findOne({
+      where: whereAllowedBranches(ctx, { id: input.invoice_id }),
+      transaction: t,
+    })
     if (!invoice) throw new Error('INVOICE_NOT_FOUND')
     if (invoice.status === 'cancelled') throw new Error('INVOICE_CANCELLED')
     if (invoice.status === 'draft')     throw new Error('INVOICE_NOT_ISSUED')
     if (invoice.status === 'paid')      throw new Error('INVOICE_ALREADY_PAID')
     if (!invoice.branch_id) throw new Error('INVOICE_BRANCH_REQUIRED')
 
-    const payment_number = await nextDocumentNumber(orgId, invoice.branch_id, 'payment', t)
+    const payment_number = await nextDocumentNumber(ctx.orgId, invoice.branch_id, 'payment', t)
 
     const payment = await Payment.create(
       {
@@ -60,7 +63,7 @@ export async function createPayment(input: PaymentInput, orgId: string, actorId:
         branch_id:      invoice.branch_id,
         payment_number,
         salesperson_id: actorId,
-        org_id:     orgId,
+        org_id:     ctx.orgId,
         amount:     String(input.amount),
         created_by: actorId,
         updated_by: actorId,
@@ -70,14 +73,17 @@ export async function createPayment(input: PaymentInput, orgId: string, actorId:
 
     await recalcInvoiceBalance(input.invoice_id, t)
 
-    logger.info({ paymentId: payment.id, invoiceId: input.invoice_id, orgId, actorId }, 'payment registered')
+    logger.info({ paymentId: payment.id, invoiceId: input.invoice_id, orgId: ctx.orgId, actorId }, 'payment registered')
     return payment
   })
 }
 
-export async function updatePayment(id: string, input: PaymentUpdateInput, actorId: string) {
+export async function updatePayment(id: string, input: PaymentUpdateInput, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const payment = await Payment.findByPk(id, { transaction: t })
+    const payment = await Payment.findOne({
+      where: whereAllowedBranches(ctx, { id }),
+      transaction: t,
+    })
     if (!payment) throw new Error('PAYMENT_NOT_FOUND')
 
     const { amount, ...rest } = input
@@ -92,9 +98,12 @@ export async function updatePayment(id: string, input: PaymentUpdateInput, actor
   })
 }
 
-export async function deletePayment(id: string, actorId: string) {
+export async function deletePayment(id: string, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const payment = await Payment.findByPk(id, { transaction: t })
+    const payment = await Payment.findOne({
+      where: whereAllowedBranches(ctx, { id }),
+      transaction: t,
+    })
     if (!payment) throw new Error('PAYMENT_NOT_FOUND')
 
     const invoiceId = payment.invoice_id

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { salesOrderUpdateSchema } from '@/modules/sales/sales-order.schema'
 import { getOrder, updateOrder, deleteOrder } from '@/modules/sales/sales-orders.service'
 
@@ -9,7 +9,9 @@ type P = { id: string }
 export const GET = withPermission<P>('sales:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     const order = await getOrder(id, ctxTenant)
     return NextResponse.json(order)
   } catch (err: unknown) {
@@ -28,7 +30,9 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     const submittedKeys = Object.keys(body)
     const order = await updateOrder(id, parsed.data, ctxTenant, resolveActorId(session), submittedKeys)
     return NextResponse.json(order)
@@ -60,7 +64,9 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
 export const DELETE = withPermission<P>('sales:delete', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     await deleteOrder(id, ctxTenant, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {

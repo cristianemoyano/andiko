@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { updatePurchaseReturnSchema } from '@/modules/purchases/purchase-return.schema'
 import { getPurchaseReturn, updatePurchaseReturn } from '@/modules/purchases/purchase-returns.service'
 
@@ -9,7 +9,9 @@ type P = { id: string }
 export const GET = withPermission<P>('purchases:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const row = await getPurchaseReturn(id, tenantCtx)
     return NextResponse.json(row)
   } catch (err) {
@@ -31,7 +33,9 @@ export const PATCH = withPermission<P>('purchases:write', async (req, ctx, sessi
   }
 
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const row = await updatePurchaseReturn(id, parsed.data, tenantCtx)
     return NextResponse.json(row)
   } catch (err) {

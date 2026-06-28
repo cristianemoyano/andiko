@@ -53,7 +53,7 @@ export async function listPurchaseReceipts(query: PurchaseReceiptQuery, orgId: s
   return toPaginated(rows, count, page, limit)
 }
 
-export async function getPurchaseReceipt(id: string) {
+export async function getPurchaseReceipt(id: string, orgId: string) {
   ensurePurchasesBranchAssociations()
 
   const { default: Branch }          = await import('@/modules/auth/branch.model')
@@ -63,7 +63,8 @@ export async function getPurchaseReceipt(id: string) {
   const { default: PurchaseOrder }   = await import('./purchase-order.model')
   const { default: SupplierInvoice } = await import('./supplier-invoice.model')
 
-  const receipt = await PurchaseReceipt.findByPk(id, {
+  const receipt = await PurchaseReceipt.findOne({
+    where: { id, org_id: orgId },
     include: [
       { model: Branch,          as: 'branch',           attributes: ['id', 'name', 'branch_code'] },
       { model: Contact,         as: 'contact',          attributes: ['id', 'legal_name', 'trade_name'], required: false },

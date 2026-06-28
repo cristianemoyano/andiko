@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { can, type Permission } from '@/lib/permissions'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { getEmailLog } from '@/modules/communications/email-logs.service'
 import {
   EMAIL_DOCUMENT_TYPES,
@@ -44,20 +44,10 @@ export async function GET(
   }
 
   const role = session.user.role as UserRole
-  const orgId = session.user.orgId ?? undefined
-
-  let ctx
-  try {
-    ctx = await makeTenantContext(session.user as AuthedSession['user'])
-  } catch (err: unknown) {
-    if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
-      return NextResponse.json(
-        { error: 'No hay organización en contexto.', code: TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED },
-        { status: 422 },
-      )
-    }
-    throw err
-  }
+  const tenantResult = await resolveTenantContext(session.user as AuthedSession['user'])
+  if ('error' in tenantResult) return tenantResult.error
+  const orgId = tenantResult.ctx.orgId
+  const ctx = tenantResult.ctx
 
   const allowedDocumentTypes = await getAllowedDocumentTypes(role, orgId)
   if (allowedDocumentTypes.length === 0) {

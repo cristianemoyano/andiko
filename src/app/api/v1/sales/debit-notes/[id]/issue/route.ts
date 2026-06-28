@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { issueDebitNote } from '@/modules/sales/debit-notes.service'
 
 type P = { id: string }
@@ -8,7 +8,9 @@ type P = { id: string }
 export const POST = withPermission<P>('sales:write', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const note = await issueDebitNote(id, tenantCtx)
     return NextResponse.json(note)
   } catch (err) {

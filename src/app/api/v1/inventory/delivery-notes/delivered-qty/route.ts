@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { resolveOrgIdForMutation } from '@/lib/session-org'
+import { resolveOrgScope } from '@/lib/session-org'
 import { getDeliveredQtyByOrderItem } from '@/modules/inventory/delivery-notes.service'
 
 /**
@@ -13,11 +13,9 @@ export const GET = withPermission('inventory:read', async (req, _ctx, session) =
   if (!orderId) {
     return NextResponse.json({ error: 'order_id requerido', code: 'VALIDATION_ERROR' }, { status: 400 })
   }
-  const orgId = await resolveOrgIdForMutation(session.user)
-  if (!orgId) {
-    return NextResponse.json({ error: 'No hay organización en contexto', code: 'ORG_CONTEXT_REQUIRED' }, { status: 422 })
-  }
-
+  const orgScope = await resolveOrgScope(session.user)
+  if ('error' in orgScope) return orgScope.error
+  const orgId = orgScope.orgId
   const delivered = await getDeliveredQtyByOrderItem(orderId, orgId)
   return NextResponse.json({ delivered })
 })

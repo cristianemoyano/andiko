@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { contactAddressUpdateSchema } from '@/modules/contacts/contact-address.schema'
 import { updateAddress, deleteAddress } from '@/modules/contacts/contact-address.service'
 
@@ -15,7 +15,9 @@ export const PATCH = withPermission<P>('contacts:write', async (req, ctx, sessio
   }
 
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     const address = await updateAddress(addressId, parsed.data, ctxTenant, resolveActorId(session))
     return NextResponse.json(address)
   } catch (err) {
@@ -32,7 +34,9 @@ export const PATCH = withPermission<P>('contacts:write', async (req, ctx, sessio
 export const DELETE = withPermission<P>('contacts:delete', async (_req, ctx, session) => {
   const { addressId } = await ctx.params
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     await deleteAddress(addressId, ctxTenant, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err) {

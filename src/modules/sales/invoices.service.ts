@@ -88,6 +88,20 @@ export async function getInvoice(id: string, ctx: TenantContext) {
   return invoice
 }
 
+async function findScopedInvoice(
+  id: string,
+  ctx: TenantContext,
+  options: { transaction?: import('sequelize').Transaction; lock?: boolean } = {},
+) {
+  const invoice = await Invoice.findOne({
+    where: whereAllowedBranches(ctx, { id }),
+    transaction: options.transaction,
+    lock: options.lock,
+  })
+  if (!invoice) throw new Error('INVOICE_NOT_FOUND')
+  return invoice
+}
+
 export async function createInvoice(input: InvoiceInput, orgId: string, actorId: string) {
   return sequelize.transaction(async (t) => {
     const { items, branch_id, ...invoiceFields } = input
@@ -154,10 +168,9 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
   })
 }
 
-export async function updateInvoice(id: string, input: InvoiceUpdateInput, actorId: string) {
+export async function updateInvoice(id: string, input: InvoiceUpdateInput, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const invoice = await Invoice.findByPk(id, { transaction: t })
-    if (!invoice) throw new Error('INVOICE_NOT_FOUND')
+    const invoice = await findScopedInvoice(id, ctx, { transaction: t })
     if (invoice.status !== 'draft') throw new Error('INVOICE_NOT_EDITABLE')
 
     const updateData: Record<string, unknown> = { updated_by: actorId }
@@ -212,9 +225,8 @@ export async function updateInvoice(id: string, input: InvoiceUpdateInput, actor
   })
 }
 
-export async function deleteInvoice(id: string, actorId: string) {
-  const invoice = await Invoice.findByPk(id)
-  if (!invoice) throw new Error('INVOICE_NOT_FOUND')
+export async function deleteInvoice(id: string, ctx: TenantContext, actorId: string) {
+  const invoice = await findScopedInvoice(id, ctx)
   if (invoice.status !== 'draft') throw new Error('INVOICE_NOT_DELETABLE')
 
   await invoice.update({ deleted_by: actorId })
@@ -222,10 +234,9 @@ export async function deleteInvoice(id: string, actorId: string) {
   logger.info({ invoiceId: id, actorId }, 'invoice soft-deleted')
 }
 
-export async function issueInvoice(id: string, actorId: string) {
+export async function issueInvoice(id: string, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const invoice = await Invoice.findByPk(id, { transaction: t })
-    if (!invoice) throw new Error('INVOICE_NOT_FOUND')
+    const invoice = await findScopedInvoice(id, ctx, { transaction: t })
     if (invoice.status !== 'draft') throw new Error('INVOICE_ALREADY_ISSUED')
 
     const issue_date = new Date()
@@ -241,10 +252,9 @@ export async function issueInvoice(id: string, actorId: string) {
   })
 }
 
-export async function cancelInvoice(id: string, actorId: string) {
+export async function cancelInvoice(id: string, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
-    const invoice = await Invoice.findByPk(id, { transaction: t })
-    if (!invoice) throw new Error('INVOICE_NOT_FOUND')
+    const invoice = await findScopedInvoice(id, ctx, { transaction: t })
     if (invoice.status === 'paid') throw new Error('INVOICE_PAID_NOT_CANCELLABLE')
     if (invoice.status === 'cancelled') throw new Error('INVOICE_ALREADY_CANCELLED')
 

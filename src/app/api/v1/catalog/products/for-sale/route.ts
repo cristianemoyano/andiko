@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { listProductsForSale } from '@/modules/catalog/products.service'
 
 const querySchema = z.object({
@@ -17,7 +17,9 @@ export const GET = withPermission('sales:read', async (req, _ctx, session) => {
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
   }
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const { search, price_list_id, manage_stock, limit } = parsed.data
     const manageStockFilter = manage_stock === 'true' ? true : manage_stock === 'false' ? false : undefined
     const data = await listProductsForSale(search, price_list_id, limit, ctx.orgId, manageStockFilter)

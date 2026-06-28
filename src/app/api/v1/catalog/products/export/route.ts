@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { toCsvText } from '@/lib/csv'
 import { listProductsForExport } from '@/modules/catalog/products.service'
 import { PRODUCT_CSV_HEADERS, productToRow } from '@/modules/catalog/products-csv-adapter'
@@ -21,7 +21,9 @@ export const GET = withPermission('products:read', async (req, _ctx, session) =>
   }
 
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const products = await listProductsForExport(parsed.data, ctx, EXPORT_LIMIT)
     const csv = toCsvText(products.map((product) => productToRow(product)), PRODUCT_CSV_HEADERS)
 

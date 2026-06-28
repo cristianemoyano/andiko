@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { stockMovementQuerySchema, manualAdjustmentSchema } from '@/modules/inventory/stock-movement.schema'
 import { listMovements, manualAdjustment } from '@/modules/inventory/stock-movements.service'
 
@@ -10,7 +10,9 @@ export const GET = withPermission('inventory:read', async (req, _ctx, session) =
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
   }
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const result = await listMovements(parsed.data, ctx.orgId)
     return NextResponse.json(result)
   } catch (err: unknown) {
@@ -28,7 +30,9 @@ export const POST = withPermission('inventory:write', async (req, _ctx, session)
     return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     await manualAdjustment(
       parsed.data.variant_id,
       parsed.data.warehouse_id,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { afipOrgFiscalSchema } from '@/modules/afip/afip.schema'
 import { updateOrgFiscal } from '@/modules/afip/afip-config.service'
 import { mapAfipErrorResponse } from '@/modules/afip/afip-http-errors'
@@ -16,7 +16,9 @@ export const PUT = withPermission('sales:write', async (req, _ctx, session) => {
   }
 
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const org = await updateOrgFiscal(parsed.data, ctx)
     return NextResponse.json({
       legal_name: org.legal_name,

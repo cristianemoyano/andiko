@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission, resolveActorId } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { contactUpdateSchema } from '@/modules/contacts/contact.schema'
 import { getContact, updateContact, deleteContact } from '@/modules/contacts/contacts.service'
 
@@ -9,7 +9,9 @@ type P = { id: string }
 export const GET = withPermission<P>('contacts:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     const contact = await getContact(id, ctxTenant)
     return NextResponse.json(contact)
   } catch (err: unknown) {
@@ -29,7 +31,9 @@ export const PATCH = withPermission<P>('contacts:write', async (req, ctx, sessio
   }
 
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     const contact = await updateContact(id, parsed.data, ctxTenant, resolveActorId(session))
     return NextResponse.json(contact)
   } catch (err: unknown) {
@@ -46,7 +50,9 @@ export const PATCH = withPermission<P>('contacts:write', async (req, ctx, sessio
 export const DELETE = withPermission<P>('contacts:delete', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const ctxTenant = await makeTenantContext(session.user)
+    const ctxTenantResult = await resolveTenantContext(session.user)
+    if ('error' in ctxTenantResult) return ctxTenantResult.error
+    const ctxTenant = ctxTenantResult.ctx
     await deleteContact(id, ctxTenant, resolveActorId(session))
     return new NextResponse(null, { status: 204 })
   } catch (err: unknown) {

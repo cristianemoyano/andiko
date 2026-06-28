@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { UniqueConstraintError } from 'sequelize'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { PosPaymentMethod, PosBranchPaymentMethod, POS_PAYMENT_METHOD_TYPES } from '@/modules/pos/pos-payment-method.model'
 
 const createSchema = z.object({
@@ -16,7 +16,9 @@ const createSchema = z.object({
 
 export const GET = withPermission('contacts:read', async (_req, _ctx, session) => {
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
 
     const methods = await PosPaymentMethod.findAll({
       where: { org_id: ctx.orgId },
@@ -49,7 +51,9 @@ export const POST = withPermission('contacts:write', async (req, _ctx, session) 
   }
 
   try {
-    const ctx = await makeTenantContext(session.user)
+    const ctxResult = await resolveTenantContext(session.user)
+    if ('error' in ctxResult) return ctxResult.error
+    const ctx = ctxResult.ctx
     const { branch_ids, ...methodData } = parsed.data
 
     const method = await PosPaymentMethod.create({ ...methodData, org_id: ctx.orgId })

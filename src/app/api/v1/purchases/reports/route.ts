@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { purchasesReportQuerySchema } from '@/modules/purchases/purchases-reports.schema'
 import { getPurchasesReport } from '@/modules/purchases/purchases-reports.service'
 
@@ -14,7 +14,9 @@ export const GET = withPermission('purchases:read', async (req, _ctx, session) =
   }
 
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const report = await getPurchasesReport(parsed.data, tenantCtx)
     return NextResponse.json(report)
   } catch (err: unknown) {

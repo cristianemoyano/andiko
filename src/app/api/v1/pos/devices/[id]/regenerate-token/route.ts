@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import PosDevice from '@/modules/pos/pos-device.model'
 
 async function resolveDevice(id: string, orgId: string) {
@@ -11,7 +11,9 @@ async function resolveDevice(id: string, orgId: string) {
 export const POST = withPermission('contacts:write', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const device = await resolveDevice(id, tenantCtx.orgId)
     if (!device) return NextResponse.json({ error: 'Dispositivo no encontrado', code: 'NOT_FOUND' }, { status: 404 })
 

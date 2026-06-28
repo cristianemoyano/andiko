@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { auth } from '@/lib/auth'
 import { can, type Permission } from '@/lib/permissions'
 import { resolveActorId, type AuthedSession } from '@/lib/api-handler'
-import { makeTenantContext, TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { sendDocumentEmail } from '@/modules/communications/send-document.service'
 import { EMAIL_DOCUMENT_TYPES, type EmailDocumentType } from '@/modules/communications/email-template.schema'
 import type { UserRole } from '@/types/roles'
@@ -51,23 +51,15 @@ export async function POST(req: Request) {
   const { document_type, document_id, to, subject, body } = parsed.data
 
   const role = session.user.role as UserRole
-  const orgId = session.user.orgId ?? undefined
+  const tenantResult = await resolveTenantContext(session.user as AuthedSession['user'])
+  if ('error' in tenantResult) return tenantResult.error
+  const orgId = tenantResult.ctx.orgId
+
   if (!(await can(role, PERMISSION_BY_TYPE[document_type], orgId))) {
     return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 })
   }
 
-  let ctx
-  try {
-    ctx = await makeTenantContext(session.user as AuthedSession['user'])
-  } catch (err: unknown) {
-    if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
-      return NextResponse.json(
-        { error: 'No hay organización en contexto.', code: TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED },
-        { status: 422 },
-      )
-    }
-    throw err
-  }
+  const ctx = tenantResult.ctx
 
   try {
     const result = await sendDocumentEmail(

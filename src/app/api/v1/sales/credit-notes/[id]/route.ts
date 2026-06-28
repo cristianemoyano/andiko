@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withPermission } from '@/lib/api-handler'
-import { makeTenantContext } from '@/lib/tenancy'
+import { resolveTenantContext } from '@/lib/tenancy'
 import { updateCreditNoteSchema } from '@/modules/sales/credit-note.schema'
 import { getCreditNote, updateCreditNote, deleteCreditNote } from '@/modules/sales/credit-notes.service'
 
@@ -24,7 +24,9 @@ function handleError(err: unknown) {
 export const GET = withPermission<P>('sales:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const note = await getCreditNote(id, tenantCtx)
     return NextResponse.json(note)
   } catch (err) { return handleError(err) }
@@ -40,7 +42,9 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     return NextResponse.json({ error: 'Validation error', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     const note = await updateCreditNote(id, parsed.data, tenantCtx)
     return NextResponse.json(note)
   } catch (err) { return handleError(err) }
@@ -49,7 +53,9 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
 export const DELETE = withPermission<P>('sales:delete', async (_req, ctx, session) => {
   const { id } = await ctx.params
   try {
-    const tenantCtx = await makeTenantContext(session.user)
+    const tenantCtxResult = await resolveTenantContext(session.user)
+    if ('error' in tenantCtxResult) return tenantCtxResult.error
+    const tenantCtx = tenantCtxResult.ctx
     await deleteCreditNote(id, tenantCtx)
     return new NextResponse(null, { status: 204 })
   } catch (err) { return handleError(err) }
