@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { DataTable, TablePagination, WooSyncBadge, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
-import { DropdownMenuItem } from '@/components/primitives/DropdownMenu'
+import { DropdownMenuItem, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuSeparator } from '@/components/primitives/DropdownMenu'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { ContactModal } from './ContactModal'
 import { ImportModal } from '@/components/erp/ImportModal'
@@ -15,6 +15,7 @@ import { formatContactPersonLabel } from '@/modules/contacts/contact.utils'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
 import { CONTACT_CSV_HEADERS } from '@/modules/contacts/contacts-csv-adapter'
+import { WOO_IMPORT_SOURCE } from '@/modules/integrations/woocommerce/woo-address.utils'
 
 type Contact = {
   id: string
@@ -29,6 +30,9 @@ type Contact = {
   email: string | null
   phone: string | null
   is_active: boolean
+  import_source: string | null
+  import_external_id: string | null
+  source: string | null
 }
 
 type ContactType = 'customer' | 'supplier' | 'both' | ''
@@ -107,6 +111,11 @@ const COLUMNS: Column<Contact>[] = [
     render: row => row.email ?? <span className="text-fg-subtle">—</span>,
   },
   {
+    key: 'woo',
+    header: 'Origen',
+    render: row => <WooSyncBadge synced={row.source === WOO_IMPORT_SOURCE} />,
+  },
+  {
     key: 'is_active',
     header: 'Estado',
     render: row => (
@@ -115,13 +124,14 @@ const COLUMNS: Column<Contact>[] = [
   },
 ]
 
-export function ContactosClient() {
+export function ContactosClient({ showWooColumn = false }: { showWooColumn?: boolean }) {
   const router = useRouter()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [total, setTotal]       = useState(0)
   const [page, setPage]         = useState(1)
   const [search, setSearch]     = useState('')
   const [typeFilter, setTypeFilter] = useState<ContactType>('')
+  const [sourceFilter, setSourceFilter] = useState<'woocommerce' | ''>('')
   const [refresh, setRefresh]   = useState(0)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing]     = useState<Contact | null>(null)
@@ -137,6 +147,7 @@ export function ContactosClient() {
       limit: String(PAGE_SIZE),
       ...(search     ? { search }     : {}),
       ...(typeFilter ? { type: typeFilter } : {}),
+      ...(showWooColumn && sourceFilter ? { source: sourceFilter } : {}),
     })
     ;(async () => {
       setServerError(null)
@@ -155,7 +166,7 @@ export function ContactosClient() {
       }
     })()
     return () => { mounted = false }
-  }, [page, search, typeFilter, refresh])
+  }, [page, search, typeFilter, sourceFilter, showWooColumn, refresh])
 
   function openCreate() {
     setEditing(null)
@@ -184,28 +195,43 @@ export function ContactosClient() {
     }
   }
 
+  const visibleColumns = useMemo(
+    () => (showWooColumn ? COLUMNS : COLUMNS.filter(col => col.key !== 'woo')),
+    [showWooColumn],
+  )
+
   const columnsWithAction: Column<Contact>[] = [
-    ...COLUMNS,
+    ...visibleColumns,
     {
       key: '_actions',
       header: '',
+      className: 'w-[88px]',
       mobileRole: 'actions' as const,
       render: row => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end gap-0.5" onClick={e => e.stopPropagation()}>
           <Button variant="ghost" size="xs" onClick={() => router.push(`/contactos/${row.id}`)}>
             Ver
           </Button>
-          <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>
-            Editar
-          </Button>
-          <Button variant="ghost" size="xs" onClick={() => setContactToDelete(row)}>
-            Eliminar
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="xs" aria-label="Más acciones" className="px-1.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" />
+                </svg>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => openEdit(row)}>Editar</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={() => setContactToDelete(row)}>
+                Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
       mobileRender: row => (
         <>
-          <DropdownMenuItem onSelect={() => router.push(`/contactos/${row.id}`)}>Ver</DropdownMenuItem>
           <DropdownMenuItem onSelect={() => openEdit(row)}>Editar</DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onSelect={() => setContactToDelete(row)}>Eliminar</DropdownMenuItem>
         </>
@@ -258,6 +284,7 @@ export function ContactosClient() {
           columns={columnsWithAction}
           data={contacts}
           keyExtractor={r => r.id}
+          onRowClick={row => router.push(`/contactos/${row.id}`)}
           emptyMessage="No hay contactos. Creá el primero."
           toolbar={
             <>
@@ -283,6 +310,17 @@ export function ContactosClient() {
                 <option value="supplier">Proveedores</option>
                 <option value="both">Ambos</option>
               </select>
+
+              {showWooColumn && (
+                <select
+                  className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
+                  value={sourceFilter}
+                  onChange={e => { setSourceFilter(e.target.value as 'woocommerce' | ''); setPage(1) }}
+                >
+                  <option value="">Todos los orígenes</option>
+                  <option value="woocommerce">WooCommerce</option>
+                </select>
+              )}
 
               <span className="flex-1" />
               <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>

@@ -51,6 +51,7 @@ function stockActorId(ctx: TenantContext): string {
 }
 
 export async function listSalesReturns(query: SalesReturnQuery, ctx: TenantContext) {
+  ensureSalesReturnAssociations()
   const { offset, limit } = paginate(query.page, query.limit)
   const where: Record<string, unknown> = { ...whereAllowedBranches(ctx, {}) }
   if (query.status)         where.status = query.status
@@ -84,6 +85,7 @@ export async function listSalesReturns(query: SalesReturnQuery, ctx: TenantConte
 }
 
 export async function listReturnsByOrder(orderId: string, ctx: TenantContext) {
+  ensureSalesReturnAssociations()
   return SalesReturn.findAll({
     where: whereAllowedBranches(ctx, { order_id: orderId }),
     attributes: [

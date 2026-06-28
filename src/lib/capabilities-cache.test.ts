@@ -35,7 +35,8 @@ const sampleCaps = {
   permissions: [],
   settingsPermissions: [],
   platform: { listOrganizations: false, sysAdminEmail: false, impersonation: false },
-  nav: { panel: true, panelBranchId: null, organizaciones: true, organizacionesHref: '/organizaciones/org-1', configuracion: true, facturacion: true },
+  nav: { panel: true, panelBranchId: null, organizaciones: true, organizacionesHref: '/organizaciones/org-1', configuracion: true, facturacion: true, integraciones: true },
+  integraciones: { read: true, write: true },
   organizacion: {
     detail: true,
     apiNamespace: 'settings' as const,
@@ -66,6 +67,7 @@ const sampleCaps = {
       emailsEnviados: true,
       apariencia: true,
       afip: true,
+      integraciones: true,
     },
   },
   onboarding: {

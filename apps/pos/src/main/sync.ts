@@ -22,7 +22,7 @@ type CloudPosUser = {
 const BUILTIN_ROLE_LABELS: Record<string, string> = {
   admin: 'Gerente',
   'branch-admin': 'Encargado de sucursal',
-  operator: 'Operativo',
+  operator: 'Operativo (legacy)',
   readonly: 'Solo lectura',
   'sys-admin': 'Sys-admin',
 }

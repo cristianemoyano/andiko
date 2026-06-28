@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { paginationSchema } from '@/lib/pagination'
+import { listSourceQuerySchema } from '@/modules/integrations/woocommerce/woo-list-filters'
 import type { ProductStatus, ProductType, IvaRate, UnitOfMeasure } from './product.model'
 
 const productStatusEnum   = z.enum(['draft', 'active', 'archived'] as const)
@@ -69,6 +70,7 @@ export const productQuerySchema = paginationSchema.extend({
   category_id:  z.string().uuid().optional(),
   status:       productStatusEnum.optional(),
   product_type: productTypeEnum.optional(),
+  source:       listSourceQuerySchema,
 })
 
 // suppress unused import warning — types used externally

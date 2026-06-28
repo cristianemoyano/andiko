@@ -11,13 +11,23 @@ import Product from '@/modules/catalog/product.model'
 import { nextDocumentNumber } from '@/modules/sales/sales.utils'
 import { deductStockForOrder, restoreStockForOrder } from '@/modules/inventory/stock-movements.service'
 import { createContact } from '@/modules/contacts/contacts.service'
+import Contact from '@/modules/contacts/contact.model'
 import WoocommerceSite from './woocommerce-site.model'
 import WoocommerceOrderLink from './woocommerce-order-link.model'
 import WoocommerceCustomerLink from './woocommerce-customer-link.model'
+import {
+  orderToWooCustomer,
+  syncWooCustomerToContact,
+  upsertContactFromWooCustomer,
+} from './woo-customers.service'
+import { resolveLiveContactForCustomerLink, resolveLiveSalesOrderForOrderLink } from './woo-sync-links.service'
+import {
+  isCancelledWooStatus,
+  mapWooStatusToErpStatus,
+  shouldApplyWooErpStatus,
+} from './woo-order-status.utils'
 import type { WooOrder, WooAddress } from './woo-client'
-
-/** Woo statuses that mean the order should not hold ERP stock. */
-const CANCELLED_STATUSES = new Set(['cancelled', 'refunded', 'failed', 'trash'])
+import { parseWooOrderCreatedAt } from './woo-client'
 
 /** Tax-inclusive line split (Woo line totals are treated as gross, like POS). */
 function calcInclusive(qty: number, grossUnit: Decimal, ivaRate: IvaRate) {
@@ -31,6 +41,11 @@ function calcInclusive(qty: number, grossUnit: Decimal, ivaRate: IvaRate) {
 
 function actorFor(site: WoocommerceSite): string {
   return site.created_by ?? site.org_id!
+}
+
+function wooOrderCreatedAtPatch(order: WooOrder): { woo_order_created_at?: Date } {
+  const parsed = parseWooOrderCreatedAt(order)
+  return parsed ? { woo_order_created_at: parsed } : {}
 }
 
 function addressFields(prefix: 'shipping' | 'billing', addr: WooAddress | undefined) {
@@ -49,12 +64,28 @@ function addressFields(prefix: 'shipping' | 'billing', addr: WooAddress | undefi
 /** Resolves the ERP contact for a Woo order, creating + linking one as needed. */
 async function resolveContact(site: WoocommerceSite, order: WooOrder, t: Transaction): Promise<string | null> {
   const wooCustomerId = order.customer_id
+  const customerPayload = orderToWooCustomer(order)
+
   if (wooCustomerId && wooCustomerId > 0) {
     const existing = await WoocommerceCustomerLink.findOne({
       where: { site_id: site.id, woo_customer_id: String(wooCustomerId) },
       transaction: t,
     })
-    if (existing) return existing.contact_id
+    if (existing) {
+      const contact = await resolveLiveContactForCustomerLink(site, existing, t)
+      if (contact) {
+        await syncWooCustomerToContact(contact, customerPayload, site, t)
+        await existing.update({ last_synced_at: new Date() }, { transaction: t })
+        return contact.id
+      }
+    }
+
+    try {
+      const result = await upsertContactFromWooCustomer(site, customerPayload, t)
+      return result.contactId
+    } catch {
+      // Fall through to guest-style resolution when Woo customer has no email on order.
+    }
   }
 
   const b = order.billing
@@ -65,20 +96,24 @@ async function resolveContact(site: WoocommerceSite, order: WooOrder, t: Transac
     email ||
     `Cliente WooCommerce #${order.id}`
 
-  // Reuse an existing contact with the same email before creating a new one,
-  // so repeat buyers (especially guests) don't accumulate duplicate contacts.
   if (email) {
-    const Contact = (await import('@/modules/contacts/contact.model')).default
     const existingByEmail = await Contact.findOne({
       where: { org_id: site.org_id, email },
       attributes: ['id'],
       transaction: t,
     })
     if (existingByEmail) {
+      await syncWooCustomerToContact(existingByEmail, customerPayload, site, t)
       if (wooCustomerId && wooCustomerId > 0) {
         await WoocommerceCustomerLink.findOrCreate({
           where: { site_id: site.id, woo_customer_id: String(wooCustomerId) },
-          defaults: { org_id: site.org_id!, site_id: site.id, woo_customer_id: String(wooCustomerId), contact_id: existingByEmail.id },
+          defaults: {
+            org_id: site.org_id!,
+            site_id: site.id,
+            woo_customer_id: String(wooCustomerId),
+            contact_id: existingByEmail.id,
+            last_synced_at: new Date(),
+          },
           transaction: t,
         })
       }
@@ -86,7 +121,6 @@ async function resolveContact(site: WoocommerceSite, order: WooOrder, t: Transac
     }
   }
 
-  // Guests with no email/identity fall back to the site's default contact.
   if (!email && (!wooCustomerId || wooCustomerId <= 0) && site.default_contact_id) {
     return site.default_contact_id
   }
@@ -99,19 +133,45 @@ async function resolveContact(site: WoocommerceSite, order: WooOrder, t: Transac
       last_name: b?.last_name ?? null,
       iva_condition: 'consumidor_final',
       email: b?.email ?? null,
-      phone: b?.phone ?? null,
+      phone: b?.phone ?? order.shipping?.phone ?? null,
     },
     { orgId: site.org_id!, userId: actorFor(site), defaultBranchId: site.branch_id, allowedBranchIds: [site.branch_id] },
     actorFor(site),
   )
 
+  await syncWooCustomerToContact(contact, customerPayload, site, t)
+
   if (wooCustomerId && wooCustomerId > 0) {
     await WoocommerceCustomerLink.create(
-      { org_id: site.org_id!, site_id: site.id, woo_customer_id: String(wooCustomerId), contact_id: contact.id },
+      {
+        org_id: site.org_id!,
+        site_id: site.id,
+        woo_customer_id: String(wooCustomerId),
+        contact_id: contact.id,
+        last_synced_at: new Date(),
+      },
       { transaction: t },
     )
   }
   return contact.id
+}
+
+async function syncErpOrderStatusFromWoo(
+  salesOrderId: string,
+  wooStatus: string,
+  actorId: string,
+  t: Transaction,
+): Promise<void> {
+  const target = mapWooStatusToErpStatus(wooStatus)
+  const salesOrder = await SalesOrder.findByPk(salesOrderId, {
+    attributes: ['id', 'status'],
+    transaction: t,
+  })
+  if (!salesOrder) return
+  if (!shouldApplyWooErpStatus(salesOrder.status, target)) return
+  if (salesOrder.status !== target) {
+    await salesOrder.update({ status: target, updated_by: actorId }, { transaction: t })
+  }
 }
 
 /**
@@ -130,7 +190,7 @@ export async function ingestWooOrder(
   if (!site) throw new Error('SITE_NOT_FOUND')
 
   // Cancelled/refunded/failed payloads are status changes, not new sales.
-  if (CANCELLED_STATUSES.has(order.status)) {
+  if (isCancelledWooStatus(order.status)) {
     return handleOrderCancellation(site, order)
   }
 
@@ -138,8 +198,17 @@ export async function ingestWooOrder(
     where: { site_id: site.id, woo_order_id: String(order.id) },
   })
   if (existing?.sales_order_id) {
-    await existing.update({ woo_status: order.status })
-    return existing
+    const liveOrder = await resolveLiveSalesOrderForOrderLink(site.org_id!, existing)
+    if (liveOrder) {
+      await sequelize.transaction(async (t) => {
+        await existing.update(
+          { woo_status: order.status, ...wooOrderCreatedAtPatch(order) },
+          { transaction: t },
+        )
+        await syncErpOrderStatusFromWoo(existing.sales_order_id!, order.status, actorFor(site), t)
+      })
+      return existing
+    }
   }
 
   return sequelize.transaction(async (t) => {
@@ -155,13 +224,21 @@ export async function ingestWooOrder(
         woo_order_id: String(order.id),
         sales_order_id: null,
         woo_status: order.status,
+        ...wooOrderCreatedAtPatch(order),
         sync_status: 'pending',
       },
       transaction: t,
     })
-    if (!created) {
-      await link.update({ woo_status: order.status }, { transaction: t })
-      return link
+    if (!created && link.sales_order_id) {
+      const liveOrder = await resolveLiveSalesOrderForOrderLink(site.org_id!, link, t)
+      if (liveOrder) {
+        await link.update(
+          { woo_status: order.status, ...wooOrderCreatedAtPatch(order) },
+          { transaction: t },
+        )
+        await syncErpOrderStatusFromWoo(link.sales_order_id, order.status, actorFor(site), t)
+        return link
+      }
     }
 
     const contactId = await resolveContact(site, order, t)
@@ -218,7 +295,7 @@ export async function ingestWooOrder(
         source: 'woocommerce',
         channel_site_id: site.id,
         order_number: orderNumber,
-        status: 'confirmed',
+        status: mapWooStatusToErpStatus(order.status),
         payment_condition: 'cash',
         currency: order.currency || 'ARS',
         notes: `WooCommerce ${site.name} · pedido #${order.number ?? order.id}`,
@@ -259,6 +336,7 @@ export async function ingestWooOrder(
       {
         sales_order_id: newOrder.id,
         woo_status: order.status,
+        ...wooOrderCreatedAtPatch(order),
         sync_status: syncStatus,
         error_message: errorMessage,
         processed_at: new Date(),
@@ -287,6 +365,7 @@ export async function handleOrderCancellation(site: WoocommerceSite, order: WooO
       woo_order_id: String(order.id),
       sales_order_id: link?.sales_order_id ?? null,
       woo_status: order.status,
+      ...wooOrderCreatedAtPatch(order),
       sync_status: 'synced',
       processed_at: new Date(),
     })
@@ -299,7 +378,10 @@ export async function handleOrderCancellation(site: WoocommerceSite, order: WooO
       await restoreStockForOrder(link.sales_order_id!, site.org_id!, actorFor(site), t)
       await salesOrder.update({ status: 'cancelled', updated_by: actorFor(site) }, { transaction: t })
     }
-    await link.update({ woo_status: order.status, processed_at: new Date() }, { transaction: t })
+    await link.update(
+      { woo_status: order.status, processed_at: new Date(), ...wooOrderCreatedAtPatch(order) },
+      { transaction: t },
+    )
   })
   logger.info({ siteId: site.id, wooOrderId: order.id }, 'woocommerce order cancelled/refunded — stock restored')
   return link

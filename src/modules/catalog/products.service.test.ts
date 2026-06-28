@@ -37,6 +37,9 @@ vi.mock('./catalog-import-persist', () => ({ persistUnmappedCsvColumns: vi.fn() 
 vi.mock('./catalog-import-category', () => ({ resolveOrCreateCategoryIdForImport: vi.fn() }))
 vi.mock('./allocate-variant-sku', () => ({ allocateUniqueVariantSku: vi.fn() }))
 vi.mock('./products-hierarchical-import', () => ({ importProductsHierarchical: vi.fn() }))
+vi.mock('@/modules/integrations/woocommerce/woocommerce-product-link.model', () => ({
+  default: { findAll: vi.fn().mockResolvedValue([]) },
+}))
 
 describe('catalog/products.service', () => {
   beforeEach(() => {
@@ -63,11 +66,15 @@ describe('catalog/products.service', () => {
     const includes = arg.include as unknown as Array<{ as?: string }>
     expect(includes.some(i => i.as === 'variants')).toBe(true)
     expect(includes.some(i => i.as === 'category')).toBe(true)
-    // Sequelize OR condition lives under a symbol key (Op.or).
-    const symbols = Object.getOwnPropertySymbols(arg.where)
-    expect(symbols.length).toBeGreaterThan(0)
-    const orValue = (arg.where as Record<symbol, unknown>)[symbols[0] as symbol]
-    expect(JSON.stringify(orValue)).toContain('$variants.sku$')
+    const andKey = Object.getOwnPropertySymbols(arg.where)[0]
+    expect(andKey).toBeDefined()
+    const clauses = (arg.where as Record<symbol, unknown>)[andKey!] as Record<string | symbol, unknown>[]
+    const hasSkuSearch = clauses.some((clause) => {
+      const orKey = Object.getOwnPropertySymbols(clause)[0]
+      if (!orKey) return false
+      return JSON.stringify(clause[orKey]).includes('$variants.sku$')
+    })
+    expect(hasSkuSearch).toBe(true)
   })
 
   it('createProduct sets default stock fields when missing', async () => {

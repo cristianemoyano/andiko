@@ -1,11 +1,11 @@
 import 'server-only'
+import { signWooHttpRequest } from './woo-oauth'
 
 /**
  * Minimal typed wrapper around the WooCommerce REST API (v3).
  *
- * Authentication uses HTTP Basic auth with the store's consumer key/secret
- * (recommended over HTTPS). All requests go through the global `fetch`, which in
- * this runtime honours the outbound agent proxy automatically.
+ * HTTPS stores use HTTP Basic auth. HTTP stores (local dev) require OAuth 1.0a
+ * query signing — WooCommerce ignores Basic credentials without TLS.
  */
 
 export interface WooClientConfig {
@@ -49,13 +49,34 @@ export interface WooOrder {
   number?: string
   status: string
   currency?: string
+  /** Store timezone, no offset — do not use for persistence. */
   date_created?: string
+  /** UTC instant from Woo REST API — use for persistence. */
+  date_created_gmt?: string
   date_modified?: string
+  date_modified_gmt?: string
   customer_id?: number
   billing?: WooAddress
   shipping?: WooAddress
   line_items: WooLineItem[]
   total?: string
+}
+
+/** Woo `*_gmt` fields are UTC but often omit the `Z` suffix. */
+export function parseWooGmtDateTime(value: string | undefined | null): Date | null {
+  if (!value?.trim()) return null
+  const trimmed = value.trim()
+  const hasOffset = /[zZ]$/.test(trimmed) || /[+-]\d{2}:\d{2}$/.test(trimmed)
+  const asUtc = hasOffset ? trimmed : `${trimmed}Z`
+  const parsed = new Date(asUtc)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+/** UTC creation instant from a Woo order payload (`date_created_gmt` only). */
+export function parseWooOrderCreatedAt(
+  order: Pick<WooOrder, 'date_created_gmt'>,
+): Date | null {
+  return parseWooGmtDateTime(order.date_created_gmt)
 }
 
 export interface WooProduct {
@@ -70,6 +91,16 @@ export interface WooProduct {
   variations?: number[]
 }
 
+export interface WooCustomer {
+  id: number
+  email?: string
+  first_name?: string
+  last_name?: string
+  username?: string
+  billing?: WooAddress
+  shipping?: WooAddress
+}
+
 export class WooApiError extends Error {
   readonly code = 'WOO_API_ERROR' as const
   constructor(readonly status: number, message: string) {
@@ -80,12 +111,20 @@ export class WooApiError extends Error {
 
 export class WooClient {
   private readonly base: string
-  private readonly authHeader: string
+  private readonly consumerKey: string
+  private readonly consumerSecret: string
+  private readonly useOAuth: boolean
+  private readonly authHeader: string | undefined
 
   constructor(config: WooClientConfig) {
     this.base = `${config.storeUrl.replace(/\/+$/, '')}/wp-json/wc/v3`
-    this.authHeader =
-      'Basic ' + Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString('base64')
+    this.consumerKey = config.consumerKey
+    this.consumerSecret = config.consumerSecret
+    const isHttps = config.storeUrl.trim().toLowerCase().startsWith('https://')
+    this.useOAuth = !isHttps
+    this.authHeader = isHttps
+      ? 'Basic ' + Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString('base64')
+      : undefined
   }
 
   private async request<T>(
@@ -97,14 +136,19 @@ export class WooClient {
     for (const [k, v] of Object.entries(opts.query ?? {})) {
       if (v !== undefined) url.searchParams.set(k, String(v))
     }
+    if (this.useOAuth) {
+      signWooHttpRequest(method, url, this.consumerKey, this.consumerSecret)
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    }
+    if (this.authHeader) headers.Authorization = this.authHeader
 
     const res = await fetch(url.toString(), {
       method,
-      headers: {
-        Authorization: this.authHeader,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       cache: 'no-store',
     })
@@ -175,6 +219,26 @@ export class WooClient {
 
   async getOrder(orderId: number): Promise<WooOrder> {
     return (await this.request<WooOrder>('GET', `/orders/${orderId}`)).data
+  }
+
+  // --- Customers ---
+
+  listCustomers(): Promise<WooCustomer[]> {
+    return this.listAll<WooCustomer>('/customers')
+  }
+
+  async getCustomer(customerId: number): Promise<WooCustomer> {
+    return (await this.request<WooCustomer>('GET', `/customers/${customerId}`, {
+      query: { context: 'edit' },
+    })).data
+  }
+
+  async createCustomer(body: Record<string, unknown>): Promise<WooCustomer> {
+    return (await this.request<WooCustomer>('POST', '/customers', { body })).data
+  }
+
+  async updateCustomer(customerId: number, body: Record<string, unknown>): Promise<WooCustomer> {
+    return (await this.request<WooCustomer>('PUT', `/customers/${customerId}`, { body })).data
   }
 
   // --- Webhooks ---

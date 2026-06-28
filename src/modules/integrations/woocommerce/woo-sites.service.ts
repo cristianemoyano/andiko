@@ -57,6 +57,12 @@ export async function listSites(query: WoocommerceSiteQuery, ctx: TenantContext)
   return toPaginated(rows.map(toPublicSite), count, page, limit)
 }
 
+/** True when the org has at least one WooCommerce site configured (any status). */
+export async function orgHasWoocommerceSites(orgId: string): Promise<boolean> {
+  const count = await WoocommerceSite.count({ where: { org_id: orgId } })
+  return count > 0
+}
+
 export async function getSite(id: string, orgId: string): Promise<WoocommerceSite> {
   const site = await WoocommerceSite.findOne({ where: { id, org_id: orgId } })
   if (!site) throw new Error('SITE_NOT_FOUND')
@@ -135,10 +141,10 @@ export function getWebhookSecret(site: WoocommerceSite): string | null {
 
 /** Builds an authenticated WooCommerce REST client for a site. */
 export function buildClientForSite(site: WoocommerceSite): WooClient {
-  const key = decryptSecret(site.consumer_key_encrypted)
-  const secret = decryptSecret(site.consumer_secret_encrypted)
+  const key = decryptSecret(site.consumer_key_encrypted)?.trim()
+  const secret = decryptSecret(site.consumer_secret_encrypted)?.trim()
   if (!key || !secret) throw new Error('SITE_CREDENTIALS_INVALID')
-  return new WooClient({ storeUrl: site.store_url, consumerKey: key, consumerSecret: secret })
+  return new WooClient({ storeUrl: site.store_url.trim(), consumerKey: key, consumerSecret: secret })
 }
 
 async function registerWebhooks(site: WoocommerceSite, secret: string): Promise<void> {

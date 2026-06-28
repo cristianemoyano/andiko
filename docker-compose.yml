@@ -32,6 +32,78 @@ services:
       postgres:
         condition: service_healthy
 
+  # --- WooCommerce dev store (profile woo — optional integration tests) — docs/dev/woocommerce-local.md
+  woo-db:
+    profiles: ["woo"]
+    image: mariadb:11
+    container_name: andiko_woo_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - woo_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  wordpress:
+    profiles: ["woo"]
+    image: wordpress:6.9-php8.2-apache
+    container_name: andiko_woo_wordpress
+    restart: unless-stopped
+    ports:
+      - "${WOO_PORT:-8080}:80"
+    environment:
+      WORDPRESS_DB_HOST: woo-db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - woo_wp_data:/var/www/html
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /var/www/html/wp-config.php && curl -sf http://localhost/ > /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    depends_on:
+      woo-db:
+        condition: service_healthy
+
+  woo-init:
+    profiles: ["woo-init"]
+    image: wordpress:cli-2.11-php8.2
+    container_name: andiko_woo_init
+    user: "33:33"
+    depends_on:
+      wordpress:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: woo-db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+      WOO_STORE_URL: ${WOO_STORE_URL:-http://localhost:8080}
+      WOO_ADMIN_USER: ${WOO_ADMIN_USER:-admin}
+      WOO_ADMIN_PASSWORD: ${WOO_ADMIN_PASSWORD:-admin}
+      WOO_ADMIN_EMAIL: ${WOO_ADMIN_EMAIL:-admin@andiko.local}
+      WOO_CREDENTIALS_FILE: /output/credentials.env
+      WP_CLI_CACHE_DIR: /tmp/wp-cli-cache
+    volumes:
+      - woo_wp_data:/var/www/html
+      - ./infra/docker/woocommerce:/scripts:ro
+      - ./infra/docker/woocommerce/dev-output:/output
+    entrypoint: ["/bin/sh", "/scripts/bootstrap.sh"]
+
 volumes:
   postgres_data:
   pgadmin_data:
+  woo_db_data:
+  woo_wp_data:

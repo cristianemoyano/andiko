@@ -2,7 +2,7 @@ import { DataTypes, Model, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
 import type { UUID } from '@/types'
 
-export const WOO_SYNC_KINDS = ['stock', 'product', 'order_ingest'] as const
+export const WOO_SYNC_KINDS = ['stock', 'product', 'order_ingest', 'import'] as const
 export type WooSyncKind = typeof WOO_SYNC_KINDS[number]
 
 export const WOO_SYNC_STATUSES = ['pending', 'processing', 'done', 'error'] as const

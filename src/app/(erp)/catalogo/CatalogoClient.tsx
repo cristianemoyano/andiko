@@ -6,11 +6,13 @@ import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { WOO_IMPORT_SOURCE } from '@/modules/integrations/woocommerce/woo-address.utils'
 import {
   GroupedDataTable,
   TablePagination,
   ConfirmDialog,
   ImportModal,
+  WooSyncBadge,
   type GroupedColumn,
   type RowGroup,
   type ImportDefaultFieldConfig,
@@ -90,6 +92,7 @@ type Product = {
   category?: { id: string; name: string } | null
   images?: Array<{ url: string; alt: string | null; position: number }>
   variants: Variant[]
+  source: string | null
 }
 
 type ProductForEdit = {
@@ -145,13 +148,14 @@ function priceRange(variants: Variant[]) {
   return min === max ? fmtPrice(String(min)) : `desde ${fmtPrice(String(min))}`
 }
 
-export function CatalogoClient() {
+export function CatalogoClient({ showWooColumn = false }: { showWooColumn?: boolean }) {
   const router = useRouter()
   const [products, setProducts]     = useState<Product[]>([])
   const [total, setTotal]           = useState(0)
   const [page, setPage]             = useState(1)
   const [search, setSearch]         = useState('')
   const [status, setStatus]         = useState('')
+  const [sourceFilter, setSourceFilter] = useState<'woocommerce' | ''>('')
   const [serverError, setServerError] = useState<string | null>(null)
   const [modalOpen, setModalOpen]   = useState(false)
   const [editing, setEditing]       = useState<ProductForEdit>(null)
@@ -191,6 +195,7 @@ export function CatalogoClient() {
       const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
       if (search) params.set('search', search)
       if (status) params.set('status', status)
+      if (showWooColumn && sourceFilter) params.set('source', sourceFilter)
       try {
         const data = await fetchJson<{ data?: Product[]; total?: number }>(
           `/api/v1/catalog/products?${params}`,
@@ -206,7 +211,7 @@ export function CatalogoClient() {
       }
     })()
     return () => { mounted = false }
-  }, [page, search, status, refresh])
+  }, [page, search, status, sourceFilter, showWooColumn, refresh])
 
   async function openEdit(id: string) {
     setLoadingEdit(true)
@@ -243,7 +248,8 @@ export function CatalogoClient() {
   }
 
   // ── Column definitions ───────────────────────────────────────────────────────
-  const parentColumns = useMemo<GroupedColumn<Product>[]>(() => [
+  const parentColumns = useMemo<GroupedColumn<Product>[]>(() => {
+    const columns: GroupedColumn<Product>[] = [
     {
       key: 'name',
       header: 'Nombre / Variante',
@@ -318,6 +324,12 @@ export function CatalogoClient() {
       },
     },
     {
+      key: 'woo',
+      header: 'Origen',
+      mobileRole: 'hidden',
+      render: p => <WooSyncBadge synced={p.source === WOO_IMPORT_SOURCE} />,
+    },
+    {
       key: 'status',
       header: 'Estado',
       mobileRole: 'badge',
@@ -345,9 +357,12 @@ export function CatalogoClient() {
         </div>
       ),
     },
-  ], [loadingEdit, router])  
+    ]
+    return showWooColumn ? columns : columns.filter(col => col.key !== 'woo')
+  }, [loadingEdit, router, showWooColumn])  
 
-  const childColumns = useMemo<GroupedColumn<Variant>[]>(() => [
+  const childColumns = useMemo<GroupedColumn<Variant>[]>(() => {
+    const columns: GroupedColumn<Variant>[] = [
     {
       key: 'name',
       header: '',
@@ -371,17 +386,16 @@ export function CatalogoClient() {
         return p ? <span className="tabular-nums text-fg-muted">{p}</span> : <span className="text-fg-subtle">—</span>
       },
     },
-    {
-      key: 'stock',
-      header: '',
-      align: 'right',
-      render: v => v.manage_stock
+    { key: 'stock', header: '', align: 'right', render: v => v.manage_stock
         ? <span className="tabular-nums text-fg-muted">{v.stock_quantity}</span>
         : <span className="text-fg-subtle">—</span>,
     },
+    { key: 'woo', header: '', render: () => null },
     { key: 'status',  header: '', render: () => null },
     { key: 'actions', header: '', render: () => null },
-  ], [])
+    ]
+    return showWooColumn ? columns : columns.filter(col => col.key !== 'woo')
+  }, [showWooColumn])
 
   const groups = useMemo<RowGroup<Product, Variant>[]>(
     () => products.map(p => ({ parent: p, children: p.variants })),
@@ -453,6 +467,16 @@ export function CatalogoClient() {
                 <option value="active">Activo</option>
                 <option value="archived">Archivado</option>
               </select>
+              {showWooColumn && (
+                <select
+                  value={sourceFilter}
+                  onChange={e => { setSourceFilter(e.target.value as 'woocommerce' | ''); setPage(1) }}
+                  className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
+                >
+                  <option value="">Todos los orígenes</option>
+                  <option value="woocommerce">WooCommerce</option>
+                </select>
+              )}
               <span className="flex-1" />
               <span className="text-[12px] text-fg-muted">{total} producto{total !== 1 ? 's' : ''}</span>
             </>

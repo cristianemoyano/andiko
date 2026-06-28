@@ -2,6 +2,10 @@
 
 ## [0.26.1](https://github.com/cristianemoyano/andiko/compare/v0.26.0...v0.26.1) (2026-06-28)
 
+### Features
+
+* **accounting:** move Libro IVA and fiscal reports under Contabilidad; unify fiscal access under `accounting:read`
+
 ### Bug Fixes
 
 * **core:** use CHECK constraint for woocommerce sales order source ([5f3ed84](https://github.com/cristianemoyano/andiko/commit/5f3ed846350aeb41aa30193284aa9a1f47366ad0))

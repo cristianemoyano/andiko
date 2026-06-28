@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { splitLegacyUserName } from './user.utils'
 
 const assignableBuiltinRole = z.enum(['admin', 'branch-admin'])
+/** Includes legacy `operator` for updating existing users only — not assignable on create. */
 const legacyBuiltinRole = z.enum(['admin', 'operator', 'readonly', 'branch-admin'])
 
 const userNameFields = {

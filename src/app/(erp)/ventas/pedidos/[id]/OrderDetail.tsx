@@ -18,6 +18,7 @@ import { SalesDocumentNumber } from '@/components/erp/SalesDocumentNumber'
 import { resolveSalesDocumentDisplay } from '@/lib/fiscal-document-number'
 import { EmptyState } from '@/components/erp/EmptyState'
 import { StatusPipeline } from '@/components/erp/StatusPipeline'
+import { WooOrderStatusBadge } from '@/components/erp/WooOrderStatusBadge'
 import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
 import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
@@ -602,12 +603,27 @@ export function OrderDetail({ id }: OrderDetailProps) {
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
           {/* Status pipeline */}
-          <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-center justify-between gap-4">
+          <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
             <div>
               <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">Pedido</p>
               <h1 className="text-[20px] font-bold text-fg tracking-tight">{order.order_number}</h1>
             </div>
-            <StatusPipeline type="order" status={order.status} />
+            <div className="flex items-center gap-5 flex-wrap">
+              {order.woo_channel && (
+                <div className="flex flex-col items-end gap-1">
+                  <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide">Estado Woo</p>
+                  <WooOrderStatusBadge label={order.woo_channel.woo_status_label} />
+                  {(order.woo_channel.site_name || order.woo_channel.woo_order_id) && (
+                    <p className="text-[11px] text-fg-subtle">
+                      {[order.woo_channel.site_name, order.woo_channel.woo_order_id ? `#${order.woo_channel.woo_order_id}` : null]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  )}
+                </div>
+              )}
+              <StatusPipeline type="order" status={order.status} />
+            </div>
           </div>
 
           {editLockReason && !editMode && (

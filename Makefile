@@ -1,24 +1,32 @@
 .PHONY: up down reset logs db shell dev \
+	woo-up woo-down woo-bootstrap woo-credentials woo-reset \
 	prod-push prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-migrate prod-migrate-status \
 	prod-create-sysadmin prod-health prod-backup prod-logs prod-renew-certs
 
-# Start Colima and all services
+# =============================================================================
+# Development — infra local (postgres, pgadmin, Next.js)
+# =============================================================================
+
+# Start Colima and core dev services (postgres + pgadmin only)
 up:
 	colima start --cpu 2 --memory 4 2>/dev/null || true
 	docker compose up -d
-	@echo "PostgreSQL → localhost:5432"
-	@echo "pgAdmin   → http://localhost:5050"
+	@echo "PostgreSQL → localhost:${POSTGRES_PORT:-5433}"
+	@echo "pgAdmin   → http://localhost:${PGADMIN_PORT:-5050}"
 
-# Stop all services (keeps volumes)
+# Stop all running compose services (keeps volumes)
 down:
 	docker compose down
 
-# Stop and delete all data (full reset)
+# Reset core dev data only (postgres + pgadmin; Woo volumes untouched)
 reset:
-	docker compose down -v
+	docker compose down
+	docker volume rm andiko_postgres_data andiko_pgadmin_data 2>/dev/null || true
 	docker compose up -d
+	@echo "PostgreSQL → localhost:${POSTGRES_PORT:-5433}"
+	@echo "pgAdmin   → http://localhost:${PGADMIN_PORT:-5050}"
 
-# Follow logs for all services
+# Follow logs for all running services
 logs:
 	docker compose logs -f
 
@@ -30,11 +38,42 @@ db:
 shell:
 	docker compose exec postgres psql -U $${POSTGRES_USER:-andiko} -d $${POSTGRES_DB:-andiko_dev}
 
-# Start Next.js dev server (infra must be up first)
+# Start Next.js dev server (core infra must be up first)
 dev: up
 	pnpm dev
 
-# --- Production (VPS / laptop) — see docs/deployment/production.md ---
+# =============================================================================
+# Development — WooCommerce (optional; integration tests only)
+# See docs/dev/woocommerce-local.md
+# =============================================================================
+
+# Start Woo stack + bootstrap (REST API keys → infra/docker/woocommerce/dev-output/credentials.env)
+woo-up: woo-bootstrap
+
+woo-bootstrap:
+	mkdir -p infra/docker/woocommerce/dev-output
+	chmod 777 infra/docker/woocommerce/dev-output
+	docker compose --profile woo up -d woo-db wordpress
+	docker compose --profile woo --profile woo-init run --rm woo-init
+	@echo "WooCommerce → http://localhost:${WOO_PORT:-8080}  (make woo-credentials)"
+
+# Stop Woo services (keeps Woo volumes)
+woo-down:
+	docker compose --profile woo stop wordpress woo-db
+
+woo-credentials:
+	@test -f infra/docker/woocommerce/dev-output/credentials.env || (echo "Missing credentials. Run: make woo-up" && exit 1)
+	@cat infra/docker/woocommerce/dev-output/credentials.env
+
+# Delete Woo volumes and stop Woo services
+woo-reset:
+	docker compose --profile woo down
+	docker volume rm andiko_woo_wp_data andiko_woo_db_data 2>/dev/null || true
+	@echo "Woo volumes removed. Run: make woo-up"
+
+# =============================================================================
+# Production (VPS / laptop) — see docs/deployment/production.md
+# =============================================================================
 
 prod-push:
 	@test -n "$(TAG)" || (echo "TAG is required: make prod-push TAG=v0.26.0" && exit 1)

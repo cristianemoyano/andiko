@@ -97,6 +97,17 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   cancelled:        'Cancelado',
 }
 
+export interface WooOrderChannel {
+  woo_order_id: string
+  woo_status: string | null
+  woo_status_label: string
+  woo_order_created_at: string | null
+  site_id: string | null
+  site_name: string | null
+  sync_status: string
+  error_message: string | null
+}
+
 export interface OrderItem {
   id: string
   product_id: string | null
@@ -122,6 +133,7 @@ export interface Order {
   price_list_id: string | null
   order_number: string
   status: OrderStatus
+  source?: 'erp' | 'pos' | 'woocommerce'
   promised_date: string | null
   payment_condition: PaymentCondition
   currency: string
@@ -153,6 +165,7 @@ export interface Order {
   contact?: { id: string; legal_name: string; trade_name: string | null } | null
   salesperson?: { id: string; name: string } | null
   items?: OrderItem[]
+  woo_channel?: WooOrderChannel | null
 }
 
 // --- Payment (matches API / `payments` model; used by invoice detail) ---

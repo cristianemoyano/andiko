@@ -9,23 +9,34 @@ import logger from '@/lib/logger'
 import type { TenantContext } from '@/lib/tenancy'
 import { whereOrg } from '@/lib/tenancy'
 import sequelize from '@/lib/db'
+import {
+  combineListWhere,
+  importSourceListWhere,
+  resolveListSource,
+} from '@/modules/integrations/woocommerce/woo-list-filters'
+import WoocommerceCustomerLink from '@/modules/integrations/woocommerce/woocommerce-customer-link.model'
 
 export async function listContacts(query: ContactQuery, ctx: TenantContext) {
-  const { page, limit, search, type } = query
+  const { page, limit, search, type, source } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = whereOrg(ctx)
-  if (type) where.type = type
-  if (search) {
-    where[Op.or as unknown as string] = [
-      { legal_name: { [Op.iLike]: `%${search}%` } },
-      { trade_name: { [Op.iLike]: `%${search}%` } },
-      { first_name: { [Op.iLike]: `%${search}%` } },
-      { last_name: { [Op.iLike]: `%${search}%` } },
-      { job_title: { [Op.iLike]: `%${search}%` } },
-      { cuit: { [Op.iLike]: `%${search}%` } },
-    ]
-  }
+  const where = combineListWhere(
+    whereOrg(ctx),
+    type ? { type } : {},
+    source ? importSourceListWhere(source, ctx.orgId, 'contact') : {},
+    search
+      ? {
+          [Op.or]: [
+            { legal_name: { [Op.iLike]: `%${search}%` } },
+            { trade_name: { [Op.iLike]: `%${search}%` } },
+            { first_name: { [Op.iLike]: `%${search}%` } },
+            { last_name: { [Op.iLike]: `%${search}%` } },
+            { job_title: { [Op.iLike]: `%${search}%` } },
+            { cuit: { [Op.iLike]: `%${search}%` } },
+          ],
+        }
+      : {},
+  )
 
   const { rows, count } = await Contact.findAndCountAll({
     where,
@@ -34,11 +45,29 @@ export async function listContacts(query: ContactQuery, ctx: TenantContext) {
     order: [['legal_name', 'ASC']],
     attributes: [
       'id', 'type', 'legal_name', 'trade_name', 'first_name', 'last_name', 'job_title',
-      'cuit', 'iva_condition', 'email', 'phone', 'is_active',
+      'cuit', 'iva_condition', 'email', 'phone', 'is_active', 'import_source', 'import_external_id',
     ],
   })
 
-  return toPaginated(rows, count, page, limit)
+  const rowIds = rows.map((row) => row.id)
+  const linkedContactIds = rowIds.length
+    ? new Set(
+        (
+          await WoocommerceCustomerLink.findAll({
+            where: { org_id: ctx.orgId, contact_id: { [Op.in]: rowIds } },
+            attributes: ['contact_id'],
+            raw: true,
+          })
+        ).map((link) => link.contact_id as string),
+      )
+    : new Set<string>()
+
+  const data = rows.map((row) => ({
+    ...row.toJSON(),
+    source: resolveListSource(row.import_source, linkedContactIds.has(row.id)),
+  }))
+
+  return toPaginated(data, count, page, limit)
 }
 
 export async function getContact(id: string, ctx: TenantContext) {

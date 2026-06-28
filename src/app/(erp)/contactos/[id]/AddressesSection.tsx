@@ -15,6 +15,7 @@ type Address = {
   type: 'fiscal' | 'delivery' | 'commercial'
   street: string
   number: string | null
+  second_line: string | null
   floor: string | null
   apartment: string | null
   city: string
@@ -39,7 +40,9 @@ const TYPE_STATUS = {
 function formatAddress(a: Address) {
   const parts = [a.street]
   if (a.number) parts[0] += ` ${a.number}`
-  if (a.floor || a.apartment) parts[0] += `, ${[a.floor && `Piso ${a.floor}`, a.apartment && `Dpto ${a.apartment}`].filter(Boolean).join(' ')}`
+  const complement = a.second_line?.trim()
+    || [a.floor && `Piso ${a.floor}`, a.apartment && `Dpto ${a.apartment}`].filter(Boolean).join(' ')
+  if (complement) parts[0] += `, ${complement}`
   parts.push(a.city)
   parts.push(a.province)
   if (a.postal_code) parts.push(`(${a.postal_code})`)
@@ -142,8 +145,9 @@ function AddressModal({ contactId, address, onClose, onSaved }: {
       type:        form.get('type'),
       street:      form.get('street'),
       number:      form.get('number') || null,
-      floor:       form.get('floor') || null,
-      apartment:   form.get('apartment') || null,
+      second_line: form.get('second_line') || null,
+      floor:       null,
+      apartment:   null,
       city:        form.get('city'),
       province:    form.get('province'),
       postal_code: form.get('postal_code') || null,
@@ -217,14 +221,15 @@ function AddressModal({ contactId, address, onClose, onSaved }: {
               </FormField>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FormField label="Piso" htmlFor="floor" error={errors.floor?.[0]}>
-                <Input id="floor" name="floor" defaultValue={address?.floor ?? ''} placeholder="3" disabled={saving} />
-              </FormField>
-              <FormField label="Depto" htmlFor="apartment" error={errors.apartment?.[0]}>
-                <Input id="apartment" name="apartment" defaultValue={address?.apartment ?? ''} placeholder="B" disabled={saving} />
-              </FormField>
-            </div>
+            <FormField label="Complemento" htmlFor="second_line" error={errors.second_line?.[0]}>
+              <Input
+                id="second_line"
+                name="second_line"
+                defaultValue={address?.second_line ?? [address?.floor, address?.apartment].filter(Boolean).join(', ') ?? ''}
+                placeholder="Piso, depto, entre calles…"
+                disabled={saving}
+              />
+            </FormField>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField label="Ciudad" htmlFor="city" required error={errors.city?.[0]}>

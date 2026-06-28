@@ -6,6 +6,7 @@ vi.mock('./sales-quote.model', () => ({
 }))
 vi.mock('./sales-order.model', () => ({
   ORDER_STATUSES: ['draft', 'confirmed', 'in_progress', 'delivered', 'partial_returned', 'returned', 'cancelled'],
+  SALES_ORDER_SOURCES: ['erp', 'pos', 'woocommerce'],
 }))
 vi.mock('./invoice.model', () => ({
   INVOICE_STATUSES: ['draft', 'issued', 'partially_paid', 'paid', 'cancelled'],

@@ -44,6 +44,10 @@ export const BASE_PLAN_ENABLED_MODULES: OrgModuleKey[] = [...BASE_TIER_MODULES]
 
 /** Prefijos de ruta ERP → módulo (orden: más específico primero). */
 export const ROUTE_PREFIX_TO_MODULE: ReadonlyArray<{ prefix: string; module: OrgModuleKey }> = [
+  { prefix: '/ventas/libro-iva', module: 'accounting' },
+  { prefix: '/ventas/reportes', module: 'accounting' },
+  { prefix: '/compras/libro-iva', module: 'accounting' },
+  { prefix: '/compras/reportes', module: 'accounting' },
   { prefix: '/ventas', module: 'sales' },
   { prefix: '/inventario', module: 'inventory' },
   { prefix: '/compras', module: 'purchases' },

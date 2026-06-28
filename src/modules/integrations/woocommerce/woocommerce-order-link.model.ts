@@ -12,6 +12,8 @@ export interface WoocommerceOrderLinkAttributes {
   woo_order_id: string
   sales_order_id: UUID | null
   woo_status: string | null
+  /** WooCommerce `date_created_gmt` at ingest (UTC instant, TIMESTAMPTZ). */
+  woo_order_created_at: Date | null
   sync_status: WooOrderSyncStatus
   error_message: string | null
   processed_at: Date | null
@@ -21,7 +23,7 @@ export interface WoocommerceOrderLinkAttributes {
 
 type WoocommerceOrderLinkCreationAttributes = Optional<
   WoocommerceOrderLinkAttributes,
-  | 'id' | 'sales_order_id' | 'woo_status' | 'sync_status' | 'error_message'
+  | 'id' | 'sales_order_id' | 'woo_status' | 'woo_order_created_at' | 'sync_status' | 'error_message'
   | 'processed_at' | 'created_at' | 'updated_at'
 >
 
@@ -35,6 +37,7 @@ class WoocommerceOrderLink extends Model<
   declare woo_order_id: string
   declare sales_order_id: UUID | null
   declare woo_status: string | null
+  declare woo_order_created_at: Date | null
   declare sync_status: WooOrderSyncStatus
   declare error_message: string | null
   declare processed_at: Date | null
@@ -49,8 +52,9 @@ WoocommerceOrderLink.init(
     site_id:        { type: DataTypes.UUID, allowNull: false },
     woo_order_id:   { type: DataTypes.BIGINT, allowNull: false },
     sales_order_id: { type: DataTypes.UUID },
-    woo_status:     { type: DataTypes.STRING(40) },
-    sync_status:    { type: DataTypes.ENUM(...WOO_ORDER_SYNC_STATUSES), allowNull: false, defaultValue: 'pending' },
+    woo_status:             { type: DataTypes.STRING(40) },
+    woo_order_created_at:   { type: DataTypes.DATE, allowNull: true },
+    sync_status:            { type: DataTypes.ENUM(...WOO_ORDER_SYNC_STATUSES), allowNull: false, defaultValue: 'pending' },
     error_message:  { type: DataTypes.TEXT },
     processed_at:   { type: DataTypes.DATE },
     created_at:     { type: DataTypes.DATE, allowNull: false },

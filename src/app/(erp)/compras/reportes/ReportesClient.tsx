@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
@@ -93,7 +93,15 @@ function exportCsv(rows: ReportRow[], totals: ReportTotals, groupBy: GroupBy) {
   URL.revokeObjectURL(url)
 }
 
-export function ReportesClient() {
+export interface ComprasReportesClientProps {
+  subnav?: ReactNode
+  breadcrumbs?: { label: string; href?: string }[]
+}
+
+export function ComprasReportesClient({
+  subnav = <ComprasSubNav />,
+  breadcrumbs = [{ label: 'Compras', href: '/compras' }, { label: 'Reportes' }],
+}: ComprasReportesClientProps = {}) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -184,14 +192,14 @@ export function ReportesClient() {
   return (
     <div className="flex h-full flex-col">
       <TopBar
-        breadcrumbs={[{ label: 'Compras', href: '/compras' }, { label: 'Reportes' }]}
+        breadcrumbs={breadcrumbs}
         actions={
           <Button size="sm" variant="secondary" onClick={() => exportCsv(rows, totals, groupBy)} disabled={rows.length === 0}>
             Exportar CSV
           </Button>
         }
       />
-      <ComprasSubNav />
+      {subnav}
 
       <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}

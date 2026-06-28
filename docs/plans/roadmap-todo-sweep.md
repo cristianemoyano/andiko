@@ -10,8 +10,8 @@ Objetivo: implementar todos los ítems pendientes implementables del `docs/ROADM
 ## Lote 1 (paralelo, sin migraciones)
 
 1. Ventas: listado de cuentas corrientes por cliente (`/ventas/cuenta-corriente` — vista lista global)
-2. Reportes de ventas: por período / cliente / producto (`/ventas/reportes`)
-3. Reportes de compras: por período / proveedor / categoría (`/compras/reportes`)
+2. Reportes de ventas: por período / cliente / producto (`/contabilidad/reportes/ventas`; legacy `/ventas/reportes` redirige)
+3. Reportes de compras: por período / proveedor / categoría (`/contabilidad/reportes/compras`; legacy `/compras/reportes` redirige)
 4. Compras: conciliación orden → recepción → factura (alertas de diferencias)
 5. Design system: Checkbox, Switch, Tooltip, DropdownMenu, Card/Panel, Tabs, Select (+ stories)
 

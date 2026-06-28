@@ -4,6 +4,7 @@ export const contactAddressSchema = z.object({
   type:        z.enum(['fiscal', 'delivery', 'commercial']),
   street:      z.string().min(1).max(255),
   number:      z.string().max(20).nullable().optional(),
+  second_line: z.string().max(255).nullable().optional(),
   floor:       z.string().max(20).nullable().optional(),
   apartment:   z.string().max(20).nullable().optional(),
   city:        z.string().min(1).max(100),

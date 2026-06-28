@@ -16,7 +16,7 @@ const session: Session = {
     role: 'operator',
     orgId: 'o1',
     branchId: 'b1',
-    orgRoleId: null,
+    orgRoleId: 'role-vendedor',
     actingOrgId: null,
     realRole: 'operator',
     realOrgId: 'o1',

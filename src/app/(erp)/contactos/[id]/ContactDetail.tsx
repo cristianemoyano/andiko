@@ -36,6 +36,7 @@ type Address = {
   type: 'fiscal' | 'delivery' | 'commercial'
   street: string
   number: string | null
+  second_line: string | null
   floor: string | null
   apartment: string | null
   city: string
