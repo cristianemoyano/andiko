@@ -10,6 +10,7 @@ import {
   getPermissionsForRole,
   isModulePermission,
   isPanelPermission,
+  isSalesScopePermission,
   isSettingsPermission,
   type MatrixPermission,
 } from '@/lib/permissions'
@@ -23,33 +24,14 @@ import { seedDefaultOrgRoles } from '@/modules/auth/org-roles-seed'
 
 export { seedDefaultOrgRoles }
 
-const MODULE_LABELS: Record<string, string> = {
-  contacts: 'Contactos',
-  products: 'Productos',
-  sales: 'Ventas',
-  inventory: 'Inventario',
-  purchases: 'Compras',
-  accounting: 'Contabilidad',
-}
-
-const ACTION_LABELS: Record<string, string> = {
-  read: 'Leer',
-  write: 'Escribir',
-  delete: 'Eliminar',
-}
-
-function permissionLabel(name: MatrixPermission): string {
-  if (isPanelPermission(name)) return 'Panel · Ver'
-  const [resource, action] = name.split(':')
-  return `${MODULE_LABELS[resource] ?? resource} · ${ACTION_LABELS[action] ?? action}`
-}
+import { permissionDisplayLabel } from '@/lib/permission-labels'
 
 function permissionGroup(name: MatrixPermission): string {
   return isPanelPermission(name) ? 'panel' : name.split(':')[0]
 }
 
 function isMatrixPermission(name: string): name is MatrixPermission {
-  return isModulePermission(name) || isPanelPermission(name)
+  return isModulePermission(name) || isPanelPermission(name) || isSalesScopePermission(name)
 }
 
 async function assertAssignablePermissions(permissionNames: string[]) {
@@ -72,7 +54,7 @@ export async function listOrgRolesMatrix(orgId: string) {
   const userCounts = new Map<string, number>()
   if (customIds.length > 0) {
     const rows = await User.findAll({
-      where: { org_id: orgId, org_role_id: { [Op.in]: customIds }, is_active: true },
+      where: { org_id: orgId, org_role_id: { [Op.in]: customIds } },
       attributes: ['org_role_id'],
     })
     for (const r of rows) {
@@ -109,7 +91,7 @@ export async function listOrgRolesMatrix(orgId: string) {
   return {
     permissions: ASSIGNABLE_MATRIX_PERMISSIONS.map(name => ({
       name,
-      label: permissionLabel(name as MatrixPermission),
+      label: permissionDisplayLabel(name),
       group: permissionGroup(name as MatrixPermission),
     })),
     columns: [
@@ -177,8 +159,7 @@ export async function deleteOrgRole(orgId: string, roleId: string) {
   if (!role) throw new Error('ORG_ROLE_NOT_FOUND')
 
   const inUse = await User.count({
-    where: { org_id: orgId, org_role_id: roleId, is_active: true },
-    paranoid: true,
+    where: { org_id: orgId, org_role_id: roleId },
   })
   if (inUse > 0) throw new Error('ORG_ROLE_IN_USE')
 

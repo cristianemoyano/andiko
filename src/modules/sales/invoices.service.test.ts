@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Op } from 'sequelize'
 import type { Mock } from 'vitest'
 import type { TenantContext } from '@/lib/tenancy'
 
@@ -30,7 +31,10 @@ vi.mock('@/modules/auth/user.model', () => ({
 vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), error: vi.fn() } }))
 vi.mock('@/modules/auth/branch.model', () => ({ default: { belongsTo: vi.fn(), hasMany: vi.fn() } }))
 vi.mock('@/modules/contacts/contact.model', () => ({ default: { belongsTo: vi.fn(), hasMany: vi.fn() } }))
-vi.mock('./sales-branch-associations', () => ({ ensureSalesBranchAssociations: vi.fn() }))
+vi.mock('./sales-branch-associations', () => ({
+  ensureSalesBranchAssociations: vi.fn(),
+  BRANCH_AFIP_ATTRIBUTES: ['id', 'name'],
+}))
 vi.mock('./sales.utils', () => ({
   nextDocumentNumber: vi.fn().mockResolvedValue('FAC-0001'),
   calcLineItem:       vi.fn().mockReturnValue({ subtotal: '100.00', discount_amount: '0.00', tax_base: '100.00', tax_amount: '21.00', total: '121.00' }),
@@ -38,13 +42,14 @@ vi.mock('./sales.utils', () => ({
 }))
 
 import Invoice from './invoice.model'
-import { issueInvoice, cancelInvoice } from './invoices.service'
+import { issueInvoice, cancelInvoice, listInvoices, getInvoice } from './invoices.service'
 
 const tenantCtx: TenantContext = {
   orgId: 'org-1',
   userId: 'user-1',
   defaultBranchId: 'branch-1',
   allowedBranchIds: ['branch-1'],
+  salesScopeOwn: false,
 }
 
 const mockInvoice = (overrides = {}) => ({
@@ -111,5 +116,65 @@ describe('cancelInvoice', () => {
   it('throws INVOICE_NOT_FOUND when invoice is missing', async () => {
     ;(Invoice.findOne as Mock).mockResolvedValue(null)
     await expect(cancelInvoice('bad-id', tenantCtx, 'actor')).rejects.toThrow('INVOICE_NOT_FOUND')
+  })
+})
+
+describe('listInvoices with sales:scope_own', () => {
+  it('does not add salesperson filter when scope is off', async () => {
+    ;(Invoice.findAndCountAll as Mock).mockResolvedValue({ rows: [], count: 0 })
+
+    await listInvoices({ page: 1, limit: 20 }, tenantCtx)
+
+    const call = (Invoice.findAndCountAll as Mock).mock.calls[0][0]
+    expect(call.where).toEqual({ org_id: 'org-1', branch_id: { [Op.in]: ['branch-1'] } })
+  })
+
+  it('restricts list to own sales when scope is on', async () => {
+    ;(Invoice.findAndCountAll as Mock).mockResolvedValue({ rows: [], count: 0 })
+    const scopedCtx: TenantContext = { ...tenantCtx, salesScopeOwn: true }
+
+    await listInvoices({ page: 1, limit: 20 }, scopedCtx)
+
+    const call = (Invoice.findAndCountAll as Mock).mock.calls[0][0]
+    expect(call.where).toEqual({
+      [Op.and]: [
+        { org_id: 'org-1', branch_id: { [Op.in]: ['branch-1'] } },
+        {
+          [Op.or]: [
+            { salesperson_id: 'user-1' },
+            { salesperson_id: null, created_by: 'user-1' },
+          ],
+        },
+      ],
+    })
+  })
+})
+
+describe('getInvoice with sales:scope_own', () => {
+  it('uses scoped where when fetching by id', async () => {
+    ;(Invoice.findOne as Mock).mockResolvedValue({ id: 'inv-1' })
+    const scopedCtx: TenantContext = { ...tenantCtx, salesScopeOwn: true }
+
+    await getInvoice('inv-1', scopedCtx)
+
+    const call = (Invoice.findOne as Mock).mock.calls[0][0]
+    expect(call.where).toEqual({
+      [Op.and]: [
+        { org_id: 'org-1', branch_id: { [Op.in]: ['branch-1'] }, id: 'inv-1' },
+        {
+          [Op.or]: [
+            { salesperson_id: 'user-1' },
+            { salesperson_id: null, created_by: 'user-1' },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('throws INVOICE_NOT_FOUND when scoped query returns nothing', async () => {
+    ;(Invoice.findOne as Mock).mockResolvedValue(null)
+    const scopedCtx: TenantContext = { ...tenantCtx, salesScopeOwn: true }
+
+    await expect(getInvoice('other-vendor-inv', scopedCtx)).rejects.toThrow('INVOICE_NOT_FOUND')
   })
 })

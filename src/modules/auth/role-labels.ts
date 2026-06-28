@@ -1,4 +1,4 @@
-import type { ModulePermission } from '@/lib/permissions'
+import type { MatrixPermission, ModulePermission } from '@/lib/permissions'
 import type { UserRole } from '@/types/roles'
 
 /** Built-in roles that can be assigned when creating users (ERP job functions use custom org roles). */
@@ -47,7 +47,7 @@ export type DefaultOrgRoleTemplate = {
   name: string
   description: string
   allows_pos: boolean
-  permissions: ModulePermission[]
+  permissions: (ModulePermission | Extract<MatrixPermission, 'sales:scope_own'>)[]
 }
 
 /** Seeded as custom org roles when an organization is created. */
@@ -61,6 +61,7 @@ export const DEFAULT_ORG_ROLE_TEMPLATES: DefaultOrgRoleTemplate[] = [
       'contacts:write',
       'sales:read',
       'sales:write',
+      'sales:scope_own',
       'products:read',
       'inventory:read',
     ],

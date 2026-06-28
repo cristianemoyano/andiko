@@ -8,13 +8,14 @@ import User from '@/modules/auth/user.model'
 import { recalcInvoiceBalance } from './invoices.service'
 import type { PaymentInput, PaymentUpdateInput, PaymentQuery } from './payment.schema'
 import { nextDocumentNumber } from './sales.utils'
-import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
+import { type TenantContext } from '@/lib/tenancy'
+import { whereSalesDocumentScope } from './sales-scope'
 
 export async function listPayments(query: PaymentQuery, ctx: TenantContext) {
   const { page, limit, invoice_id, contact_id, payment_method } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = whereAllowedBranches(ctx)
+  const where: Record<string, unknown> = whereSalesDocumentScope(ctx) as Record<string, unknown>
   if (invoice_id)     where.invoice_id     = invoice_id
   if (contact_id)     where.contact_id     = contact_id
   if (payment_method) where.payment_method = payment_method
@@ -36,7 +37,7 @@ export async function listPayments(query: PaymentQuery, ctx: TenantContext) {
 
 export async function getPayment(id: string, ctx: TenantContext) {
   const payment = await Payment.findOne({
-    where: whereAllowedBranches(ctx, { id }),
+    where: whereSalesDocumentScope(ctx, { id }),
     include: [{ model: User, as: 'salesperson', attributes: ['id', 'name'] }],
   })
   if (!payment) throw new Error('PAYMENT_NOT_FOUND')
@@ -46,7 +47,7 @@ export async function getPayment(id: string, ctx: TenantContext) {
 export async function createPayment(input: PaymentInput, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
     const invoice = await Invoice.findOne({
-      where: whereAllowedBranches(ctx, { id: input.invoice_id }),
+      where: whereSalesDocumentScope(ctx, { id: input.invoice_id }),
       transaction: t,
     })
     if (!invoice) throw new Error('INVOICE_NOT_FOUND')
@@ -81,7 +82,7 @@ export async function createPayment(input: PaymentInput, ctx: TenantContext, act
 export async function updatePayment(id: string, input: PaymentUpdateInput, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
     const payment = await Payment.findOne({
-      where: whereAllowedBranches(ctx, { id }),
+      where: whereSalesDocumentScope(ctx, { id }),
       transaction: t,
     })
     if (!payment) throw new Error('PAYMENT_NOT_FOUND')
@@ -101,7 +102,7 @@ export async function updatePayment(id: string, input: PaymentUpdateInput, ctx: 
 export async function deletePayment(id: string, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
     const payment = await Payment.findOne({
-      where: whereAllowedBranches(ctx, { id }),
+      where: whereSalesDocumentScope(ctx, { id }),
       transaction: t,
     })
     if (!payment) throw new Error('PAYMENT_NOT_FOUND')

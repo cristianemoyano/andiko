@@ -42,6 +42,7 @@ Infraestructura base sin lógica de negocio.
 - [x] Capabilities-driven UI: navegación, tabs de configuración y secciones de organización según permisos efectivos
 - [x] Roles custom por org (`org_roles`) + matriz de permisos editable; rol built-in `branch-admin` (Encargado de sucursal)
 - [x] Permisos `settings:read/write` para administración de org (usuarios, sucursales, matriz) sin bypass sys-admin
+- [x] Matriz de roles: filtros por módulo y rol, vista de permisos asignados/sin asignar, labels legibles, eliminar rol bloqueado con usuarios
 - [x] Admin de organización unificado en `/organizaciones/[id]` (namespace API `settings` para Gerente)
 - [x] Impersonación sys-admin: identidad efectiva en sesión, capabilities y perfil del usuario impersonado
 - [x] Impersonación accesible en mobile: control en el menú mobile (`MenuPanel`) para sys-admin, incluso mientras impersona (iniciar/cambiar/detener sin sidebar de desktop)
@@ -258,6 +259,7 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] Endpoints de conversión: `POST /quotes/:id/convert`, `POST /orders/:id/convert`
 - [x] Endpoints de estado: `POST /invoices/:id/issue`, `POST /invoices/:id/cancel`
 - [x] Permisos `sales:read / sales:write / sales:delete` — ya presentes en DB desde Fase 0
+- [x] Permiso `sales:scope_own` (Solo propias): alcance por vendedor configurable en matriz; default en rol Vendedor
 - [x] Tests unitarios: `calcLineItem`, `calcDocumentTotals`, `issueInvoice`, `cancelInvoice`, `createPayment` (48 assertions)
 
 ### Frontend

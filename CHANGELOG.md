@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.29.0](https://github.com/cristianemoyano/andiko/compare/v0.28.0...v0.29.0) (2026-06-28)
+
+### Features
+
+* **sales:** add sales:scope_own and improve role permission matrix ([92b6d48](https://github.com/cristianemoyano/andiko/commit/92b6d48f867de96297e85be86354d0f3e83f7f02))
+
 ## [0.28.0](https://github.com/cristianemoyano/andiko/compare/v0.26.1...v0.28.0) (2026-06-28)
 
 ### Features

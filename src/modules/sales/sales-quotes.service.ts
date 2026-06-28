@@ -16,14 +16,15 @@ import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import type { IvaRate } from '@/types'
 import type { TenantContext } from '@/lib/tenancy'
-import { whereAllowedBranches, whereBranch } from '@/lib/tenancy'
+import { whereBranch } from '@/lib/tenancy'
+import { isWithinSalesOwnScope, whereSalesDocumentScope } from './sales-scope'
 
 export async function listQuotes(query: SalesQuoteQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
   const { page, limit, search, status, contact_id } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = whereAllowedBranches(ctx)
+  const where: Record<string, unknown> = whereSalesDocumentScope(ctx) as Record<string, unknown>
   if (status)     where.status     = status
   if (contact_id) where.contact_id = contact_id
   if (search) {
@@ -68,6 +69,7 @@ export async function getQuote(id: string, ctx: TenantContext) {
   if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(quote.branch_id as string)) {
     throw new Error('QUOTE_NOT_FOUND')
   }
+  if (!isWithinSalesOwnScope(ctx, quote)) throw new Error('QUOTE_NOT_FOUND')
   return quote
 }
 
@@ -267,7 +269,7 @@ export async function convertQuoteToOrder(id: string, ctx: TenantContext, actorI
 async function getQuoteInTransaction(id: string, ctx: TenantContext, t: import('sequelize').Transaction) {
   ensureSalesBranchAssociations()
   return SalesQuote.findOne({
-    where: whereAllowedBranches(ctx, { id }),
+    where: whereSalesDocumentScope(ctx, { id }),
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
