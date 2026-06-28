@@ -21,6 +21,7 @@ apt-get install -y \
   make \
   gettext-base \
   openssl \
+  python3 \
   ufw
 
 if ! command -v docker >/dev/null 2>&1; then

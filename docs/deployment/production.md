@@ -45,17 +45,20 @@ cp infra/.env.production.example infra/.env.production
 # Edit secrets — never commit infra/.env.production
 ```
 
-Generate secrets:
+Generate secrets (prefer **hex** for `POSTGRES_PASSWORD` — URL-safe, no encoding issues):
 
 ```bash
-openssl rand -base64 32   # AUTH_SECRET, CRON_SECRET, POSTGRES_PASSWORD
+openssl rand -hex 32      # POSTGRES_PASSWORD, AUTH_SECRET, CRON_SECRET (recommended)
+# openssl rand -base64 32 # OK for AUTH_SECRET/CRON_SECRET; encode password in DATABASE_URL if used for Postgres
 ```
+
+Set `POSTGRES_PASSWORD` in `.env.production`; scripts build `DATABASE_URL` automatically from `POSTGRES_*` (URL-encoded). You do **not** need to hand-edit `DATABASE_URL` if `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` match.
 
 | Variable | Purpose |
 |----------|---------|
-| `GHCR_IMAGE` | e.g. `ghcr.io/cristianemoyano/andiko` |
+| `GHCR_IMAGE` | `ghcr.io/cristianemoyano/andiko` |
 | `POSTGRES_*` | Database credentials |
-| `DATABASE_URL` | Must use host `postgres` (swarm service name) |
+| `DATABASE_URL` | Optional if `POSTGRES_*` set; host must be `postgres` |
 | `AUTH_URL` | `https://andiko.cloud` |
 | `AFIP_MODE` | `produccion` on VPS |
 | `CERTBOT_EMAIL` | Let's Encrypt notifications |
@@ -63,7 +66,26 @@ openssl rand -base64 32   # AUTH_SECRET, CRON_SECRET, POSTGRES_PASSWORD
 
 Values with spaces must be quoted in `infra/.env.production`, e.g. `BACKUP_GDRIVE_FOLDER="my folder"`.
 
-## VPS from zero (Hostinger Debian)
+## Andiko production VPS (Hostinger)
+
+| Item | Value |
+|------|--------|
+| SSH | `ssh root@187.77.235.70` |
+| Hostname | `srv1789017` |
+| Repo path | `/root/andiko` |
+| Branch | `develop` |
+| Domain | `https://andiko.cloud` |
+| GHCR image | `ghcr.io/cristianemoyano/andiko` |
+| Swarm stack | `andiko` |
+| Current tag | `v0.25.2` (update per release) |
+
+```bash
+ssh root@187.77.235.70
+cd /root/andiko
+git pull origin develop
+```
+
+---
 
 Fresh VPS with nothing installed — follow in order.
 
@@ -83,8 +105,8 @@ make prod-push TAG=v0.25.2
 ### B. Conectar al VPS
 
 ```bash
-ssh root@TU_IP_VPS
-# o el usuario que te dio Hostinger
+ssh root@187.77.235.70
+# hostname: srv1789017
 ```
 
 ### C. Bootstrap del sistema (una sola vez)
@@ -294,6 +316,7 @@ Point each terminal's `cloud_url` to `https://andiko.cloud`.
 
 | Symptom | Check |
 |---------|-------|
+| **`DATABASE_URL: Invalid URL` on migrate** | Password contains `+`, `/`, `=` from base64 — use `openssl rand -hex 32` for `POSTGRES_PASSWORD`, or `git pull` and re-run `make prod-secrets` + `make prod-deploy` (scripts now URL-encode) |
 | **`error from registry: denied` on push** | PAT missing `write:packages`; re-login with GitHub **username** (not email); `GHCR_IMAGE` owner must match PAT owner; authorize SSO on org if applicable |
 | `prod-deploy` fails pulling image | `docker login ghcr.io` on VPS; image tag exists |
 | Stack not starting | `docker stack ps andiko --no-trunc` |

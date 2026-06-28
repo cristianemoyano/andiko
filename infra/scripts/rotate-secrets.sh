@@ -11,8 +11,13 @@ rotate_secret() {
   local name="$1"
   local value="$2"
   if docker secret inspect "${name}" >/dev/null 2>&1; then
-    echo "Removing existing secret ${name} ..."
-    docker secret rm "${name}"
+    if docker secret rm "${name}" 2>/dev/null; then
+      echo "Removed secret ${name}"
+    else
+      echo "Cannot remove secret ${name} — stack is using it. Run:" >&2
+      echo "  docker stack rm andiko && sleep 10 && make prod-secrets && make prod-deploy TAG=..." >&2
+      exit 1
+    fi
   fi
   echo -n "$value" | docker secret create "${name}" -
   echo "Created secret ${name}"
@@ -22,7 +27,7 @@ if [ -z "${CRON_SECRET:-}" ]; then
   CRON_SECRET="cron-secret-not-configured"
 fi
 
-DATABASE_URL="${DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}"
+DATABASE_URL="$(resolve_database_url)"
 
 rotate_secret postgres_password "${POSTGRES_PASSWORD}"
 rotate_secret database_url "${DATABASE_URL}"

@@ -13,7 +13,7 @@ NETWORK="$(internal_network)"
 IMAGE="${GHCR_IMAGE}:${TAG}"
 CMD="${1:-up}"
 
-DATABASE_URL="${DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}"
+DATABASE_URL="$(resolve_database_url)"
 
 run_migrate() {
   docker run --rm \

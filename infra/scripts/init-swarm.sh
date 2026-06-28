@@ -61,7 +61,7 @@ create_or_update_secret() {
   fi
 }
 
-DATABASE_URL="${DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}"
+DATABASE_URL="$(resolve_database_url)"
 
 if [ -z "${CRON_SECRET:-}" ]; then
   echo "Warning: CRON_SECRET is empty — using placeholder; set a real value and rotate the secret later."
