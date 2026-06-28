@@ -6,7 +6,7 @@ import logger from '@/lib/logger'
 import { can } from '@/lib/permissions'
 import { whereOrg } from '@/lib/tenancy'
 import { paginate, toPaginated } from '@/lib/pagination'
-import { getStorageAdapter } from '@/lib/storage/adapter'
+import { getStorageAdapter, type StorageProvider } from '@/lib/storage/adapter'
 import FileModel from './file.model'
 import FileLink, { type FileOwnerType } from './file-link.model'
 import FileShare from './file-share.model'
@@ -132,7 +132,7 @@ export async function completeUpload(fileId: string, actor: FileActor) {
   }
   if (file.status === 'available') return file
 
-  const adapter = getStorageAdapter(file.storage_provider as 's3')
+  const adapter = getStorageAdapter(file.storage_provider as StorageProvider)
   const head = await adapter.headObject(file.storage_key)
 
   if (!head) {
@@ -161,7 +161,7 @@ export async function getDownloadUrl(fileId: string, actor: FileActor) {
     throw new Error(STORAGE_ERRORS.FILE_FORBIDDEN)
   }
 
-  const adapter = getStorageAdapter(file.storage_provider as 's3')
+  const adapter = getStorageAdapter(file.storage_provider as StorageProvider)
   const { url, expiresInSeconds } = await adapter.getDownloadUrl({
     key: file.storage_key,
     downloadFilename: file.original_filename,
