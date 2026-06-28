@@ -2,10 +2,13 @@ import { DataTypes } from 'sequelize'
 import type { Migration } from '../../lib/migrations'
 
 export const up: Migration = async ({ context: queryInterface }) => {
-  // Add WooCommerce as a third sales channel alongside 'erp' and 'pos'.
-  await queryInterface.sequelize.query(
-    `ALTER TYPE "enum_sales_orders_source" ADD VALUE IF NOT EXISTS 'woocommerce'`,
-  )
+  // source is VARCHAR + CHECK (see 20260425154500), not a Postgres ENUM.
+  await queryInterface.sequelize.query(`
+    ALTER TABLE sales_orders DROP CONSTRAINT IF EXISTS chk_sales_orders_source;
+    ALTER TABLE sales_orders
+      ADD CONSTRAINT chk_sales_orders_source
+      CHECK (source IN ('erp', 'pos', 'woocommerce'));
+  `)
 
   // Denormalized link to the originating site for channel reporting/filtering
   // (mirrors pos_device_id/pos_sale_id). The woo_order_id lives in
@@ -22,6 +25,10 @@ export const up: Migration = async ({ context: queryInterface }) => {
 
 export const down: Migration = async ({ context: queryInterface }) => {
   await queryInterface.removeColumn('sales_orders', 'channel_site_id')
-  // Note: a Postgres ENUM value cannot be removed; 'woocommerce' remains on the
-  // type. This is harmless and consistent with the branch/seat line-kind additions.
+  await queryInterface.sequelize.query(`
+    ALTER TABLE sales_orders DROP CONSTRAINT IF EXISTS chk_sales_orders_source;
+    ALTER TABLE sales_orders
+      ADD CONSTRAINT chk_sales_orders_source
+      CHECK (source IN ('erp', 'pos'));
+  `)
 }
