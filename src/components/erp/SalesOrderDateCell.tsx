@@ -1,4 +1,4 @@
-import { formatLocalDateTime } from '@/lib/date-only'
+import { formatLocalDateTime, formatLocalTime } from '@/lib/date-only'
 import { WOO_COMMERCE_BRAND } from './WooCommerceIcon'
 
 export interface SalesOrderDateCellProps {
@@ -16,7 +16,7 @@ function sameLocalDay(a: Date, b: Date): boolean {
 
 function formatWooDateTime(erp: Date, woo: Date): string {
   if (sameLocalDay(erp, woo)) {
-    return woo.toLocaleString('es-AR', { hour: '2-digit', minute: '2-digit' })
+    return formatLocalTime(woo)
   }
   return formatLocalDateTime(woo)
 }

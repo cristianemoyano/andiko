@@ -17,7 +17,7 @@ export function atEndOfDay(date: Date): Date {
   return d
 }
 
-/** Argentine locale: dd/mm/yyyy, hh:mm (local timezone). */
+/** Argentine locale: dd/mm/yyyy, HH:mm (24 h, local timezone). */
 export function formatLocalDateTime(value: Date | string): string {
   return new Date(value).toLocaleString('es-AR', {
     day: '2-digit',
@@ -25,5 +25,15 @@ export function formatLocalDateTime(value: Date | string): string {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
+  })
+}
+
+/** Local time only, 24 h (es-AR). */
+export function formatLocalTime(value: Date | string): string {
+  return new Date(value).toLocaleString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   })
 }
