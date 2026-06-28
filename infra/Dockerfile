@@ -35,13 +35,14 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Manual migration runs (make prod-migrate)
+# Manual migration runs (make prod-migrate) — seed migrations import src/modules
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/src/db ./src/db
-COPY --from=builder /app/src/lib/db.ts ./src/lib/db.ts
-COPY --from=builder /app/src/lib/migrations.ts ./src/lib/migrations.ts
+COPY --from=builder /app/src/lib ./src/lib
+COPY --from=builder /app/src/modules ./src/modules
+COPY --from=builder /app/src/types ./src/types
 COPY --from=builder /app/src/config ./src/config
 COPY --from=builder /app/infra/docker-entrypoint.sh ./infra/docker-entrypoint.sh
 
