@@ -3,7 +3,10 @@ import { Op } from 'sequelize'
 import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
-import { whereAllowedBranches, whereBranch, type TenantContext } from '@/lib/tenancy'
+import { combineListWhere } from '@/modules/integrations/woocommerce/woo-list-filters'
+import type { TenantContext } from '@/lib/tenancy'
+import { whereBranch } from '@/lib/tenancy'
+import { whereSalesDocumentScopeViaInvoice } from './sales-scope'
 import { FISCAL_NUMBER_SOURCE_ATTRS } from '@/lib/fiscal-document-number'
 import DebitNote from './debit-note.model'
 import Invoice from './invoice.model'
@@ -16,23 +19,26 @@ import type { DebitNoteQuery, CreateDebitNoteInput, UpdateDebitNoteInput } from 
 
 export async function listDebitNotes(query: DebitNoteQuery, ctx: TenantContext) {
   const { offset, limit } = paginate(query.page, query.limit)
-  const where: Record<string, unknown> = { ...whereAllowedBranches(ctx, {}) }
-  if (query.status) where.status = query.status
-  if (query.contact_id) where.contact_id = query.contact_id
-  if (query.invoice_id) where.invoice_id = query.invoice_id
-  if (query.search) {
-    const term = `%${query.search}%`
-    where[Op.or as unknown as string] = [
-      { debit_note_number: { [Op.iLike]: term } },
-      { '$contact.legal_name$': { [Op.iLike]: term } },
-      { '$contact.trade_name$': { [Op.iLike]: term } },
-      { '$invoice.invoice_number$': { [Op.iLike]: term } },
-    ]
-  }
+  const where = combineListWhere(
+    whereSalesDocumentScopeViaInvoice(ctx),
+    query.status ? { status: query.status } : {},
+    query.contact_id ? { contact_id: query.contact_id } : {},
+    query.invoice_id ? { invoice_id: query.invoice_id } : {},
+    query.search
+      ? {
+          [Op.or]: [
+            { debit_note_number: { [Op.iLike]: `%${query.search}%` } },
+            { '$contact.legal_name$': { [Op.iLike]: `%${query.search}%` } },
+            { '$contact.trade_name$': { [Op.iLike]: `%${query.search}%` } },
+            { '$invoice.invoice_number$': { [Op.iLike]: `%${query.search}%` } },
+          ],
+        }
+      : {},
+  ) as Record<string, unknown>
 
   const { rows, count } = await DebitNote.findAndCountAll({
     where,
-    subQuery: query.search ? false : undefined,
+    subQuery: query.search || ctx.salesScopeOwn ? false : undefined,
     attributes: [
       'id', 'branch_id', 'contact_id', 'invoice_id', 'debit_note_number', 'status',
       'issue_date', 'currency', 'subtotal', 'discount_amount', 'tax_amount', 'total',
@@ -44,7 +50,7 @@ export async function listDebitNotes(query: DebitNoteQuery, ctx: TenantContext) 
       {
         model: Invoice,
         as: 'invoice',
-        attributes: ['id', 'invoice_number', ...FISCAL_NUMBER_SOURCE_ATTRS],
+        attributes: ['id', 'invoice_number', 'salesperson_id', 'created_by', ...FISCAL_NUMBER_SOURCE_ATTRS],
         required: false,
       },
     ],
@@ -60,7 +66,7 @@ export async function getDebitNote(id: string, ctx: TenantContext) {
   ensureSalesBranchAssociations()
 
   const note = await DebitNote.findOne({
-    where: whereAllowedBranches(ctx, { id }),
+    where: whereSalesDocumentScopeViaInvoice(ctx, { id }),
     include: [
       { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES], required: false },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'cuit'], required: false },
@@ -118,7 +124,7 @@ export async function updateDebitNote(id: string, input: UpdateDebitNoteInput, c
   if (!orgId) throw new Error('ORG_CONTEXT_REQUIRED')
 
   return sequelize.transaction(async (t) => {
-    const note = await DebitNote.findOne({ where: whereAllowedBranches(ctx, { id }), transaction: t, lock: true })
+    const note = await DebitNote.findOne({ where: whereSalesDocumentScopeViaInvoice(ctx, { id }), transaction: t, lock: true })
     if (!note) throw new Error('DEBIT_NOTE_NOT_FOUND')
     if (note.status !== 'draft') throw new Error('DEBIT_NOTE_NOT_EDITABLE')
 
@@ -163,7 +169,7 @@ export async function issueDebitNoteInTransaction(
   ctx: TenantContext,
   t: import('sequelize').Transaction,
 ) {
-  const note = await DebitNote.findOne({ where: whereAllowedBranches(ctx, { id }), transaction: t, lock: true })
+  const note = await DebitNote.findOne({ where: whereSalesDocumentScopeViaInvoice(ctx, { id }), transaction: t, lock: true })
   if (!note) throw new Error('DEBIT_NOTE_NOT_FOUND')
   if (note.status !== 'draft') throw new Error('DEBIT_NOTE_ALREADY_ISSUED')
 
@@ -178,7 +184,7 @@ export async function issueDebitNoteInTransaction(
 
 export async function cancelDebitNote(id: string, ctx: TenantContext) {
   return sequelize.transaction(async (t) => {
-    const note = await DebitNote.findOne({ where: whereAllowedBranches(ctx, { id }), transaction: t, lock: true })
+    const note = await DebitNote.findOne({ where: whereSalesDocumentScopeViaInvoice(ctx, { id }), transaction: t, lock: true })
     if (!note) throw new Error('DEBIT_NOTE_NOT_FOUND')
     if (note.status === 'cancelled') throw new Error('DEBIT_NOTE_ALREADY_CANCELLED')
 
@@ -190,7 +196,7 @@ export async function cancelDebitNote(id: string, ctx: TenantContext) {
 }
 
 export async function deleteDebitNote(id: string, ctx: TenantContext) {
-  const note = await DebitNote.findOne({ where: whereAllowedBranches(ctx, { id }) })
+  const note = await DebitNote.findOne({ where: whereSalesDocumentScopeViaInvoice(ctx, { id }) })
   if (!note) throw new Error('DEBIT_NOTE_NOT_FOUND')
   if (note.status !== 'draft') throw new Error('DEBIT_NOTE_NOT_DELETABLE')
 

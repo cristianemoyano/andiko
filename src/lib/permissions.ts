@@ -12,8 +12,9 @@ type Action = 'read' | 'write' | 'delete'
 export type ModulePermission = `${ModuleResource}:${Action}`
 export type SettingsPermission = 'settings:read' | 'settings:write'
 export type PanelPermission = 'panel:read'
-export type MatrixPermission = ModulePermission | PanelPermission
-export type Permission = ModulePermission | SettingsPermission | PanelPermission
+export type SalesScopePermission = 'sales:scope_own'
+export type MatrixPermission = ModulePermission | PanelPermission | SalesScopePermission
+export type Permission = ModulePermission | SettingsPermission | PanelPermission | SalesScopePermission
 
 const MODULE_RESOURCES: ModuleResource[] = [
   'contacts', 'products', 'sales', 'inventory', 'purchases', 'accounting',
@@ -25,6 +26,14 @@ export function isSettingsPermission(p: string): p is SettingsPermission {
 
 export function isPanelPermission(p: string): p is PanelPermission {
   return p === 'panel:read'
+}
+
+export function isSalesScopePermission(p: string): p is SalesScopePermission {
+  return p === 'sales:scope_own'
+}
+
+export function hasSalesScopeOwn(permissions: readonly string[]): boolean {
+  return permissions.includes('sales:scope_own')
 }
 
 export function isModulePermission(p: string): p is ModulePermission {
@@ -59,7 +68,7 @@ export const getPermissionsForRole = cache(async (
 ): Promise<Permission[]> => {
   const names = await loadRolePermissionNames(role, orgId)
   return names.filter((n): n is Permission =>
-    isModulePermission(n) || isSettingsPermission(n) || isPanelPermission(n),
+    isModulePermission(n) || isSettingsPermission(n) || isPanelPermission(n) || isSalesScopePermission(n),
   )
 })
 
@@ -80,7 +89,9 @@ export const getPermissionsForUser = cache(async (
     const names = rows
       .map(r => (r as unknown as { permission: { name: string } }).permission?.name)
       .filter((n): n is string => typeof n === 'string')
-    return names.filter((n): n is Permission => isModulePermission(n) || isPanelPermission(n))
+    return names.filter((n): n is Permission =>
+      isModulePermission(n) || isPanelPermission(n) || isSalesScopePermission(n),
+    )
   }
 
   const perms = await getPermissionsForRole(identity.role, orgId)
@@ -154,7 +165,10 @@ export const ASSIGNABLE_MODULE_PERMISSIONS: ModulePermission[] = MODULE_RESOURCE
 
 export const ASSIGNABLE_PANEL_PERMISSIONS: PanelPermission[] = ['panel:read']
 
+export const ASSIGNABLE_SALES_SCOPE_PERMISSIONS: SalesScopePermission[] = ['sales:scope_own']
+
 export const ASSIGNABLE_MATRIX_PERMISSIONS: Permission[] = [
   ...ASSIGNABLE_PANEL_PERMISSIONS,
+  ...ASSIGNABLE_SALES_SCOPE_PERMISSIONS,
   ...ASSIGNABLE_MODULE_PERMISSIONS,
 ]

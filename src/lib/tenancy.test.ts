@@ -16,6 +16,7 @@ const ctx: TenantContext = {
   userId: 'user-1',
   defaultBranchId: 'branch-a',
   allowedBranchIds: ['branch-a', 'branch-b'],
+  salesScopeOwn: false,
 }
 
 describe('whereAllowedBranchRecords', () => {

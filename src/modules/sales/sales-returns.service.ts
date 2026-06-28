@@ -5,7 +5,9 @@ import { Op } from 'sequelize'
 import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
-import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
+import { combineListWhere } from '@/modules/integrations/woocommerce/woo-list-filters'
+import type { TenantContext } from '@/lib/tenancy'
+import { whereSalesDocumentScope, whereSalesDocumentScopeViaOrder } from './sales-scope'
 import SalesReturn from './sales-return.model'
 import SalesReturnItem, { type SalesReturnItemAttributes } from './sales-return-item.model'
 import SalesReturnExchangeItem, { type SalesReturnExchangeItemAttributes } from './sales-return-exchange-item.model'
@@ -53,28 +55,31 @@ function stockActorId(ctx: TenantContext): string {
 export async function listSalesReturns(query: SalesReturnQuery, ctx: TenantContext) {
   ensureSalesReturnAssociations()
   const { offset, limit } = paginate(query.page, query.limit)
-  const where: Record<string, unknown> = { ...whereAllowedBranches(ctx, {}) }
-  if (query.status)         where.status = query.status
-  if (query.order_id)       where.order_id = query.order_id
-  if (query.operation_type) where.operation_type = query.operation_type
-  if (query.search) {
-    const term = `%${query.search}%`
-    where[Op.or as unknown as string] = [
-      { return_number: { [Op.iLike]: term } },
-      { '$order.order_number$': { [Op.iLike]: term } },
-    ]
-  }
+  const where = combineListWhere(
+    whereSalesDocumentScopeViaOrder(ctx),
+    query.status ? { status: query.status } : {},
+    query.order_id ? { order_id: query.order_id } : {},
+    query.operation_type ? { operation_type: query.operation_type } : {},
+    query.search
+      ? {
+          [Op.or]: [
+            { return_number: { [Op.iLike]: `%${query.search}%` } },
+            { '$order.order_number$': { [Op.iLike]: `%${query.search}%` } },
+          ],
+        }
+      : {},
+  ) as Record<string, unknown>
 
   const { rows, count } = await SalesReturn.findAndCountAll({
     where,
-    subQuery: query.search ? false : undefined,
+    subQuery: query.search || ctx.salesScopeOwn ? false : undefined,
     attributes: [
       'id', 'return_number', 'operation_type', 'status', 'order_id', 'invoice_id',
       'credit_note_id', 'returned_total', 'exchange_total', 'difference_total',
       'completed_at', 'created_at',
     ],
     include: [
-      { model: SalesOrder, as: 'order', attributes: ['id', 'order_number', 'status'], required: false },
+      { model: SalesOrder, as: 'order', attributes: ['id', 'order_number', 'status', 'salesperson_id', 'created_by'], required: false },
     ],
     order: [['created_at', 'DESC']],
     limit,
@@ -87,7 +92,7 @@ export async function listSalesReturns(query: SalesReturnQuery, ctx: TenantConte
 export async function listReturnsByOrder(orderId: string, ctx: TenantContext) {
   ensureSalesReturnAssociations()
   return SalesReturn.findAll({
-    where: whereAllowedBranches(ctx, { order_id: orderId }),
+    where: whereSalesDocumentScopeViaOrder(ctx, { order_id: orderId }),
     attributes: [
       'id', 'return_number', 'operation_type', 'status', 'credit_note_id',
       'returned_total', 'exchange_total', 'difference_total', 'completed_at', 'created_at',
@@ -103,7 +108,7 @@ export async function getSalesReturn(id: string, ctx: TenantContext) {
   ensureSalesReturnAssociations()
 
   const row = await SalesReturn.findOne({
-    where: whereAllowedBranches(ctx, { id }),
+    where: whereSalesDocumentScopeViaOrder(ctx, { id }),
     include: [
       { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES], required: false },
       { model: SalesOrder, as: 'order', attributes: ['id', 'order_number', 'status', 'contact_id'], required: false },
@@ -131,7 +136,7 @@ export async function createReturnFromOrder(input: CreateSalesReturnInput, ctx: 
 
   return sequelize.transaction(async (t) => {
     const order = await SalesOrder.findOne({
-      where: whereAllowedBranches(ctx, { id: input.order_id }),
+      where: whereSalesDocumentScope(ctx, { id: input.order_id }),
       transaction: t,
       lock: t.LOCK.UPDATE,
     })
@@ -221,7 +226,7 @@ export async function createReturnFromOrder(input: CreateSalesReturnInput, ctx: 
 export async function updateSalesReturn(id: string, input: UpdateSalesReturnInput, ctx: TenantContext) {
   return sequelize.transaction(async (t) => {
     const salesReturn = await SalesReturn.findOne({
-      where: whereAllowedBranches(ctx, { id }),
+      where: whereSalesDocumentScopeViaOrder(ctx, { id }),
       transaction: t,
       lock: t.LOCK.UPDATE,
     })
@@ -739,7 +744,7 @@ async function isOrderItemStockable(
 
 async function loadReturnForMutation(id: string, ctx: TenantContext, t: Transaction) {
   const salesReturn = await SalesReturn.findOne({
-    where: whereAllowedBranches(ctx, { id }),
+    where: whereSalesDocumentScopeViaOrder(ctx, { id }),
     transaction: t,
     lock: t.LOCK.UPDATE,
   })
@@ -750,7 +755,7 @@ async function loadReturnForMutation(id: string, ctx: TenantContext, t: Transact
 async function getSalesReturnInTransaction(id: string, ctx: TenantContext, t: Transaction) {
   ensureSalesReturnAssociations()
   return SalesReturn.findOne({
-    where: whereAllowedBranches(ctx, { id }),
+    where: whereSalesDocumentScopeViaOrder(ctx, { id }),
     include: [
       { model: SalesReturnItem, as: 'items', order: [['sort_order', 'ASC']] },
       { model: SalesReturnExchangeItem, as: 'exchangeItems', order: [['sort_order', 'ASC']] },

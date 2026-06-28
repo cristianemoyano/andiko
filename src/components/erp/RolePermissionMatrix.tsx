@@ -9,6 +9,7 @@ import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { orgApiPaths, type OrgApiNamespace } from '@/lib/org-api-paths'
 import type { MatrixPermission } from '@/lib/permissions'
 import type { UserRole } from '@/types/roles'
+import { permissionDisplayLabel, sortPermissionsForGroup } from '@/lib/permission-labels'
 import { useCapabilities } from '@/components/layout/CapabilitiesContext'
 
 type MatrixColumn =
@@ -31,6 +32,8 @@ const MODULE_GROUP_LABELS: Record<string, string> = {
   accounting: 'Contabilidad',
 }
 
+const DEFAULT_ROLE_FILTER_KEY = 'admin'
+
 const MODULE_GROUP_ORDER = [
   'panel',
   'contacts',
@@ -40,6 +43,49 @@ const MODULE_GROUP_ORDER = [
   'purchases',
   'accounting',
 ] as const
+
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  )
+}
+
+function columnKey(col: MatrixColumn): string {
+  return col.kind === 'builtin' ? col.role : col.id
+}
+
+function columnLabel(col: MatrixColumn): string {
+  return col.kind === 'builtin' ? col.label : col.name
+}
+
+function roleHasPermission(
+  col: MatrixColumn,
+  permission: MatrixPermission,
+  grants: Record<string, MatrixPermission[]>,
+  draft: Record<string, Set<MatrixPermission>>,
+): boolean {
+  if (col.kind === 'builtin') {
+    return grants[col.role]?.includes(permission) ?? false
+  }
+  return draft[col.id]?.has(permission) ?? false
+}
 
 interface RolePermissionMatrixProps {
   orgId: string
@@ -61,6 +107,7 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
   const [deleteRole, setDeleteRole] = useState<{ id: string; name: string } | null>(null)
   const [moduleFilter, setModuleFilter] = useState<string | null>(null)
   const [showAllModules, setShowAllModules] = useState(false)
+  const [roleFilterKey, setRoleFilterKey] = useState<string | null>(DEFAULT_ROLE_FILTER_KEY)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -135,6 +182,24 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
     return matrix.permissions.filter(p => p.group === activeModuleFilter)
   }, [matrix, activeModuleFilter])
 
+  const roleFilteredColumn = useMemo(
+    () => matrix?.columns.find(col => columnKey(col) === roleFilterKey) ?? null,
+    [matrix, roleFilterKey],
+  )
+
+  const assignedPermissionCount = useMemo(() => {
+    if (!matrix || !roleFilteredColumn) return 0
+    return filteredPermissions.filter(perm =>
+      roleHasPermission(roleFilteredColumn, perm.name, matrix.grants, draft),
+    ).length
+  }, [matrix, roleFilteredColumn, filteredPermissions, draft])
+
+  const visibleColumns = useMemo(() => {
+    if (!matrix) return []
+    if (roleFilteredColumn) return [roleFilteredColumn]
+    return matrix.columns
+  }, [matrix, roleFilteredColumn])
+
   const grouped = useMemo(
     () => filteredPermissions.reduce<Record<string, typeof filteredPermissions>>((acc, p) => {
       acc[p.group] = acc[p.group] ?? []
@@ -144,8 +209,20 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
     [filteredPermissions],
   )
 
+  const sortedGrouped = useMemo(
+    () => Object.fromEntries(
+      Object.entries(grouped).map(([group, perms]) => [group, sortPermissionsForGroup(group, perms)]),
+    ),
+    [grouped],
+  )
+
   const moduleFilterActive = activeModuleFilter !== null
+  const roleFilterActive = roleFilterKey !== null
   const totalPermissions = matrix?.permissions.length ?? 0
+  const scopedPermissionCount = filteredPermissions.length
+  const unassignedPermissionCount = roleFilterActive
+    ? scopedPermissionCount - assignedPermissionCount
+    : 0
 
   function toggleGrant(roleId: string, permission: MatrixPermission) {
     if (!canEdit) return
@@ -208,6 +285,7 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
     try {
       await fetchJson(api.role(deleteRole.id), { method: 'DELETE' })
       setDeleteRole(null)
+      if (roleFilterKey === deleteRole.id) setRoleFilterKey(DEFAULT_ROLE_FILTER_KEY)
       await load()
       void refreshCapabilities()
     } catch (err) {
@@ -239,6 +317,10 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
     setModuleFilter(group)
   }
 
+  function selectRoleFilter(key: string) {
+    setRoleFilterKey(prev => (prev === key ? null : key))
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -258,6 +340,7 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
       </div>
 
       <div className="flex flex-col gap-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">Módulo</p>
         <div className="flex flex-wrap items-center gap-1.5">
           {moduleGroups.map(group => (
             <button
@@ -294,9 +377,63 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
             </button>
           )}
         </div>
-        {moduleFilterActive && (
+        {moduleFilterActive && !roleFilterActive && (
           <p className="text-[11px] text-fg-subtle">
             {filteredPermissions.length} de {totalPermissions} permisos
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">Rol</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {matrix.columns.map(col => {
+            const key = columnKey(col)
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => selectRoleFilter(key)}
+                className={`rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
+                  roleFilterKey === key
+                    ? 'border-brand-600 bg-brand-50 text-brand-800'
+                    : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'
+                }`}
+              >
+                {columnLabel(col)}
+              </button>
+            )
+          })}
+          <button
+            type="button"
+            onClick={() => setRoleFilterKey(null)}
+            className={`rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
+              !roleFilterActive
+                ? 'border-brand-600 bg-brand-50 text-brand-800'
+                : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'
+            }`}
+          >
+            Todos
+          </button>
+        </div>
+        {roleFilterActive && roleFilteredColumn && (
+          <p className="text-[11px] text-fg-subtle">
+            {assignedPermissionCount} de {scopedPermissionCount} permiso
+            {scopedPermissionCount === 1 ? '' : 's'} asignado
+            {assignedPermissionCount === 1 ? '' : 's'} a {columnLabel(roleFilteredColumn)}
+            {moduleFilterActive && activeModuleFilter
+              ? ` en ${MODULE_GROUP_LABELS[activeModuleFilter] ?? activeModuleFilter}`
+              : ''}
+            {unassignedPermissionCount > 0 && (
+              <span className="text-fg-muted">
+                {' '}· {unassignedPermissionCount} sin asignar
+              </span>
+            )}
+          </p>
+        )}
+        {roleFilterActive && roleFilteredColumn && canEdit && roleFilteredColumn.kind === 'custom' && unassignedPermissionCount > 0 && (
+          <p className="text-[11px] text-fg-muted">
+            Marcá los permisos que falten para actualizar este rol.
           </p>
         )}
       </div>
@@ -308,14 +445,28 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
           <thead>
             <tr className="bg-surface-muted border-b border-border">
               <th className="text-left px-3 py-2 font-medium text-fg-muted sticky left-0 bg-surface-muted z-10">Permiso</th>
-              {matrix.columns.map(col => (
-                <th key={col.kind === 'builtin' ? col.role : col.id} className="px-3 py-2 font-medium text-fg-muted text-center min-w-[100px]">
+              {visibleColumns.map(col => (
+                <th key={columnKey(col)} className="px-3 py-2 font-medium text-fg-muted text-center min-w-[100px]">
                   <div className="flex flex-col items-center gap-1">
-                    <span>{col.kind === 'builtin' ? col.label : col.name}</span>
-                    {col.kind === 'custom' && canEdit && (
-                      <Button variant="ghost" size="xs" onClick={() => setDeleteRole({ id: col.id, name: col.name })}>
-                        Eliminar
-                      </Button>
+                    <span>{columnLabel(col)}</span>
+                    {col.kind === 'custom' && canEdit && !roleFilterActive && (
+                      col.user_count > 0 ? (
+                        <span
+                          className="text-[10px] text-fg-subtle tabular-nums"
+                          title={`${col.user_count} usuario${col.user_count === 1 ? '' : 's'} asignado${col.user_count === 1 ? '' : 's'}. Reasigná antes de eliminar.`}
+                        >
+                          {col.user_count} usr.
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteRole({ id: col.id, name: col.name })}
+                          className="p-0.5 text-danger/70 hover:text-danger transition-colors"
+                          aria-label={`Eliminar rol ${col.name}`}
+                        >
+                          <TrashIcon />
+                        </button>
+                      )
                     )}
                   </div>
                 </th>
@@ -323,42 +474,66 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
             </tr>
           </thead>
           <tbody>
-            {Object.entries(grouped).map(([group, perms]) => (
-              perms.map((perm, idx) => (
-                <tr key={perm.name} className="border-b border-border last:border-0">
-                  <td className="px-3 py-2 text-fg sticky left-0 bg-surface z-10">
-                    {idx === 0 && (
-                      <span className="block text-[10px] uppercase text-fg-subtle mb-0.5">
-                        {MODULE_GROUP_LABELS[group] ?? group}
-                      </span>
-                    )}
-                    {perm.label}
-                  </td>
-                  {matrix.columns.map(col => {
-                    const key = col.kind === 'builtin' ? col.role : col.id
-                    const checked =
-                      col.kind === 'builtin'
-                        ? (matrix.grants[col.role]?.includes(perm.name) ?? false)
-                        : (draft[col.id]?.has(perm.name) ?? false)
-                    const readonly = col.kind === 'builtin' || !canEdit
-                    return (
-                      <td key={key} className="px-3 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={readonly}
-                          aria-label={`${perm.label} — ${col.kind === 'builtin' ? col.label : col.name}`}
-                          onChange={() => {
-                            if (col.kind === 'custom') toggleGrant(col.id, perm.name)
-                          }}
-                          className="h-3.5 w-3.5 accent-brand-600 disabled:opacity-60"
-                        />
-                      </td>
-                    )
-                  })}
-                </tr>
+            {scopedPermissionCount === 0 ? (
+              <tr>
+                <td
+                  colSpan={visibleColumns.length + 1}
+                  className="px-3 py-6 text-center text-fg-muted"
+                >
+                  No hay permisos para mostrar.
+                </td>
+              </tr>
+            ) : (
+              Object.entries(sortedGrouped).map(([group, perms]) => (
+                perms.map((perm, idx) => {
+                  const assignedInRoleView = roleFilteredColumn
+                    ? roleHasPermission(roleFilteredColumn, perm.name, matrix.grants, draft)
+                    : true
+                  return (
+                  <tr
+                    key={perm.name}
+                    className={`border-b border-border last:border-0 ${
+                      roleFilterActive && !assignedInRoleView ? 'bg-surface-muted/40' : ''
+                    }`}
+                  >
+                    <td className={`px-3 py-2 sticky left-0 z-10 ${
+                      roleFilterActive && !assignedInRoleView
+                        ? 'text-fg-muted bg-surface-muted/40'
+                        : 'text-fg bg-surface'
+                    }`}>
+                      {idx === 0 && (
+                        <span className="block text-[10px] uppercase text-fg-subtle mb-0.5">
+                          {MODULE_GROUP_LABELS[group] ?? group}
+                        </span>
+                      )}
+                      {permissionDisplayLabel(perm.name)}
+                    </td>
+                    {visibleColumns.map(col => {
+                      const key = columnKey(col)
+                      const checked = roleHasPermission(col, perm.name, matrix.grants, draft)
+                      const readonly = col.kind === 'builtin' || !canEdit
+                      return (
+                        <td key={key} className={`px-3 py-2 text-center ${
+                          roleFilterActive && !checked ? 'bg-surface-muted/40' : ''
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={readonly}
+                            aria-label={`${permissionDisplayLabel(perm.name)} — ${columnLabel(col)}`}
+                            onChange={() => {
+                              if (col.kind === 'custom') toggleGrant(col.id, perm.name)
+                            }}
+                            className="h-3.5 w-3.5 accent-brand-600 disabled:opacity-60"
+                          />
+                        </td>
+                      )
+                    })}
+                  </tr>
+                  )
+                })
               ))
-            ))}
+            )}
           </tbody>
         </table>
       </div>

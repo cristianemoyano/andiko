@@ -17,6 +17,7 @@ import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.ut
 import type { IvaRate } from '@/types'
 import type { TenantContext } from '@/lib/tenancy'
 import { whereAllowedBranches, whereBranch } from '@/lib/tenancy'
+import { isWithinSalesOwnScope, whereSalesDocumentScope, whereSalesOwnScope } from './sales-scope'
 import { atEndOfDay, atStartOfDay } from '@/lib/date-only'
 import { combineListWhere, wooOrderStatusListWhere } from '@/modules/integrations/woocommerce/woo-list-filters'
 import {
@@ -42,6 +43,7 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
 
   const where = combineListWhere(
     whereAllowedBranches(ctx),
+    whereSalesOwnScope(ctx),
     branch_id ? { branch_id } : {},
     createdAtWhere,
     status ? { status } : {},
@@ -101,6 +103,7 @@ export async function getOrder(id: string, ctx: TenantContext) {
   if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(order.branch_id as string)) {
     throw new Error('ORDER_NOT_FOUND')
   }
+  if (!isWithinSalesOwnScope(ctx, order)) throw new Error('ORDER_NOT_FOUND')
   return serializeSalesOrderDetail(order, ctx.orgId)
 }
 
@@ -411,7 +414,7 @@ async function getOrderInTransaction(id: string, ctx: TenantContext, t: import('
   ensureSalesBranchAssociations()
 
   return SalesOrder.findOne({
-    where: whereAllowedBranches(ctx, { id }),
+    where: whereSalesDocumentScope(ctx, { id }),
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },

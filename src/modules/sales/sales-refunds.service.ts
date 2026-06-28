@@ -2,7 +2,8 @@ import 'server-only'
 import type { Transaction } from 'sequelize'
 import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
-import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
+import type { TenantContext } from '@/lib/tenancy'
+import { whereSalesDocumentScopeViaOrder } from './sales-scope'
 import SalesRefund from './sales-refund.model'
 import { nextDocumentNumber } from './sales.utils'
 import type { RefundMethod } from './sales-refund.model'
@@ -29,7 +30,7 @@ export async function createSalesRefund(
 
     const SalesReturn = (await import('./sales-return.model')).default
     const salesReturn = await SalesReturn.findOne({
-      where: whereAllowedBranches(ctx, { id: input.return_id }),
+      where: whereSalesDocumentScopeViaOrder(ctx, { id: input.return_id }),
       transaction: t,
     })
     if (!salesReturn) throw new Error('SALES_RETURN_NOT_FOUND')

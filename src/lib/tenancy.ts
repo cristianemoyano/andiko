@@ -31,6 +31,8 @@ export type TenantContext = {
   defaultBranchId: string | null
   /** Branches allowed for reads+writes. */
   allowedBranchIds: string[]
+  /** When true, sales document lists/detail are limited to the logged-in salesperson. */
+  salesScopeOwn?: boolean
 }
 
 export function orgContextRequiredResponse(): NextResponse {
@@ -88,6 +90,7 @@ export function tenantContextFromPosDevice(device: {
     userId: '',
     defaultBranchId: device.branchId,
     allowedBranchIds,
+    salesScopeOwn: false,
   }
 }
 
@@ -132,11 +135,22 @@ export async function makeTenantContext(sessionUser: AuthedSession['user']): Pro
     if (allowedBranchIds.length === 0 && branchId) allowedBranchIds = [branchId]
   }
 
+  let salesScopeOwn = false
+  if (!(isRealSysAdmin && !isImpersonating)) {
+    const { getPermissionsForUser, hasSalesScopeOwn } = await import('@/lib/permissions')
+    const perms = await getPermissionsForUser(
+      { role: sessionUser.role, orgRoleId: sessionUser.orgRoleId },
+      orgId,
+    )
+    salesScopeOwn = hasSalesScopeOwn(perms)
+  }
+
   return {
     orgId,
     userId,
     defaultBranchId: branchId,
     allowedBranchIds,
+    salesScopeOwn,
   }
 }
 

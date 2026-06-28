@@ -21,6 +21,7 @@ import {
   can,
   canSettings,
   getPermissionsForUser,
+  hasSalesScopeOwn,
   requirePermission,
   ForbiddenError,
 } from './permissions'
@@ -84,6 +85,16 @@ describe('getPermissionsForUser()', () => {
     const perms = await getPermissionsForUser({ role: 'operator', orgRoleId: 'role-uuid' }, 'org-1')
     expect(perms).toEqual(['contacts:read', 'panel:read'])
     expect(mockRoleFindAll).not.toHaveBeenCalled()
+  })
+
+  it('returns sales:scope_own from custom org role', async () => {
+    mockOrgRoleFindAll.mockResolvedValue([
+      makeOrgRoleRow('sales:read'),
+      makeOrgRoleRow('sales:scope_own'),
+    ])
+    const perms = await getPermissionsForUser({ role: 'operator', orgRoleId: 'role-uuid' }, 'org-1')
+    expect(perms).toContain('sales:scope_own')
+    expect(hasSalesScopeOwn(perms)).toBe(true)
   })
 
   it('returns module permissions from custom org role', async () => {

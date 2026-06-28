@@ -16,7 +16,8 @@ import { ensureSalesBranchAssociations, BRANCH_AFIP_ATTRIBUTES } from './sales-b
 import { buildBranchRenumberPatch } from '@/lib/branch-document-renumber'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import { FISCAL_NUMBER_SOURCE_ATTRS } from '@/lib/fiscal-document-number'
-import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
+import type { TenantContext } from '@/lib/tenancy'
+import { whereSalesDocumentScope } from './sales-scope'
 import type { IvaRate } from '@/types'
 
 export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
@@ -25,7 +26,7 @@ export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
   const { page, limit, search, status, contact_id, order_id, overdue } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = whereAllowedBranches(ctx)
+  const where: Record<string, unknown> = whereSalesDocumentScope(ctx) as Record<string, unknown>
   if (status)     where.status     = status
   if (contact_id) where.contact_id = contact_id
   if (order_id)   where.order_id   = order_id
@@ -74,7 +75,7 @@ export async function getInvoice(id: string, ctx: TenantContext) {
   ensureSalesBranchAssociations()
 
   const invoice = await Invoice.findOne({
-    where: whereAllowedBranches(ctx, { id }),
+    where: whereSalesDocumentScope(ctx, { id }),
     include: [
       { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES] },
       { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'cuit'], required: false },
@@ -94,7 +95,7 @@ async function findScopedInvoice(
   options: { transaction?: import('sequelize').Transaction; lock?: boolean } = {},
 ) {
   const invoice = await Invoice.findOne({
-    where: whereAllowedBranches(ctx, { id }),
+    where: whereSalesDocumentScope(ctx, { id }),
     transaction: options.transaction,
     lock: options.lock,
   })
