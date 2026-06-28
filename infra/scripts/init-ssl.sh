@@ -36,7 +36,7 @@ else
 fi
 
 echo "Enabling HTTPS nginx config ..."
-cp "${REPO_ROOT}/infra/nginx/conf.d/andiko.ssl.conf" "${REPO_ROOT}/infra/nginx/conf.d/default.conf"
+cp "${REPO_ROOT}/infra/nginx/templates/andiko.ssl.conf" "${REPO_ROOT}/infra/nginx/conf.d/default.conf"
 
 NGINX_CONTAINER="$(docker ps -q -f name="${STACK}_nginx" | head -n1)"
 if [ -n "$NGINX_CONTAINER" ]; then
