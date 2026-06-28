@@ -194,6 +194,7 @@ Point each terminal's `cloud_url` to `https://andiko.cloud`.
 
 | Symptom | Check |
 |---------|-------|
+| **`error from registry: denied` on push** | PAT missing `write:packages`; re-login with GitHub **username** (not email); `GHCR_IMAGE` owner must match PAT owner; authorize SSO on org if applicable |
 | `prod-deploy` fails pulling image | `docker login ghcr.io` on VPS; image tag exists |
 | Stack not starting | `docker stack ps andiko --no-trunc` |
 | Health check fails | `docker service logs andiko_app`; postgres healthy? |
