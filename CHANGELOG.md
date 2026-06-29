@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.32.0](https://github.com/cristianemoyano/andiko/compare/v0.31.0...v0.32.0) (2026-06-29)
+
+### Features
+
+* **core:** billing dashboard, error pages, and safe module redirects ([5e80c63](https://github.com/cristianemoyano/andiko/commit/5e80c634fc4ed75aad28c3f7aff30f86d7370b18))
+
+### Bug Fixes
+
+* **core:** correct dropbox migration order for production ([754e17f](https://github.com/cristianemoyano/andiko/commit/754e17f59089c22b4d4c28e1e3be662f854dd473))
+
 ## [0.31.0](https://github.com/cristianemoyano/andiko/compare/v0.30.0...v0.31.0) (2026-06-29)
 
 ### Features
