@@ -432,6 +432,7 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [x] **Servicio de archivos** — backends S3, Google Drive y Dropbox; credenciales en `platform_settings`; ReBAC por registro vinculado + shares explícitos; adjuntos en compras (facturas proveedor, recepciones); preview PDF/imagen; sys-admin `/sys-admin/storage`
 - [x] `/documentos/compartidos` — listado de archivos compartidos explícitamente con el usuario (sin permiso de módulo sobre el registro vinculado)
 - [x] Medición de storage en tiempo real al subir/eliminar archivos (`storage_gb` / `storage_files` en `usage_records`; job diario de reconciliación)
+- [x] Paths estructurados de almacenamiento (`{slug}/suc-{code}/{módulo}/{entidad}/{yyyy}/{mm}/{dd}/…`); slug de org inmutable tras creación
 
 ### Pendientes (fases futuras)
 - [ ] Gateway de pagos (Mercado Pago / Stripe) + webhooks para débito automático

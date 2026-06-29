@@ -28,17 +28,13 @@ export const organizationCreateSchema = z.object({
   ...fiscalFields,
 })
 
-export const organizationUpdateSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  slug: z
-    .string()
-    .min(1)
-    .max(100)
-    .regex(slugPattern, 'Solo minúsculas, números y guiones')
-    .optional(),
-  is_active: z.boolean().optional(),
-  ...fiscalFields,
-})
+export const organizationUpdateSchema = z
+  .object({
+    name: z.string().min(1).max(255).optional(),
+    is_active: z.boolean().optional(),
+    ...fiscalFields,
+  })
+  .strict()
 
 const branchAddressFields = {
   street:      z.string().max(255).nullable().optional(),
