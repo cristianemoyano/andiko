@@ -4,7 +4,7 @@ import type { Migration } from '../../lib/migrations'
 export const up: Migration = async ({ context: queryInterface }) => {
   await queryInterface.sequelize.query(`
     ALTER TABLE platform_settings
-      ADD COLUMN dropbox_access_token_encrypted TEXT NOT NULL DEFAULT '';
+      ADD COLUMN IF NOT EXISTS dropbox_access_token_encrypted TEXT NOT NULL DEFAULT '';
   `)
 }
 
