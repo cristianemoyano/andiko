@@ -1,6 +1,6 @@
 .PHONY: up down reset logs db shell dev \
 	woo-up woo-down woo-bootstrap woo-credentials woo-reset \
-	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-migrate prod-migrate-status \
+	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-sync-nginx-conf prod-migrate prod-migrate-status \
 	prod-create-sysadmin prod-health prod-backup prod-logs prod-renew-certs prod-portainer-auth
 
 # =============================================================================
@@ -99,6 +99,11 @@ prod-deploy:
 
 prod-ssl:
 	bash infra/scripts/init-ssl.sh
+
+prod-sync-nginx-conf:
+	bash infra/scripts/sync-nginx-conf.sh
+	@NGINX_CONTAINER=$$(docker ps -q -f name=andiko_nginx | head -n1); \
+	if [ -n "$$NGINX_CONTAINER" ]; then docker exec $$NGINX_CONTAINER nginx -s reload; fi
 
 prod-migrate:
 	@test -n "$(TAG)" || (echo "TAG is required: make prod-migrate TAG=v0.26.0" && exit 1)

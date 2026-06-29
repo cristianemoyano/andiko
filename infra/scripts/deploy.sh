@@ -16,16 +16,19 @@ export CERTBOT_CERTS_DIR="${CERTBOT_CERTS_DIR:-/var/lib/andiko/certs}"
 export CERTBOT_WWW_DIR="${CERTBOT_WWW_DIR:-/var/lib/andiko/certbot-www}"
 export PORTAINER_DATA_DIR="${PORTAINER_DATA_DIR:-/var/lib/andiko/portainer}"
 export PORTAINER_HTPASSWD_FILE="${PORTAINER_HTPASSWD_FILE:-/var/lib/andiko/portainer/.htpasswd}"
+export NGINX_CONF_DIR="${NGINX_CONF_DIR:-/var/lib/andiko/nginx/conf.d}"
 
 if [ ! -f "$PORTAINER_HTPASSWD_FILE" ]; then
   echo "Warning: ${PORTAINER_HTPASSWD_FILE} not found — nginx will fail until you run: make prod-portainer-auth" >&2
 fi
 
+bash "$SCRIPT_DIR/sync-nginx-conf.sh"
+
 echo "Pulling ${GHCR_IMAGE}:${TAG} ..."
 docker pull "${GHCR_IMAGE}:${TAG}"
 
 echo "Deploying stack ${STACK} ..."
-envsubst '${GHCR_IMAGE} ${IMAGE_TAG} ${AFIP_MODE} ${POSTGRES_USER} ${POSTGRES_DB} ${REPO_ROOT} ${POSTGRES_DATA_DIR} ${CERTBOT_CERTS_DIR} ${CERTBOT_WWW_DIR} ${PORTAINER_DATA_DIR} ${PORTAINER_HTPASSWD_FILE}' \
+envsubst '${GHCR_IMAGE} ${IMAGE_TAG} ${AFIP_MODE} ${POSTGRES_USER} ${POSTGRES_DB} ${REPO_ROOT} ${POSTGRES_DATA_DIR} ${CERTBOT_CERTS_DIR} ${CERTBOT_WWW_DIR} ${PORTAINER_DATA_DIR} ${PORTAINER_HTPASSWD_FILE} ${NGINX_CONF_DIR}' \
   < "${REPO_ROOT}/infra/docker-stack.yml" \
   | docker stack deploy -c - "$STACK"
 

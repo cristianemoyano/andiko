@@ -20,6 +20,7 @@ if [ "$SKIP_PULL" != "1" ]; then
   echo "Pulling latest code (origin/${BRANCH}) ..."
   git -C "$REPO_ROOT" pull origin "$BRANCH"
   git -C "$REPO_ROOT" fetch origin --tags
+  bash "$SCRIPT_DIR/sync-nginx-conf.sh"
 else
   echo "Skipping git pull (SKIP_PULL=1)."
 fi

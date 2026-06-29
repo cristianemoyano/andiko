@@ -77,7 +77,7 @@ services:
         mode: host
     volumes:
       - ${REPO_ROOT}/infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ${REPO_ROOT}/infra/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ${NGINX_CONF_DIR}:/etc/nginx/conf.d:ro
       - ${PORTAINER_HTPASSWD_FILE}:/etc/nginx/.htpasswd.portainer:ro
       - certbot_certs:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro

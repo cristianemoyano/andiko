@@ -13,8 +13,15 @@ PORTAINER_HTPASSWD_FILE="${PORTAINER_HTPASSWD_FILE:-/var/lib/andiko/portainer/.h
 PORTAINER_DATA_DIR="${PORTAINER_DATA_DIR:-/var/lib/andiko/portainer}"
 
 if ! command -v htpasswd >/dev/null 2>&1; then
-  echo "htpasswd not found. Install apache2-utils: sudo apt install -y apache2-utils" >&2
-  exit 1
+  if [ "$(id -u)" -eq 0 ] && command -v apt-get >/dev/null 2>&1; then
+    echo "Installing apache2-utils (htpasswd) ..."
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -y apache2-utils
+  else
+    echo "htpasswd not found. Install apache2-utils: sudo apt install -y apache2-utils" >&2
+    exit 1
+  fi
 fi
 
 if [ -z "$PORTAINER_AUTH_PASSWORD" ]; then

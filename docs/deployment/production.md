@@ -303,7 +303,13 @@ Generate a password: `openssl rand -base64 24`
 0 3,15 * * * cd ~/andiko && make prod-renew-certs >> /var/log/andiko-certbot.log 2>&1
 ```
 
-Before SSL, nginx serves HTTP with a proxy to the app. After `prod-ssl`, `infra/nginx/conf.d/default.conf` is replaced with the HTTPS config and `portainer.conf` is installed for Portainer.
+Before SSL, nginx serves HTTP with a proxy to the app. After `prod-ssl`, HTTPS configs are written to **`/var/lib/andiko/nginx/conf.d`** (outside the git repo) from templates in `infra/nginx/templates/`.
+
+`git pull` no longer overwrites nginx configs. `make prod-deploy` and `make prod-release` run `sync-nginx-conf.sh` to bootstrap or upgrade configs when needed. To re-apply templates manually:
+
+```bash
+FORCE_NGINX_SSL=1 make prod-sync-nginx-conf
+```
 
 New installs request a certificate that includes `portainer.andiko.cloud`. On a VPS that already has HTTPS without that SAN, run once:
 

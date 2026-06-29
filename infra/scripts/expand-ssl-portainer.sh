@@ -41,8 +41,8 @@ docker run --rm \
   -d "www.${DOMAIN}" \
   -d "$PORTAINER_DOMAIN"
 
-echo "Installing Portainer nginx config ..."
-cp "${REPO_ROOT}/infra/nginx/templates/portainer.ssl.conf" "${REPO_ROOT}/infra/nginx/conf.d/portainer.conf"
+echo "Installing HTTPS nginx configs ..."
+FORCE_NGINX_SSL=1 bash "${SCRIPT_DIR}/sync-nginx-conf.sh"
 
 NGINX_CONTAINER="$(docker ps -q -f name="${STACK}_nginx" | head -n1)"
 if [ -n "$NGINX_CONTAINER" ]; then
