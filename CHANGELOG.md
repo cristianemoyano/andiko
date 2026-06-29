@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.30.0](https://github.com/cristianemoyano/andiko/compare/v0.29.1...v0.30.0) (2026-06-29)
+
+### Features
+
+* **billing:** meter storage usage (bytes + files) into the billing pipeline ([02362e6](https://github.com/cristianemoyano/andiko/commit/02362e695aabec541ba6a45f39624637f2b02216))
+* **core:** add Google Drive storage backend and file UI components ([2056708](https://github.com/cristianemoyano/andiko/commit/205670878026f1ef13375d355403f8dda6f58681))
+* **core:** add vendor-agnostic file service with S3 backend and ReBAC sharing ([edb4e8e](https://github.com/cristianemoyano/andiko/commit/edb4e8eea0c1fb42b043c3876ac381bdc3fe4447))
+* **core:** dropbox storage, file preview, and purchase attachments ([b6e744b](https://github.com/cristianemoyano/andiko/commit/b6e744b9c3b8f8f16279ea773fad13bd81fe09f7))
+* **core:** shared files page and real-time storage billing ([d9b8d38](https://github.com/cristianemoyano/andiko/commit/d9b8d38284847b174abd0aff2bf6ec958a10d651))
+
 ## [0.29.1](https://github.com/cristianemoyano/andiko/compare/v0.29.0...v0.29.1) (2026-06-28)
 
 ### Bug Fixes
