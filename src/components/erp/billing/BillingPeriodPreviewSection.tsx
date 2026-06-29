@@ -6,6 +6,7 @@ import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { BillingInvoiceItemsBreakdown } from '@/components/erp/billing/BillingInvoiceItemsBreakdown'
 import { formatSeatCapacitySummary } from '@/modules/billing/billing-capacity-summary'
+import { cn } from '@/lib/utils'
 
 export type BillingPreviewLine = {
   kind: string
@@ -64,6 +65,9 @@ interface BillingPeriodPreviewSectionProps {
   /** Collapse the line-item breakdown by default */
   collapsible?: boolean
   defaultExpanded?: boolean
+  /** Tighter spacing when nested inside a parent card */
+  embedded?: boolean
+  className?: string
 }
 
 export function BillingPeriodPreviewSection({
@@ -74,6 +78,8 @@ export function BillingPeriodPreviewSection({
   hideStats = false,
   collapsible = false,
   defaultExpanded = true,
+  embedded = false,
+  className,
 }: BillingPeriodPreviewSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
 
@@ -94,7 +100,7 @@ export function BillingPeriodPreviewSection({
   }))
 
   return (
-    <section className="mb-4">
+    <section className={cn(!embedded && 'mb-4', className)}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div>
           <h2 className="text-[13px] font-semibold text-fg">Período actual</h2>
@@ -137,8 +143,8 @@ export function BillingPeriodPreviewSection({
       </p>
 
       {(preview.warnings?.length ?? 0) > 0 && (
-        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-950">
-          <p className="font-medium mb-1">Consumo no facturable detectado</p>
+        <div className="mb-3 rounded-md border border-warning bg-warning-bg px-4 py-3 text-[12px] text-fg">
+          <p className="font-medium text-warning mb-1">Consumo no facturable detectado</p>
           <ul className="list-disc pl-4 space-y-0.5">
             {preview.warnings!.map(w => (
               <li key={w.metric_key}>{w.message}</li>
