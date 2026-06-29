@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.31.0](https://github.com/cristianemoyano/andiko/compare/v0.30.0...v0.31.0) (2026-06-29)
+
+### Features
+
+* **core:** structured storage paths and immutable org slug ([113d215](https://github.com/cristianemoyano/andiko/commit/113d215b088eb71e73a13584e3561255a325f22b))
+
 ## [0.30.0](https://github.com/cristianemoyano/andiko/compare/v0.29.1...v0.30.0) (2026-06-29)
 
 ### Features
