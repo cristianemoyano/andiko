@@ -1,6 +1,10 @@
 # Production deployment (VPS)
 
-Andiko production runs on a single VPS at **https://andiko.cloud** using Docker Swarm, nginx, Certbot, and PostgreSQL with a persistent volume. Migrations are **manual** after each deploy. Image builds are pushed manually to GHCR from your laptop (no GitHub Actions).
+Andiko production runs on a single VPS at **https://andiko.cloud** using Docker Swarm, nginx, Certbot, and PostgreSQL with a persistent volume. Image builds are pushed manually to GHCR (no GitHub Actions).
+
+**Portainer CE** is installed on the same VPS: **https://portainer.andiko.cloud** (HTTPS + nginx basic auth + Portainer admin login).
+
+The **production VPS is already configured** (Swarm, secrets, TLS, nginx, Portainer, backups). Day-to-day work is **deploying releases** — not re-running bootstrap.
 
 Vercel configuration is unchanged and operates independently of this stack.
 
@@ -22,7 +26,83 @@ Internet → nginx (:443) → app (:3000) → postgres (:5432, internal)
 
 All orgs (multi-tenant) share one app instance and one database.
 
-## Prerequisites
+## Production VPS (live)
+
+| Item | Value |
+|------|--------|
+| Status | **Configured** — bootstrap, SSL, and Portainer already done |
+| SSH | `ssh root@187.77.235.70` |
+| Hostname | `srv1789017` |
+| Repo path | `/root/andiko` |
+| Branch | `develop` |
+| App | [https://andiko.cloud](https://andiko.cloud) |
+| Portainer | [https://portainer.andiko.cloud](https://portainer.andiko.cloud) |
+| GHCR image | `ghcr.io/cristianemoyano/andiko` |
+| Swarm stack | `andiko` |
+| Current tag | `v0.32.0` (update per release) |
+
+`infra/.env.production` on the VPS holds secrets — never commit it. See [Environment file](#environment-file) when editing or provisioning a new host.
+
+## Deploy a release (routine)
+
+From the **VPS** — one command does everything:
+
+```bash
+ssh root@187.77.235.70
+cd /root/andiko
+make prod-release
+```
+
+`prod-release` runs in order:
+
+1. `git pull origin develop` (+ sync nginx configs if needed)
+2. Build and push image to GHCR (`prod-push`)
+3. **Migrations** (`prod-migrate`) — before deploy so the DB matches the new app
+4. `docker stack deploy` (`prod-deploy`)
+5. Health check (`https://andiko.cloud/api/health`)
+
+Prompts for the tag interactively (default from `package.json`). Override when needed:
+
+```bash
+make prod-release TAG=v0.32.0
+make prod-release TAG=v0.32.0 SKIP_PUSH=1    # image already in GHCR (e.g. pushed from laptop)
+make prod-release TAG=v0.32.0 SKIP_PULL=1    # code already up to date on VPS
+make prod-release TAG=v0.32.0 SKIP_MIGRATE=1  # no migration files in this release
+```
+
+**Verify after deploy:**
+
+```bash
+make prod-health
+docker stack services andiko
+```
+
+Monitor services and logs in Portainer: [https://portainer.andiko.cloud](https://portainer.andiko.cloud)
+
+### Manual deploy (advanced)
+
+If you need to run steps separately:
+
+```bash
+# Laptop (optional — prod-release can build/push from VPS)
+make prod-push TAG=v0.32.0
+
+# VPS
+cd /root/andiko && git pull origin develop
+make prod-migrate TAG=v0.32.0
+make prod-deploy TAG=v0.32.0
+make prod-health
+```
+
+`make prod-deploy` alone does **not** run migrations. Never skip `prod-migrate` when migration files changed.
+
+---
+
+## Reference: prerequisites & environment
+
+The live VPS already satisfies the items below. Use this section when **editing secrets** or provisioning a **new host**.
+
+### Prerequisites
 
 **Target host:** Hostinger VPS running **Debian** (production at `andiko.cloud`).
 
@@ -34,13 +114,13 @@ sudo apt update
 sudo apt install -y make git curl gettext-base
 ```
 
-- DNS: `andiko.cloud` and `www.andiko.cloud` → VPS public IP (Hostinger DNS or external)
+- DNS: `andiko.cloud`, `www.andiko.cloud`, and `portainer.andiko.cloud` → VPS public IP (Hostinger DNS or external)
 - Firewall: allow TCP 22, 80, 443 — check **both** Hostinger panel firewall and `ufw` on the server if enabled
 - GitHub PAT:
   - **Laptop:** `write:packages` (push images to GHCR)
   - **VPS:** `read:packages` (pull images)
 
-## Environment file
+### Environment file
 
 ```bash
 cp infra/.env.production.example infra/.env.production
@@ -68,212 +148,120 @@ Set `POSTGRES_PASSWORD` in `.env.production`; scripts build `DATABASE_URL` autom
 
 Values with spaces must be quoted in `infra/.env.production`, e.g. `BACKUP_GDRIVE_FOLDER="my folder"`.
 
-## Andiko production VPS (Hostinger)
-
-| Item | Value |
-|------|--------|
-| SSH | `ssh root@187.77.235.70` |
-| Hostname | `srv1789017` |
-| Repo path | `/root/andiko` |
-| Branch | `develop` |
-| Domain | `https://andiko.cloud` |
-| GHCR image | `ghcr.io/cristianemoyano/andiko` |
-| Swarm stack | `andiko` |
-| Current tag | `v0.25.2` (update per release) |
-
-```bash
-ssh root@187.77.235.70
-cd /root/andiko
-git pull origin develop
-```
-
 ---
 
-Fresh VPS with nothing installed — follow in order.
+## New VPS bootstrap (first time only)
 
-### A. Before touching the VPS
+Use this section only when provisioning a **fresh** Debian VPS. The live Hostinger server is already past these steps.
 
-1. **DNS** (Hostinger hPanel or your registrar): `andiko.cloud` and `www.andiko.cloud` → IP pública del VPS.
-2. **Hostinger firewall** (panel): permitir TCP **22**, **80**, **443**.
-3. **GitHub PAT (laptop):** `write:packages` + `read:packages` → push image.
-4. **GitHub PAT (VPS):** solo `read:packages` → pull image.
-5. **Laptop — push image** (cuando GHCR login funcione):
+### Before touching the VPS
 
-```bash
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u cristianemoyano --password-stdin
-make prod-push TAG=v0.25.2
-```
+1. **DNS:** `andiko.cloud`, `www.andiko.cloud`, and `portainer.andiko.cloud` → VPS public IP.
+2. **Firewall:** TCP **22**, **80**, **443** (Hostinger panel + `ufw` if enabled).
+3. **GitHub PAT (laptop):** `write:packages` + `read:packages` → push images.
+4. **GitHub PAT (VPS):** `read:packages` → pull images.
 
-### B. Conectar al VPS
+### Bootstrap del sistema
 
 ```bash
-ssh root@187.77.235.70
-# hostname: srv1789017
-```
-
-### C. Bootstrap del sistema (una sola vez)
-
-Opción rápida — clonar solo el script y ejecutarlo:
-
-```bash
+ssh root@YOUR_VPS_IP
 apt-get update && apt-get install -y git
 git clone git@github.com:cristianemoyano/andiko.git /root/andiko
 cd /root/andiko && git checkout develop
 sudo bash infra/scripts/bootstrap-vps.sh
 ```
 
-Si el repo es **privado** y `git clone` falla, primero creá una SSH key en el VPS:
+If the repo is private and `git clone` fails, add an SSH deploy key on the VPS (`ssh-keygen -t ed25519`, add public key to GitHub).
+
+`bootstrap-vps.sh` installs git, make, curl, Docker, `ufw`, and runs `docker swarm init`.
+
+### Configurar Andiko
 
 ```bash
-ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
-cat ~/.ssh/id_ed25519.pub
-# Pegar en https://github.com/settings/keys → New SSH key
-```
-
-Instala: `git`, `make`, `curl`, `docker`, `ufw` (22/80/443), e inicializa **Docker Swarm**.
-
-### D. Configurar Andiko en el VPS
-
-```bash
-cd ~/andiko   # o /root/andiko
-git checkout develop
+cd /root/andiko
 cp infra/.env.production.example infra/.env.production
 nano infra/.env.production
 ```
 
-Generar secrets (en el VPS o en la laptop):
+Generate secrets:
 
 ```bash
-openssl rand -base64 32   # repetir para AUTH_SECRET, POSTGRES_PASSWORD, CRON_SECRET
+openssl rand -hex 32   # POSTGRES_PASSWORD, AUTH_SECRET, CRON_SECRET (recommended)
 ```
 
-Completar en `infra/.env.production`:
-- `POSTGRES_PASSWORD` y `DATABASE_URL` (host = `postgres`, no `localhost`)
-- `AUTH_SECRET`, `AUTH_URL=https://andiko.cloud`
-- `AFIP_MODE=produccion`
-- `CERTBOT_EMAIL=tu@email.com`
-- `GHCR_IMAGE=ghcr.io/cristianemoyano/andiko`
+Complete `infra/.env.production`: `POSTGRES_*`, `AUTH_URL=https://andiko.cloud`, `AFIP_MODE=produccion`, `CERTBOT_EMAIL`, `GHCR_IMAGE`.
 
-Login GHCR (PAT de **solo lectura**):
+GHCR login on VPS (read-only PAT):
 
 ```bash
-export GITHUB_TOKEN=ghp_xxxx
 echo "$GITHUB_TOKEN" | docker login ghcr.io -u cristianemoyano --password-stdin
 ```
 
-### E. Deploy inicial
+### Deploy inicial
 
 ```bash
 make prod-init
-make prod-deploy TAG=v0.25.2
-make prod-migrate TAG=v0.25.2
-make prod-health                    # HTTP (antes del certificado)
-make prod-ssl                       # HTTPS
-make prod-health                    # https://andiko.cloud/api/health
+make prod-portainer-auth          # Portainer nginx basic auth
+make prod-deploy TAG=vX.Y.Z       # first image — build/push from laptop or VPS
+make prod-migrate TAG=vX.Y.Z
+make prod-health                  # HTTP (before certificate)
+make prod-ssl                     # HTTPS + portainer.andiko.cloud in cert
+make prod-health                  # https://andiko.cloud/api/health
 ```
 
-### F. Verificar
+If the cert already exists but lacks `portainer.andiko.cloud`:
+
+```bash
+bash infra/scripts/expand-ssl-portainer.sh
+```
+
+### Verificar
 
 ```bash
 docker stack services andiko
-docker service logs andiko_app --tail 50
-curl -sf http://localhost/api/health    # desde el VPS, antes de SSL
+curl -sf https://andiko.cloud/api/health
+curl -sf -u admin:YOUR_BASIC_AUTH_PASSWORD https://portainer.andiko.cloud/api/status
 ```
+
+### Cron (recommended on new VPS)
+
+```cron
+0 3,15 * * * cd /root/andiko && make prod-renew-certs >> /var/log/andiko-certbot.log 2>&1
+0 2 * * * cd /root/andiko && make prod-backup >> /var/log/andiko-backup.log 2>&1
+```
+
+After bootstrap, use [Deploy a release (routine)](#deploy-a-release-routine) for every subsequent version.
 
 ---
 
-## First-time bootstrap
-
-(If bootstrap script already ran — start here after `prod-bootstrap-vps`.)
-
-Clone anywhere on the VPS (e.g. `~/andiko`):
-
-```bash
-git clone git@github.com:cristianemoyano/andiko.git ~/andiko
-cd ~/andiko
-cp infra/.env.production.example infra/.env.production
-# edit infra/.env.production
-
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin
-make prod-init
-```
-
-On your **laptop** (same repo, Docker running):
-
-```bash
-make prod-push TAG=v0.26.0
-```
-
-Back on the **VPS**:
-
-```bash
-make prod-deploy TAG=v0.26.0
-make prod-migrate TAG=v0.26.0
-make prod-health   # HTTP until SSL — uses default nginx config
-make prod-ssl      # Certbot + HTTPS nginx config
-make prod-health   # HTTPS
-```
-
-## Release workflow
-
-### One command (recommended on VPS)
-
-Runs `git pull` → build/push image → **migrations** → deploy → health check. Migrations run **before** deploy so the DB is ready when the new app starts.
-
-```bash
-make prod-release
-```
-
-Prompts for the tag (default from `package.json`). Override explicitly when needed:
-
-```bash
-make prod-release TAG=v0.27.0
-make prod-release TAG=v0.27.0 SKIP_PUSH=1    # image already in GHCR (e.g. pushed from laptop)
-make prod-release TAG=v0.27.0 SKIP_PULL=1    # code already up to date
-```
-
-### Manual steps
-
-```bash
-# Laptop
-make prod-push TAG=v0.27.0
-
-# VPS
-git pull
-make prod-migrate TAG=v0.27.0
-make prod-deploy TAG=v0.27.0
-make prod-health
-```
-
-`make prod-deploy` prints a reminder to run migrations. **Never skip `prod-migrate`** when migration files changed.
-
 ## Makefile reference
 
-| Target | Where | Description |
-|--------|-------|-------------|
-| `prod-bootstrap-vps` | VPS (once) | Install Docker, git, make, ufw, swarm init (fresh Debian) |
-| `prod-release TAG=…` | VPS | Pull code, push image, migrate, deploy, health |
-| `prod-push TAG=…` | Laptop / VPS | Build + push Docker image to GHCR |
-| `prod-init` | VPS (once) | Swarm init, data dirs, Docker secrets |
-| `prod-secrets` | VPS | Rotate Swarm secrets (then redeploy) |
-| `prod-deploy TAG=…` | VPS | Pull image + `docker stack deploy` |
-| `prod-ssl` | VPS (once) | Certbot certificate + enable HTTPS |
-| `prod-migrate TAG=…` | VPS | Run pending Umzug migrations |
-| `prod-migrate-status TAG=…` | VPS | List executed vs pending migrations |
-| `prod-create-sysadmin TAG=… EMAIL=… PASSWORD=…` | VPS | Create or reset platform sys-admin user |
-| `prod-health` | VPS | `curl https://andiko.cloud/api/health` |
-| `prod-backup` | VPS | pg_dump + optional rclone → Google Drive |
-| `prod-logs` | VPS | Follow app service logs |
-| `prod-renew-certs` | VPS (cron) | Renew TLS certificates |
-| `prod-portainer-auth` | VPS (once) | Generate nginx basic-auth for Portainer |
+| Target | Where | When | Description |
+|--------|-------|------|-------------|
+| **`prod-release`** | **VPS** | **Routine** | Pull, push image, migrate, deploy, health |
+| `prod-push TAG=…` | Laptop / VPS | Release | Build + push Docker image to GHCR |
+| `prod-deploy TAG=…` | VPS | Advanced | Pull image + `docker stack deploy` only |
+| `prod-migrate TAG=…` | VPS | Advanced | Run pending Umzug migrations |
+| `prod-health` | VPS | After deploy | `curl https://andiko.cloud/api/health` |
+| `prod-logs` | VPS | Ops | Follow app service logs |
+| `prod-backup` | VPS | Cron / ops | pg_dump + optional rclone → Google Drive |
+| `prod-renew-certs` | VPS | Cron | Renew TLS certificates |
+| `prod-sync-nginx-conf` | VPS | Rare | Re-apply nginx templates to live dir |
+| `prod-migrate-status TAG=…` | VPS | Debug | List executed vs pending migrations |
+| `prod-create-sysadmin TAG=… EMAIL=… PASSWORD=…` | VPS | Once / ops | Create or reset platform sys-admin user |
+| `prod-bootstrap-vps` | VPS | **Once (new VPS)** | Install Docker, git, make, ufw, swarm init |
+| `prod-init` | VPS | **Once (new VPS)** | Swarm secrets, data dirs, nginx bootstrap |
+| `prod-secrets` | VPS | Rare | Rotate Swarm secrets (then redeploy) |
+| `prod-ssl` | VPS | **Once (new VPS)** | Certbot certificate + enable HTTPS |
+| `prod-portainer-auth` | VPS | **Once (new VPS)** | Generate nginx basic-auth for Portainer |
 
 ## Manual migrations
 
-Migrations do **not** run during Docker build or deploy. The migrate container uses the same image tag as the deployed app:
+Included in `make prod-release`. Run standalone only when debugging or using [manual deploy](#manual-deploy-advanced):
 
 ```bash
-make prod-migrate TAG=v0.27.0
-make prod-migrate-status TAG=v0.27.0
+make prod-migrate TAG=v0.32.0
+make prod-migrate-status TAG=v0.32.0
 ```
 
 Emergency fallback: `POST /api/admin/migrate` with `Authorization: Bearer $MIGRATION_SECRET` if configured.
@@ -284,7 +272,7 @@ Create the first sys-admin (or reset password) on the VPS:
 
 ```bash
 make prod-create-sysadmin \
-  TAG=v0.25.3 \
+  TAG=v0.32.0 \
   EMAIL=admin@andiko.cloud \
   PASSWORD='your-secure-password-min-16-chars' \
   NAME='Sys Admin'
@@ -333,43 +321,17 @@ Advanced host retention (logrotate for cron files, image prune, disk diagnostics
 
 ## Portainer (Swarm UI)
 
-Web UI to monitor Docker Swarm. **Not exposed on port 9000** — only via nginx at `https://portainer.andiko.cloud`.
+**Live:** [https://portainer.andiko.cloud](https://portainer.andiko.cloud) — Portainer CE 2.21.5 (`andiko_portainer`). Already installed and configured on the production VPS.
+
+Web UI to monitor Docker Swarm (services, logs, images, volumes). **Not exposed on port 9000** — only via nginx on the subdomain above.
 
 **Security layers:**
 
 1. HTTPS (Let's Encrypt)
 2. nginx **basic auth** (htpasswd on the VPS, not in git)
-3. Portainer admin login (created on first visit)
+3. Portainer admin login
 
 Portainer mounts `/var/run/docker.sock` on the manager node — full Docker control. Treat credentials accordingly.
-
-### One-time setup
-
-1. **DNS:** `portainer.andiko.cloud` → VPS public IP (same as `andiko.cloud`).
-
-2. **Basic auth** (generates `/var/lib/andiko/portainer/.htpasswd`):
-
-```bash
-make prod-portainer-auth
-# Or set explicitly:
-# PORTAINER_AUTH_USER=admin PORTAINER_AUTH_PASSWORD='...' make prod-portainer-auth
-```
-
-3. **Deploy** (includes Portainer service):
-
-```bash
-make prod-deploy TAG=vX.Y.Z
-```
-
-4. **TLS** — if the cert predates Portainer, expand it:
-
-```bash
-bash infra/scripts/expand-ssl-portainer.sh
-```
-
-Fresh installs: `make prod-ssl` already includes `portainer.andiko.cloud`.
-
-5. Open `https://portainer.andiko.cloud` → basic auth → create Portainer admin → environment **local** (socket already mounted).
 
 Verify:
 
@@ -377,6 +339,8 @@ Verify:
 curl -sf -u admin:YOUR_BASIC_AUTH_PASSWORD https://portainer.andiko.cloud/api/status
 docker service inspect andiko_portainer --format '{{json .Spec.TaskTemplate.LogDriver}}'
 ```
+
+Portainer **initial setup** (DNS, `prod-portainer-auth`, TLS SAN) is documented under [New VPS bootstrap](#new-vps-bootstrap-first-time-only).
 
 ## Backups
 
