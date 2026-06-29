@@ -7,10 +7,11 @@ const envSchema = z.object({
   AUTH_URL: z.string().url().default('http://localhost:3000'),
   MIGRATION_SECRET: z.string().min(32).optional(),
 
-  // AFIP / ARCA electronic invoicing. `stub` needs no credentials; in
-  // `homologacion`/`produccion` the certificate + key are stored per-organization
-  // (see afip-credentials.service). This only selects the target environment.
   AFIP_MODE: z.enum(['stub', 'homologacion', 'produccion']).default('stub'),
+
+  // Hard cap on a single upload, enforced at request validation and on the storage proxy.
+  // Backend credentials live in platform_settings (sys-admin), not env vars.
+  FILE_MAX_BYTES: z.coerce.number().int().positive().default(26_214_400), // 25 MiB
 })
 
 const parsed = envSchema.safeParse(process.env)

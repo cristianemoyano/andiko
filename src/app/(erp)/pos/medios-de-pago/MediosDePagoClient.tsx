@@ -81,12 +81,12 @@ export function MediosDePagoClient() {
       key: 'name',
       header: 'Nombre',
       render: row => (
-        <div>
-          <span className="text-sm font-medium text-fg">{row.name}</span>
+        <>
+          <span>{row.name}</span>
           {row.requires_reference && (
-            <p className="text-xs text-fg-subtle mt-0.5">Requiere referencia</p>
+            <span className="block text-xs font-normal text-fg-subtle mt-0.5">Requiere referencia</span>
           )}
-        </div>
+        </>
       ),
     },
     {

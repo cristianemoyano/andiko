@@ -1,0 +1,5 @@
+export * from './storage.service'
+export type { FileActor, AccessMode } from './storage.authz'
+export type { FileOwnerType } from './file-link.model'
+export type { SharePrincipalType, SharePermission } from './file-share.model'
+export type { FileStatus } from './file.model'

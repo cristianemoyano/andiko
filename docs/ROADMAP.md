@@ -429,6 +429,9 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [x] `BillingSubNav`, badges de estado de facturación, preview de período con copy de capacidad (contrato vs incluidos)
 - [x] Impersonación sys-admin: nombre de org en búsqueda/recientes; panel org con nombre en título
 - [x] **Monetización por sitio (WooCommerce)** — `included_sites` / `per_site_price` en planes, conteo de sitios activos, línea de cargo `site` (espejo de sucursales), snapshot `billed_sites` en factura, campos en `PlanModal` y seed
+- [x] **Servicio de archivos** — backends S3, Google Drive y Dropbox; credenciales en `platform_settings`; ReBAC por registro vinculado + shares explícitos; adjuntos en compras (facturas proveedor, recepciones); preview PDF/imagen; sys-admin `/sys-admin/storage`
+- [x] `/documentos/compartidos` — listado de archivos compartidos explícitamente con el usuario (sin permiso de módulo sobre el registro vinculado)
+- [x] Medición de storage en tiempo real al subir/eliminar archivos (`storage_gb` / `storage_files` en `usage_records`; job diario de reconciliación)
 
 ### Pendientes (fases futuras)
 - [ ] Gateway de pagos (Mercado Pago / Stripe) + webhooks para débito automático
@@ -650,7 +653,8 @@ Ideas validadas pero sin fecha definida.
 - Integración con e-commerce (WooCommerce, Tiendanube)
 - BI / Dashboards ejecutivos
 - CRM básico (leads, oportunidades, pipeline comercial)
-- Adjuntos de documentos (comprobantes / PDFs) en ventas, compras y contactos
+- [x] Adjuntos de documentos (comprobantes / PDFs) en compras — facturas de proveedor y recepciones
+- [ ] Extender adjuntos a ventas, contactos y catálogo
 - Bitácora de auditoría visible para el usuario (historial de cambios; hoy solo campos `created_by/updated_by`)
 - Límite de crédito por cliente (bloqueo/alerta al superar saldo en cuenta corriente)
 - Comisiones de vendedores

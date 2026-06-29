@@ -25,7 +25,15 @@ export const TRACKED_BILLING_METRICS = [
     unit_label: 'GB',
     default_unit_price: '200.00',
     description: 'Gigabytes de archivos adjuntos y documentos almacenados.',
-    tracked_by: 'Manual / job de storage (pendiente)',
+    tracked_by: 'Automático al subir/eliminar archivos',
+  },
+  {
+    key: 'storage_files',
+    label: 'Archivos almacenados',
+    unit_label: 'archivo',
+    default_unit_price: '0.00',
+    description: 'Cantidad de archivos almacenados (objetos). Medido; sin cargo por defecto.',
+    tracked_by: 'Automático al subir/eliminar archivos',
   },
 ] as const
 
@@ -59,3 +67,7 @@ export function buildTrackedMetricsCatalog(configuredKeys: ReadonlySet<string>):
 
 /** Clave usada al registrar consumo AFIP (evita strings sueltos en servicios). */
 export const AFIP_INVOICES_ISSUED_METRIC_KEY: TrackedBillingMetricKey = 'afip_invoices_issued'
+
+/** Claves de almacenamiento, registradas por el job de storage (gauge: snapshot por período). */
+export const STORAGE_GB_METRIC_KEY: TrackedBillingMetricKey = 'storage_gb'
+export const STORAGE_FILES_METRIC_KEY: TrackedBillingMetricKey = 'storage_files'

@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/primitives/Badge'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { EmptyState } from '@/components/erp/EmptyState'
+import { OwnerAttachmentsSection } from '@/components/erp/OwnerAttachmentsSection'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { CurrencyInput, formatARS } from '@/components/primitives/CurrencyInput'
 import { FormField } from '@/components/primitives/FormField'
@@ -244,6 +245,12 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
               )}
             </div>
           </div>
+
+          <OwnerAttachmentsSection
+            ownerType="supplier_invoice"
+            ownerId={invoice.id}
+            title="Factura / PDF del proveedor"
+          />
 
           {/* Items card */}
           <div className="bg-surface border border-border rounded-sm overflow-hidden">

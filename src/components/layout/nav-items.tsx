@@ -18,6 +18,17 @@ export const NAV_MAIN: NavItem[] = [
       </svg>
     ),
   },
+  {
+    id: 'documentos-compartidos',
+    label: 'Compartidos con vos',
+    href: '/documentos/compartidos',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6l-4-4H6z"/>
+        <path d="M6 2v4h4M8 10l2-2 2 2"/>
+      </svg>
+    ),
+  },
 ]
 
 export const NAV_MODULES: NavItem[] = [
