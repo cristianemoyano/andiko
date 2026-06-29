@@ -9,7 +9,7 @@ export const up: Migration = async ({ context: queryInterface }) => {
     ALTER TABLE platform_settings
       ADD COLUMN storage_enabled                      BOOLEAN      NOT NULL DEFAULT FALSE,
       ADD COLUMN storage_provider                   VARCHAR(32)  NOT NULL DEFAULT 's3'
-        CHECK (storage_provider IN ('s3', 'gdrive')),
+        CHECK (storage_provider IN ('s3', 'gdrive', 'dropbox')),
       ADD COLUMN s3_bucket                          VARCHAR(255) NOT NULL DEFAULT '',
       ADD COLUMN s3_region                          VARCHAR(64)  NOT NULL DEFAULT 'us-east-1',
       ADD COLUMN s3_access_key_id                   VARCHAR(255) NOT NULL DEFAULT '',

@@ -1,20 +1,17 @@
 import type { Migration } from '../../lib/migrations'
 
-/** Adds Dropbox as a platform storage backend (OAuth refresh token + root path). */
+/**
+ * Adds Dropbox columns to `platform_settings`.
+ * Runs before `20260629150000-add-storage-settings-to-platform-settings`; the
+ * `storage_provider` check is extended to include `dropbox` in a later migration.
+ */
 export const up: Migration = async ({ context: queryInterface }) => {
   await queryInterface.sequelize.query(`
     ALTER TABLE platform_settings
-      DROP CONSTRAINT IF EXISTS platform_settings_storage_provider_check;
-
-    ALTER TABLE platform_settings
-      ADD CONSTRAINT platform_settings_storage_provider_check
-        CHECK (storage_provider IN ('s3', 'gdrive', 'dropbox'));
-
-    ALTER TABLE platform_settings
-      ADD COLUMN dropbox_app_key                  VARCHAR(255) NOT NULL DEFAULT '',
-      ADD COLUMN dropbox_app_secret_encrypted     TEXT         NOT NULL DEFAULT '',
-      ADD COLUMN dropbox_refresh_token_encrypted  TEXT         NOT NULL DEFAULT '',
-      ADD COLUMN dropbox_root_path                VARCHAR(512) NOT NULL DEFAULT '/andiko';
+      ADD COLUMN IF NOT EXISTS dropbox_app_key                  VARCHAR(255) NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS dropbox_app_secret_encrypted     TEXT         NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS dropbox_refresh_token_encrypted  TEXT         NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS dropbox_root_path                VARCHAR(512) NOT NULL DEFAULT '/andiko';
   `)
 }
 
@@ -25,12 +22,5 @@ export const down: Migration = async ({ context: queryInterface }) => {
       DROP COLUMN IF EXISTS dropbox_app_secret_encrypted,
       DROP COLUMN IF EXISTS dropbox_refresh_token_encrypted,
       DROP COLUMN IF EXISTS dropbox_root_path;
-
-    ALTER TABLE platform_settings
-      DROP CONSTRAINT IF EXISTS platform_settings_storage_provider_check;
-
-    ALTER TABLE platform_settings
-      ADD CONSTRAINT platform_settings_storage_provider_check
-        CHECK (storage_provider IN ('s3', 'gdrive'));
   `)
 }

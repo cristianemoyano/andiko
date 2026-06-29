@@ -7,7 +7,7 @@ import { getEffectiveOrganizationSettings, isModuleEnabled } from '@/modules/aut
 import { resolveModuleForPath, type OrgModuleKey } from '@/modules/auth/organization-modules'
 import { resolveCapabilities } from '@/lib/capabilities'
 import { hasModuleReadAccess } from '@/lib/nav-module-access'
-import { resolveDefaultLandingPath } from '@/lib/panel-access'
+import { resolveModuleAccessRedirect, SIN_ACCESO_PATH } from '@/lib/panel-access'
 import { isOnboardingPath, shouldLayoutForceOnboardingRedirect } from '@/lib/onboarding-guards'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BottomNav } from '@/components/layout/BottomNav'
@@ -44,12 +44,24 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
       }
     }
 
-    const moduleForPath = resolveModuleForPath(pathname)
-    if (moduleForPath && !(await isModuleEnabled(orgId, moduleForPath))) {
-      redirect(`${resolveDefaultLandingPath(capabilities, enabledModules)}?module_disabled=1`)
-    }
-    if (moduleForPath && capabilities && !hasModuleReadAccess(moduleForPath, capabilities.permissions)) {
-      redirect(`${resolveDefaultLandingPath(capabilities, enabledModules)}?module_forbidden=1`)
+    if (pathname !== SIN_ACCESO_PATH) {
+      const moduleForPath = resolveModuleForPath(pathname)
+      if (moduleForPath) {
+        const moduleDisabled = !(await isModuleEnabled(orgId, moduleForPath))
+        const moduleForbidden = capabilities
+          ? !hasModuleReadAccess(moduleForPath, capabilities.permissions)
+          : false
+
+        if (moduleDisabled || moduleForbidden) {
+          const target = resolveModuleAccessRedirect(
+            pathname,
+            capabilities,
+            enabledModules,
+            moduleDisabled ? 'disabled' : 'forbidden',
+          )
+          if (target !== pathname) redirect(target)
+        }
+      }
     }
   }
 
