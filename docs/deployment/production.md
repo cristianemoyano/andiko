@@ -434,6 +434,7 @@ Point each terminal's `cloud_url` to `https://andiko.cloud`.
 | Migrations fail | `make prod-migrate-status TAG=…`; DATABASE_URL host is `postgres` |
 | SSL fails | DNS points to VPS; port 80 open; `CERTBOT_EMAIL` set |
 | Portainer 401/403 | Run `make prod-portainer-auth`; redeploy; expand cert if HTTPS fails |
+| Portainer **500** after basic-auth prompt | `.htpasswd` not readable by nginx — `chmod 644 /var/lib/andiko/portainer/.htpasswd` or re-run `make prod-portainer-auth` |
 | Portainer nginx error | `PORTAINER_HTPASSWD_FILE` must exist before deploy |
 | Secrets changed | `make prod-secrets` then `make prod-deploy TAG=…` |
 

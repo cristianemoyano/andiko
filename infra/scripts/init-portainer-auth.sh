@@ -37,7 +37,8 @@ sudo mkdir -p "$(dirname "$PORTAINER_HTPASSWD_FILE")"
 TMP_FILE="$(mktemp)"
 htpasswd -nbB "$PORTAINER_AUTH_USER" "$PORTAINER_AUTH_PASSWORD" > "$TMP_FILE"
 sudo mv "$TMP_FILE" "$PORTAINER_HTPASSWD_FILE"
-sudo chmod 600 "$PORTAINER_HTPASSWD_FILE"
+# nginx (worker user) must read this file inside the container — 600 causes auth_basic 500.
+sudo chmod 644 "$PORTAINER_HTPASSWD_FILE"
 
 echo "Wrote ${PORTAINER_HTPASSWD_FILE}"
 echo "Redeploy nginx if already running: make prod-deploy TAG=..."
