@@ -33,12 +33,15 @@ latest_git_tag() {
 }
 
 package_json_tag() {
-  if ! command -v node >/dev/null 2>&1; then
+  local version
+  if command -v python3 >/dev/null 2>&1; then
+    version="$(python3 -c "import json; print(json.load(open('${REPO_ROOT}/package.json'))['version'])" 2>/dev/null)" || true
+  elif command -v node >/dev/null 2>&1; then
+    version="$(node -p "require('${REPO_ROOT}/package.json').version" 2>/dev/null)" || true
+  else
     return 1
   fi
-  local version
-  version="$(node -p "require('${REPO_ROOT}/package.json').version" 2>/dev/null)" || return 1
-  [ -n "$version" ] || return 1
+  [ -n "${version:-}" ] || return 1
   echo "v${version}"
 }
 
@@ -99,8 +102,13 @@ resolve_release_tag() {
       TAG="$reply"
     fi
   else
+    echo "Could not detect a release tag (package.json / git tags)." >&2
     printf "Enter release tag (e.g. v0.32.0): "
     read -r TAG
+    if [ -z "$TAG" ]; then
+      echo "Aborted: tag is required." >&2
+      exit 1
+    fi
   fi
 
   TAG="$(normalize_tag "$TAG")" || {

@@ -19,6 +19,7 @@ WAIT_SECONDS="${RELEASE_WAIT_SECONDS:-120}"
 if [ "$SKIP_PULL" != "1" ]; then
   echo "Pulling latest code (origin/${BRANCH}) ..."
   git -C "$REPO_ROOT" pull origin "$BRANCH"
+  git -C "$REPO_ROOT" fetch origin --tags
 else
   echo "Skipping git pull (SKIP_PULL=1)."
 fi
