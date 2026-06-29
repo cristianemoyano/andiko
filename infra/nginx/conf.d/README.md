@@ -1,12 +1,15 @@
-# nginx site configs (production)
+# nginx site configs (repo bootstrap)
 
-Live configs are **not** stored in this directory on the VPS.
+These files are **tracked in git** as the HTTP bootstrap for new VPS instances.
 
-They live at `${NGINX_CONF_DIR}` (default: `/var/lib/andiko/nginx/conf.d`), outside the git repo, so `git pull` cannot overwrite them.
+On production, nginx mounts **`${NGINX_CONF_DIR}`** (default: `/var/lib/andiko/nginx/conf.d`) — outside this repo — so `git pull` never overwrites live configs.
 
-Templates: `infra/nginx/templates/`. Sync with:
+| Repo (bootstrap) | VPS live (runtime) | After `prod-ssl` |
+|----------------|--------------------|------------------|
+| `default.conf` | `${NGINX_CONF_DIR}/default.conf` | from `templates/andiko.ssl.conf` |
+| `portainer.conf` | `${NGINX_CONF_DIR}/portainer.conf` | from `templates/portainer.ssl.conf` |
 
 ```bash
-make prod-sync-nginx-conf    # bootstrap or upgrade to SSL if cert exists
-make prod-ssl                # initial TLS + HTTPS configs
+make prod-sync-nginx-conf   # copy bootstrap to live dir, or upgrade to SSL if cert exists
+make prod-ssl               # TLS + HTTPS configs
 ```

@@ -303,9 +303,9 @@ Generate a password: `openssl rand -base64 24`
 0 3,15 * * * cd ~/andiko && make prod-renew-certs >> /var/log/andiko-certbot.log 2>&1
 ```
 
-Before SSL, nginx serves HTTP with a proxy to the app. After `prod-ssl`, HTTPS configs are written to **`/var/lib/andiko/nginx/conf.d`** (outside the git repo) from templates in `infra/nginx/templates/`.
+HTTP bootstrap configs live in **`infra/nginx/conf.d/`** (tracked in git for new VPS setups). At runtime, nginx mounts **`/var/lib/andiko/nginx/conf.d`** — `sync-nginx-conf.sh` copies the bootstrap there on first deploy. After `prod-ssl`, HTTPS configs are written to the live dir from `infra/nginx/templates/*.ssl.conf`.
 
-`git pull` no longer overwrites nginx configs. `make prod-deploy` and `make prod-release` run `sync-nginx-conf.sh` to bootstrap or upgrade configs when needed. To re-apply templates manually:
+`git pull` does not overwrite live nginx configs. `make prod-deploy` and `make prod-release` run `sync-nginx-conf.sh` to bootstrap or upgrade when needed. To re-apply templates manually:
 
 ```bash
 FORCE_NGINX_SSL=1 make prod-sync-nginx-conf

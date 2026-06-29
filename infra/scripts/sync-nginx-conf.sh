@@ -13,30 +13,19 @@ PORTAINER_DOMAIN="${PORTAINER_DOMAIN:-portainer.${DOMAIN}}"
 CERTBOT_CERTS_DIR="${CERTBOT_CERTS_DIR:-/var/lib/andiko/certs}"
 NGINX_CONF_DIR="${NGINX_CONF_DIR:-/var/lib/andiko/nginx/conf.d}"
 CERT_PATH="${CERTBOT_CERTS_DIR}/live/${DOMAIN}/fullchain.pem"
-LEGACY_CONF_DIR="${REPO_ROOT}/infra/nginx/conf.d"
+REPO_CONF_DIR="${REPO_ROOT}/infra/nginx/conf.d"
 TEMPLATES="${REPO_ROOT}/infra/nginx/templates"
 
 sudo mkdir -p "$NGINX_CONF_DIR"
 
-migrate_legacy_conf() {
-  local name="$1"
-  if [ -f "${LEGACY_CONF_DIR}/${name}" ] && [ ! -f "${NGINX_CONF_DIR}/${name}" ]; then
-    echo "Migrating legacy ${LEGACY_CONF_DIR}/${name} → ${NGINX_CONF_DIR}/${name}"
-    sudo cp "${LEGACY_CONF_DIR}/${name}" "${NGINX_CONF_DIR}/${name}"
-  fi
-}
-
-migrate_legacy_conf default.conf
-migrate_legacy_conf portainer.conf
-
 install_http_bootstrap() {
   if [ ! -f "${NGINX_CONF_DIR}/default.conf" ]; then
     echo "Installing HTTP bootstrap → ${NGINX_CONF_DIR}/default.conf"
-    sudo cp "${TEMPLATES}/andiko.http.conf" "${NGINX_CONF_DIR}/default.conf"
+    sudo cp "${REPO_CONF_DIR}/default.conf" "${NGINX_CONF_DIR}/default.conf"
   fi
   if [ ! -f "${NGINX_CONF_DIR}/portainer.conf" ]; then
     echo "Installing Portainer HTTP bootstrap → ${NGINX_CONF_DIR}/portainer.conf"
-    sudo cp "${TEMPLATES}/portainer.http.conf" "${NGINX_CONF_DIR}/portainer.conf"
+    sudo cp "${REPO_CONF_DIR}/portainer.conf" "${NGINX_CONF_DIR}/portainer.conf"
   fi
 }
 
