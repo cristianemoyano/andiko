@@ -28,6 +28,90 @@ require_tag() {
   export IMAGE_TAG="$TAG"
 }
 
+latest_git_tag() {
+  git -C "$REPO_ROOT" tag --sort=-version:refname 'v*' 2>/dev/null | head -n1
+}
+
+package_json_tag() {
+  if ! command -v node >/dev/null 2>&1; then
+    return 1
+  fi
+  local version
+  version="$(node -p "require('${REPO_ROOT}/package.json').version" 2>/dev/null)" || return 1
+  [ -n "$version" ] || return 1
+  echo "v${version}"
+}
+
+normalize_tag() {
+  local t="${1#"${1%%[![:space:]]*}"}"
+  t="${t%"${t##*[![:space:]]}"}"
+  if [ -z "$t" ]; then
+    return 1
+  fi
+  case "$t" in
+    v*) echo "$t" ;;
+    [0-9]*) echo "v$t" ;;
+    *) echo "$t" ;;
+  esac
+}
+
+# Interactive tag picker for prod-release when TAG is unset.
+resolve_release_tag() {
+  if [ -n "${TAG:-}" ]; then
+    TAG="$(normalize_tag "$TAG")" || {
+      echo "Invalid TAG: ${TAG:-}" >&2
+      exit 1
+    }
+    export IMAGE_TAG="$TAG"
+    return
+  fi
+
+  if [ ! -t 0 ]; then
+    echo "TAG is required in non-interactive mode (make prod-release TAG=v0.32.0)" >&2
+    exit 1
+  fi
+
+  local suggested git_tag pkg_tag reply source
+  git_tag="$(latest_git_tag || true)"
+  pkg_tag="$(package_json_tag || true)"
+
+  if [ -n "$pkg_tag" ]; then
+    suggested="$pkg_tag"
+    source="package.json"
+  elif [ -n "$git_tag" ]; then
+    suggested="$git_tag"
+    source="latest git tag"
+  else
+    suggested=""
+    source=""
+  fi
+
+  echo ""
+  echo "Release tag"
+  if [ -n "$suggested" ]; then
+    echo "  Suggested: ${suggested} (from ${source})"
+    [ -n "$git_tag" ] && [ "$git_tag" != "$suggested" ] && echo "  Latest git tag: ${git_tag}"
+    printf "Press Enter to use %s, or type another tag: " "$suggested"
+    read -r reply
+    if [ -z "$reply" ]; then
+      TAG="$suggested"
+    else
+      TAG="$reply"
+    fi
+  else
+    printf "Enter release tag (e.g. v0.32.0): "
+    read -r TAG
+  fi
+
+  TAG="$(normalize_tag "$TAG")" || {
+    echo "Invalid or empty tag." >&2
+    exit 1
+  }
+  export TAG IMAGE_TAG="$TAG"
+  echo "Using tag: ${TAG}"
+  echo ""
+}
+
 stack_name() {
   echo "${STACK_NAME:-andiko}"
 }

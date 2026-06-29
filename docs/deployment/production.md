@@ -219,12 +219,13 @@ make prod-health   # HTTPS
 Runs `git pull` → build/push image → **migrations** → deploy → health check. Migrations run **before** deploy so the DB is ready when the new app starts.
 
 ```bash
-make prod-release TAG=v0.27.0
+make prod-release
 ```
 
-Skip steps when needed:
+Prompts for the tag (default from `package.json`). Override explicitly when needed:
 
 ```bash
+make prod-release TAG=v0.27.0
 make prod-release TAG=v0.27.0 SKIP_PUSH=1    # image already in GHCR (e.g. pushed from laptop)
 make prod-release TAG=v0.27.0 SKIP_PULL=1    # code already up to date
 ```

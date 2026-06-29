@@ -6,7 +6,6 @@ SCRIPT_DIR="$(CDPATH= cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common.sh"
 
 load_env
-require_tag
 
 STACK="$(stack_name)"
 BRANCH="${RELEASE_BRANCH:-develop}"
@@ -16,6 +15,15 @@ SKIP_PUSH="${SKIP_PUSH:-0}"
 SKIP_MIGRATE="${SKIP_MIGRATE:-0}"
 WAIT_SECONDS="${RELEASE_WAIT_SECONDS:-120}"
 [ -n "$WAIT_SECONDS" ] || WAIT_SECONDS=120
+
+if [ "$SKIP_PULL" != "1" ]; then
+  echo "Pulling latest code (origin/${BRANCH}) ..."
+  git -C "$REPO_ROOT" pull origin "$BRANCH"
+else
+  echo "Skipping git pull (SKIP_PULL=1)."
+fi
+
+resolve_release_tag
 
 wait_for_app() {
   local service="${STACK}_app"
@@ -46,13 +54,6 @@ run_health() {
 }
 
 echo "=== Andiko release ${TAG} ==="
-
-if [ "$SKIP_PULL" != "1" ]; then
-  echo "Pulling latest code (origin/${BRANCH}) ..."
-  git -C "$REPO_ROOT" pull origin "$BRANCH"
-else
-  echo "Skipping git pull (SKIP_PULL=1)."
-fi
 
 if [ "$SKIP_PUSH" != "1" ]; then
   TAG="$TAG" bash "$SCRIPT_DIR/push-image.sh"
