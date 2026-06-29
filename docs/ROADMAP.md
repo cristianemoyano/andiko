@@ -665,6 +665,21 @@ Ideas validadas pero sin fecha definida.
   - Descuentos por cliente y por lista de precios con vigencia
   - Descuento por condición de pago (contado/anticipado)
 
+**Infra VPS (observabilidad y disco):**
+
+- [ ] Logrotate para `/var/log/andiko-*.log` (crons backup/certbot)
+- [ ] `make prod-prune` — limpieza de imágenes Docker viejas
+- [ ] `make prod-disk-check` — diagnóstico de disco
+- [ ] `daemon.json.example` — defaults globales de logging Docker
+
+**Logging de plataforma:**
+
+- [ ] `LOG_LEVEL`, redacción de secretos en pino, `requestId` (AsyncLocalStorage)
+- [ ] `handleApiError` centralizado en api-handler
+- [ ] HTTP access logging
+- [ ] Convenciones `action` + `logger.error` en transacciones de módulos críticos
+- [ ] `docs/observability/logging.md`
+
 ---
 
 ## Principios que guían el roadmap

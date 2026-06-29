@@ -36,7 +36,11 @@ yarn-error.log*
 # env files
 .env*
 !.env.example
-!infra/.env.production.example
+!infra/.env.production
+
+# Portainer basic auth (generated on VPS — never commit)
+**/.htpasswd
+**/.htpasswd.*.example
 
 # WooCommerce local bootstrap output
 infra/docker/woocommerce/dev-output/credentials.env

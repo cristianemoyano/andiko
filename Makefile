@@ -1,7 +1,7 @@
 .PHONY: up down reset logs db shell dev \
 	woo-up woo-down woo-bootstrap woo-credentials woo-reset \
 	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-migrate prod-migrate-status \
-	prod-create-sysadmin prod-health prod-backup prod-logs prod-renew-certs
+	prod-create-sysadmin prod-health prod-backup prod-logs prod-renew-certs prod-portainer-auth
 
 # =============================================================================
 # Development — infra local (postgres, pgadmin, Next.js)
@@ -126,3 +126,7 @@ prod-logs:
 
 prod-renew-certs:
 	bash infra/certbot/renew.sh
+
+prod-portainer-auth:
+	PORTAINER_AUTH_USER=$(PORTAINER_AUTH_USER) PORTAINER_AUTH_PASSWORD=$(PORTAINER_AUTH_PASSWORD) \
+		bash infra/scripts/init-portainer-auth.sh

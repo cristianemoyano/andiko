@@ -8,6 +8,7 @@ Vercel configuration is unchanged and operates independently of this stack.
 
 ```
 Internet → nginx (:443) → app (:3000) → postgres (:5432, internal)
+                ├→ portainer (:9000, internal, UI at portainer.andiko.cloud)
                 ↑
            Certbot (Let's Encrypt)
 ```
@@ -17,6 +18,7 @@ Internet → nginx (:443) → app (:3000) → postgres (:5432, internal)
 | `nginx`   | 1        | TLS termination, reverse proxy |
 | `app`     | 1        | Next.js standalone (`node server.js`) |
 | `postgres`| 1        | PostgreSQL 16, bind-mounted volume   |
+| `portainer` | 1      | Docker Swarm UI (basic auth + HTTPS) |
 
 All orgs (multi-tenant) share one app instance and one database.
 
@@ -263,6 +265,7 @@ make prod-health
 | `prod-backup` | VPS | pg_dump + optional rclone → Google Drive |
 | `prod-logs` | VPS | Follow app service logs |
 | `prod-renew-certs` | VPS (cron) | Renew TLS certificates |
+| `prod-portainer-auth` | VPS (once) | Generate nginx basic-auth for Portainer |
 
 ## Manual migrations
 
@@ -300,7 +303,74 @@ Generate a password: `openssl rand -base64 24`
 0 3,15 * * * cd ~/andiko && make prod-renew-certs >> /var/log/andiko-certbot.log 2>&1
 ```
 
-Before SSL, nginx serves HTTP with a proxy to the app. After `prod-ssl`, `infra/nginx/conf.d/default.conf` is replaced with the HTTPS config.
+Before SSL, nginx serves HTTP with a proxy to the app. After `prod-ssl`, `infra/nginx/conf.d/default.conf` is replaced with the HTTPS config and `portainer.conf` is installed for Portainer.
+
+New installs request a certificate that includes `portainer.andiko.cloud`. On a VPS that already has HTTPS without that SAN, run once:
+
+```bash
+bash infra/scripts/expand-ssl-portainer.sh
+```
+
+## Container logs
+
+Each Swarm service uses the Docker **`local`** log driver with rotation (`max-size: 50m`, `max-file: 5` — about 250 MB per container). Logs live under `/var/lib/docker/containers/` on the host.
+
+View logs:
+
+```bash
+make prod-logs
+docker service logs andiko_nginx --tail 100
+docker service logs andiko_portainer --tail 100
+```
+
+Advanced host retention (logrotate for cron files, image prune, disk diagnostics) is tracked in [`docs/ROADMAP.md`](../ROADMAP.md).
+
+## Portainer (Swarm UI)
+
+Web UI to monitor Docker Swarm. **Not exposed on port 9000** — only via nginx at `https://portainer.andiko.cloud`.
+
+**Security layers:**
+
+1. HTTPS (Let's Encrypt)
+2. nginx **basic auth** (htpasswd on the VPS, not in git)
+3. Portainer admin login (created on first visit)
+
+Portainer mounts `/var/run/docker.sock` on the manager node — full Docker control. Treat credentials accordingly.
+
+### One-time setup
+
+1. **DNS:** `portainer.andiko.cloud` → VPS public IP (same as `andiko.cloud`).
+
+2. **Basic auth** (generates `/var/lib/andiko/portainer/.htpasswd`):
+
+```bash
+make prod-portainer-auth
+# Or set explicitly:
+# PORTAINER_AUTH_USER=admin PORTAINER_AUTH_PASSWORD='...' make prod-portainer-auth
+```
+
+3. **Deploy** (includes Portainer service):
+
+```bash
+make prod-deploy TAG=vX.Y.Z
+```
+
+4. **TLS** — if the cert predates Portainer, expand it:
+
+```bash
+bash infra/scripts/expand-ssl-portainer.sh
+```
+
+Fresh installs: `make prod-ssl` already includes `portainer.andiko.cloud`.
+
+5. Open `https://portainer.andiko.cloud` → basic auth → create Portainer admin → environment **local** (socket already mounted).
+
+Verify:
+
+```bash
+curl -sf -u admin:YOUR_BASIC_AUTH_PASSWORD https://portainer.andiko.cloud/api/status
+docker service inspect andiko_portainer --format '{{json .Spec.TaskTemplate.LogDriver}}'
+```
 
 ## Backups
 
@@ -357,6 +427,8 @@ Point each terminal's `cloud_url` to `https://andiko.cloud`.
 | Health check fails | `docker service logs andiko_app`; postgres healthy? |
 | Migrations fail | `make prod-migrate-status TAG=…`; DATABASE_URL host is `postgres` |
 | SSL fails | DNS points to VPS; port 80 open; `CERTBOT_EMAIL` set |
+| Portainer 401/403 | Run `make prod-portainer-auth`; redeploy; expand cert if HTTPS fails |
+| Portainer nginx error | `PORTAINER_HTPASSWD_FILE` must exist before deploy |
 | Secrets changed | `make prod-secrets` then `make prod-deploy TAG=…` |
 
 ## Scaling note

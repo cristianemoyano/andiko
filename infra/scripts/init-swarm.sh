@@ -30,8 +30,9 @@ POSTGRES_DATA_DIR="${POSTGRES_DATA_DIR:-/var/lib/andiko/postgres}"
 CERTBOT_CERTS_DIR="${CERTBOT_CERTS_DIR:-/var/lib/andiko/certs}"
 CERTBOT_WWW_DIR="${CERTBOT_WWW_DIR:-/var/lib/andiko/certbot-www}"
 BACKUP_LOCAL_DIR="${BACKUP_LOCAL_DIR:-/var/lib/andiko/backups}"
+PORTAINER_DATA_DIR="${PORTAINER_DATA_DIR:-/var/lib/andiko/portainer}"
 
-for dir in "$POSTGRES_DATA_DIR" "$CERTBOT_CERTS_DIR" "$CERTBOT_WWW_DIR" "$BACKUP_LOCAL_DIR"; do
+for dir in "$POSTGRES_DATA_DIR" "$CERTBOT_CERTS_DIR" "$CERTBOT_WWW_DIR" "$BACKUP_LOCAL_DIR" "$PORTAINER_DATA_DIR"; do
   if [ ! -d "$dir" ]; then
     echo "Creating $dir"
     sudo mkdir -p "$dir"
