@@ -103,7 +103,6 @@ export async function updateOrganization(id: string, input: OrganizationUpdateIn
 
   const next: Partial<{
     name: string
-    slug: string
     is_active: boolean
     legal_name: string | null
     cuit: string | null
@@ -116,17 +115,6 @@ export async function updateOrganization(id: string, input: OrganizationUpdateIn
   if (input.cuit !== undefined) next.cuit = input.cuit
   if (input.iva_condition !== undefined) next.iva_condition = input.iva_condition
   if (input.fiscal_address !== undefined) next.fiscal_address = input.fiscal_address?.trim() || null
-  if (input.slug !== undefined) {
-    const s = input.slug.trim().toLowerCase()
-    if (s !== org.slug) {
-      const taken = await Organization.findOne({
-        where: { slug: s, id: { [Op.ne]: id } },
-        paranoid: true,
-      })
-      if (taken) throw new Error('ORG_SLUG_TAKEN')
-      next.slug = s
-    }
-  }
 
   await org.update(next)
   return org.reload()

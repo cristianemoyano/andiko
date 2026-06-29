@@ -42,16 +42,22 @@ vi.mock('./file-share.model', () => ({
   SHARE_PERMISSIONS: ['read', 'write'],
 }))
 
-const { ownerExists } = vi.hoisted(() => ({ ownerExists: vi.fn() }))
+const { ownerExists, pathContextMock } = vi.hoisted(() => ({
+  ownerExists: vi.fn(),
+  pathContextMock: vi.fn(),
+}))
 vi.mock('./owner-registry', () => ({
   OWNER_RESOLVERS: {
-    invoice: { readPermission: 'sales:read', writePermission: 'sales:write', exists: ownerExists },
-    product: { readPermission: 'products:read', writePermission: 'products:write', exists: ownerExists },
-    contact: { readPermission: 'contacts:read', writePermission: 'contacts:write', exists: ownerExists },
-    supplier_invoice: { readPermission: 'purchases:read', writePermission: 'purchases:write', exists: ownerExists },
-    purchase_receipt: { readPermission: 'purchases:read', writePermission: 'purchases:write', exists: ownerExists },
+    invoice: { readPermission: 'sales:read', writePermission: 'sales:write', exists: ownerExists, pathContext: pathContextMock },
+    product: { readPermission: 'products:read', writePermission: 'products:write', exists: ownerExists, pathContext: pathContextMock },
+    contact: { readPermission: 'contacts:read', writePermission: 'contacts:write', exists: ownerExists, pathContext: pathContextMock },
+    supplier_invoice: { readPermission: 'purchases:read', writePermission: 'purchases:write', exists: ownerExists, pathContext: pathContextMock },
+    purchase_receipt: { readPermission: 'purchases:read', writePermission: 'purchases:write', exists: ownerExists, pathContext: pathContextMock },
   },
 }))
+
+const { buildStorageKeyMock } = vi.hoisted(() => ({ buildStorageKeyMock: vi.fn() }))
+vi.mock('./storage-path.service', () => ({ buildStorageKey: buildStorageKeyMock }))
 
 import { can } from '@/lib/permissions'
 import FileModel from './file.model'
@@ -97,6 +103,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   ;(can as Mock).mockResolvedValue(true)
   ownerExists.mockResolvedValue(true)
+  buildStorageKeyMock.mockImplementation(async ({ fileId, filename }: { fileId: string; filename: string }) =>
+    `acme/suc-001/ventas/facturas/2026/06/28/fc-1__${fileId.split('-')[0]}__${filename.replace(/\s/g, '_')}`,
+  )
   ;(FileLink.findAll as Mock).mockResolvedValue([])
   ;(FileShare.findAll as Mock).mockResolvedValue([])
 })
@@ -130,8 +139,16 @@ describe('initiateUpload', () => {
       expect.anything(),
     )
     expect(res.upload_url).toBe('https://s3/put')
-    // The link's file_id and the storage key are minted from the same generated id.
-    expect(res.storage_key).toContain(res.file_id)
+    expect(buildStorageKeyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orgId: 'org-1',
+        filename: 'doc.pdf',
+        primaryLink: { owner_type: 'invoice', owner_id: 'inv-1' },
+      }),
+    )
+    expect(res.storage_key).toContain('acme/suc-001/ventas/facturas')
+    expect(res.storage_key).not.toContain('org-1')
+    expect(res.storage_key).toContain(res.file_id.split('-')[0])
   })
 
   it('rejects when caller lacks write on the linked owner', async () => {

@@ -17,7 +17,6 @@ import { BranchModal, type BranchRow } from './BranchModal'
 import { OrgUserModal, type OrgUserRow } from './OrgUserModal'
 import { SearchableSelect, type SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { formatCuit } from '@/modules/contacts/contact.utils'
-import { slugifyText } from '@/lib/slug'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 import { notifyApiError } from '@/lib/notify'
@@ -85,7 +84,6 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
   const [orgName, setOrgName] = useState('')
   const [orgSlug, setOrgSlug] = useState('')
   const [orgActive, setOrgActive] = useState(true)
-  const [slugTouched, setSlugTouched] = useState(false)
   const [orgLegalName, setOrgLegalName] = useState('')
   const [orgCuit, setOrgCuit] = useState('')
   const [orgIvaCondition, setOrgIvaCondition] = useState<string | null>(null)
@@ -127,7 +125,6 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
         setOrgCuit(data.organization.cuit ?? '')
         setOrgIvaCondition(data.organization.iva_condition)
         setOrgFiscalAddress(data.organization.fiscal_address ?? '')
-        setSlugTouched(false)
         setNotFound(false)
       } catch (e) {
         if (cancelled) return
@@ -201,7 +198,6 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
       const body = ui.sections.orgMetaEdit
         ? {
             name: orgName.trim(),
-            slug: orgSlug.trim().toLowerCase(),
             is_active: orgActive,
             ...fiscalBody,
           }
@@ -672,9 +668,6 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               id="edit_org_name"
               value={orgName}
               onChange={e => setOrgName(e.target.value)}
-              onBlur={() => {
-                if (!slugTouched && orgName.trim()) setOrgSlug(slugifyText(orgName))
-              }}
               required
             />
           </FormField>
@@ -682,9 +675,12 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
             <Input
               id="edit_org_slug"
               value={orgSlug}
-              onChange={e => { setSlugTouched(true); setOrgSlug(e.target.value) }}
-              required
+              readOnly
+              disabled
             />
+            <p className="mt-1 text-[11px] text-fg-muted">
+              Identificador de almacenamiento; no editable tras la creación.
+            </p>
           </FormField>
           </>
           )}

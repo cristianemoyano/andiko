@@ -13,6 +13,7 @@ import FileModel, { type FileStatus } from './file.model'
 import FileLink, { type FileOwnerType } from './file-link.model'
 import FileShare, { type SharePermission } from './file-share.model'
 import { OWNER_RESOLVERS } from './owner-registry'
+import { buildStorageKey } from './storage-path.service'
 import { buildExplicitSharePrincipalWhere, canAccessFile, unexpiredShareWhere, type FileActor } from './storage.authz'
 import type {
   InitiateUploadInput,
@@ -32,11 +33,6 @@ export const STORAGE_ERRORS = {
   SIZE_MISMATCH: 'FILE_SIZE_MISMATCH',
   STORAGE_NOT_CONFIGURED: 'STORAGE_NOT_CONFIGURED',
 } as const
-
-function sanitizeFilename(name: string): string {
-  const base = name.split(/[/\\]/).pop() ?? name
-  return base.replace(/[^\w.\- ]+/g, '_').slice(0, 200) || 'file'
-}
 
 /** Dropbox/S3 often return `application/octet-stream`; prefer the type stored at upload. */
 export function resolvePreviewContentType(fromBackend: string | null | undefined, fromFile: string): string {
@@ -77,7 +73,15 @@ export async function initiateUpload(input: InitiateUploadInput, actor: FileActo
   const adapter = await getStorageAdapter(activeProvider)
   if (!adapter) throw new Error(STORAGE_ERRORS.STORAGE_NOT_CONFIGURED)
   const fileId = randomUUID()
-  const storageKey = `${actor.ctx.orgId}/${fileId}/${sanitizeFilename(input.filename)}`
+  const uploadedAt = new Date()
+  const storageKey = await buildStorageKey({
+    orgId: actor.ctx.orgId,
+    fileId,
+    filename: input.filename,
+    primaryLink: input.links[0],
+    ctx: actor.ctx,
+    uploadedAt,
+  })
 
   const file = await sequelize.transaction(async (t) => {
     const created = await FileModel.create(
