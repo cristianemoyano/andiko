@@ -36,6 +36,14 @@ export type SharePrincipalType = 'user' | 'org_role' | 'branch'
 export type SharePermission = 'read' | 'write'
 export type FileStatus = 'pending' | 'available' | 'failed'
 
+export const FILE_OWNER_TYPE_LABELS: Record<FileOwnerType, string> = {
+  invoice: 'Factura de venta',
+  product: 'Producto',
+  contact: 'Contacto',
+  supplier_invoice: 'Factura de proveedor',
+  purchase_receipt: 'Recepción de compra',
+}
+
 export interface OwnerLink {
   owner_type: FileOwnerType
   owner_id: string
@@ -50,6 +58,12 @@ export interface FileMetadata {
   status: FileStatus
   uploaded_at: string | null
   created_at: string
+}
+
+export interface SharedFileListItem extends FileMetadata {
+  share_permission: SharePermission
+  shared_at: string
+  owner_links: Array<{ owner_type: FileOwnerType; owner_id: string }>
 }
 
 export interface FileShare {
@@ -95,6 +109,12 @@ export type AddShareFn = (fileId: string, input: ShareInput) => Promise<FileShar
 export type RevokeShareFn = (fileId: string, shareId: string) => Promise<void>
 export type DeleteFileFn = (fileId: string) => Promise<void>
 export type FetchSharePrincipalsFn = () => Promise<SharePrincipalOptions>
+export type ListSharedWithMeFn = (params?: { page?: number; limit?: number }) => Promise<{
+  data: SharedFileListItem[]
+  total: number
+  page: number
+  limit: number
+}>
 
 /** Runs the 3-step presigned upload: initiate → PUT bytes → complete. */
 export const uploadFile: UploadFileFn = async (file, opts) => {
@@ -142,6 +162,16 @@ export const listFileShares: ListSharesFn = (fileId) =>
 
 export const fetchSharePrincipals: FetchSharePrincipalsFn = () =>
   fetchJson<{ data: SharePrincipalOptions }>('/api/v1/files/share-principals').then((r) => r.data)
+
+export const listSharedWithMeFiles: ListSharedWithMeFn = (params) => {
+  const search = new URLSearchParams()
+  if (params?.page) search.set('page', String(params.page))
+  if (params?.limit) search.set('limit', String(params.limit))
+  const qs = search.toString()
+  return fetchJson<{ data: SharedFileListItem[]; total: number; page: number; limit: number }>(
+    `/api/v1/files/shared-with-me${qs ? `?${qs}` : ''}`,
+  )
+}
 
 export const addFileShare: AddShareFn = (fileId, input) =>
   fetchJson<FileShare>(`/api/v1/files/${fileId}/shares`, { method: 'POST', body: JSON.stringify(input) })

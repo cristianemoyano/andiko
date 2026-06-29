@@ -25,7 +25,7 @@ export const TRACKED_BILLING_METRICS = [
     unit_label: 'GB',
     default_unit_price: '200.00',
     description: 'Gigabytes de archivos adjuntos y documentos almacenados.',
-    tracked_by: 'Automático (job de storage)',
+    tracked_by: 'Automático al subir/eliminar archivos',
   },
   {
     key: 'storage_files',
@@ -33,7 +33,7 @@ export const TRACKED_BILLING_METRICS = [
     unit_label: 'archivo',
     default_unit_price: '0.00',
     description: 'Cantidad de archivos almacenados (objetos). Medido; sin cargo por defecto.',
-    tracked_by: 'Automático (job de storage)',
+    tracked_by: 'Automático al subir/eliminar archivos',
   },
 ] as const
 

@@ -9,11 +9,11 @@ import { paginate, toPaginated } from '@/lib/pagination'
 import { getStorageAdapter } from '@/lib/storage/adapter'
 import type { StorageProvider } from '@/lib/storage/adapter'
 import { getActiveStorageProvider, isStorageProviderReady } from './storage-settings.service'
-import FileModel from './file.model'
+import FileModel, { type FileStatus } from './file.model'
 import FileLink, { type FileOwnerType } from './file-link.model'
-import FileShare from './file-share.model'
+import FileShare, { type SharePermission } from './file-share.model'
 import { OWNER_RESOLVERS } from './owner-registry'
-import { canAccessFile, type FileActor } from './storage.authz'
+import { buildExplicitSharePrincipalWhere, canAccessFile, unexpiredShareWhere, type FileActor } from './storage.authz'
 import type {
   InitiateUploadInput,
   ShareInput,
@@ -33,7 +33,6 @@ export const STORAGE_ERRORS = {
   STORAGE_NOT_CONFIGURED: 'STORAGE_NOT_CONFIGURED',
 } as const
 
-/** Strips path components and unsafe characters; keeps the object key readable and S3-safe. */
 function sanitizeFilename(name: string): string {
   const base = name.split(/[/\\]/).pop() ?? name
   return base.replace(/[^\w.\- ]+/g, '_').slice(0, 200) || 'file'
@@ -165,6 +164,7 @@ export async function completeUpload(fileId: string, actor: FileActor) {
 
   await file.update({ status: 'available', uploaded_at: new Date(), updated_by: actor.ctx.userId })
   logger.info({ fileId, actorId: actor.ctx.userId }, 'file upload completed')
+  scheduleStorageUsageMeter(file.org_id, actor.ctx.userId)
   return file
 }
 
@@ -254,6 +254,90 @@ export async function listFiles(query: FileListQuery, actor: FileActor) {
     order: [['created_at', 'DESC']],
   })
   return toPaginated(rows.map((r) => r.toJSON()), count, page, limit)
+}
+
+export type SharedFileListItem = {
+  id: string
+  original_filename: string
+  content_type: string
+  byte_size: string
+  status: FileStatus
+  uploaded_at: string | null
+  created_at: string
+  share_permission: SharePermission
+  shared_at: string
+  owner_links: Array<{ owner_type: FileOwnerType; owner_id: string }>
+}
+
+/** Files with an explicit share to the caller (independent of module permissions). */
+export async function listSharedWithMeFiles(query: FileListQuery, actor: FileActor) {
+  const { page, limit } = query
+  const { offset } = paginate(page, limit)
+
+  const shares = await FileShare.findAll({
+    where: {
+      [Op.and]: [buildExplicitSharePrincipalWhere(actor), unexpiredShareWhere],
+    },
+    attributes: ['file_id', 'permission', 'created_at'],
+    order: [['created_at', 'DESC']],
+  })
+
+  const shareMeta = new Map<string, { permission: SharePermission; shared_at: Date }>()
+  const orderedFileIds: string[] = []
+  for (const share of shares) {
+    if (shareMeta.has(share.file_id)) continue
+    shareMeta.set(share.file_id, { permission: share.permission, shared_at: share.created_at })
+    orderedFileIds.push(share.file_id)
+  }
+
+  if (orderedFileIds.length === 0) {
+    return toPaginated<SharedFileListItem>([], 0, page, limit)
+  }
+
+  const pageIds = orderedFileIds.slice(offset, offset + limit)
+  if (pageIds.length === 0) {
+    return toPaginated<SharedFileListItem>([], orderedFileIds.length, page, limit)
+  }
+
+  const [files, links] = await Promise.all([
+    FileModel.findAll({
+      where: whereOrg(actor.ctx, { id: { [Op.in]: pageIds }, status: 'available' }),
+    }),
+    FileLink.findAll({
+      where: { file_id: { [Op.in]: pageIds } },
+      attributes: ['file_id', 'owner_type', 'owner_id'],
+    }),
+  ])
+
+  const fileMap = new Map(files.map((f) => [f.id, f]))
+  const linksByFile = new Map<string, Array<{ owner_type: FileOwnerType; owner_id: string }>>()
+  for (const link of links) {
+    const arr = linksByFile.get(link.file_id) ?? []
+    arr.push({ owner_type: link.owner_type, owner_id: link.owner_id })
+    linksByFile.set(link.file_id, arr)
+  }
+
+  const data: SharedFileListItem[] = []
+  for (const id of pageIds) {
+    const file = fileMap.get(id)
+    const meta = shareMeta.get(id)
+    if (!file || !meta) continue
+    const json = file.toJSON()
+    data.push({
+      id: json.id,
+      original_filename: json.original_filename,
+      content_type: json.content_type,
+      byte_size: json.byte_size,
+      status: json.status,
+      uploaded_at: json.uploaded_at ? new Date(json.uploaded_at).toISOString() : null,
+      created_at: new Date(json.created_at).toISOString(),
+      share_permission: meta.permission,
+      shared_at: new Date(meta.shared_at).toISOString(),
+      owner_links: linksByFile.get(id) ?? [],
+    })
+  }
+
+  return toPaginated(data, orderedFileIds.length, page, limit)
 }
 
 /** Attaches an existing file to another owner record. Requires write on both file and owner. */
@@ -368,4 +452,13 @@ export async function deleteFile(fileId: string, actor: FileActor) {
     await file.destroy({ transaction: t })
   })
   logger.info({ fileId, actorId: actor.ctx.userId }, 'file soft-deleted')
+  scheduleStorageUsageMeter(file.org_id, actor.ctx.userId)
+}
+
+/** Fire-and-forget gauge snapshot after storage footprint changes. Never blocks the caller. */
+function scheduleStorageUsageMeter(orgId: string | null, actorId: string) {
+  if (!orgId) return
+  void import('@/modules/billing/storage-usage.service')
+    .then(({ meterOrgStorageUsage }) => meterOrgStorageUsage(orgId, { actorId }))
+    .catch((err) => logger.warn({ err, orgId }, 'storage usage meter failed'))
 }

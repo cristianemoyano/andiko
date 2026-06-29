@@ -21,28 +21,57 @@ function grantSatisfies(grant: SharePermission, mode: AccessMode): boolean {
   return grant === 'write' || grant === mode
 }
 
+function shareMatchesActor(
+  share: { principal_type: string; principal_id: string },
+  actor: FileActor,
+): boolean {
+  switch (share.principal_type) {
+    case 'user':
+      return share.principal_id === actor.ctx.userId
+    case 'org_role':
+      return actor.orgRoleId !== null && share.principal_id === actor.orgRoleId
+    case 'branch':
+      return actor.ctx.allowedBranchIds.includes(share.principal_id)
+    default:
+      return false
+  }
+}
+
+export function buildExplicitSharePrincipalWhere(actor: FileActor) {
+  const ors: Array<Record<string, unknown>> = [
+    { principal_type: 'user', principal_id: actor.ctx.userId },
+  ]
+  if (actor.orgRoleId) {
+    ors.push({ principal_type: 'org_role', principal_id: actor.orgRoleId })
+  }
+  if (actor.ctx.allowedBranchIds.length > 0) {
+    ors.push({
+      principal_type: 'branch',
+      principal_id: { [Op.in]: actor.ctx.allowedBranchIds },
+    })
+  }
+  return { [Op.or]: ors }
+}
+
+const UNEXPIRED_SHARE = {
+  [Op.or]: [{ expires_at: null }, { expires_at: { [Op.gt]: new Date() } }],
+} as const
+
+export const unexpiredShareWhere = UNEXPIRED_SHARE
+
 /** True when an explicit, unexpired share grants the actor `mode` on the file. */
 async function hasExplicitShare(fileId: string, actor: FileActor, mode: AccessMode): Promise<boolean> {
   const shares = await FileShare.findAll({
     where: {
       file_id: fileId,
-      [Op.or]: [{ expires_at: null }, { expires_at: { [Op.gt]: new Date() } }],
+      ...UNEXPIRED_SHARE,
     },
     attributes: ['principal_type', 'principal_id', 'permission'],
   })
 
   return shares.some((share) => {
     if (!grantSatisfies(share.permission, mode)) return false
-    switch (share.principal_type) {
-      case 'user':
-        return share.principal_id === actor.ctx.userId
-      case 'org_role':
-        return actor.orgRoleId !== null && share.principal_id === actor.orgRoleId
-      case 'branch':
-        return actor.ctx.allowedBranchIds.includes(share.principal_id)
-      default:
-        return false
-    }
+    return shareMatchesActor(share, actor)
   })
 }
 

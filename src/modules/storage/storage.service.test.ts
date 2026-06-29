@@ -29,7 +29,7 @@ vi.mock('./storage-settings.service', () => ({
 }))
 
 vi.mock('./file.model', () => ({
-  default: { findOne: vi.fn(), findAndCountAll: vi.fn(), create: vi.fn() },
+  default: { findOne: vi.fn(), findAll: vi.fn(), findAndCountAll: vi.fn(), create: vi.fn() },
   FILE_STATUSES: ['pending', 'available', 'failed'],
 }))
 vi.mock('./file-link.model', () => ({
@@ -61,6 +61,7 @@ import {
   initiateUpload,
   completeUpload,
   getDownloadUrl,
+  listSharedWithMeFiles,
   resolvePreviewContentType,
   STORAGE_ERRORS,
 } from './storage.service'
@@ -230,5 +231,40 @@ describe('getDownloadUrl (ReBAC read)', () => {
   it('denies a standalone file with no link, share, or ownership', async () => {
     ;(FileModel.findOne as Mock).mockResolvedValue(mockFile({ created_by: 'someone-else' }))
     await expect(getDownloadUrl('file-1', opActor)).rejects.toThrow(STORAGE_ERRORS.FILE_FORBIDDEN)
+  })
+})
+
+describe('listSharedWithMeFiles', () => {
+  it('returns files shared directly with the user', async () => {
+    const sharedAt = new Date('2026-06-20T10:00:00Z')
+    ;(FileShare.findAll as Mock).mockResolvedValue([
+      { file_id: 'file-shared', permission: 'read', created_at: sharedAt },
+    ])
+    ;(FileModel.findAll as Mock).mockResolvedValue([
+      mockFile({
+        id: 'file-shared',
+        original_filename: 'contrato.pdf',
+        content_type: 'application/pdf',
+        status: 'available',
+        created_at: sharedAt,
+        uploaded_at: sharedAt,
+      }),
+    ])
+    ;(FileLink.findAll as Mock).mockResolvedValue([
+      { file_id: 'file-shared', owner_type: 'supplier_invoice', owner_id: 'inv-1' },
+    ])
+
+    const res = await listSharedWithMeFiles({ page: 1, limit: 20 }, opActor)
+    expect(res.total).toBe(1)
+    expect(res.data[0]?.original_filename).toBe('contrato.pdf')
+    expect(res.data[0]?.share_permission).toBe('read')
+    expect(res.data[0]?.owner_links[0]?.owner_type).toBe('supplier_invoice')
+  })
+
+  it('returns empty when there are no shares', async () => {
+    ;(FileShare.findAll as Mock).mockResolvedValue([])
+    const res = await listSharedWithMeFiles({ page: 1, limit: 20 }, opActor)
+    expect(res.total).toBe(0)
+    expect(res.data).toEqual([])
   })
 })
