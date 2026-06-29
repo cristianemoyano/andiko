@@ -1,7 +1,7 @@
 .PHONY: up down reset logs db shell dev \
 	woo-up woo-down woo-bootstrap woo-credentials woo-reset \
 	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-sync-nginx-conf prod-migrate prod-migrate-status \
-	prod-create-sysadmin prod-health prod-backup prod-logs prod-renew-certs prod-portainer-auth
+	prod-create-sysadmin prod-health prod-backup prod-disk-check prod-logs prod-renew-certs prod-portainer-auth
 
 # =============================================================================
 # Development — infra local (postgres, pgadmin, Next.js)
@@ -125,6 +125,9 @@ prod-health:
 
 prod-backup:
 	bash infra/scripts/backup-db.sh
+
+prod-disk-check:
+	bash infra/scripts/disk-check.sh
 
 prod-logs:
 	docker service logs -f andiko_app

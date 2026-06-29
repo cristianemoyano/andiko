@@ -669,7 +669,7 @@ Ideas validadas pero sin fecha definida.
 
 - [ ] Logrotate para `/var/log/andiko-*.log` (crons backup/certbot)
 - [ ] `make prod-prune` — limpieza de imágenes Docker viejas
-- [ ] `make prod-disk-check` — diagnóstico de disco
+- [x] `make prod-disk-check` — diagnóstico de disco
 - [ ] `daemon.json.example` — defaults globales de logging Docker
 
 **Logging de plataforma:**

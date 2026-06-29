@@ -245,6 +245,7 @@ After bootstrap, use [Deploy a release (routine)](#deploy-a-release-routine) for
 | `prod-health` | VPS | After deploy | `curl https://andiko.cloud/api/health` |
 | `prod-logs` | VPS | Ops | Follow app service logs |
 | `prod-backup` | VPS | Cron / ops | pg_dump + optional rclone → Google Drive |
+| `prod-disk-check` | VPS | Ops | Host + Docker + Andiko data disk report |
 | `prod-renew-certs` | VPS | Cron | Renew TLS certificates |
 | `prod-sync-nginx-conf` | VPS | Rare | Re-apply nginx templates to live dir |
 | `prod-migrate-status TAG=…` | VPS | Debug | List executed vs pending migrations |
@@ -317,11 +318,27 @@ docker service logs andiko_nginx --tail 100
 docker service logs andiko_portainer --tail 100
 ```
 
-Advanced host retention (logrotate for cron files, image prune, disk diagnostics) is tracked in [`docs/ROADMAP.md`](../ROADMAP.md).
+Advanced host retention (logrotate for cron files, image prune) is tracked in [`docs/ROADMAP.md`](../ROADMAP.md).
+
+## Disk diagnostics
+
+Portainer CE does not show VPS disk usage in the Swarm visualizer. On the VPS:
+
+```bash
+make prod-disk-check
+```
+
+Reports root filesystem usage, `/var/lib/andiko/*` sizes, `docker system df`, old images, and stopped containers. Exits with code **2** (warning) at ≥85% disk, **1** (critical) at ≥95% — override with `DISK_WARN_PCT` / `DISK_CRIT_PCT` in the environment.
+
+```bash
+DISK_WARN_PCT=80 DISK_CRIT_PCT=90 make prod-disk-check
+```
 
 ## Portainer (Swarm UI)
 
 **Live:** [https://portainer.andiko.cloud](https://portainer.andiko.cloud) — Portainer CE 2.21.5 (`andiko_portainer`). Already installed and configured on the production VPS.
+
+The Swarm **cluster visualizer** shows nodes and tasks only — it does **not** display host disk usage. Use `make prod-disk-check` on the VPS (or SSH + `df -h`) for disk diagnostics.
 
 Web UI to monitor Docker Swarm (services, logs, images, volumes). **Not exposed on port 9000** — only via nginx on the subdomain above.
 
