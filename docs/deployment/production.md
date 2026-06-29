@@ -214,7 +214,22 @@ make prod-health   # HTTPS
 
 ## Release workflow
 
-Each release:
+### One command (recommended on VPS)
+
+Runs `git pull` → build/push image → **migrations** → deploy → health check. Migrations run **before** deploy so the DB is ready when the new app starts.
+
+```bash
+make prod-release TAG=v0.27.0
+```
+
+Skip steps when needed:
+
+```bash
+make prod-release TAG=v0.27.0 SKIP_PUSH=1    # image already in GHCR (e.g. pushed from laptop)
+make prod-release TAG=v0.27.0 SKIP_PULL=1    # code already up to date
+```
+
+### Manual steps
 
 ```bash
 # Laptop
@@ -222,8 +237,8 @@ make prod-push TAG=v0.27.0
 
 # VPS
 git pull
-make prod-deploy TAG=v0.27.0
 make prod-migrate TAG=v0.27.0
+make prod-deploy TAG=v0.27.0
 make prod-health
 ```
 
@@ -234,7 +249,8 @@ make prod-health
 | Target | Where | Description |
 |--------|-------|-------------|
 | `prod-bootstrap-vps` | VPS (once) | Install Docker, git, make, ufw, swarm init (fresh Debian) |
-| `prod-push TAG=…` | Laptop | Build + push Docker image to GHCR |
+| `prod-release TAG=…` | VPS | Pull code, push image, migrate, deploy, health |
+| `prod-push TAG=…` | Laptop / VPS | Build + push Docker image to GHCR |
 | `prod-init` | VPS (once) | Swarm init, data dirs, Docker secrets |
 | `prod-secrets` | VPS | Rotate Swarm secrets (then redeploy) |
 | `prod-deploy TAG=…` | VPS | Pull image + `docker stack deploy` |

@@ -1,6 +1,6 @@
 .PHONY: up down reset logs db shell dev \
 	woo-up woo-down woo-bootstrap woo-credentials woo-reset \
-	prod-push prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-migrate prod-migrate-status \
+	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-migrate prod-migrate-status \
 	prod-create-sysadmin prod-health prod-backup prod-logs prod-renew-certs
 
 # =============================================================================
@@ -78,6 +78,12 @@ woo-reset:
 prod-push:
 	@test -n "$(TAG)" || (echo "TAG is required: make prod-push TAG=v0.26.0" && exit 1)
 	TAG=$(TAG) bash infra/scripts/push-image.sh
+
+prod-release:
+	@test -n "$(TAG)" || (echo "TAG is required: make prod-release TAG=v0.26.0" && exit 1)
+	TAG=$(TAG) SKIP_PULL=$(SKIP_PULL) SKIP_PUSH=$(SKIP_PUSH) SKIP_MIGRATE=$(SKIP_MIGRATE) \
+		RELEASE_BRANCH=$(RELEASE_BRANCH) RELEASE_WAIT_SECONDS=$(RELEASE_WAIT_SECONDS) \
+		bash infra/scripts/release.sh
 
 prod-bootstrap-vps:
 	sudo bash infra/scripts/bootstrap-vps.sh
