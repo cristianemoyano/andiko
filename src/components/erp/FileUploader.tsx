@@ -23,8 +23,8 @@ interface UploadItem {
 }
 
 export interface FileUploaderProps {
-  /** Owner records to attach the uploaded file(s) to (drives inherited access). */
-  links?: OwnerLink[]
+  /** Owner records to attach the uploaded file(s) to (required — drives inherited access). */
+  links: OwnerLink[]
   /** Accepted content types. Defaults to the server allow-list. */
   accept?: readonly string[]
   /** Max bytes per file (client-side pre-check). Defaults to 25 MiB. */

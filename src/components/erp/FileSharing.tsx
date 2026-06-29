@@ -1,9 +1,8 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Dialog } from '@/components/primitives/Dialog'
 import { Button } from '@/components/primitives/Button'
 import { Select } from '@/components/primitives/Select'
-import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
 import { Badge } from '@/components/primitives/Badge'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -12,12 +11,15 @@ import {
   listFileShares as defaultListShares,
   addFileShare as defaultAddShare,
   revokeFileShare as defaultRevokeShare,
+  fetchSharePrincipals as defaultFetchPrincipals,
   type FileShare,
   type SharePrincipalType,
   type SharePermission,
+  type SharePrincipalOptions,
   type ListSharesFn,
   type AddShareFn,
   type RevokeShareFn,
+  type FetchSharePrincipalsFn,
 } from '@/lib/storage-client'
 
 export interface FileSharingProps {
@@ -31,6 +33,7 @@ export interface FileSharingProps {
   listShares?: ListSharesFn
   addShare?: AddShareFn
   revokeShare?: RevokeShareFn
+  fetchPrincipals?: FetchSharePrincipalsFn
 }
 
 const PRINCIPAL_LABELS: Record<SharePrincipalType, string> = {
@@ -38,7 +41,36 @@ const PRINCIPAL_LABELS: Record<SharePrincipalType, string> = {
   org_role: 'Rol',
   branch: 'Sucursal',
 }
+const PRINCIPAL_FIELD_LABELS: Record<SharePrincipalType, string> = {
+  user: 'Usuario',
+  org_role: 'Rol',
+  branch: 'Sucursal',
+}
 const PERMISSION_LABELS: Record<SharePermission, string> = { read: 'Lectura', write: 'Escritura' }
+
+function principalOptionsForType(
+  principals: SharePrincipalOptions | null,
+  type: SharePrincipalType,
+) {
+  if (!principals) return []
+  switch (type) {
+    case 'user':
+      return principals.users
+    case 'org_role':
+      return principals.org_roles
+    case 'branch':
+      return principals.branches
+  }
+}
+
+function buildLabelMap(principals: SharePrincipalOptions | null): Map<string, string> {
+  const map = new Map<string, string>()
+  if (!principals) return map
+  for (const u of principals.users) map.set(`user:${u.id}`, u.label)
+  for (const r of principals.org_roles) map.set(`org_role:${r.id}`, r.label)
+  for (const b of principals.branches) map.set(`branch:${b.id}`, b.label)
+  return map
+}
 
 export function FileSharing({
   open,
@@ -49,11 +81,16 @@ export function FileSharing({
   listShares = defaultListShares,
   addShare = defaultAddShare,
   revokeShare = defaultRevokeShare,
+  fetchPrincipals = defaultFetchPrincipals,
 }: FileSharingProps) {
   const [shares, setShares] = useState<FileShare[]>([])
   const [loading, setLoading] = useState(false)
   const [refresh, setRefresh] = useState(0)
   const [loadError, setLoadError] = useState<string | null>(null)
+
+  const [principals, setPrincipals] = useState<SharePrincipalOptions | null>(null)
+  const [principalsLoading, setPrincipalsLoading] = useState(false)
+  const [principalsError, setPrincipalsError] = useState<string | null>(null)
 
   // Add-share form state
   const [principalType, setPrincipalType] = useState<SharePrincipalType>('user')
@@ -64,6 +101,8 @@ export function FileSharing({
   const [serverError, setServerError] = useState<string | null>(null)
 
   const [revokeTarget, setRevokeTarget] = useState<FileShare | null>(null)
+
+  const labelMap = useMemo(() => buildLabelMap(principals), [principals])
 
   useEffect(() => {
     if (!open) return
@@ -82,12 +121,41 @@ export function FileSharing({
     return () => { cancelled = true }
   }, [open, fileId, refresh, listShares])
 
+  useEffect(() => {
+    if (!open || !canManage) return
+    let cancelled = false
+    void (async () => {
+      if (!cancelled) { setPrincipalsLoading(true); setPrincipalsError(null) }
+      try {
+        const data = await fetchPrincipals()
+        if (!cancelled) setPrincipals(data)
+      } catch (err) {
+        if (!cancelled) setPrincipalsError(getApiErrorMessage(err))
+      } finally {
+        if (!cancelled) setPrincipalsLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [open, canManage, fetchPrincipals])
+
+  const selectableOptions = useMemo(() => {
+    const all = principalOptionsForType(principals, principalType)
+    const taken = new Set(
+      shares.filter((s) => s.principal_type === principalType).map((s) => s.principal_id),
+    )
+    return all.filter((o) => !taken.has(o.id))
+  }, [principals, principalType, shares])
+
+  function resolveShareLabel(share: FileShare): string {
+    return labelMap.get(`${share.principal_type}:${share.principal_id}`) ?? share.principal_id
+  }
+
   async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setFieldError(null)
     setServerError(null)
     if (!principalId.trim()) {
-      setFieldError('Indicá el ID del usuario, rol o sucursal')
+      setFieldError(`Seleccioná ${PRINCIPAL_FIELD_LABELS[principalType].toLowerCase()}`)
       return
     }
     setSaving(true)
@@ -141,8 +209,8 @@ export function FileSharing({
                       <span className="text-[13px] text-fg">{PRINCIPAL_LABELS[share.principal_type]}</span>
                       <Badge status="info">{PERMISSION_LABELS[share.permission]}</Badge>
                     </div>
-                    <div className="truncate text-[11px] text-fg-subtle" title={share.principal_id}>
-                      {share.principal_id}
+                    <div className="truncate text-[11px] text-fg-subtle" title={resolveShareLabel(share)}>
+                      {resolveShareLabel(share)}
                       {share.expires_at ? ` · vence ${share.expires_at.slice(0, 10)}` : ''}
                     </div>
                   </div>
@@ -160,12 +228,19 @@ export function FileSharing({
         {canManage && (
           <form onSubmit={handleAdd} className="flex flex-col gap-3 border-t border-border pt-4">
             <h3 className="text-[12px] font-medium text-fg-muted">Agregar acceso</h3>
+            {principalsError && (
+              <p role="alert" className="text-[12px] text-danger">{principalsError}</p>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Tipo" htmlFor="principal_type">
                 <Select
                   id="principal_type"
                   value={principalType}
-                  onChange={(v) => setPrincipalType(v as SharePrincipalType)}
+                  onChange={(v) => {
+                    setPrincipalType(v as SharePrincipalType)
+                    setPrincipalId('')
+                    setFieldError(null)
+                  }}
                   options={[
                     { value: 'user', label: 'Usuario' },
                     { value: 'org_role', label: 'Rol' },
@@ -185,12 +260,24 @@ export function FileSharing({
                 />
               </FormField>
             </div>
-            <FormField label="ID (usuario / rol / sucursal)" htmlFor="principal_id" error={fieldError ?? undefined}>
-              <Input
+            <FormField
+              label={PRINCIPAL_FIELD_LABELS[principalType]}
+              htmlFor="principal_id"
+              error={fieldError ?? undefined}
+            >
+              <Select
                 id="principal_id"
-                value={principalId}
-                onChange={(e) => setPrincipalId(e.target.value)}
-                placeholder="00000000-0000-0000-0000-000000000000"
+                value={principalId || null}
+                onChange={setPrincipalId}
+                placeholder={
+                  principalsLoading
+                    ? 'Cargando…'
+                    : selectableOptions.length === 0
+                      ? 'Sin opciones disponibles'
+                      : `Seleccionar ${PRINCIPAL_FIELD_LABELS[principalType].toLowerCase()}…`
+                }
+                options={selectableOptions.map((o) => ({ value: o.id, label: o.label }))}
+                disabled={principalsLoading || selectableOptions.length === 0}
                 error={!!fieldError}
               />
             </FormField>
@@ -200,7 +287,7 @@ export function FileSharing({
               </p>
             )}
             <div className="flex justify-end">
-              <Button type="submit" size="sm" disabled={saving}>
+              <Button type="submit" size="sm" disabled={saving || principalsLoading}>
                 {saving ? 'Agregando…' : 'Agregar acceso'}
               </Button>
             </div>
@@ -212,7 +299,11 @@ export function FileSharing({
         open={revokeTarget !== null}
         onOpenChange={(o) => { if (!o) setRevokeTarget(null) }}
         title="Quitar acceso"
-        description={revokeTarget ? `Se quitará el acceso de ${PRINCIPAL_LABELS[revokeTarget.principal_type]} ${revokeTarget.principal_id}.` : ''}
+        description={
+          revokeTarget
+            ? `Se quitará el acceso de ${PRINCIPAL_LABELS[revokeTarget.principal_type]} ${resolveShareLabel(revokeTarget)}.`
+            : ''
+        }
         onConfirm={handleRevoke}
         confirmLabel="Quitar acceso"
       />

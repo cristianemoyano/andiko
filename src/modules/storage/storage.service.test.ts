@@ -22,7 +22,11 @@ const { mockAdapter } = vi.hoisted(() => ({
     deleteObject: vi.fn(),
   },
 }))
-vi.mock('@/lib/storage/adapter', () => ({ getStorageAdapter: () => mockAdapter }))
+vi.mock('@/lib/storage/adapter', () => ({ getStorageAdapter: vi.fn().mockResolvedValue(mockAdapter) }))
+vi.mock('./storage-settings.service', () => ({
+  getActiveStorageProvider: vi.fn().mockResolvedValue('s3'),
+  isStorageProviderReady: vi.fn().mockResolvedValue(true),
+}))
 
 vi.mock('./file.model', () => ({
   default: { findOne: vi.fn(), findAndCountAll: vi.fn(), create: vi.fn() },
@@ -30,7 +34,7 @@ vi.mock('./file.model', () => ({
 }))
 vi.mock('./file-link.model', () => ({
   default: { findAll: vi.fn(), findOne: vi.fn(), create: vi.fn(), update: vi.fn(), destroy: vi.fn() },
-  FILE_OWNER_TYPES: ['invoice', 'product', 'contact'],
+  FILE_OWNER_TYPES: ['invoice', 'product', 'contact', 'supplier_invoice', 'purchase_receipt'],
 }))
 vi.mock('./file-share.model', () => ({
   default: { findAll: vi.fn(), findOne: vi.fn(), create: vi.fn(), update: vi.fn(), destroy: vi.fn() },
@@ -44,6 +48,8 @@ vi.mock('./owner-registry', () => ({
     invoice: { readPermission: 'sales:read', writePermission: 'sales:write', exists: ownerExists },
     product: { readPermission: 'products:read', writePermission: 'products:write', exists: ownerExists },
     contact: { readPermission: 'contacts:read', writePermission: 'contacts:write', exists: ownerExists },
+    supplier_invoice: { readPermission: 'purchases:read', writePermission: 'purchases:write', exists: ownerExists },
+    purchase_receipt: { readPermission: 'purchases:read', writePermission: 'purchases:write', exists: ownerExists },
   },
 }))
 
@@ -55,6 +61,7 @@ import {
   initiateUpload,
   completeUpload,
   getDownloadUrl,
+  resolvePreviewContentType,
   STORAGE_ERRORS,
 } from './storage.service'
 
@@ -91,6 +98,16 @@ beforeEach(() => {
   ownerExists.mockResolvedValue(true)
   ;(FileLink.findAll as Mock).mockResolvedValue([])
   ;(FileShare.findAll as Mock).mockResolvedValue([])
+})
+
+describe('resolvePreviewContentType', () => {
+  it('uses stored file type when Dropbox returns octet-stream', () => {
+    expect(resolvePreviewContentType('application/octet-stream', 'application/pdf')).toBe('application/pdf')
+  })
+
+  it('keeps a specific backend type when present', () => {
+    expect(resolvePreviewContentType('image/png', 'application/pdf')).toBe('image/png')
+  })
 })
 
 describe('initiateUpload', () => {

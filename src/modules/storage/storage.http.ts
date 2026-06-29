@@ -22,6 +22,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   [STORAGE_ERRORS.FILE_NOT_READY]: 409,
   [STORAGE_ERRORS.UPLOAD_NOT_FOUND]: 409,
   [STORAGE_ERRORS.SIZE_MISMATCH]: 409,
+  [STORAGE_ERRORS.STORAGE_NOT_CONFIGURED]: 503,
 }
 
 /** Maps a storage service error to a structured response, or null when unrecognized (rethrow). */

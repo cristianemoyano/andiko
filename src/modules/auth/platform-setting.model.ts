@@ -30,6 +30,25 @@ export interface PlatformSettingAttributes {
   biller_activity_start_date: Date | string | null
   biller_email: string | null
   biller_phone: string | null
+  storage_enabled: boolean
+  storage_provider: 's3' | 'gdrive' | 'dropbox'
+  s3_bucket: string
+  s3_region: string
+  s3_access_key_id: string
+  /** Encrypted blob (see src/lib/crypto.ts), or '' when no secret is set. */
+  s3_secret_access_key_encrypted: string
+  s3_endpoint: string
+  /** Encrypted base64 service-account JSON, or '' when not set. */
+  gdrive_service_account_json_encrypted: string
+  gdrive_folder_id: string
+  dropbox_app_key: string
+  /** Encrypted blob (see src/lib/crypto.ts), or '' when not set. */
+  dropbox_app_secret_encrypted: string
+  /** Encrypted OAuth refresh token, or '' when not set. */
+  dropbox_refresh_token_encrypted: string
+  /** Encrypted generated access token (dev shortcut), or '' when not set. */
+  dropbox_access_token_encrypted: string
+  dropbox_root_path: string
   created_at: Date
   updated_at: Date
 }
@@ -40,6 +59,10 @@ type PlatformSettingCreationAttributes = Optional<
   | 'smtp_user' | 'smtp_password_encrypted' | 'from_name' | 'from_address'
   | 'biller_legal_name' | 'biller_cuit' | 'biller_iva_condition' | 'biller_fiscal_address'
   | 'biller_gross_income' | 'biller_activity_start_date' | 'biller_email' | 'biller_phone'
+  | 'storage_enabled' | 'storage_provider' | 's3_bucket' | 's3_region' | 's3_access_key_id'
+  | 's3_secret_access_key_encrypted' | 's3_endpoint' | 'gdrive_service_account_json_encrypted'
+  | 'gdrive_folder_id' | 'dropbox_app_key' | 'dropbox_app_secret_encrypted'
+  | 'dropbox_refresh_token_encrypted' | 'dropbox_access_token_encrypted' | 'dropbox_root_path'
   | 'created_at' | 'updated_at'
 >
 
@@ -65,6 +88,20 @@ export class PlatformSetting extends Model<
   declare biller_activity_start_date: Date | string | null
   declare biller_email: string | null
   declare biller_phone: string | null
+  declare storage_enabled: boolean
+  declare storage_provider: 's3' | 'gdrive' | 'dropbox'
+  declare s3_bucket: string
+  declare s3_region: string
+  declare s3_access_key_id: string
+  declare s3_secret_access_key_encrypted: string
+  declare s3_endpoint: string
+  declare gdrive_service_account_json_encrypted: string
+  declare gdrive_folder_id: string
+  declare dropbox_app_key: string
+  declare dropbox_app_secret_encrypted: string
+  declare dropbox_refresh_token_encrypted: string
+  declare dropbox_access_token_encrypted: string
+  declare dropbox_root_path: string
   declare created_at: Date
   declare updated_at: Date
 }
@@ -89,6 +126,20 @@ PlatformSetting.init(
     biller_activity_start_date: { type: DataTypes.DATEONLY, allowNull: true },
     biller_email: { type: DataTypes.STRING(320), allowNull: true },
     biller_phone: { type: DataTypes.STRING(40), allowNull: true },
+    storage_enabled: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    storage_provider: { type: DataTypes.STRING(32), allowNull: false, defaultValue: 's3' },
+    s3_bucket: { type: DataTypes.STRING(255), allowNull: false, defaultValue: '' },
+    s3_region: { type: DataTypes.STRING(64), allowNull: false, defaultValue: 'us-east-1' },
+    s3_access_key_id: { type: DataTypes.STRING(255), allowNull: false, defaultValue: '' },
+    s3_secret_access_key_encrypted: { type: DataTypes.TEXT, allowNull: false, defaultValue: '' },
+    s3_endpoint: { type: DataTypes.STRING(512), allowNull: false, defaultValue: '' },
+    gdrive_service_account_json_encrypted: { type: DataTypes.TEXT, allowNull: false, defaultValue: '' },
+    gdrive_folder_id: { type: DataTypes.STRING(255), allowNull: false, defaultValue: '' },
+    dropbox_app_key: { type: DataTypes.STRING(255), allowNull: false, defaultValue: '' },
+    dropbox_app_secret_encrypted: { type: DataTypes.TEXT, allowNull: false, defaultValue: '' },
+    dropbox_refresh_token_encrypted: { type: DataTypes.TEXT, allowNull: false, defaultValue: '' },
+    dropbox_access_token_encrypted: { type: DataTypes.TEXT, allowNull: false, defaultValue: '' },
+    dropbox_root_path: { type: DataTypes.STRING(512), allowNull: false, defaultValue: '/andiko' },
     created_at: { type: DataTypes.DATE, allowNull: false },
     updated_at: { type: DataTypes.DATE, allowNull: false },
   },

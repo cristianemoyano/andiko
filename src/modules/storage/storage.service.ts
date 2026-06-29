@@ -6,7 +6,9 @@ import logger from '@/lib/logger'
 import { can } from '@/lib/permissions'
 import { whereOrg } from '@/lib/tenancy'
 import { paginate, toPaginated } from '@/lib/pagination'
-import { getStorageAdapter, type StorageProvider } from '@/lib/storage/adapter'
+import { getStorageAdapter } from '@/lib/storage/adapter'
+import type { StorageProvider } from '@/lib/storage/adapter'
+import { getActiveStorageProvider, isStorageProviderReady } from './storage-settings.service'
 import FileModel from './file.model'
 import FileLink, { type FileOwnerType } from './file-link.model'
 import FileShare from './file-share.model'
@@ -28,12 +30,19 @@ export const STORAGE_ERRORS = {
   OWNER_FORBIDDEN: 'FILE_OWNER_FORBIDDEN',
   UPLOAD_NOT_FOUND: 'FILE_UPLOAD_NOT_FOUND',
   SIZE_MISMATCH: 'FILE_SIZE_MISMATCH',
+  STORAGE_NOT_CONFIGURED: 'STORAGE_NOT_CONFIGURED',
 } as const
 
 /** Strips path components and unsafe characters; keeps the object key readable and S3-safe. */
 function sanitizeFilename(name: string): string {
   const base = name.split(/[/\\]/).pop() ?? name
   return base.replace(/[^\w.\- ]+/g, '_').slice(0, 200) || 'file'
+}
+
+/** Dropbox/S3 often return `application/octet-stream`; prefer the type stored at upload. */
+export function resolvePreviewContentType(fromBackend: string | null | undefined, fromFile: string): string {
+  if (!fromBackend || fromBackend === 'application/octet-stream') return fromFile
+  return fromBackend
 }
 
 /** Throws unless the caller may attach files to (write) the given owner record. */
@@ -57,12 +66,17 @@ async function loadFileInOrg(fileId: string, actor: FileActor) {
  * its links in one transaction, then hand back a presigned PUT for the browser to upload to.
  */
 export async function initiateUpload(input: InitiateUploadInput, actor: FileActor) {
-  // Every link must be writable by the caller before we mint an upload URL.
   for (const link of input.links) {
     await authorizeOwnerWrite(link, actor)
   }
 
-  const adapter = getStorageAdapter()
+  const activeProvider = await getActiveStorageProvider()
+  if (!activeProvider || !(await isStorageProviderReady(activeProvider))) {
+    throw new Error(STORAGE_ERRORS.STORAGE_NOT_CONFIGURED)
+  }
+
+  const adapter = await getStorageAdapter(activeProvider)
+  if (!adapter) throw new Error(STORAGE_ERRORS.STORAGE_NOT_CONFIGURED)
   const fileId = randomUUID()
   const storageKey = `${actor.ctx.orgId}/${fileId}/${sanitizeFilename(input.filename)}`
 
@@ -132,7 +146,8 @@ export async function completeUpload(fileId: string, actor: FileActor) {
   }
   if (file.status === 'available') return file
 
-  const adapter = getStorageAdapter(file.storage_provider as StorageProvider)
+  const adapter = await getStorageAdapter(file.storage_provider as StorageProvider)
+  if (!adapter) throw new Error(STORAGE_ERRORS.STORAGE_NOT_CONFIGURED)
   const head = await adapter.headObject(file.storage_key)
 
   if (!head) {
@@ -161,12 +176,34 @@ export async function getDownloadUrl(fileId: string, actor: FileActor) {
     throw new Error(STORAGE_ERRORS.FILE_FORBIDDEN)
   }
 
-  const adapter = getStorageAdapter(file.storage_provider as StorageProvider)
+  const adapter = await getStorageAdapter(file.storage_provider as StorageProvider)
+  if (!adapter) throw new Error(STORAGE_ERRORS.STORAGE_NOT_CONFIGURED)
   const { url, expiresInSeconds } = await adapter.getDownloadUrl({
     key: file.storage_key,
     downloadFilename: file.original_filename,
   })
   return { url, expires_in: expiresInSeconds, filename: file.original_filename }
+}
+
+/** Streams file bytes for in-app preview (`Content-Disposition: inline`). */
+export async function getFileContentStream(fileId: string, actor: FileActor) {
+  const file = await loadFileInOrg(fileId, actor)
+  if (file.status !== 'available') throw new Error(STORAGE_ERRORS.FILE_NOT_READY)
+  if (!(await canAccessFile(file, actor, 'read', fileId))) {
+    throw new Error(STORAGE_ERRORS.FILE_FORBIDDEN)
+  }
+
+  const adapter = await getStorageAdapter(file.storage_provider as StorageProvider)
+  if (!adapter?.getObjectStream) throw new Error(STORAGE_ERRORS.FILE_NOT_FOUND)
+  const object = await adapter.getObjectStream(file.storage_key)
+  if (!object) throw new Error(STORAGE_ERRORS.FILE_NOT_FOUND)
+
+  return {
+    stream: object.stream,
+    contentType: resolvePreviewContentType(object.contentType, file.content_type),
+    byteSize: object.byteSize,
+    filename: file.original_filename,
+  }
 }
 
 /** File metadata plus its links ("where is this linked") and explicit shares. */

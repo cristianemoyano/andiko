@@ -13,6 +13,21 @@ const SHARES: FileShare[] = [
   { id: '3', principal_type: 'branch', principal_id: 'branch-centro', permission: 'read', expires_at: '2026-12-31T00:00:00Z', created_at: '2026-06-03T10:00:00Z' },
 ]
 
+const MOCK_PRINCIPALS = {
+  users: [
+    { id: 'a1b2c3d4-0000-0000-0000-000000000001', label: 'Ana García (ana@empresa.com)' },
+    { id: 'a1b2c3d4-0000-0000-0000-000000000002', label: 'Bruno López (bruno@empresa.com)' },
+  ],
+  org_roles: [
+    { id: 'role-contador', label: 'Contador' },
+    { id: 'role-compras', label: 'Compras' },
+  ],
+  branches: [
+    { id: 'branch-centro', label: 'Centro (001)' },
+    { id: 'branch-norte', label: 'Norte (002)' },
+  ],
+}
+
 function Harness({ initial, canManage }: { initial: FileShare[]; canManage: boolean }) {
   const [open, setOpen] = useState(true)
   const [shares, setShares] = useState<FileShare[]>(initial)
@@ -34,6 +49,7 @@ function Harness({ initial, canManage }: { initial: FileShare[]; canManage: bool
           return created
         }}
         revokeShare={async (_id, shareId) => { await sleep(300); setShares((s) => s.filter((x) => x.id !== shareId)) }}
+        fetchPrincipals={async () => { await sleep(200); return MOCK_PRINCIPALS }}
       />
     </>
   )

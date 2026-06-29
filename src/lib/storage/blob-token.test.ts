@@ -9,9 +9,20 @@ const past = () => Math.floor(Date.now() / 1000) - 5
 
 describe('blob-token', () => {
   it('round-trips a valid token', () => {
-    const token = signBlobToken({ key: 'org/file/doc.pdf', mode: 'put', exp: future(), contentType: 'application/pdf' })
+    const token = signBlobToken({
+      key: 'org/file/doc.pdf',
+      mode: 'put',
+      exp: future(),
+      contentType: 'application/pdf',
+      byteSize: 1024,
+    })
     const payload = verifyBlobToken(token)
-    expect(payload).toMatchObject({ key: 'org/file/doc.pdf', mode: 'put', contentType: 'application/pdf' })
+    expect(payload).toMatchObject({
+      key: 'org/file/doc.pdf',
+      mode: 'put',
+      contentType: 'application/pdf',
+      byteSize: 1024,
+    })
   })
 
   it('preserves the download filename', () => {

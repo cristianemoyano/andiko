@@ -9,6 +9,7 @@ import { Button } from '@/components/primitives/Button'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { EmptyState } from '@/components/erp/EmptyState'
+import { OwnerAttachmentsSection } from '@/components/erp/OwnerAttachmentsSection'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import type { PurchaseReceipt } from '../../types'
 import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_RECEIPT_STATUS_LABEL, SUPPLIER_INVOICE_STATUS_LABEL } from '../../types'
@@ -185,6 +186,12 @@ export function RecepcionDetail({ id }: RecepcionDetailProps) {
               )}
             </div>
           </div>
+
+          <OwnerAttachmentsSection
+            ownerType="purchase_receipt"
+            ownerId={receipt.id}
+            title="Remito / documento de recepción"
+          />
 
           {/* Items card */}
           <div className="bg-surface border border-border rounded-sm overflow-hidden">

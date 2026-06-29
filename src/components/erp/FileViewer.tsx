@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { ConfirmDialog } from './ConfirmDialog'
+import { FilePreviewDialog } from './FilePreviewDialog'
 import { formatBytes } from '@/lib/format-bytes'
 import { formatLocalDateTime } from '@/lib/date-only'
 import {
@@ -46,8 +47,11 @@ export function FileViewer({
 }: FileViewerProps) {
   const [thumb, setThumb] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const isImage = file.content_type.startsWith('image/')
+  const [previewOpen, setPreviewOpen] = useState(false)
   const available = file.status === 'available'
+  const isImage = file.content_type.startsWith('image/')
+  const isPdf = file.content_type === 'application/pdf'
+  const canPreview = available && (isImage || isPdf)
 
   useEffect(() => {
     if (!showThumbnail || !isImage || !available) return
@@ -94,6 +98,12 @@ export function FileViewer({
       </div>
 
       <div className="flex flex-shrink-0 items-center gap-0.5">
+        {canPreview && (
+          <IconButton label="Ver" onClick={() => setPreviewOpen(true)}>
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+          </IconButton>
+        )}
         <IconButton label="Descargar" onClick={handleDownload} disabled={!available}>
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <path d="M7 10l5 5 5-5M12 15V3" />
@@ -120,6 +130,13 @@ export function FileViewer({
         description={`El archivo "${file.original_filename}" se eliminará. Esta acción no afecta los documentos vinculados.`}
         onConfirm={handleConfirmDelete}
         confirmLabel="Eliminar archivo"
+      />
+
+      <FilePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        file={file}
+        getDownloadUrl={getDownloadUrl}
       />
     </div>
   )

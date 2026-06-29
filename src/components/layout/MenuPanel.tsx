@@ -143,6 +143,20 @@ export function MenuPanel({
                 />
                 <MenuRow
                   item={{
+                    id: 'sys-admin-storage',
+                    label: 'Almacenamiento',
+                    href: '/sys-admin/storage',
+                    icon: (
+                      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 4.5 8 1.5l6 3v7L8 14.5 2 11.5v-7z"/><path d="M8 1.5v13"/>
+                      </svg>
+                    ),
+                  }}
+                  active={pathname.startsWith('/sys-admin/storage')}
+                  onNavigate={close}
+                />
+                <MenuRow
+                  item={{
                     id: 'sys-admin-billing',
                     label: 'Facturación',
                     href: '/sys-admin/billing',

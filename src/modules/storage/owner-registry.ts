@@ -56,4 +56,28 @@ export const OWNER_RESOLVERS: Record<FileOwnerType, OwnerResolver> = {
       return row !== null
     },
   },
+  supplier_invoice: {
+    readPermission: 'purchases:read',
+    writePermission: 'purchases:write',
+    async exists(ownerId, ctx) {
+      const { default: SupplierInvoice } = await import('@/modules/purchases/supplier-invoice.model')
+      const row = await SupplierInvoice.findOne({
+        where: whereAllowedBranches(ctx, { id: ownerId }),
+        attributes: ['id'],
+      })
+      return row !== null
+    },
+  },
+  purchase_receipt: {
+    readPermission: 'purchases:read',
+    writePermission: 'purchases:write',
+    async exists(ownerId, ctx) {
+      const { default: PurchaseReceipt } = await import('@/modules/purchases/purchase-receipt.model')
+      const row = await PurchaseReceipt.findOne({
+        where: whereAllowedBranches(ctx, { id: ownerId }),
+        attributes: ['id'],
+      })
+      return row !== null
+    },
+  },
 }

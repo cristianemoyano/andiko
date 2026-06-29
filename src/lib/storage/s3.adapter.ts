@@ -6,12 +6,20 @@ import {
   HeadObjectCommand,
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3'
+import { Readable } from 'node:stream'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { env } from '@/config/env'
 import type { StorageAdapter } from './adapter'
 
-const UPLOAD_URL_TTL_SECONDS = 5 * 60 // browser has 5 min to start the PUT
+const UPLOAD_URL_TTL_SECONDS = 5 * 60
 const DOWNLOAD_URL_TTL_SECONDS = 5 * 60
+
+export type S3StorageConfig = {
+  bucket: string
+  region: string
+  accessKeyId: string
+  secretAccessKey: string
+  endpoint?: string
+}
 
 /** AWS S3 (and S3-compatible) backend. Bytes never pass through the app — only presigned URLs. */
 export class S3StorageAdapter implements StorageAdapter {
@@ -19,24 +27,15 @@ export class S3StorageAdapter implements StorageAdapter {
   readonly bucket: string
   private readonly client: S3Client
 
-  constructor() {
-    if (!env.S3_BUCKET) {
-      throw new Error('S3_BUCKET is not configured')
-    }
-    this.bucket = env.S3_BUCKET
+  constructor(config: S3StorageConfig) {
+    this.bucket = config.bucket
     this.client = new S3Client({
-      region: env.S3_REGION ?? 'us-east-1',
-      ...(env.S3_ENDPOINT
-        ? { endpoint: env.S3_ENDPOINT, forcePathStyle: true } // MinIO/R2 need path-style
-        : {}),
-      ...(env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY
-        ? {
-            credentials: {
-              accessKeyId: env.S3_ACCESS_KEY_ID,
-              secretAccessKey: env.S3_SECRET_ACCESS_KEY,
-            },
-          }
-        : {}),
+      region: config.region,
+      ...(config.endpoint ? { endpoint: config.endpoint, forcePathStyle: true } : {}),
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
     })
   }
 
@@ -51,7 +50,6 @@ export class S3StorageAdapter implements StorageAdapter {
     return {
       url,
       method: 'PUT' as const,
-      // The browser must send the same Content-Type that was signed, or S3 rejects the PUT.
       headers: { 'Content-Type': params.contentType },
       expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
     }
@@ -90,6 +88,21 @@ export class S3StorageAdapter implements StorageAdapter {
   async deleteObject(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }))
   }
+
+  async getObjectStream(key: string) {
+    const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }))
+    if (!res.Body) return null
+    const body = res.Body
+    const stream =
+      body instanceof ReadableStream
+        ? body
+        : (Readable.toWeb(body as import('node:stream').Readable) as ReadableStream)
+    return {
+      stream,
+      contentType: res.ContentType ?? null,
+      byteSize: res.ContentLength ?? null,
+    }
+  }
 }
 
 function isNotFound(err: unknown): boolean {
@@ -98,7 +111,6 @@ function isNotFound(err: unknown): boolean {
   return e.name === 'NotFound' || e.name === 'NoSuchKey' || e.$metadata?.httpStatusCode === 404
 }
 
-/** RFC 5987 Content-Disposition so non-ASCII filenames download intact. */
 function contentDisposition(filename: string): string {
   const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_')
   const encoded = encodeURIComponent(filename)

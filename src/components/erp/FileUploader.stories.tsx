@@ -5,6 +5,8 @@ import type { FileMetadata } from '@/lib/storage-client'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+const demoLinks = [{ owner_type: 'contact' as const, owner_id: '00000000-0000-4000-8000-000000000001' }]
+
 const fakeUploaded = (file: File): FileMetadata => ({
   id: crypto.randomUUID(),
   original_filename: file.name,
@@ -37,27 +39,27 @@ export default meta
 type Story = StoryObj<typeof FileUploader>
 
 export const Default: Story = {
-  render: () => <FileUploader uploadFile={fakeUpload} />,
+  render: () => <FileUploader links={demoLinks} uploadFile={fakeUpload} />,
 }
 
 export const Multiple: Story = {
-  render: () => <FileUploader multiple uploadFile={fakeUpload} />,
+  render: () => <FileUploader links={demoLinks} multiple uploadFile={fakeUpload} />,
 }
 
 export const RestrictedToPdf: Story = {
-  render: () => <FileUploader accept={['application/pdf']} uploadFile={fakeUpload} />,
+  render: () => <FileUploader links={demoLinks} accept={['application/pdf']} uploadFile={fakeUpload} />,
 }
 
 export const UploadError: Story = {
   name: 'Upload error (server)',
-  render: () => <FileUploader uploadFile={fakeUploadFail} />,
+  render: () => <FileUploader links={demoLinks} uploadFile={fakeUploadFail} />,
 }
 
 export const SizeLimited: Story = {
   name: 'Rejects too-large files',
-  render: () => <FileUploader maxBytes={1024} uploadFile={fakeUpload} />,
+  render: () => <FileUploader links={demoLinks} maxBytes={1024} uploadFile={fakeUpload} />,
 }
 
 export const Disabled: Story = {
-  render: () => <FileUploader disabled uploadFile={fakeUpload} />,
+  render: () => <FileUploader links={demoLinks} disabled uploadFile={fakeUpload} />,
 }

@@ -26,7 +26,12 @@ export const DEFAULT_ALLOWED_CONTENT_TYPES = [
   'application/zip',
 ] as const
 
-export type FileOwnerType = 'invoice' | 'product' | 'contact'
+export type FileOwnerType =
+  | 'invoice'
+  | 'product'
+  | 'contact'
+  | 'supplier_invoice'
+  | 'purchase_receipt'
 export type SharePrincipalType = 'user' | 'org_role' | 'branch'
 export type SharePermission = 'read' | 'write'
 export type FileStatus = 'pending' | 'available' | 'failed'
@@ -63,6 +68,17 @@ export interface ShareInput {
   expires_at?: string | null
 }
 
+export interface SharePrincipalOption {
+  id: string
+  label: string
+}
+
+export interface SharePrincipalOptions {
+  users: SharePrincipalOption[]
+  org_roles: SharePrincipalOption[]
+  branches: SharePrincipalOption[]
+}
+
 interface InitiateResponse {
   file_id: string
   upload_url: string
@@ -78,16 +94,24 @@ export type ListSharesFn = (fileId: string) => Promise<FileShare[]>
 export type AddShareFn = (fileId: string, input: ShareInput) => Promise<FileShare>
 export type RevokeShareFn = (fileId: string, shareId: string) => Promise<void>
 export type DeleteFileFn = (fileId: string) => Promise<void>
+export type FetchSharePrincipalsFn = () => Promise<SharePrincipalOptions>
 
 /** Runs the 3-step presigned upload: initiate → PUT bytes → complete. */
 export const uploadFile: UploadFileFn = async (file, opts) => {
+  if (!opts?.links?.length) {
+    throw new Error('Debe vincular el archivo a al menos un registro')
+  }
+  if (!file.type) {
+    throw new Error('No se pudo detectar el tipo de archivo')
+  }
+
   const initiated = await fetchJson<InitiateResponse>('/api/v1/files', {
     method: 'POST',
     body: JSON.stringify({
       filename: file.name,
-      content_type: file.type || 'application/octet-stream',
+      content_type: file.type,
       byte_size: file.size,
-      links: opts?.links ?? [],
+      links: opts.links,
     }),
   })
 
@@ -108,8 +132,16 @@ export const getFileDownloadUrl: GetDownloadUrlFn = (fileId) =>
     (r) => ({ url: r.url, filename: r.filename }),
   )
 
+/** Same-origin inline stream for PDF/image preview (session cookie auth). */
+export function getFileContentUrl(fileId: string): string {
+  return `/api/v1/files/${encodeURIComponent(fileId)}/content`
+}
+
 export const listFileShares: ListSharesFn = (fileId) =>
   fetchJson<{ data: FileShare[] }>(`/api/v1/files/${fileId}/shares`).then((r) => r.data)
+
+export const fetchSharePrincipals: FetchSharePrincipalsFn = () =>
+  fetchJson<{ data: SharePrincipalOptions }>('/api/v1/files/share-principals').then((r) => r.data)
 
 export const addFileShare: AddShareFn = (fileId, input) =>
   fetchJson<FileShare>(`/api/v1/files/${fileId}/shares`, { method: 'POST', body: JSON.stringify(input) })

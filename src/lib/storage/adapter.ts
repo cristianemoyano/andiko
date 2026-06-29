@@ -1,25 +1,22 @@
 import 'server-only'
-import { env } from '@/config/env'
+import type { StorageProvider } from '@/modules/storage/storage-settings.schema'
+import {
+  getResolvedGDriveConfig,
+  getResolvedDropboxConfig,
+  getResolvedS3Config,
+} from '@/modules/storage/storage-settings.service'
 import { S3StorageAdapter } from './s3.adapter'
 import { GoogleDriveStorageAdapter } from './gdrive.adapter'
-
-export type StorageProvider = typeof env.FILE_STORAGE_PROVIDER
+import { DropboxStorageAdapter } from './dropbox.adapter'
 
 /**
- * Vendor-agnostic object storage. The file service speaks only this interface;
- * concrete backends (S3, future GCS/Azure/MinIO) live behind {@link getStorageAdapter}.
- *
- * The bytes always live in the backend — the database only keeps metadata. Uploads and
- * downloads use short-lived presigned URLs so the browser transfers bytes directly to the
- * backend (no proxying through the Next.js serverless runtime, which caps request bodies).
+ * Vendor-agnostic object storage. Credentials live in `platform_settings` (sys-admin),
+ * same pattern as global SMTP — not in environment variables.
  */
 export interface StorageAdapter {
-  /** Name persisted on the file row (`files.storage_provider`). */
   readonly provider: string
-  /** Bucket/container persisted on the file row (`files.storage_bucket`). */
   readonly bucket: string
 
-  /** Presigned PUT the browser uses to upload the object. */
   getUploadUrl(params: {
     key: string
     contentType: string
@@ -31,56 +28,51 @@ export interface StorageAdapter {
     expiresInSeconds: number
   }>
 
-  /** Presigned GET the browser uses to download the object. */
   getDownloadUrl(params: {
     key: string
     downloadFilename?: string
     expiresInSeconds?: number
   }): Promise<{ url: string; expiresInSeconds: number }>
 
-  /** Object metadata, or `null` when the object does not exist (used to confirm uploads). */
   headObject(key: string): Promise<{ byteSize: number; contentType: string | null } | null>
 
-  /** Hard-delete the object from the backend. */
   deleteObject(key: string): Promise<void>
 
-  /**
-   * Server-side write, used ONLY by proxy backends (e.g. Google Drive) whose `getUploadUrl`
-   * points at our own `/api/v1/storage/blob` route. Presigned backends (S3) leave this
-   * undefined — the browser writes straight to the backend, never through the app.
-   */
   putObject?(key: string, params: { contentType: string; body: ReadableStream | Buffer }): Promise<void>
 
-  /** Server-side read counterpart to {@link putObject}; `null` when the object is absent. */
   getObjectStream?(
     key: string,
   ): Promise<{ stream: ReadableStream; contentType: string | null; byteSize: number | null } | null>
 }
 
+export type { StorageProvider }
+
 const cache = new Map<StorageProvider, StorageAdapter>()
 
+export function clearStorageAdapterCache(): void {
+  cache.clear()
+}
+
 /**
- * Resolves the storage backend. Currently env-driven (single platform bucket/folder); the
- * `provider` seam is where per-org/own backends will plug in later without touching callers.
+ * Resolves the storage backend from platform settings. `provider` defaults to the active
+ * provider for new uploads; pass a file's persisted `storage_provider` for existing blobs.
  */
-export function getStorageAdapter(provider: StorageProvider = env.FILE_STORAGE_PROVIDER): StorageAdapter {
+export async function getStorageAdapter(provider: StorageProvider): Promise<StorageAdapter | null> {
   const existing = cache.get(provider)
   if (existing) return existing
 
-  let adapter: StorageAdapter
-  switch (provider) {
-    case 's3':
-      adapter = new S3StorageAdapter()
-      break
-    case 'gdrive':
-      adapter = new GoogleDriveStorageAdapter()
-      break
-    default: {
-      // Exhaustiveness guard — adding a provider to the enum forces a case here.
-      const never: never = provider
-      throw new Error(`Unsupported FILE_STORAGE_PROVIDER: ${String(never)}`)
-    }
+  let adapter: StorageAdapter | null = null
+  if (provider === 's3') {
+    const config = await getResolvedS3Config()
+    if (config) adapter = new S3StorageAdapter(config)
+  } else if (provider === 'gdrive') {
+    const config = await getResolvedGDriveConfig()
+    if (config) adapter = new GoogleDriveStorageAdapter(config)
+  } else {
+    const config = await getResolvedDropboxConfig()
+    if (config) adapter = new DropboxStorageAdapter(config)
   }
-  cache.set(provider, adapter)
+
+  if (adapter) cache.set(provider, adapter)
   return adapter
 }

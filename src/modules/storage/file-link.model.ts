@@ -7,8 +7,19 @@ import type { UUID, Timestamps, AuditFields } from '@/types'
  * Owner entity a file can be attached to. Stored as VARCHAR + CHECK (not a DB enum) because
  * the set grows as modules adopt attachments — see {@link OWNER_RESOLVERS} in owner-registry.ts.
  */
-export type FileOwnerType = 'invoice' | 'product' | 'contact'
-export const FILE_OWNER_TYPES: FileOwnerType[] = ['invoice', 'product', 'contact']
+export type FileOwnerType =
+  | 'invoice'
+  | 'product'
+  | 'contact'
+  | 'supplier_invoice'
+  | 'purchase_receipt'
+export const FILE_OWNER_TYPES: FileOwnerType[] = [
+  'invoice',
+  'product',
+  'contact',
+  'supplier_invoice',
+  'purchase_receipt',
+]
 
 export interface FileLinkAttributes extends Timestamps, AuditFields {
   id: UUID

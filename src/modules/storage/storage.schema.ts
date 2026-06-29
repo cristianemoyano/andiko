@@ -36,8 +36,9 @@ export const initiateUploadSchema = z.object({
     .positive()
     .max(env.FILE_MAX_BYTES, `El archivo supera el máximo de ${env.FILE_MAX_BYTES} bytes`),
   checksum_sha256: z.string().regex(/^[a-f0-9]{64}$/i).nullable().optional(),
-  // Empty array = standalone file (no inherited access; only creator/shares can see it).
-  links: z.array(ownerLinkSchema).default([]),
+  // At least one owner link required — prevents orphan uploads that only the creator can see
+  // but still consume org storage.
+  links: z.array(ownerLinkSchema).min(1, 'Debe vincular el archivo a al menos un registro'),
 })
 
 export const shareSchema = z.object({

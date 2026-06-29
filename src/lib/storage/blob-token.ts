@@ -14,15 +14,21 @@ import { env } from '@/config/env'
  * (same source `src/lib/crypto.ts` uses — no extra env var).
  */
 
+import type { ProxyStorageProvider } from '@/modules/storage/storage-settings.schema'
+
 export type BlobTokenMode = 'put' | 'get'
 
 export interface BlobTokenPayload {
+  /** Proxy backend; omitted on legacy tokens (defaults to gdrive). */
+  provider?: ProxyStorageProvider
   key: string
   mode: BlobTokenMode
   /** Unix epoch seconds after which the token is invalid. */
   exp: number
   contentType?: string
   filename?: string
+  /** Declared upload size (PUT only); enforced by the storage proxy. */
+  byteSize?: number
 }
 
 function sign(data: string): Buffer {
@@ -59,6 +65,16 @@ export function verifyBlobToken(token: string): BlobTokenPayload | null {
   }
 
   if (typeof payload.key !== 'string' || (payload.mode !== 'put' && payload.mode !== 'get')) {
+    return null
+  }
+  if (payload.byteSize != null && (typeof payload.byteSize !== 'number' || payload.byteSize <= 0)) {
+    return null
+  }
+  if (
+    payload.provider != null
+    && payload.provider !== 'gdrive'
+    && payload.provider !== 'dropbox'
+  ) {
     return null
   }
   if (typeof payload.exp !== 'number' || payload.exp * 1000 < Date.now()) return null
