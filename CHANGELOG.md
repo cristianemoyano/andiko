@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.35.0](https://github.com/cristianemoyano/andiko/compare/v0.34.0...v0.35.0) (2026-06-30)
+
+### Features
+
+* **sales:** require catalog lines, branch stock validation, and warehouse-per-branch ([f6cbf39](https://github.com/cristianemoyano/andiko/commit/f6cbf39a0f5d49145e6ff47a5f59d1c0e52ba372))
+
 ## [0.34.0](https://github.com/cristianemoyano/andiko/compare/v0.33.0...v0.34.0) (2026-06-30)
 
 ### Features
