@@ -1,6 +1,6 @@
 import type { IpcMain } from 'electron'
 import { db } from './db'
-import { products, customers, posUsers, posPaymentMethods, sales, saleItems, syncQueue, settings, cashSessions } from '../db/schema'
+import { products, customers, posUsers, posPaymentMethods, sales, saleItems, syncQueue, settings, cashSessions, posDraftSales, posDraftSaleItems, licenseCache } from '../db/schema'
 import { eq, inArray, isNull, like, or, and, sql } from 'drizzle-orm'
 import type { PosProduct, PosCustomer, PosPaymentMethod, PosSalePayment } from '@andiko/shared'
 import bcrypt from 'bcryptjs'
@@ -676,11 +676,15 @@ export function registerSyncHandlers(ipc: IpcMain) {
     try {
       db().delete(syncQueue).run()
       db().delete(saleItems).run()
+      db().delete(posDraftSaleItems).run()
       db().delete(sales).run()
+      db().delete(posDraftSales).run()
+      db().delete(cashSessions).run()
       db().delete(posPaymentMethods).run()
       db().delete(posUsers).run()
       db().delete(customers).run()
       db().delete(products).run()
+      db().delete(licenseCache).run()
       db().delete(settings).run()
       return { ok: true }
     } catch (e) {

@@ -2,11 +2,20 @@
 
 import { cn } from '@/lib/utils'
 import { type MobileColumnRole } from './DataTable'
+import { Checkbox } from '@/components/primitives/Checkbox'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from '@/components/primitives/DropdownMenu'
+
+export interface TableRowSelection {
+  selectedIds: Set<string>
+  onToggleRow: (id: string) => void
+  onToggleAllOnPage: () => void
+  /** Parent row ids on the current page (for header checkbox state). */
+  pageIds: string[]
+}
 
 export interface GroupedColumn<T> {
   key: string
@@ -39,6 +48,50 @@ interface GroupedDataTableProps<P extends object, C extends object> {
   className?: string
   /** Render card list on viewports below md. Default true. */
   mobileList?: boolean
+  /** Optional row selection (checkbox column on parent rows). */
+  selection?: TableRowSelection
+}
+
+const SELECT_COL_CLASS = 'w-10 px-2'
+
+function SelectionHeaderCell({ selection }: { selection: TableRowSelection }) {
+  const { pageIds, selectedIds } = selection
+  const allSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id))
+  const someSelected = pageIds.some(id => selectedIds.has(id))
+  return (
+    <th
+      className={cn(
+        'h-9 text-left text-[11px] font-semibold text-fg-muted uppercase tracking-wide border-b border-border bg-surface-muted whitespace-nowrap select-none',
+        SELECT_COL_CLASS,
+      )}
+    >
+      <Checkbox
+        checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+        onCheckedChange={() => selection.onToggleAllOnPage()}
+        aria-label="Seleccionar todos en la página"
+      />
+    </th>
+  )
+}
+
+function SelectionRowCell({
+  id,
+  selection,
+  label,
+}: {
+  id: string
+  selection: TableRowSelection
+  label: string
+}) {
+  return (
+    <td className={cn('px-3 py-2.5 align-middle', SELECT_COL_CLASS)} data-stop-row-click>
+      <Checkbox
+        checked={selection.selectedIds.has(id)}
+        onCheckedChange={() => selection.onToggleRow(id)}
+        aria-label={label}
+      />
+    </td>
+  )
 }
 
 function renderGroupedCell<T extends object>(col: GroupedColumn<T>, row: T): React.ReactNode {
@@ -47,12 +100,16 @@ function renderGroupedCell<T extends object>(col: GroupedColumn<T>, row: T): Rea
 
 function GroupedMobileCard<P extends object>({
   row,
+  rowId,
   columns,
   onActivate,
+  selection,
 }: {
   row: P
+  rowId: string
   columns: GroupedColumn<P>[]
   onActivate?: () => void
+  selection?: TableRowSelection
 }) {
   const byRole = (role: MobileColumnRole) =>
     columns.filter(c => c.mobileRole === role).map(c => renderGroupedCell(c, row))
@@ -99,6 +156,15 @@ function GroupedMobileCard<P extends object>({
       )}
     >
       <div className="flex items-start gap-3">
+        {selection && (
+          <span className="flex h-[19px] items-center shrink-0" data-stop-row-click>
+            <Checkbox
+              checked={selection.selectedIds.has(rowId)}
+              onCheckedChange={() => selection.onToggleRow(rowId)}
+              aria-label="Seleccionar fila"
+            />
+          </span>
+        )}
         <div className="flex-1 min-w-0">
           {titleContent && (
             <div className="text-fg leading-snug">{titleContent}</div>
@@ -179,6 +245,7 @@ export function GroupedDataTable<P extends object, C extends object>({
   emptyMessage = 'Sin registros.',
   className,
   mobileList = true,
+  selection,
 }: GroupedDataTableProps<P, C>) {
   return (
     <div className={cn('bg-surface border border-border rounded', className)}>
@@ -196,9 +263,11 @@ export function GroupedDataTable<P extends object, C extends object>({
             groups.map(({ parent }) => (
               <GroupedMobileCard
                 key={parentKey(parent)}
+                rowId={parentKey(parent)}
                 row={parent}
                 columns={parentColumns}
                 onActivate={onRowClick ? () => onRowClick(parent) : undefined}
+                selection={selection}
               />
             ))
           )}
@@ -209,6 +278,7 @@ export function GroupedDataTable<P extends object, C extends object>({
         <table className="w-full border-collapse">
           <thead>
             <tr>
+              {selection && <SelectionHeaderCell selection={selection} />}
               {parentColumns.map(col => (
                 <th
                   key={col.key}
@@ -226,7 +296,7 @@ export function GroupedDataTable<P extends object, C extends object>({
           <tbody>
             {groups.length === 0 ? (
               <tr>
-                <td colSpan={parentColumns.length} className="h-20 text-center text-sm text-fg-subtle">
+                <td colSpan={parentColumns.length + (selection ? 1 : 0)} className="h-20 text-center text-sm text-fg-subtle">
                   {emptyMessage}
                 </td>
               </tr>
@@ -237,12 +307,23 @@ export function GroupedDataTable<P extends object, C extends object>({
                   // ── Parent row ──────────────────────────────────────────
                   <tr
                     key={parentKey(parent)}
-                    onClick={onRowClick ? () => onRowClick(parent) : undefined}
+                    onClick={onRowClick ? (e) => {
+                      const t = e.target as HTMLElement | null
+                      if (t?.closest('[data-stop-row-click]')) return
+                      onRowClick(parent)
+                    } : undefined}
                     className={cn(
-                      'border-b border-border last:border-0 hover:bg-surface-muted transition-colors',
+                      'group border-b border-border last:border-0 hover:bg-surface-muted transition-colors',
                       onRowClick && 'cursor-pointer',
                     )}
                   >
+                    {selection && (
+                      <SelectionRowCell
+                        id={parentKey(parent)}
+                        selection={selection}
+                        label={`Seleccionar ${String((parent as Record<string, unknown>).name ?? 'producto')}`}
+                      />
+                    )}
                     {parentColumns.map(col => (
                       <td
                         key={col.key}
@@ -264,12 +345,17 @@ export function GroupedDataTable<P extends object, C extends object>({
                         return (
                           <tr
                             key={childKey(child)}
-                            onClick={onRowClick ? () => onRowClick(parent) : undefined}
+                            onClick={onRowClick ? (e) => {
+                              const t = e.target as HTMLElement | null
+                              if (t?.closest('[data-stop-row-click]')) return
+                              onRowClick(parent)
+                            } : undefined}
                             className={cn(
                               'border-b border-border last:border-0 bg-surface-muted/50 hover:bg-surface-hover/40 transition-colors',
                               onRowClick && 'cursor-pointer',
                             )}
                           >
+                            {selection && <td className={cn('align-middle', SELECT_COL_CLASS)} />}
                             {childColumns.map((col, ci2) => (
                               <td
                                 key={col.key}

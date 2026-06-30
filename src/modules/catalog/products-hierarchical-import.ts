@@ -5,8 +5,9 @@ import Product from './product.model'
 import ProductCategory from './product-category.model'
 import ProductVariant from './product-variant.model'
 import { persistUnmappedCsvColumns } from './catalog-import-persist'
+import { syncImportedPriceToDefaultList } from './catalog-import-price-list'
 import { allocateUniqueVariantSku } from './allocate-variant-sku'
-import { formatSku, normalizeProductImagesForDb, slugForImportedProduct } from './product.utils'
+import { formatSku, normalizeProductImagesForDb, slugForImportedProduct, importBasePrice } from './product.utils'
 import { resolveOrCreateCategoryIdForImport } from './catalog-import-category'
 import { productSchema, productUpdateSchema } from './product.schema'
 import type { ProductInput, ProductUpdateInput } from './product.schema'
@@ -63,8 +64,11 @@ function buildProductUpdate(
   normalized: ReturnType<typeof mappedRowToNormalizedProductRow>,
   categoryId: string | undefined,
   images: Array<{ url: string; alt: null; position: number }>,
+  mapped?: Record<string, string>,
 ): ProductUpdateInput {
-  const input = rowToProductUpdateInput(normalized, categoryId)
+  const input = rowToProductUpdateInput(normalized, categoryId, {
+    priceMapped: mapped ? 'base_price' in mapped : undefined,
+  })
   if (images.length > 0) input.images = images
   return input
 }
@@ -101,7 +105,7 @@ async function createProductHierarchical(
       barcode: barcode ?? null,
       is_default: true,
       cost_price: cost_price ?? null,
-      base_price: base_price ?? null,
+      base_price: importBasePrice(base_price),
       manage_stock: manage_stock ?? true,
       stock_quantity: stock_quantity ?? 0,
       import_external_id: defaultVariantExternalId,
@@ -110,6 +114,7 @@ async function createProductHierarchical(
     },
     { transaction },
   )
+  await syncImportedPriceToDefaultList(ctx.orgId, variant.id, base_price, actorId, transaction)
   return { productId: product.id, variantId: variant.id }
 }
 
@@ -121,6 +126,7 @@ async function updateProductHierarchical(
   variantExternalId: string,
   importSource: string,
   actorId: string,
+  ctx: TenantContext,
   transaction: Transaction,
 ) {
   const { barcode, cost_price, base_price, stock_quantity, manage_stock, images, ...productData } = input
@@ -143,13 +149,20 @@ async function updateProductHierarchical(
       sku: formatSku(sku),
       barcode: barcode ?? variant.barcode,
       cost_price: cost_price ?? variant.cost_price,
-      base_price: base_price ?? variant.base_price,
+      base_price: base_price !== undefined ? importBasePrice(base_price) : importBasePrice(variant.base_price),
       stock_quantity: stock_quantity ?? variant.stock_quantity,
       manage_stock: manage_stock ?? variant.manage_stock,
       import_external_id: variantExternalId,
       updated_by: actorId,
     },
     { transaction },
+  )
+  await syncImportedPriceToDefaultList(
+    ctx.orgId,
+    variant.id,
+    base_price !== undefined ? importBasePrice(base_price) : importBasePrice(variant.base_price),
+    actorId,
+    transaction,
   )
 }
 
@@ -282,7 +295,7 @@ export async function importProductsHierarchical(
           errors.push({ row: rowNum, message: 'variante default no encontrada' })
           return
         }
-        const upd = buildProductUpdate(normalized, categoryId, images)
+        const upd = buildProductUpdate(normalized, categoryId, images, mapped)
         const parsed = productUpdateSchema.safeParse(upd)
         if (!parsed.success) {
           const msgs = parsed.error.issues.map((iss) => `${iss.path.join('.')}: ${iss.message}`).join(', ')
@@ -297,6 +310,7 @@ export async function importProductsHierarchical(
           variantExtId,
           importSource,
           actorId,
+          ctx,
           t,
         )
         updated++
@@ -399,7 +413,7 @@ export async function importProductsHierarchical(
               name: chNorm.name && chNorm.name !== displayName ? chNorm.name.slice(0, 255) : null,
               is_default: false,
               cost_price: chNorm.cost_price || null,
-              base_price: chNorm.base_price || null,
+              base_price: importBasePrice(chNorm.base_price),
               manage_stock: parseManage(chNorm.manage_stock),
               stock_quantity: parseStock(chNorm.stock_quantity),
               import_external_id: chExt,
@@ -412,6 +426,9 @@ export async function importProductsHierarchical(
             where: { ...whereOrg(ctx), product_id: product.id, import_external_id: chExt },
             transaction: t,
           })
+          if (newV?.id) {
+            await syncImportedPriceToDefaultList(ctx.orgId, newV.id, importBasePrice(chNorm.base_price), actorId, t)
+          }
           await persistUnmappedCsvColumns(
             ch.raw,
             columnMapping,
@@ -428,7 +445,7 @@ export async function importProductsHierarchical(
       }
 
       if (product && (action === 'update' || action === 'upsert')) {
-        const upd = buildProductUpdate(parentNorm, categoryId, parentImages)
+        const upd = buildProductUpdate(parentNorm, categoryId, parentImages, parentMapped)
         upd.name = displayName
         const parsed = productUpdateSchema.safeParse(upd)
         if (!parsed.success) {
@@ -472,7 +489,7 @@ export async function importProductsHierarchical(
                 name: chNorm.name && chNorm.name !== displayName ? chNorm.name.slice(0, 255) : null,
                 is_default: false,
                 cost_price: chNorm.cost_price || null,
-                base_price: chNorm.base_price || null,
+                base_price: importBasePrice(chNorm.base_price),
                 manage_stock: parseManage(chNorm.manage_stock),
                 stock_quantity: parseStock(chNorm.stock_quantity),
                 import_external_id: chExt,
@@ -488,7 +505,7 @@ export async function importProductsHierarchical(
                 barcode: chNorm.barcode || v.barcode,
                 name: chNorm.name && chNorm.name !== displayName ? chNorm.name.slice(0, 255) : v.name,
                 cost_price: chNorm.cost_price ?? v.cost_price,
-                base_price: chNorm.base_price ?? v.base_price,
+                base_price: chNorm.base_price !== undefined ? importBasePrice(chNorm.base_price) : importBasePrice(v.base_price),
                 manage_stock: parseManage(chNorm.manage_stock) ?? v.manage_stock,
                 stock_quantity: parseStock(chNorm.stock_quantity) ?? v.stock_quantity,
                 import_external_id: chExt,
@@ -501,6 +518,9 @@ export async function importProductsHierarchical(
             where: { ...whereOrg(ctx), product_id: product.id, import_external_id: chExt },
             transaction: t,
           })
+          if (vFinal?.id) {
+            await syncImportedPriceToDefaultList(ctx.orgId, vFinal.id, importBasePrice(chNorm.base_price), actorId, t)
+          }
           await persistUnmappedCsvColumns(ch.raw, columnMapping, importSource, ctx.orgId, chExt, product.id, vFinal?.id ?? null, t)
           processedExtIds.add(chExt)
         }

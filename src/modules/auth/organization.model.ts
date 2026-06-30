@@ -37,14 +37,15 @@ export interface OnboardingData {
   completedStepIds?: string[]
 }
 
-export const ORG_IVA_CONDITIONS = [
-  'responsable_inscripto',
-  'monotributista',
-  'consumidor_final',
-  'exento',
-  'no_responsable',
-] as const
-export type OrgIvaCondition = typeof ORG_IVA_CONDITIONS[number]
+import type { OrgIvaCondition } from './org-iva-conditions'
+
+export {
+  ORG_IVA_CONDITIONS,
+  ORG_IVA_CONDITION_LABEL,
+  ORG_IVA_CONDITION_OPTIONS,
+  ORG_IVA_CONDITION_HINT,
+  type OrgIvaCondition,
+} from './org-iva-conditions'
 
 export interface OrganizationAttributes extends Timestamps {
   id: UUID

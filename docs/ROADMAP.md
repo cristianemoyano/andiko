@@ -210,6 +210,8 @@ Productos y servicios. Requisito mínimo para facturar.
 - [x] Datos de logística / shipping por SKU (peso, dimensiones, bultos/presentaciones)
 - [x] Importación CSV de productos con progreso en tiempo real (stream NDJSON)
 - [x] Script de conversión WooCommerce → Andiko (`scripts/convert-wc-products-to-andiko.mjs`)
+- [x] Listas de precios: detalle paginado, fill desde catálogo, clonar, hint lista predeterminada, sync import→lista default, toggle productos sin precio
+- [x] Catálogo: eliminación masiva de productos; ajustes masivos con toggle sin precio base
 
 ---
 

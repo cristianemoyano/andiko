@@ -1,6 +1,7 @@
 import type { CsvHeader } from '@/lib/csv'
 import type { ProductInput, ProductUpdateInput } from './product.schema'
 import type { ProductStatus } from './product.model'
+import { importBasePrice } from './product.utils'
 
 /** Destinos internos permitidos para import (allowlist) y tabla catalog_import_field_maps */
 export const PRODUCT_IMPORT_META_HEADERS: CsvHeader[] = [
@@ -273,7 +274,7 @@ export function rowToProductInput(
     vendor: emptyToNull(row.vendor),
     iva_rate: emptyToUndefined(row.iva_rate),
     unit_of_measure: emptyToUndefined(row.unit_of_measure),
-    base_price: emptyToNull(row.base_price),
+    base_price: importBasePrice(row.base_price),
     cost_price: emptyToNull(row.cost_price),
     barcode: emptyToNull(row.barcode),
     manage_stock: parseBoolean(row.manage_stock),
@@ -288,6 +289,7 @@ export function rowToProductInput(
 export function rowToProductUpdateInput(
   row: ProductCsvRow,
   categoryId: string | undefined,
+  opts?: { priceMapped?: boolean },
 ): ProductUpdateInput {
   return {
     sku: row.sku || undefined,
@@ -298,7 +300,7 @@ export function rowToProductUpdateInput(
     vendor: emptyToNull(row.vendor),
     iva_rate: emptyToUndefined(row.iva_rate),
     unit_of_measure: emptyToUndefined(row.unit_of_measure),
-    base_price: emptyToNull(row.base_price),
+    base_price: opts?.priceMapped ? importBasePrice(row.base_price) : emptyToNull(row.base_price),
     cost_price: emptyToNull(row.cost_price),
     barcode: emptyToNull(row.barcode),
     manage_stock: parseBoolean(row.manage_stock),

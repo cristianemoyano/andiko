@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
@@ -15,6 +15,7 @@ import {
   WooSyncBadge,
   type GroupedColumn,
   type RowGroup,
+  type TableRowSelection,
   type ImportDefaultFieldConfig,
 } from '@/components/erp'
 import { Badge } from '@/components/primitives/Badge'
@@ -161,6 +162,8 @@ export function CatalogoClient({ showWooColumn = false }: { showWooColumn?: bool
   const [editing, setEditing]       = useState<ProductForEdit>(null)
   const [loadingEdit, setLoadingEdit] = useState(false)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [refresh, setRefresh]       = useState(0)
   const [importOpen, setImportOpen] = useState(false)
   const [importSession, setImportSession] = useState(0)
@@ -231,10 +234,81 @@ export function CatalogoClient({ showWooColumn = false }: { showWooColumn?: bool
     try {
       await fetchJson(`/api/v1/catalog/products/${productToDelete.id}`, { method: 'DELETE' })
       setProductToDelete(null)
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        next.delete(productToDelete.id)
+        return next
+      })
       notifySuccess('Producto eliminado')
       setRefresh(r => r + 1)
     } catch (e) {
       notifyApiError(e)
+    }
+  }
+
+  const pageProductIds = useMemo(() => products.map(p => p.id), [products])
+  const selectedCount = selectedIds.size
+  const allPageSelected = pageProductIds.length > 0 && pageProductIds.every(id => selectedIds.has(id))
+
+  const toggleRowSelection = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const toggleAllPageSelection = useCallback(() => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (allPageSelected) {
+        for (const id of pageProductIds) next.delete(id)
+      } else {
+        for (const id of pageProductIds) next.add(id)
+      }
+      return next
+    })
+  }, [allPageSelected, pageProductIds])
+
+  const tableSelection = useMemo<TableRowSelection>(() => ({
+    selectedIds,
+    onToggleRow: toggleRowSelection,
+    onToggleAllOnPage: toggleAllPageSelection,
+    pageIds: pageProductIds,
+  }), [selectedIds, toggleRowSelection, toggleAllPageSelection, pageProductIds])
+
+  async function handleBulkDelete() {
+    if (selectedCount === 0) return
+    try {
+      const result = await fetchJson<{ deleted: number; errors: { id: string; message: string }[] }>(
+        '/api/v1/catalog/products/bulk-delete',
+        {
+          method: 'POST',
+          body: JSON.stringify({ ids: Array.from(selectedIds) }),
+        },
+      )
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        for (const id of selectedIds) {
+          if (!result.errors?.some(e => e.id === id)) next.delete(id)
+        }
+        return next
+      })
+      if (result.deleted > 0) {
+        notifySuccess(
+          result.deleted === 1
+            ? '1 producto eliminado'
+            : `${result.deleted} productos eliminados`,
+        )
+        setRefresh(r => r + 1)
+      }
+      if (result.errors?.length) {
+        notifyApiError(new Error(`${result.errors.length} producto(s) no se pudieron eliminar`))
+      }
+    } catch (e) {
+      notifyApiError(e)
+      throw e
     }
   }
 
@@ -442,6 +516,7 @@ export function CatalogoClient({ showWooColumn = false }: { showWooColumn?: bool
           parentKey={p => p.id}
           childKey={v => v.id}
           onRowClick={p => router.push(`/catalogo/${p.id}`)}
+          selection={tableSelection}
           emptyMessage="No hay productos. Creá el primero."
           toolbar={
             <>
@@ -477,6 +552,20 @@ export function CatalogoClient({ showWooColumn = false }: { showWooColumn?: bool
                   <option value="woocommerce">WooCommerce</option>
                 </select>
               )}
+              {selectedCount > 0 && (
+                <>
+                  <span className="text-[12px] font-medium text-fg-muted">
+                    {selectedCount} seleccionado{selectedCount !== 1 ? 's' : ''}
+                  </span>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setBulkDeleteOpen(true)}
+                  >
+                    Eliminar
+                  </Button>
+                </>
+              )}
               <span className="flex-1" />
               <span className="text-[12px] text-fg-muted">{total} producto{total !== 1 ? 's' : ''}</span>
             </>
@@ -496,6 +585,20 @@ export function CatalogoClient({ showWooColumn = false }: { showWooColumn?: bool
           onSaved={() => { setModalOpen(false); setEditing(null); setRefresh(r => r + 1) }}
         />
       )}
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title="Eliminar productos"
+        description={
+          selectedCount === 1
+            ? 'Se eliminará 1 producto seleccionado.'
+            : `Se eliminarán ${selectedCount} productos seleccionados.`
+        }
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={handleBulkDelete}
+      />
 
       <ConfirmDialog
         open={!!productToDelete}

@@ -34,6 +34,7 @@ vi.mock('./product-variant.model', () => ({
 
 vi.mock('./product-category.model', () => ({ default: {} }))
 vi.mock('./catalog-import-persist', () => ({ persistUnmappedCsvColumns: vi.fn() }))
+vi.mock('./catalog-import-price-list', () => ({ syncImportedPriceToDefaultList: vi.fn() }))
 vi.mock('./catalog-import-category', () => ({ resolveOrCreateCategoryIdForImport: vi.fn() }))
 vi.mock('./allocate-variant-sku', () => ({ allocateUniqueVariantSku: vi.fn() }))
 vi.mock('./products-hierarchical-import', () => ({ importProductsHierarchical: vi.fn() }))

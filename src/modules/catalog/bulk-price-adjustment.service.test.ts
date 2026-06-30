@@ -47,4 +47,12 @@ describe('bulk-price-adjustment math', () => {
   it('rounds half-up to 2 decimals', () => {
     expect(applyAdjustment('10.00', { adjustment_type: 'percent_increase', value: '33.333' })).toBe('13.33')
   })
+
+  it('applies percent increase from zero', () => {
+    expect(applyAdjustment('0.00', { adjustment_type: 'percent_increase', value: '10' })).toBe('0.00')
+  })
+
+  it('applies fixed increase from zero', () => {
+    expect(applyAdjustment('0.00', { adjustment_type: 'fixed_increase', value: '100' })).toBe('100.00')
+  })
 })

@@ -1,12 +1,14 @@
 import 'server-only'
-import { Op } from 'sequelize'
+import { Op, type Transaction } from 'sequelize'
 import sequelize from '@/lib/db'
 import PriceList from './price-list.model'
 import PriceListItem from './price-list-item.model'
+import Product from './product.model'
 import ProductVariant from './product-variant.model'
 import { paginate, toPaginated } from '@/lib/pagination'
+import { isMissingBasePrice } from './product.utils'
 import logger from '@/lib/logger'
-import type { PriceListInput, PriceListUpdateInput, PriceListQuery, PriceListItemInput } from './price-list.schema'
+import type { PriceListInput, PriceListUpdateInput, PriceListQuery, PriceListItemInput, PriceListItemsQuery, ClonePriceListInput, FillPriceListFromCatalogInput, FillPriceListFromCatalogResult } from './price-list.schema'
 import type { UUID } from '@/types'
 
 function orgWhere(orgId: string) {
@@ -87,39 +89,272 @@ export async function deletePriceList(id: UUID, actorId: UUID, orgId: string) {
   logger.info({ priceListId: id, actorId }, 'price list deleted')
 }
 
-export async function listPriceListItems(priceListId: UUID, orgId: string) {
-  await getPriceList(priceListId, orgId)
-  return PriceListItem.findAll({
-    where: { price_list_id: priceListId, ...orgWhere(orgId) },
-    include: [{ model: ProductVariant, as: 'variant', attributes: ['id', 'sku', 'name', 'base_price', 'product_id'] }],
-    order: [['valid_from', 'DESC']],
+const CLONE_ITEMS_BATCH_SIZE = 500
+const FILL_ITEMS_BATCH_SIZE = 500
+
+async function resolveFillPriceListCandidates(
+  priceListId: UUID,
+  orgId: string,
+  categoryId?: UUID,
+  includeWithoutPrice = false,
+): Promise<{
+  toAdd: Array<{ variantId: UUID; price: string; normalizeBasePrice: boolean }>
+  skipped_existing: number
+  skipped_no_price: number
+  total_active_variants: number
+}> {
+  const productWhere: Record<string, unknown> = { ...orgWhere(orgId), status: 'active' }
+  if (categoryId) productWhere.category_id = categoryId
+
+  const variants = await ProductVariant.findAll({
+    attributes: ['id', 'base_price'],
+    where: orgWhere(orgId),
+    include: [{
+      model: Product,
+      as: 'product',
+      required: true,
+      attributes: ['id'],
+      where: productWhere,
+    }],
   })
+
+  const existingItems = await PriceListItem.findAll({
+    where: { price_list_id: priceListId, ...orgWhere(orgId) },
+    attributes: ['product_variant_id'],
+  })
+  const existingIds = new Set(existingItems.map((item) => item.product_variant_id))
+  const skipped_existing = variants.filter((v) => existingIds.has(v.id)).length
+
+  const candidates = variants.filter((v) => !existingIds.has(v.id))
+  const withoutPrice = candidates.filter((v) => isMissingBasePrice(v.base_price))
+  const withPrice = candidates.filter((v) => !isMissingBasePrice(v.base_price))
+
+  const toAdd = [
+    ...withPrice.map((v) => ({
+      variantId: v.id,
+      price: String(v.base_price),
+      normalizeBasePrice: false,
+    })),
+    ...(includeWithoutPrice
+      ? withoutPrice.map((v) => ({
+          variantId: v.id,
+          price: '0.00',
+          normalizeBasePrice: true,
+        }))
+      : []),
+  ]
+  const skipped_no_price = includeWithoutPrice ? 0 : withoutPrice.length
+
+  return { toAdd, skipped_existing, skipped_no_price, total_active_variants: variants.length }
+}
+
+export async function fillPriceListFromCatalog(
+  priceListId: UUID,
+  input: FillPriceListFromCatalogInput,
+  actorId: UUID,
+  orgId: string,
+): Promise<FillPriceListFromCatalogResult> {
+  await getPriceList(priceListId, orgId)
+
+  const { toAdd, skipped_existing, skipped_no_price, total_active_variants } = await resolveFillPriceListCandidates(
+    priceListId,
+    orgId,
+    input.category_id,
+    input.include_without_price,
+  )
+
+  if (input.dry_run || toAdd.length === 0) {
+    return { added: toAdd.length, skipped_existing, skipped_no_price, total_active_variants }
+  }
+
+  await sequelize.transaction(async (t) => {
+    for (let i = 0; i < toAdd.length; i += FILL_ITEMS_BATCH_SIZE) {
+      const batch = toAdd.slice(i, i + FILL_ITEMS_BATCH_SIZE)
+      await PriceListItem.bulkCreate(
+        batch.map((row) => ({
+          price_list_id: priceListId,
+          product_variant_id: row.variantId,
+          org_id: orgId,
+          price: row.price,
+          created_by: actorId,
+          updated_by: actorId,
+        })),
+        { transaction: t },
+      )
+    }
+
+    const normalizeIds = toAdd.filter((row) => row.normalizeBasePrice).map((row) => row.variantId)
+    for (let i = 0; i < normalizeIds.length; i += FILL_ITEMS_BATCH_SIZE) {
+      const batch = normalizeIds.slice(i, i + FILL_ITEMS_BATCH_SIZE)
+      await ProductVariant.update(
+        { base_price: '0.00', updated_by: actorId },
+        {
+          where: {
+            id: { [Op.in]: batch },
+            ...orgWhere(orgId),
+            base_price: null,
+          },
+          transaction: t,
+        },
+      )
+    }
+  })
+
+  logger.info(
+    { priceListId, added: toAdd.length, skipped_existing, skipped_no_price, categoryId: input.category_id, actorId },
+    'price list filled from catalog',
+  )
+
+  return { added: toAdd.length, skipped_existing, skipped_no_price, total_active_variants }
+}
+
+export async function clonePriceList(
+  sourceId: UUID,
+  input: ClonePriceListInput,
+  actorId: UUID,
+  orgId: string,
+) {
+  await getPriceList(sourceId, orgId)
+
+  return sequelize.transaction(async (t) => {
+    const sourceItems = await PriceListItem.findAll({
+      where: { price_list_id: sourceId, ...orgWhere(orgId) },
+      attributes: ['product_variant_id', 'price'],
+      transaction: t,
+    })
+
+    const newList = await PriceList.create(
+      {
+        name: input.name,
+        description: input.description ?? null,
+        is_default: false,
+        is_active: input.is_active ?? true,
+        org_id: orgId,
+        created_by: actorId,
+        updated_by: actorId,
+      },
+      { transaction: t },
+    )
+
+    for (let i = 0; i < sourceItems.length; i += CLONE_ITEMS_BATCH_SIZE) {
+      const batch = sourceItems.slice(i, i + CLONE_ITEMS_BATCH_SIZE)
+      await PriceListItem.bulkCreate(
+        batch.map((item) => ({
+          price_list_id: newList.id,
+          product_variant_id: item.product_variant_id,
+          org_id: orgId,
+          price: item.price,
+          created_by: actorId,
+          updated_by: actorId,
+        })),
+        { transaction: t },
+      )
+    }
+
+    logger.info(
+      { sourceId, priceListId: newList.id, itemsCopied: sourceItems.length, actorId },
+      'price list cloned',
+    )
+
+    return { priceList: newList, items_copied: sourceItems.length }
+  })
+}
+
+export async function listPriceListItems(priceListId: UUID, query: PriceListItemsQuery, orgId: string) {
+  await getPriceList(priceListId, orgId)
+
+  const { page, limit, search } = query
+  const { offset } = paginate(page, limit)
+
+  const baseWhere = { price_list_id: priceListId, ...orgWhere(orgId) }
+  const where: Record<string, unknown> = search?.trim()
+    ? {
+        [Op.and]: [
+          baseWhere,
+          {
+            [Op.or]: [
+              { '$variant.sku$': { [Op.iLike]: `%${search.trim()}%` } },
+              { '$variant.name$': { [Op.iLike]: `%${search.trim()}%` } },
+              { '$variant.product.name$': { [Op.iLike]: `%${search.trim()}%` } },
+            ],
+          },
+        ],
+      }
+    : baseWhere
+
+  const { rows, count } = await PriceListItem.findAndCountAll({
+    where,
+    attributes: ['id', 'price', 'valid_from', 'created_at', 'updated_at'],
+    include: [{
+      model: ProductVariant,
+      as: 'variant',
+      required: true,
+      attributes: ['id', 'sku', 'name', 'base_price', 'product_id'],
+      include: [{
+        model: Product,
+        as: 'product',
+        required: true,
+        attributes: ['id', 'name'],
+      }],
+    }],
+    order: [
+      ['valid_from', 'DESC'],
+      [{ model: ProductVariant, as: 'variant' }, 'sku', 'ASC'],
+    ],
+    limit,
+    offset,
+    distinct: true,
+    subQuery: false,
+  })
+
+  return toPaginated(rows, count, page, limit)
+}
+
+export async function upsertPriceListItemInTransaction(
+  priceListId: UUID,
+  variantId: UUID,
+  price: string,
+  actorId: UUID,
+  orgId: string,
+  transaction: Transaction,
+) {
+  // Soft-delete current price — keeps history
+  await PriceListItem.update(
+    { deleted_by: actorId },
+    {
+      where: { price_list_id: priceListId, product_variant_id: variantId, ...orgWhere(orgId) },
+      transaction,
+    },
+  )
+  await PriceListItem.destroy({
+    where: { price_list_id: priceListId, product_variant_id: variantId, ...orgWhere(orgId) },
+    transaction,
+  })
+
+  return PriceListItem.create(
+    {
+      price_list_id: priceListId,
+      product_variant_id: variantId,
+      org_id: orgId,
+      price,
+      created_by: actorId,
+      updated_by: actorId,
+    },
+    { transaction },
+  )
 }
 
 export async function setPriceListItem(priceListId: UUID, input: PriceListItemInput, actorId: UUID, orgId: string) {
   await getPriceList(priceListId, orgId)
 
   return sequelize.transaction(async (t) => {
-    // Soft-delete current price — keeps history
-    await PriceListItem.update(
-      { deleted_by: actorId },
-      { where: { price_list_id: priceListId, product_variant_id: input.product_variant_id, ...orgWhere(orgId) }, transaction: t }
-    )
-    await PriceListItem.destroy({
-      where: { price_list_id: priceListId, product_variant_id: input.product_variant_id, ...orgWhere(orgId) },
-      transaction: t,
-    })
-
-    const item = await PriceListItem.create(
-      {
-        price_list_id:      priceListId,
-        product_variant_id: input.product_variant_id,
-        org_id:             orgId,
-        price:              input.price,
-        created_by:         actorId,
-        updated_by:         actorId,
-      },
-      { transaction: t }
+    const item = await upsertPriceListItemInTransaction(
+      priceListId,
+      input.product_variant_id,
+      input.price,
+      actorId,
+      orgId,
+      t,
     )
 
     logger.info({ priceListId, variantId: input.product_variant_id, price: input.price, actorId }, 'price set')
