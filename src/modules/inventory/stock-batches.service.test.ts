@@ -15,7 +15,7 @@ vi.mock('./stock-item-batch.model', () => ({
 }))
 
 import StockItemBatch from './stock-item-batch.model'
-import { allocateInbound, consumeFefo } from './stock-batches.service'
+import { allocateInbound, consumeFefo, ensureBatchesMatchAggregate } from './stock-batches.service'
 
 const T = {} as never
 
@@ -142,5 +142,51 @@ describe('consumeFefo', () => {
     await expect(
       consumeFefo({ stockItemId: 'item-1', quantity: new Decimal('10') }, T),
     ).rejects.toThrow('INSUFFICIENT_STOCK')
+  })
+})
+
+describe('ensureBatchesMatchAggregate', () => {
+  it('creates default batch when aggregate exceeds batch sum', async () => {
+    ;(StockItemBatch.findAll as Mock).mockResolvedValue([])
+
+    await ensureBatchesMatchAggregate(
+      { orgId: 'org-1', stockItemId: 'item-1', aggregateQty: new Decimal('150') },
+      T,
+    )
+
+    expect(StockItemBatch.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stock_item_id: 'item-1',
+        batch_code:    null,
+        quantity:      '150.0000',
+      }),
+      expect.anything(),
+    )
+  })
+
+  it('tops up default batch when batches under-allocate', async () => {
+    const def = batch({ id: 'def', batch_code: null, quantity: '0' })
+    ;(StockItemBatch.findAll as Mock).mockResolvedValue([def])
+
+    await ensureBatchesMatchAggregate(
+      { orgId: 'org-1', stockItemId: 'item-1', aggregateQty: new Decimal('150') },
+      T,
+    )
+
+    expect(def.update).toHaveBeenCalledWith({ quantity: '150.0000' }, expect.anything())
+    expect(StockItemBatch.create).not.toHaveBeenCalled()
+  })
+
+  it('no-ops when batches already cover aggregate', async () => {
+    const def = batch({ id: 'def', batch_code: null, quantity: '150' })
+    ;(StockItemBatch.findAll as Mock).mockResolvedValue([def])
+
+    await ensureBatchesMatchAggregate(
+      { orgId: 'org-1', stockItemId: 'item-1', aggregateQty: new Decimal('150') },
+      T,
+    )
+
+    expect(def.update).not.toHaveBeenCalled()
+    expect(StockItemBatch.create).not.toHaveBeenCalled()
   })
 })

@@ -212,6 +212,7 @@ Productos y servicios. Requisito mínimo para facturar.
 - [x] Script de conversión WooCommerce → Andiko (`scripts/convert-wc-products-to-andiko.mjs`)
 - [x] Listas de precios: detalle paginado, fill desde catálogo, clonar, hint lista predeterminada, sync import→lista default, toggle productos sin precio
 - [x] Catálogo: eliminación masiva de productos; ajustes masivos con toggle sin precio base
+- [x] Import catálogo → inventario: depósito fijo en confirmación; sync stock por `manage_stock`
 
 ---
 
@@ -317,7 +318,9 @@ Gestión de stock integrada con ventas y compras.
 ### Pendientes
 - [x] Remitos de entrega
 - [x] Trazabilidad por lotes (lote + vencimiento por cantidad) con salidas FEFO y vínculo explícito en `stock_movements`
-- [ ] Transferencias de stock entre depósitos / sucursales
+- [x] Transferencias de stock entre depósitos / sucursales
+- [x] Carga masiva de stock desde catálogo por depósito (filtros, progreso NDJSON, cancelación)
+- [x] Importación CSV de catálogo: depósito obligatorio en confirmación; stock según `manage_stock`
 - [ ] Métodos de valuación de stock (FIFO / promedio ponderado) para costeo
 
 ---

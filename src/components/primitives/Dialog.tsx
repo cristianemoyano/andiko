@@ -40,9 +40,38 @@ export interface DialogProps extends VariantProps<typeof panelVariants> {
   hideClose?: boolean
   /** Body padding (default true). Use false when the child manages its own layout (split footers). */
   padded?: boolean
+  /** Acciones fijas al pie del modal, fuera del área con scroll. */
+  footer?: React.ReactNode
 }
 
-function Dialog({ open, onOpenChange, title, description, children, size, className, hideClose, padded = true }: DialogProps) {
+export interface DialogFooterProps {
+  children: React.ReactNode
+  className?: string
+  /** Error inline sobre los botones (p. ej. validación al enviar). */
+  error?: string | null
+}
+
+function DialogFooter({ children, className, error }: DialogFooterProps) {
+  return (
+    <div
+      className={cn(
+        'flex flex-shrink-0 flex-col gap-2 border-t border-border bg-surface px-5 py-3',
+        className,
+      )}
+    >
+      {error ? (
+        <p className="text-danger text-[13px] leading-snug" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function Dialog({ open, onOpenChange, title, description, children, size, className, hideClose, padded = true, footer }: DialogProps) {
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
@@ -85,10 +114,11 @@ function Dialog({ open, onOpenChange, title, description, children, size, classN
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div className={cn(padded && 'px-5 py-4')}>{children}</div>
           </div>
+          {footer}
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>
   )
 }
 
-export { Dialog }
+export { Dialog, DialogFooter }

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.34.0](https://github.com/cristianemoyano/andiko/compare/v0.33.0...v0.34.0) (2026-06-30)
+
+### Features
+
+* **inventory:** add transfers, catalog stock load, and import depósito ([142fca8](https://github.com/cristianemoyano/andiko/commit/142fca8729903040bf98163e497a11cd0bc19570))
+
 ## [0.33.0](https://github.com/cristianemoyano/andiko/compare/v0.32.0...v0.33.0) (2026-06-30)
 
 ### Features

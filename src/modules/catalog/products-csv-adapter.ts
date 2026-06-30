@@ -289,7 +289,7 @@ export function rowToProductInput(
 export function rowToProductUpdateInput(
   row: ProductCsvRow,
   categoryId: string | undefined,
-  opts?: { priceMapped?: boolean },
+  opts?: { priceMapped?: boolean; stockMapped?: boolean },
 ): ProductUpdateInput {
   return {
     sku: row.sku || undefined,
@@ -304,7 +304,7 @@ export function rowToProductUpdateInput(
     cost_price: emptyToNull(row.cost_price),
     barcode: emptyToNull(row.barcode),
     manage_stock: parseBoolean(row.manage_stock),
-    stock_quantity: parseInteger(row.stock_quantity),
+    stock_quantity: opts?.stockMapped ? (parseInteger(row.stock_quantity) ?? 0) : undefined,
     description: emptyToNull(row.description),
     short_description: emptyToNull(row.short_description),
     ncm_code: emptyToNull(row.ncm_code),

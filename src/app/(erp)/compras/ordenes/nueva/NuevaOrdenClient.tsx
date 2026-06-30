@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
@@ -12,6 +12,7 @@ import { DatePicker } from '@/components/primitives/DatePicker'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
 import { SalesLineItemsEditor, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
 import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
+import { consumePurchaseOrderDraft } from '@/lib/purchase-order-draft'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
@@ -36,6 +37,23 @@ export function NuevaOrdenClient() {
   const [internalNotes,    setInternalNotes]    = useState('')
   const [saving,           setSaving]           = useState(false)
   const [serverError,      setServerError]      = useState<string | null>(null)
+
+  useEffect(() => {
+    const draft = consumePurchaseOrderDraft()
+    if (!draft) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate once from sessionStorage draft
+    setItems(draft.items.map(item => ({
+      id:           crypto.randomUUID(),
+      product_id:   item.product_id,
+      variant_id:   item.variant_id,
+      description:  item.description,
+      quantity:     item.quantity,
+      unit_price:   '0',
+      discount_pct: '0',
+      iva_rate:     '21',
+    })))
+    if (draft.notes) setNotes(draft.notes)
+  }, [])
 
   const searchSuppliers = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
     try {

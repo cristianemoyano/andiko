@@ -8,6 +8,7 @@ import type { TenantContext } from '@/lib/tenancy'
 import { paginate, toPaginated } from '@/lib/pagination'
 import StockItem from './stock-item.model'
 import StockMovement from './stock-movement.model'
+import Warehouse from './warehouse.model'
 import type { StockMovementType, StockReferenceType } from './stock-movement.model'
 import { resolveDefaultWarehouse } from './warehouses.service'
 import type { StockMovementQuery } from './stock-movement.schema'
@@ -28,6 +29,14 @@ interface ApplyMovementParams {
   batchCode?:    string | null
   /** Inbound only: expiry (YYYY-MM-DD) for the batch the quantity lands on. */
   expiryDate?:   string | null
+  /** Fila ya bloqueada (evita findOrCreate repetido en cargas masivas). */
+  stockItem?:    StockItem
+  /** Mínimo del depósito ya resuelto (evita consulta por ítem). */
+  defaultMinimum?: string
+  /** El caller sincroniza product_variants.stock_quantity al final del lote. */
+  skipVariantStockSync?: boolean
+  /** Omite encolar WooCommerce en cargas masivas (miles de ítems). */
+  skipWooEnqueue?: boolean
 }
 
 /**
@@ -49,14 +58,32 @@ interface ApplyMovementParams {
  * expiry so the existing expiry-alert queries keep working unchanged.
  */
 export async function applyMovement(params: ApplyMovementParams, t: Transaction): Promise<void> {
-  const { variantId, warehouseId, orgId, movementType, referenceType, referenceId, quantityDelta, notes, actorId } = params
-  const { allocateInbound, consumeFefo, earliestExpiry } = await import('./stock-batches.service')
+  const {
+    variantId, warehouseId, orgId, movementType, referenceType, referenceId,
+    quantityDelta, notes, actorId, stockItem: existingItem,
+    defaultMinimum: defaultMinimumIn, skipVariantStockSync, skipWooEnqueue,
+  } = params
+  const { allocateInbound, consumeFefo, earliestExpiry, ensureBatchesMatchAggregate } = await import('./stock-batches.service')
+  const { resolveDefaultMinimumForWarehouse } = await import('./stock-items.service')
 
-  const [item] = await StockItem.findOrCreate({
-    where:    { variant_id: variantId, warehouse_id: warehouseId },
-    defaults: { variant_id: variantId, warehouse_id: warehouseId, org_id: orgId, quantity: '0' },
-    transaction: t,
-  })
+  let item = existingItem
+  if (!item) {
+    const defaultMinimum = defaultMinimumIn
+      ?? await resolveDefaultMinimumForWarehouse(warehouseId, orgId, t)
+
+    const [found] = await StockItem.findOrCreate({
+      where:    { variant_id: variantId, warehouse_id: warehouseId },
+      defaults: {
+        variant_id: variantId,
+        warehouse_id: warehouseId,
+        org_id: orgId,
+        quantity: '0',
+        minimum_quantity: defaultMinimum,
+      },
+      transaction: t,
+    })
+    item = found
+  }
 
   const before = new Decimal(item.quantity)
   const after  = before.plus(quantityDelta)
@@ -100,6 +127,10 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
     )
     await writeMovement(quantityDelta, alloc.batchId)
   } else if (quantityDelta.lt(0)) {
+    await ensureBatchesMatchAggregate(
+      { orgId, stockItemId: item.id, aggregateQty: before },
+      t,
+    )
     const allocations = await consumeFefo({ stockItemId: item.id, quantity: quantityDelta.abs() }, t)
     for (const alloc of allocations) {
       await writeMovement(alloc.quantity.negated(), alloc.batchId)
@@ -115,24 +146,28 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
   )
 
   // Sync denormalized stock_quantity on product_variant
-  const ProductVariant = (await import('@/modules/catalog/product-variant.model')).default
-  const totalStock = await StockItem.sum('quantity', {
-    where: { variant_id: variantId },
-    transaction: t,
-  }) as number | null
-  await ProductVariant.update(
-    { stock_quantity: Math.max(0, Math.round((totalStock ?? 0) * 10000) / 10000) },
-    { where: { id: variantId }, transaction: t },
-  )
+  if (!skipVariantStockSync) {
+    const ProductVariant = (await import('@/modules/catalog/product-variant.model')).default
+    const totalStock = await StockItem.sum('quantity', {
+      where: { variant_id: variantId },
+      transaction: t,
+    }) as number | null
+    await ProductVariant.update(
+      { stock_quantity: Math.max(0, Math.round((totalStock ?? 0) * 10000) / 10000) },
+      { where: { id: variantId }, transaction: t },
+    )
+  }
 
   // Best-effort: queue a stock push to any WooCommerce site sharing this
   // warehouse. Written to the transactional outbox inside this transaction, so
   // it's atomic with the movement and never fires for a rolled-back change.
-  try {
-    const woo = await import('@/modules/integrations/woocommerce/woo-stock.service')
-    await woo.enqueueStockSync(variantId, warehouseId, orgId, t)
-  } catch (err) {
-    logger.warn({ variantId, warehouseId, err: String(err) }, 'woocommerce stock enqueue skipped')
+  if (!skipWooEnqueue) {
+    try {
+      const woo = await import('@/modules/integrations/woocommerce/woo-stock.service')
+      await woo.enqueueStockSync(variantId, warehouseId, orgId, t)
+    } catch (err) {
+      logger.warn({ variantId, warehouseId, err: String(err) }, 'woocommerce stock enqueue skipped')
+    }
   }
 }
 
@@ -605,6 +640,12 @@ export async function listMovements(query: StockMovementQuery, orgId: string) {
         attributes: ['id', 'sku', 'name', 'is_default'],
         required:   !!search,
         include: [{ model: Product, as: 'product', attributes: ['id', 'name'] }],
+      },
+      {
+        model:      Warehouse,
+        as:         'warehouse',
+        attributes: ['id', 'name'],
+        required:   false,
       },
       {
         model:      StockItemBatch,

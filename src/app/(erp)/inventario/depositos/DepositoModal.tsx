@@ -15,6 +15,7 @@ type Warehouse = {
   description: string | null
   branch_id: string | null
   is_active: boolean
+  default_minimum_quantity?: string
 }
 
 interface DepositoModalProps {
@@ -28,6 +29,7 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
 
   const [name, setName]               = useState(warehouse?.name ?? '')
   const [description, setDescription] = useState(warehouse?.description ?? '')
+  const [defaultMinimum, setDefaultMinimum] = useState(warehouse?.default_minimum_quantity ?? '0')
   const [errors, setErrors]           = useState<Record<string, string>>({})
   const [serverError, setServerError] = useState<string | null>(null)
   const [submitting, setSubmitting]   = useState(false)
@@ -37,6 +39,7 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional form reset when warehouse prop changes
     setName(warehouse?.name ?? '')
     setDescription(warehouse?.description ?? '')
+    setDefaultMinimum(warehouse?.default_minimum_quantity ?? '0')
     setErrors({})
     setServerError(null)
   }, [warehouse])
@@ -45,6 +48,8 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
     e.preventDefault()
     const errs: Record<string, string> = {}
     if (!name.trim()) errs.name = 'El nombre es requerido'
+    const minN = Number(defaultMinimum)
+    if (!Number.isFinite(minN) || minN < 0) errs.default_minimum = 'Ingresá un mínimo válido ≥ 0'
     if (Object.keys(errs).length) { setErrors(errs); return }
 
     setSubmitting(true)
@@ -54,7 +59,11 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
       const method = isEdit ? 'PATCH' : 'POST'
       await fetchJson(url, {
         method,
-        body: JSON.stringify({ name: name.trim(), description: description.trim() || null }),
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim() || null,
+          default_minimum_quantity: Number(defaultMinimum),
+        }),
       })
       onSaved()
     } catch (e) {
@@ -98,6 +107,20 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
               placeholder="Descripción opcional"
               rows={2}
             />
+          </FormField>
+
+          <FormField label="Stock mínimo default" error={errors.default_minimum}>
+            <Input
+              type="number"
+              min={0}
+              step="0.0001"
+              value={defaultMinimum}
+              onChange={e => setDefaultMinimum(e.target.value)}
+              placeholder="0"
+            />
+            <p className="text-[11px] text-fg-subtle mt-1">
+              Se asigna a productos nuevos en este depósito. Aplicá en masa desde el detalle del depósito.
+            </p>
           </FormField>
 
           {serverError && (

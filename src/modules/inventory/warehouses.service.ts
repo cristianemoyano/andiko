@@ -1,4 +1,5 @@
 import 'server-only'
+import Decimal from 'decimal.js'
 import { Op } from 'sequelize'
 import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
@@ -24,7 +25,7 @@ export async function listWarehouses(query: WarehouseQuery, ctx: TenantContext) 
     limit,
     offset,
     order: [['name', 'ASC']],
-    attributes: ['id', 'org_id', 'branch_id', 'name', 'description', 'is_active', 'created_at'],
+    attributes: ['id', 'org_id', 'branch_id', 'name', 'description', 'is_active', 'default_minimum_quantity', 'created_at'],
   })
 
   return toPaginated(rows, count, page, limit)
@@ -36,9 +37,18 @@ export async function getWarehouse(id: string, orgId: string) {
   return warehouse
 }
 
+function withDecimalDefaultMinimum<T extends { default_minimum_quantity?: number }>(input: T) {
+  const { default_minimum_quantity, ...rest } = input
+  if (default_minimum_quantity === undefined) return rest
+  return {
+    ...rest,
+    default_minimum_quantity: new Decimal(default_minimum_quantity).toFixed(4),
+  }
+}
+
 export async function createWarehouse(input: WarehouseInput, ctx: TenantContext, actorId: string) {
   const warehouse = await Warehouse.create({
-    ...input,
+    ...withDecimalDefaultMinimum(input),
     org_id:     ctx.orgId,
     created_by: actorId,
     updated_by: actorId,
@@ -51,7 +61,7 @@ export async function updateWarehouse(id: string, input: WarehouseUpdateInput, c
   const warehouse = await Warehouse.findOne({ where: { id, org_id: ctx.orgId } })
   if (!warehouse) throw new Error('WAREHOUSE_NOT_FOUND')
 
-  await warehouse.update({ ...input, updated_by: actorId })
+  await warehouse.update({ ...withDecimalDefaultMinimum(input), updated_by: actorId })
   logger.info({ warehouseId: id, orgId: ctx.orgId, actorId }, 'warehouse updated')
   return warehouse
 }

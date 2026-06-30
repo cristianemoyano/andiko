@@ -9,6 +9,7 @@ import ProductVariant from './product-variant.model'
 import { generateSlug, formatSku, normalizeProductImagesForDb, slugForImportedProduct, importBasePrice } from './product.utils'
 import { persistUnmappedCsvColumns } from './catalog-import-persist'
 import { syncImportedPriceToDefaultList } from './catalog-import-price-list'
+import { bindImportStockWarehouse, syncImportedStockIfMapped } from './catalog-import-stock'
 import { resolveOrCreateCategoryIdForImport } from './catalog-import-category'
 import { allocateUniqueVariantSku } from './allocate-variant-sku'
 import { importProductsHierarchical } from './products-hierarchical-import'
@@ -304,6 +305,11 @@ export type ImportResult = {
   errors: { row: number; message: string }[]
 }
 
+export type CatalogImportOptions = {
+  /** Depósito donde cargar stock cuando el CSV mapea `stock_quantity`. */
+  stockWarehouseId?: string | null
+}
+
 export async function listProductsForExport(
   query: Pick<ProductQuery, 'search' | 'status' | 'product_type' | 'category_id'>,
   ctx: TenantContext,
@@ -366,6 +372,7 @@ export async function importProducts(
   actorId: string,
   importSource = 'catalog_csv',
   importDefaults: Record<string, string> = {},
+  importOptions: CatalogImportOptions = {},
   onProgress?: ImportProgressCallback,
 ): Promise<ImportResult> {
   const IMPORT_BATCH_SIZE = 1000
@@ -382,6 +389,7 @@ export async function importProducts(
       ctx,
       actorId,
       importSource,
+      importOptions,
       onProgress,
     )
   }
@@ -404,6 +412,7 @@ export async function importProducts(
   for (let start = 0; start < mappedRowsEffective.length; start += IMPORT_BATCH_SIZE) {
     const end = Math.min(start + IMPORT_BATCH_SIZE, mappedRowsEffective.length)
     await sequelize.transaction(async (t) => {
+      bindImportStockWarehouse(t, importOptions.stockWarehouseId ?? null)
       for (let i = start; i < end; i++) {
         try {
         const rowNum = i + 2
@@ -442,6 +451,7 @@ export async function importProducts(
         if (images.length > 0) rowInput.images = images
         const rowUpdate = rowToProductUpdateInput(normalized, categoryId, {
           priceMapped: 'base_price' in mapped,
+          stockMapped: 'stock_quantity' in mapped,
         })
         if (images.length > 0) rowUpdate.images = images
 
@@ -477,7 +487,10 @@ export async function importProducts(
             errors.push({ row: rowNum, message: msgs })
             continue
           }
-          const { productId, variantId } = await createProductFromImport(parsed.data, actorId, ctx, t, importOpts)
+          const { productId, variantId } = await createProductFromImport(parsed.data, actorId, ctx, t, {
+            ...importOpts,
+            stockMapped: 'stock_quantity' in mapped,
+          })
           created++
           await persistUnmappedCsvColumns(raw, columnMapping, importSource, ctx.orgId, rowKey, productId, variantId, t)
           continue
@@ -494,7 +507,10 @@ export async function importProducts(
             errors.push({ row: rowNum, message: msgs })
             continue
           }
-          await updateProductFromImport(existingVariant, parsed.data, actorId, t, importOpts)
+          await updateProductFromImport(existingVariant, parsed.data, actorId, ctx, t, {
+            ...importOpts,
+            stockMapped: 'stock_quantity' in mapped,
+          })
           updated++
           const product = existingVariant.get('product') as Product
           await persistUnmappedCsvColumns(raw, columnMapping, importSource, ctx.orgId, rowKey, product.id, existingVariant.id, t)
@@ -508,7 +524,10 @@ export async function importProducts(
             errors.push({ row: rowNum, message: msgs })
             continue
           }
-          await updateProductFromImport(existingVariant, parsed.data, actorId, t, importOpts)
+          await updateProductFromImport(existingVariant, parsed.data, actorId, ctx, t, {
+            ...importOpts,
+            stockMapped: 'stock_quantity' in mapped,
+          })
           updated++
           const product = existingVariant.get('product') as Product
           await persistUnmappedCsvColumns(raw, columnMapping, importSource, ctx.orgId, rowKey, product.id, existingVariant.id, t)
@@ -519,7 +538,10 @@ export async function importProducts(
             errors.push({ row: rowNum, message: msgs })
             continue
           }
-          const { productId, variantId } = await createProductFromImport(parsed.data, actorId, ctx, t, importOpts)
+          const { productId, variantId } = await createProductFromImport(parsed.data, actorId, ctx, t, {
+            ...importOpts,
+            stockMapped: 'stock_quantity' in mapped,
+          })
           created++
           await persistUnmappedCsvColumns(raw, columnMapping, importSource, ctx.orgId, rowKey, productId, variantId, t)
         }
@@ -541,7 +563,7 @@ async function createProductFromImport(
   actorId: string,
   ctx: TenantContext,
   transaction: Transaction,
-  opts: { importSource: string; importExternalId: string | null },
+  opts: { importSource: string; importExternalId: string | null; stockMapped?: boolean },
 ): Promise<{ productId: string; variantId: string }> {
   const { sku, barcode, cost_price, base_price, manage_stock, stock_quantity, images, ...productData } = input
   const slug = slugForImportedProduct(productData.name, opts.importExternalId)
@@ -577,6 +599,14 @@ async function createProductFromImport(
     { transaction },
   )
   await syncImportedPriceToDefaultList(ctx.orgId, variant.id, base_price, actorId, transaction)
+  await syncImportedStockIfMapped({
+    orgId:         ctx.orgId,
+    variantId:     variant.id,
+    manageStock:   manage_stock ?? true,
+    stockQuantity: stock_quantity,
+    actorId,
+    transaction,
+  })
   return { productId: product.id, variantId: variant.id }
 }
 
@@ -584,8 +614,9 @@ async function updateProductFromImport(
   variant: ProductVariant,
   input: ProductUpdateInput,
   actorId: string,
+  ctx: TenantContext,
   transaction: Transaction,
-  opts?: { importSource?: string; importExternalId?: string | null },
+  opts?: { importSource?: string; importExternalId?: string | null; stockMapped?: boolean },
 ) {
   const product = variant.get('product') as Product | undefined
   if (!product) return
@@ -616,7 +647,7 @@ async function updateProductFromImport(
   if (barcode !== undefined) variantUpdates.barcode = barcode
   if (cost_price !== undefined) variantUpdates.cost_price = cost_price
   if (base_price !== undefined) variantUpdates.base_price = importBasePrice(base_price)
-  if (stock_quantity !== undefined) variantUpdates.stock_quantity = stock_quantity
+  if (stock_quantity !== undefined && !opts?.stockMapped) variantUpdates.stock_quantity = stock_quantity
   if (manage_stock !== undefined) variantUpdates.manage_stock = manage_stock
   if (opts?.importExternalId !== undefined && opts.importExternalId !== null) {
     variantUpdates.import_external_id = opts.importExternalId
@@ -629,6 +660,15 @@ async function updateProductFromImport(
   if (variant.org_id) {
     const priceToSync = base_price !== undefined ? importBasePrice(base_price) : importBasePrice(variant.base_price)
     await syncImportedPriceToDefaultList(variant.org_id, variant.id, priceToSync, actorId, transaction)
+    const effectiveManageStock = manage_stock !== undefined ? manage_stock : variant.manage_stock
+    await syncImportedStockIfMapped({
+      orgId:         variant.org_id,
+      variantId:     variant.id,
+      manageStock:   effectiveManageStock,
+      stockQuantity: stock_quantity ?? Number(variant.stock_quantity),
+      actorId,
+      transaction,
+    })
   }
 }
 

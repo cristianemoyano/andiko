@@ -9,6 +9,12 @@ vi.mock('./stock-item.model', () => ({
   },
 }))
 
+vi.mock('./warehouse.model', () => ({
+  default: {
+    findOne: vi.fn().mockResolvedValue({ default_minimum_quantity: '0' }),
+  },
+}))
+
 vi.mock('./stock-movement.model', () => ({
   default: {
     create:  vi.fn(),
@@ -17,9 +23,10 @@ vi.mock('./stock-movement.model', () => ({
 }))
 
 vi.mock('./stock-batches.service', () => ({
-  allocateInbound: vi.fn(),
-  consumeFefo:     vi.fn(),
-  earliestExpiry:  vi.fn(),
+  allocateInbound:              vi.fn(),
+  consumeFefo:                  vi.fn(),
+  earliestExpiry:               vi.fn(),
+  ensureBatchesMatchAggregate:  vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -60,7 +67,7 @@ import StockItem    from './stock-item.model'
 import StockMovement from './stock-movement.model'
 import { applyMovement, restoreStockForOrder, manualAdjustment } from './stock-movements.service'
 import { resolveDefaultWarehouse } from './warehouses.service'
-import { allocateInbound, consumeFefo, earliestExpiry } from './stock-batches.service'
+import { allocateInbound, consumeFefo, earliestExpiry, ensureBatchesMatchAggregate } from './stock-batches.service'
 
 const T = {} as never // mock transaction
 
@@ -82,6 +89,7 @@ beforeEach(() => {
     async ({ quantity }: { quantity: Decimal }) => [{ batchId: 'batch-1', quantity }],
   )
   ;(earliestExpiry as Mock).mockResolvedValue(null)
+  ;(ensureBatchesMatchAggregate as Mock).mockResolvedValue(undefined)
 })
 
 // ─────────────────────────────────────────────
@@ -154,6 +162,10 @@ describe('applyMovement', () => {
 
     expect(item.update).toHaveBeenCalledWith(
       expect.objectContaining({ quantity: '15.0000' }),
+      expect.anything(),
+    )
+    expect(ensureBatchesMatchAggregate).toHaveBeenCalledWith(
+      { orgId: 'org-1', stockItemId: 'item-1', aggregateQty: new Decimal('20') },
       expect.anything(),
     )
   })

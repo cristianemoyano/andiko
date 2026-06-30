@@ -8,14 +8,14 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from '@/components/primitives/DropdownMenu'
+import {
+  SELECT_COL_CLASS,
+  SelectionHeaderCell,
+  SelectionRowCell,
+  type TableRowSelection,
+} from './table-selection'
 
-export interface TableRowSelection {
-  selectedIds: Set<string>
-  onToggleRow: (id: string) => void
-  onToggleAllOnPage: () => void
-  /** Parent row ids on the current page (for header checkbox state). */
-  pageIds: string[]
-}
+export type { TableRowSelection } from './table-selection'
 
 export interface GroupedColumn<T> {
   key: string
@@ -50,48 +50,6 @@ interface GroupedDataTableProps<P extends object, C extends object> {
   mobileList?: boolean
   /** Optional row selection (checkbox column on parent rows). */
   selection?: TableRowSelection
-}
-
-const SELECT_COL_CLASS = 'w-10 px-2'
-
-function SelectionHeaderCell({ selection }: { selection: TableRowSelection }) {
-  const { pageIds, selectedIds } = selection
-  const allSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id))
-  const someSelected = pageIds.some(id => selectedIds.has(id))
-  return (
-    <th
-      className={cn(
-        'h-9 text-left text-[11px] font-semibold text-fg-muted uppercase tracking-wide border-b border-border bg-surface-muted whitespace-nowrap select-none',
-        SELECT_COL_CLASS,
-      )}
-    >
-      <Checkbox
-        checked={allSelected ? true : someSelected ? 'indeterminate' : false}
-        onCheckedChange={() => selection.onToggleAllOnPage()}
-        aria-label="Seleccionar todos en la página"
-      />
-    </th>
-  )
-}
-
-function SelectionRowCell({
-  id,
-  selection,
-  label,
-}: {
-  id: string
-  selection: TableRowSelection
-  label: string
-}) {
-  return (
-    <td className={cn('px-3 py-2.5 align-middle', SELECT_COL_CLASS)} data-stop-row-click>
-      <Checkbox
-        checked={selection.selectedIds.has(id)}
-        onCheckedChange={() => selection.onToggleRow(id)}
-        aria-label={label}
-      />
-    </td>
-  )
 }
 
 function renderGroupedCell<T extends object>(col: GroupedColumn<T>, row: T): React.ReactNode {

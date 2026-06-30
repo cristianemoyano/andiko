@@ -2,11 +2,19 @@
 
 import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
+import { Checkbox } from '@/components/primitives/Checkbox'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from '@/components/primitives/DropdownMenu'
+import {
+  SelectionHeaderCell,
+  SelectionRowCell,
+  type TableRowSelection,
+} from './table-selection'
+
+export type { TableRowSelection } from './table-selection'
 
 export type MobileColumnRole = 'lead' | 'prefix' | 'title' | 'subtitle' | 'badge' | 'amount' | 'actions' | 'hidden'
 
@@ -38,6 +46,8 @@ interface DataTableProps<T extends object> {
   stickyFirstColumn?: boolean
   /** Render card list on viewports below md. Default true. */
   mobileList?: boolean
+  /** Optional row selection (checkbox column aligned in header). */
+  selection?: TableRowSelection
 }
 
 type SortDir = 'asc' | 'desc' | null
@@ -87,6 +97,7 @@ export function DataTable<T extends object>({
   className,
   stickyFirstColumn = false,
   mobileList = true,
+  selection,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>(null)
@@ -150,8 +161,10 @@ export function DataTable<T extends object>({
               <MobileListRow
                 key={keyExtractor(row)}
                 row={row}
+                rowId={keyExtractor(row)}
                 mobileColumns={mobileColumns}
                 onActivate={onRowClick ? () => onRowClick(row) : undefined}
+                selection={selection}
               />
             ))
           )}
@@ -162,6 +175,7 @@ export function DataTable<T extends object>({
         <table className="min-w-full border-collapse">
           <thead>
             <tr>
+              {selection && <SelectionHeaderCell selection={selection} />}
               {columns.map((col, i) => (
                 <th
                   key={col.key}
@@ -171,7 +185,7 @@ export function DataTable<T extends object>({
                     col.align === 'right' && 'text-right',
                     col.sortable && 'cursor-pointer hover:bg-surface-hover hover:text-fg',
                     sortKey === col.key && 'text-brand-600 bg-brand-50',
-                    stickyFirstColumn && i === 0 && 'sticky left-0 z-10 bg-surface-muted',
+                    stickyFirstColumn && i === 0 && !selection && 'sticky left-0 z-10 bg-surface-muted',
                     col.className,
                   )}
                 >
@@ -186,27 +200,37 @@ export function DataTable<T extends object>({
           <tbody>
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="h-20 text-center text-sm text-fg-subtle">
+                <td colSpan={columns.length + (selection ? 1 : 0)} className="h-20 text-center text-sm text-fg-subtle">
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
-              sorted.map(row => (
+              sorted.map(row => {
+                const rowId = keyExtractor(row)
+                return (
                 <tr
-                  key={keyExtractor(row)}
+                  key={rowId}
                   onClick={onRowClick ? e => handleRowClick(row, e) : undefined}
                   className={cn(
                     'border-b border-border last:border-0 hover:bg-surface-muted transition-colors',
                     onRowClick && 'cursor-pointer',
                   )}
                 >
+                  {selection && (
+                    <SelectionRowCell
+                      id={rowId}
+                      selection={selection}
+                      label="Seleccionar fila"
+                      disabled={selection.disabledIds?.has(rowId)}
+                    />
+                  )}
                   {columns.map((col, i) => (
                     <td
                       key={col.key}
                       className={cn(
                         'h-10 px-3 text-[13px] text-fg',
                         col.align === 'right' && 'text-right',
-                        stickyFirstColumn && i === 0 && 'sticky left-0 z-10 bg-surface',
+                        stickyFirstColumn && i === 0 && !selection && 'sticky left-0 z-10 bg-surface',
                         col.className,
                       )}
                     >
@@ -214,7 +238,8 @@ export function DataTable<T extends object>({
                     </td>
                   ))}
                 </tr>
-              ))
+                )
+              })
             )}
           </tbody>
         </table>
@@ -231,11 +256,13 @@ export function DataTable<T extends object>({
 
 interface MobileListRowProps<T extends object> {
   row: T
+  rowId: string
   mobileColumns: { col: Column<T>; role: MobileColumnRole }[]
   onActivate?: () => void
+  selection?: TableRowSelection
 }
 
-function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: MobileListRowProps<T>) {
+function MobileListRow<T extends object>({ row, rowId, mobileColumns, onActivate, selection }: MobileListRowProps<T>) {
   const byRole = (role: MobileColumnRole) =>
     mobileColumns.filter(item => item.role === role).map(item => renderCell(item.col, row))
 
@@ -289,11 +316,24 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
           : undefined
       }
       className={cn(
-        'relative block w-full text-left pl-4 py-3.5 transition-colors',
+        'relative block w-full text-left py-3.5 transition-colors',
         hasActions ? 'pr-10' : 'pr-4',
+        selection ? 'pl-4' : 'pl-4',
         onActivate && 'cursor-pointer hover:bg-surface-muted active:bg-surface-muted',
       )}
     >
+      <div className="flex items-start gap-3">
+        {selection && (
+          <span className="flex h-[19px] items-center shrink-0" data-stop-row-click>
+            <Checkbox
+              checked={selection.selectedIds.has(rowId)}
+              onCheckedChange={() => selection.onToggleRow(rowId)}
+              disabled={selection.disabledIds?.has(rowId)}
+              aria-label="Seleccionar fila"
+            />
+          </span>
+        )}
+        <div className="flex-1 min-w-0">
       {(lead || amount) && (
         <div className="flex items-start justify-between gap-3 mb-1">
           <span className="text-[12px] text-fg-subtle tabular-nums shrink-0">{lead}</span>
@@ -337,6 +377,8 @@ function MobileListRow<T extends object>({ row, mobileColumns, onActivate }: Mob
       )}
 
       {badge && <div className="mt-2">{badge}</div>}
+        </div>
+      </div>
 
       {hasActions && (
         <div className="absolute top-2 right-2" data-stop-row-click>

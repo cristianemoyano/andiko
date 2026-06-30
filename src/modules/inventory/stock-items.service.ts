@@ -9,8 +9,24 @@ import StockItem from './stock-item.model'
 import Warehouse from './warehouse.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
 import Product from '@/modules/catalog/product.model'
-import type { StockItemAlertsPatchInput, StockLevelQuery } from './stock-level.schema'
+import type { StockItemAlertsPatchInput, StockLevelQuery, BulkStockMinimumInput, BulkStockExpiryInput, ApplyWarehouseDefaultMinimumInput } from './stock-level.schema'
 import { getWarehouse } from './warehouses.service'
+
+/** Stock mínimo default del depósito, para nuevos stock_items. */
+export async function resolveDefaultMinimumForWarehouse(
+  warehouseId: string,
+  orgId: string,
+  t?: import('sequelize').Transaction,
+): Promise<string> {
+  const wh = await Warehouse.findOne({
+    where: { id: warehouseId, org_id: orgId },
+    attributes: ['default_minimum_quantity'],
+    transaction: t,
+  })
+  if (!wh) return '0'
+  const min = new Decimal(wh.default_minimum_quantity ?? 0)
+  return min.gte(0) ? min.toFixed(4) : '0'
+}
 
 export async function getStockLevels(query: StockLevelQuery, orgId: string) {
   const { page, limit, warehouse_id, variant_id, search, below_minimum, expired, expiring_within_days } = query
@@ -82,6 +98,34 @@ function assertWarehouseBranchAllowed(ctx: TenantContext, warehouseBranchId: str
   }
 }
 
+/** Aplica vencimiento de alerta en el lote default y sincroniza `stock_items.expires_on`. */
+export async function applyStockItemExpiryAlert(
+  ctx: TenantContext,
+  item: StockItem,
+  expiresOn: string | null,
+  t: import('sequelize').Transaction,
+): Promise<void> {
+  const StockItemBatch = (await import('./stock-item-batch.model')).default
+  const { ensureBatchesMatchAggregate, earliestExpiry } = await import('./stock-batches.service')
+
+  await ensureBatchesMatchAggregate(
+    { orgId: ctx.orgId, stockItemId: item.id, aggregateQty: new Decimal(item.quantity) },
+    t,
+  )
+
+  const [defaultBatch] = await StockItemBatch.findOrCreate({
+    where:    { stock_item_id: item.id, batch_code: { [Op.is]: null } },
+    defaults: { org_id: ctx.orgId, stock_item_id: item.id, batch_code: null, expiry_date: null, quantity: '0' },
+    transaction: t,
+    lock: true,
+  })
+  await defaultBatch.update({ expiry_date: expiresOn }, { transaction: t })
+
+  // Fecha explícita del usuario → alerta directa. `null` → derivar del FEFO restante.
+  const resolved = expiresOn ?? await earliestExpiry(item.id, t)
+  await item.update({ expires_on: resolved }, { transaction: t })
+}
+
 export async function updateStockItemAlerts(ctx: TenantContext, input: StockItemAlertsPatchInput): Promise<void> {
   const warehouse = await getWarehouse(input.warehouse_id, ctx.orgId)
   assertWarehouseBranchAllowed(ctx, warehouse.branch_id)
@@ -109,33 +153,97 @@ export async function updateStockItemAlerts(ctx: TenantContext, input: StockItem
       lock: true,
     })
 
-    // Single-expiry alerts UX maps onto the legacy/default batch: set its expiry,
-    // then derive `expires_on` from the earliest live batch (kept in sync so the
-    // existing expiry-alert queries on stock_items.expires_on keep working).
-    const StockItemBatch = (await import('./stock-item-batch.model')).default
-    const { earliestExpiry } = await import('./stock-batches.service')
-
-    const [defaultBatch] = await StockItemBatch.findOrCreate({
-      where:    { stock_item_id: item.id, batch_code: { [Op.is]: null } },
-      defaults: { org_id: ctx.orgId, stock_item_id: item.id, batch_code: null, expiry_date: null, quantity: '0' },
-      transaction: t,
-      lock: true,
-    })
-    await defaultBatch.update({ expiry_date: input.expires_on }, { transaction: t })
-
-    await item.update(
-      {
-        minimum_quantity: minQty,
-        expires_on:       await earliestExpiry(item.id, t),
-      },
-      { transaction: t },
-    )
+    await applyStockItemExpiryAlert(ctx, item, input.expires_on, t)
+    await item.update({ minimum_quantity: minQty }, { transaction: t })
   })
+}
+
+export async function bulkSetStockMinimum(
+  ctx: TenantContext,
+  input: BulkStockMinimumInput,
+): Promise<{ updated: number }> {
+  const minQty = new Decimal(input.minimum_quantity).toFixed(4)
+  let updated = 0
+
+  await sequelize.transaction(async (t) => {
+    for (const { variant_id, warehouse_id } of input.items) {
+      const warehouse = await getWarehouse(warehouse_id, ctx.orgId)
+      assertWarehouseBranchAllowed(ctx, warehouse.branch_id)
+
+      const item = await StockItem.findOne({
+        where: { variant_id, warehouse_id, org_id: ctx.orgId },
+        transaction: t,
+        lock: true,
+      })
+      if (!item) continue
+
+      await item.update({ minimum_quantity: minQty }, { transaction: t })
+      updated++
+    }
+  })
+
+  return { updated }
+}
+
+export async function bulkSetStockExpiry(
+  ctx: TenantContext,
+  input: BulkStockExpiryInput,
+): Promise<{ updated: number }> {
+  let updated = 0
+
+  await sequelize.transaction(async (t) => {
+    for (const { variant_id, warehouse_id } of input.items) {
+      const warehouse = await getWarehouse(warehouse_id, ctx.orgId)
+      assertWarehouseBranchAllowed(ctx, warehouse.branch_id)
+
+      const item = await StockItem.findOne({
+        where: { variant_id, warehouse_id, org_id: ctx.orgId },
+        transaction: t,
+        lock: true,
+      })
+      if (!item) continue
+
+      await applyStockItemExpiryAlert(ctx, item, input.expires_on, t)
+      updated++
+    }
+  })
+
+  return { updated }
+}
+
+export async function applyWarehouseDefaultMinimum(
+  ctx: TenantContext,
+  warehouseId: string,
+  input: ApplyWarehouseDefaultMinimumInput,
+): Promise<{ updated: number }> {
+  const warehouse = await getWarehouse(warehouseId, ctx.orgId)
+  assertWarehouseBranchAllowed(ctx, warehouse.branch_id)
+
+  const defaultMin = new Decimal(warehouse.default_minimum_quantity ?? 0)
+  if (defaultMin.lte(0)) return { updated: 0 }
+
+  const minQty = defaultMin.toFixed(4)
+  const where = input.only_without_minimum
+    ? {
+        [Op.and]: [
+          { org_id: ctx.orgId, warehouse_id: warehouseId },
+          literal('"StockItem"."minimum_quantity" = 0'),
+        ],
+      }
+    : { org_id: ctx.orgId, warehouse_id: warehouseId }
+
+  const [count] = await StockItem.update(
+    { minimum_quantity: minQty },
+    { where },
+  )
+
+  return { updated: count }
 }
 
 export interface ReplenishmentRow {
   stock_item_id: string
   variant_id: string
+  product_id: string | null
   sku: string | null
   product_name: string
   variant_name: string | null
@@ -144,6 +252,37 @@ export interface ReplenishmentRow {
   quantity: string
   minimum_quantity: string
   suggested_qty: string
+}
+
+export interface ReplenishmentSummary {
+  data: ReplenishmentRow[]
+  meta: {
+    below_minimum_count: number
+    items_with_minimum: number
+    total_stock_items: number
+  }
+}
+
+export async function getReplenishmentSummary(orgId: string): Promise<ReplenishmentSummary> {
+  const [data, itemsWithMinimum, totalStockItems] = await Promise.all([
+    getReplenishmentList(orgId),
+    StockItem.count({
+      where: {
+        org_id: orgId,
+        minimum_quantity: { [Op.gt]: 0 },
+      },
+    }),
+    StockItem.count({ where: { org_id: orgId } }),
+  ])
+
+  return {
+    data,
+    meta: {
+      below_minimum_count: data.length,
+      items_with_minimum: itemsWithMinimum,
+      total_stock_items: totalStockItems,
+    },
+  }
 }
 
 export async function getReplenishmentList(orgId: string): Promise<ReplenishmentRow[]> {
@@ -177,6 +316,7 @@ export async function getReplenishmentList(orgId: string): Promise<Replenishment
     return {
       stock_item_id:   item.id,
       variant_id:      item.variant_id,
+      product_id:      variant?.product?.id ?? null,
       sku:             variant?.sku ?? null,
       product_name:    variant?.product?.name ?? '',
       variant_name:    variant?.name ?? null,

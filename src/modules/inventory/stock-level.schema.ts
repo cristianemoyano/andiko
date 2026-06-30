@@ -31,3 +31,31 @@ export const stockItemAlertsPatchSchema = z.object({
 })
 
 export type StockItemAlertsPatchInput = z.infer<typeof stockItemAlertsPatchSchema>
+
+export const bulkStockMinimumSchema = z.object({
+  items: z.array(z.object({
+    variant_id:   z.string().uuid(),
+    warehouse_id: z.string().uuid(),
+  })).min(1).max(100),
+  minimum_quantity: z.coerce.number().min(0),
+})
+
+export type BulkStockMinimumInput = z.infer<typeof bulkStockMinimumSchema>
+
+export const bulkStockExpirySchema = z.object({
+  items: z.array(z.object({
+    variant_id:   z.string().uuid(),
+    warehouse_id: z.string().uuid(),
+  })).min(1).max(100),
+  /** `null` limpia el vencimiento en el lote default de cada ítem. */
+  expires_on: z.union([isoDate, z.null()]),
+})
+
+export type BulkStockExpiryInput = z.infer<typeof bulkStockExpirySchema>
+
+export const applyWarehouseDefaultMinimumSchema = z.object({
+  /** Si true, solo actualiza filas con mínimo en 0. Si false, sobrescribe todos. */
+  only_without_minimum: z.boolean().optional().default(true),
+})
+
+export type ApplyWarehouseDefaultMinimumInput = z.infer<typeof applyWarehouseDefaultMinimumSchema>

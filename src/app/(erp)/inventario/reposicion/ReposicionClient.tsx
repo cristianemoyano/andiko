@@ -1,15 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
+import { InventoryStockHint } from '@/components/erp/InventoryStockHint'
 import { InventarioSubNav } from '../InventarioSubNav'
+import { savePurchaseOrderDraft } from '@/lib/purchase-order-draft'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 interface ReplenishmentRow {
   stock_item_id: string
   variant_id: string
+  product_id: string | null
   sku: string | null
   product_name: string
   variant_name: string | null
@@ -18,6 +23,12 @@ interface ReplenishmentRow {
   quantity: string
   minimum_quantity: string
   suggested_qty: string
+}
+
+interface ReplenishmentMeta {
+  below_minimum_count: number
+  items_with_minimum: number
+  total_stock_items: number
 }
 
 function exportCsv(rows: ReplenishmentRow[]) {
@@ -41,18 +52,31 @@ function exportCsv(rows: ReplenishmentRow[]) {
   URL.revokeObjectURL(url)
 }
 
+function lineDescription(row: ReplenishmentRow): string {
+  if (row.variant_name && row.variant_name !== row.product_name) {
+    return `${row.product_name} — ${row.variant_name}`
+  }
+  return row.product_name
+}
+
 export function ReposicionClient() {
+  const router = useRouter()
   const [rows, setRows] = useState<ReplenishmentRow[] | null>(null)
+  const [meta, setMeta] = useState<ReplenishmentMeta | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
     setRows(null)
+    setMeta(null)
     setError(null)
     ;(async () => {
       try {
-        const data = await fetchJson<{ data: ReplenishmentRow[] }>('/api/v1/inventory/stock/replenishment')
+        const data = await fetchJson<{ data: ReplenishmentRow[]; meta: ReplenishmentMeta }>(
+          '/api/v1/inventory/stock/replenishment',
+        )
         setRows(data.data ?? [])
+        setMeta(data.meta ?? null)
       } catch (e) {
         setError(getApiErrorMessage(e))
         setRows([])
@@ -60,20 +84,42 @@ export function ReposicionClient() {
     })()
   }, [])
 
+  function createPurchaseOrder() {
+    if (!rows?.length) return
+    savePurchaseOrderDraft({
+      source: 'replenishment',
+      notes: 'Generada desde reposición de inventario',
+      items: rows.map(row => ({
+        product_id: row.product_id,
+        variant_id: row.variant_id,
+        description: lineDescription(row),
+        quantity: row.suggested_qty,
+      })),
+    })
+    router.push('/compras/ordenes/nueva')
+  }
+
   return (
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[{ label: 'Inventario' }, { label: 'Reposición' }]}
         actions={
           rows && rows.length > 0 ? (
-            <Button variant="secondary" size="sm" onClick={() => exportCsv(rows)}>
-              Exportar CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => exportCsv(rows)}>
+                Exportar CSV
+              </Button>
+              <Button size="sm" onClick={createPurchaseOrder}>
+                Crear orden de compra
+              </Button>
+            </div>
           ) : null
         }
       />
       <InventarioSubNav />
-      <PageBody>
+      <PageBody className="flex flex-col gap-5">
+        <InventoryStockHint screen="reposicion" />
+
         {error && (
           <div className="mb-4 rounded-[4px] bg-danger-bg border border-danger px-4 py-3 text-sm text-danger">{error}</div>
         )}
@@ -81,11 +127,29 @@ export function ReposicionClient() {
         {rows === null ? (
           <div className="flex items-center justify-center h-40 text-sm text-fg-subtle">Cargando…</div>
         ) : rows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 gap-2">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            <p className="text-sm text-fg-muted">No hay productos por reponer. Todo el stock está sobre el mínimo.</p>
+          <div className="flex flex-col items-center justify-center gap-3 py-12 px-4 text-center max-w-md mx-auto">
+            {meta && meta.items_with_minimum === 0 ? (
+              <>
+                <p className="text-sm font-medium text-fg">Sin mínimos configurados</p>
+                <p className="text-[13px] text-fg-muted">
+                  Ningún producto tiene stock mínimo en un depósito. Entrá al detalle de un depósito y usá{' '}
+                  <strong>Stock y alertas</strong> para definir el mínimo por producto.
+                </p>
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href="/inventario/depositos">Ir a depósitos</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <p className="text-sm font-medium text-fg">Todo sobre el mínimo</p>
+                <p className="text-[13px] text-fg-muted">
+                  Hay {meta?.items_with_minimum ?? 0} producto(s) con mínimo configurado y ninguno está bajo ese umbral.
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">

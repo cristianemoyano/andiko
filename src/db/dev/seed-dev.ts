@@ -1,5 +1,6 @@
 import sequelize from '@/lib/db'
 import { QueryTypes } from 'sequelize'
+import Decimal from 'decimal.js'
 import Contact from '@/modules/contacts/contact.model'
 import ContactAddress from '@/modules/contacts/contact-address.model'
 import Organization from '@/modules/auth/organization.model'
@@ -38,6 +39,7 @@ import { nextEntryNumber } from '@/modules/accounting/accounting.utils'
 import Warehouse from '@/modules/inventory/warehouse.model'
 import StockItem from '@/modules/inventory/stock-item.model'
 import StockMovement from '@/modules/inventory/stock-movement.model'
+import { applyMovement } from '@/modules/inventory/stock-movements.service'
 import PurchaseOrder from '@/modules/purchases/purchase-order.model'
 import PurchaseOrderItem from '@/modules/purchases/purchase-order-item.model'
 import PurchaseReceipt from '@/modules/purchases/purchase-receipt.model'
@@ -839,28 +841,22 @@ async function seedInventory(
 
       const [item, created] = await StockItem.findOrCreate({
         where:    { variant_id: variant.id, warehouse_id: warehouse.id },
-        defaults: { variant_id: variant.id, warehouse_id: warehouse.id, org_id: orgId, quantity: qty },
+        defaults: { variant_id: variant.id, warehouse_id: warehouse.id, org_id: orgId, quantity: '0' },
         transaction: t,
       })
 
-      if (created) {
-        await StockMovement.create(
-          {
-            variant_id:      variant.id,
-            warehouse_id:    warehouse.id,
-            org_id:          orgId,
-            movement_type:   'in',
-            reference_type:  'initial',
-            reference_id:    null,
-            quantity_delta:  qty,
-            quantity_before: '0',
-            quantity_after:  qty,
-            notes:           'Stock inicial (seed)',
-            created_by:      actorId,
-            updated_by:      actorId,
-          },
-          { transaction: t },
-        )
+      if (created && Number(qty) > 0) {
+        await applyMovement({
+          variantId:     variant.id,
+          warehouseId:   warehouse.id,
+          orgId,
+          movementType:  'in',
+          referenceType: 'initial',
+          referenceId:   null,
+          quantityDelta: new Decimal(qty),
+          notes:         'Stock inicial (seed)',
+          actorId,
+        }, t)
       }
 
       void item

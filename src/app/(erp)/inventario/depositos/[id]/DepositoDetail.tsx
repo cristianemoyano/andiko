@@ -1,17 +1,23 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { DataTable, TablePagination, InventoryStockHint, type Column } from '@/components/erp'
 import { Button } from '@/components/primitives/Button'
 import { Badge } from '@/components/primitives/Badge'
+import { FormField } from '@/components/primitives/FormField'
+import { Input } from '@/components/primitives/Input'
+import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { InventarioSubNav } from '../../InventarioSubNav'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/layout/Tabs'
 import { AjusteStockModal } from './AjusteStockModal'
+import { CargarDesdeCatalogoModal } from './CargarDesdeCatalogoModal'
 import type { StockMovementType, StockReferenceType } from '@/modules/inventory/stock-movement.model'
 import { STOCK_EXPIRY_WARNING_DAYS } from '@/modules/inventory/inventory.constants'
-import { fetchJson } from '@/lib/fetch-json'
+import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError } from '@/lib/notify'
 
 type VariantInfo = {
@@ -95,6 +101,7 @@ const REFERENCE_TYPE_LABEL: Record<StockReferenceType, string> = {
   sales_exchange:   'Cambio venta',
   purchase_return:  'Devolución compra',
   purchase_exchange: 'Cambio compra',
+  transfer:         'Transferencia',
 }
 
 function movementBadgeStatus(type: StockMovementType): 'success' | 'error' | 'neutral' {
@@ -238,7 +245,16 @@ export function DepositoDetail() {
   const [movPage, setMovPage]         = useState(1)
 
   const [warehouseName, setName]      = useState('')
+  const [warehouseDescription, setWarehouseDescription] = useState<string | null>(null)
+  const [defaultMinimum, setDefaultMinimum] = useState('0')
+  const [defaultMinError, setDefaultMinError] = useState<string | null>(null)
+  const [savingDefault, setSavingDefault] = useState(false)
+  const [applyConfirmOpen, setApplyConfirmOpen] = useState(false)
+  const [applyingDefault, setApplyingDefault] = useState(false)
+  const [applyResult, setApplyResult] = useState<string | null>(null)
   const [ajusteOpen, setAjusteOpen]   = useState(false)
+  const [catalogLoadOpen, setCatalogLoadOpen] = useState(false)
+  const [activeTab, setActiveTab]     = useState('stock')
   const [refresh, setRefresh]         = useState(0)
 
   const fetchData = useCallback(async () => {
@@ -252,13 +268,15 @@ export function DepositoDetail() {
         fetchJson<{ data: MovementRow[]; total: number }>(
           `/api/v1/inventory/movements?warehouse_id=${id}&page=${movPage}&limit=${PAGE_SIZE}`,
         ),
-        fetchJson<{ name: string }>(`/api/v1/inventory/warehouses/${id}`),
+        fetchJson<{ name: string; description?: string | null; default_minimum_quantity?: string }>(`/api/v1/inventory/warehouses/${id}`),
       ])
       setStock(stockData.data ?? [])
       setStockTotal(stockData.total ?? 0)
       setMovements(movData.data ?? [])
       setMovTotal(movData.total ?? 0)
       setName(whData.name ?? '')
+      setWarehouseDescription(whData.description ?? null)
+      setDefaultMinimum(whData.default_minimum_quantity ?? '0')
     } catch (e) {
       notifyApiError(e)
       setStock([])
@@ -273,52 +291,185 @@ export function DepositoDetail() {
     fetchData()
   }, [fetchData, refresh])
 
+  async function saveDefaultMinimum() {
+    const minN = Number(defaultMinimum)
+    if (!Number.isFinite(minN) || minN < 0) {
+      setDefaultMinError('Ingresá un mínimo válido ≥ 0')
+      return
+    }
+    setDefaultMinError(null)
+    setSavingDefault(true)
+    setApplyResult(null)
+    try {
+      await fetchJson(`/api/v1/inventory/warehouses/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ default_minimum_quantity: minN }),
+      })
+      setRefresh(r => r + 1)
+    } catch (e) {
+      setDefaultMinError(getApiErrorMessage(e))
+    } finally {
+      setSavingDefault(false)
+    }
+  }
+
+  async function applyDefaultMinimum(overwrite: boolean) {
+    setApplyingDefault(true)
+    setApplyResult(null)
+    try {
+      const res = await fetchJson<{ updated: number }>(
+        `/api/v1/inventory/warehouses/${id}/apply-default-minimum`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ only_without_minimum: !overwrite }),
+        },
+      )
+      setApplyResult(`Mínimo aplicado a ${res.updated} producto(s).`)
+      setApplyConfirmOpen(false)
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
+      setApplyConfirmOpen(false)
+    } finally {
+      setApplyingDefault(false)
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[
-          { label: 'Inventario' },
           { label: 'Depósitos', href: '/inventario/depositos' },
           { label: warehouseName || '…' },
         ]}
         actions={
-          <Button size="sm" onClick={() => setAjusteOpen(true)}>
-            Stock y alertas
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" asChild>
+              <Link href={`/inventario/transferencias?from=${id}`}>Transferir</Link>
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setCatalogLoadOpen(true)}>
+              Cargar desde catálogo
+            </Button>
+            <Button size="sm" onClick={() => setAjusteOpen(true)}>
+              Cargar stock
+            </Button>
+          </div>
         }
       />
       <InventarioSubNav />
 
-      <PageBody className="flex flex-col gap-6">
-        <section>
-          <h2 className="text-sm font-semibold text-fg-muted mb-2">Stock actual</h2>
-          <DataTable
-            columns={STOCK_COLUMNS}
-            data={stock}
-            keyExtractor={row => row.id}
-            emptyMessage="Sin stock registrado."
-            footer={
-              stockTotal > 0 ? (
-                <TablePagination page={stockPage} pageSize={PAGE_SIZE} total={stockTotal} onPageChange={setStockPage} />
-              ) : undefined
-            }
-          />
-        </section>
+      <PageBody className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-1 min-w-0">
+              <Link
+                href="/inventario/depositos"
+                className="text-[12px] font-medium text-brand-600 hover:underline w-fit"
+              >
+                ← Depósitos
+              </Link>
+              <h1 className="text-[20px] font-bold text-fg tracking-tight">
+                {warehouseName || '…'}
+              </h1>
+              {warehouseDescription ? (
+                <p className="text-[13px] text-fg-muted">{warehouseDescription}</p>
+              ) : (
+                <p className="text-[13px] text-fg-muted">Stock y movimientos de este depósito</p>
+              )}
+            </div>
+            <InventoryStockHint screen="deposito-detalle" label={null} showDivider={false} className="shrink-0" />
+          </div>
+          <hr className="m-0 border-0 border-t border-border" aria-hidden="true" />
+        </div>
 
-        <section>
-          <h2 className="text-sm font-semibold text-fg-muted mb-2">Movimientos</h2>
-          <DataTable
-            columns={MOVEMENT_COLUMNS}
-            data={movements}
-            keyExtractor={row => row.id}
-            emptyMessage="Sin movimientos registrados."
-            footer={
-              movTotal > 0 ? (
-                <TablePagination page={movPage} pageSize={PAGE_SIZE} total={movTotal} onPageChange={setMovPage} />
-              ) : undefined
-            }
-          />
-        </section>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="stock">Stock actual</TabsTrigger>
+            <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="stock">
+            <details className="group mb-4 rounded-sm border border-border bg-surface-muted/40 open:bg-surface open:border-border">
+              <summary className="cursor-pointer list-none px-4 py-2.5 text-[13px] font-medium text-fg-muted hover:text-fg [&::-webkit-details-marker]:hidden">
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-fg-subtle group-open:rotate-90 transition-transform">›</span>
+                  Mínimo default del depósito
+                  {Number(defaultMinimum) > 0 && (
+                    <span className="text-[11px] font-normal text-fg-subtle">({defaultMinimum})</span>
+                  )}
+                </span>
+              </summary>
+              <div className="border-t border-border px-4 py-3 flex flex-col gap-3">
+                <p className="text-[12px] text-fg-muted leading-relaxed">
+                  Los productos nuevos heredan este mínimo. Podés aplicarlo a los que aún no tienen uno configurado.
+                </p>
+                <div className="flex flex-wrap items-end gap-3">
+                  <FormField label="Mínimo default" error={defaultMinError ?? undefined} className="w-full sm:w-40">
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.0001"
+                      value={defaultMinimum}
+                      onChange={e => setDefaultMinimum(e.target.value)}
+                    />
+                  </FormField>
+                  <Button size="sm" variant="secondary" disabled={savingDefault} onClick={saveDefaultMinimum}>
+                    {savingDefault ? 'Guardando…' : 'Guardar'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={applyingDefault || Number(defaultMinimum) <= 0}
+                    onClick={() => setApplyConfirmOpen(true)}
+                  >
+                    Aplicar a sin mínimo
+                  </Button>
+                </div>
+                {applyResult && (
+                  <p role="status" className="text-[13px] text-success bg-success-bg border border-success rounded-sm px-3 py-2">
+                    {applyResult}
+                  </p>
+                )}
+              </div>
+            </details>
+
+            <DataTable
+              columns={STOCK_COLUMNS}
+              data={stock}
+              keyExtractor={row => row.id}
+              emptyMessage={
+                stock === null
+                  ? 'Cargando…'
+                  : 'Sin stock en este depósito. Usá «Cargar stock» para la cantidad inicial de cada producto.'
+              }
+              footer={
+                stockTotal > 0 ? (
+                  <TablePagination page={stockPage} pageSize={PAGE_SIZE} total={stockTotal} onPageChange={setStockPage} />
+                ) : stock !== null && stock.length === 0 ? (
+                  <div className="px-3 py-3 border-t border-border flex justify-end">
+                    <Button size="sm" onClick={() => setAjusteOpen(true)}>
+                      Cargar stock inicial
+                    </Button>
+                  </div>
+                ) : undefined
+              }
+            />
+          </TabsContent>
+
+          <TabsContent value="movimientos">
+            <DataTable
+              columns={MOVEMENT_COLUMNS}
+              data={movements}
+              keyExtractor={row => row.id}
+              emptyMessage="Sin movimientos registrados."
+              footer={
+                movTotal > 0 ? (
+                  <TablePagination page={movPage} pageSize={PAGE_SIZE} total={movTotal} onPageChange={setMovPage} />
+                ) : undefined
+              }
+            />
+          </TabsContent>
+        </Tabs>
       </PageBody>
 
       {ajusteOpen && (
@@ -328,6 +479,27 @@ export function DepositoDetail() {
           onSaved={() => { setAjusteOpen(false); setRefresh(r => r + 1) }}
         />
       )}
+
+      {catalogLoadOpen && (
+        <CargarDesdeCatalogoModal
+          warehouseId={id}
+          onClose={() => setCatalogLoadOpen(false)}
+          onSaved={() => {
+            setCatalogLoadOpen(false)
+            setRefresh((value) => value + 1)
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={applyConfirmOpen}
+        onOpenChange={setApplyConfirmOpen}
+        title="Aplicar mínimo default"
+        description={`¿Aplicar mínimo ${defaultMinimum} a todos los productos de este depósito que aún no tienen mínimo configurado?`}
+        confirmLabel="Aplicar"
+        variant="warning"
+        onConfirm={() => applyDefaultMinimum(false)}
+      />
     </div>
   )
 }

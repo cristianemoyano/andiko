@@ -6,9 +6,12 @@ import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Badge } from '@/components/primitives/Badge'
 import { Input } from '@/components/primitives/Input'
+import { InventoryStockHint } from '@/components/erp/InventoryStockHint'
 import { InventarioSubNav } from '../InventarioSubNav'
 import type { StockMovementType, StockReferenceType } from '@/modules/inventory/stock-movement.model'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+
+type Warehouse = { id: string; name: string }
 
 type MovementRow = {
   id: string
@@ -21,6 +24,7 @@ type MovementRow = {
   quantity_after: string
   notes: string | null
   created_at: string
+  warehouse?: { id: string; name: string }
   variant?: {
     id: string
     sku: string
@@ -43,11 +47,12 @@ const MOVEMENT_TYPE_LABEL: Record<StockMovementType, string> = {
   transfer_out: 'Transf. salida',
 }
 
-const REFERENCE_TYPE_LABEL: Record<StockReferenceType, string> = {
+const REFERENCE_TYPE_LABEL: Record<string, string> = {
   order:            'Pedido',
   invoice_cancel:   'Anulación factura',
   manual:           'Manual',
   initial:          'Stock inicial',
+  transfer:         'Transferencia',
   purchase_receipt: 'Recepción compra',
   delivery_note:    'Remito de entrega',
   sales_return:     'Devolución venta',
@@ -88,6 +93,13 @@ const COLUMNS: Column<MovementRow>[] = [
       <Badge status={movementBadgeStatus(row.movement_type)}>
         {MOVEMENT_TYPE_LABEL[row.movement_type] ?? row.movement_type}
       </Badge>
+    ),
+  },
+  {
+    key: 'warehouse' as keyof MovementRow,
+    header: 'Depósito',
+    render: row => (
+      <span className="text-fg-muted text-[12px]">{row.warehouse?.name ?? '—'}</span>
     ),
   },
   {
@@ -146,11 +158,6 @@ const COLUMNS: Column<MovementRow>[] = [
     render: row => <span className="tabular-nums text-[13px]">{row.quantity_after}</span>,
   },
   {
-    key: 'notes',
-    header: 'Notas',
-    render: row => <span className="text-fg-muted text-[12px]">{row.notes ?? '—'}</span>,
-  },
-  {
     key: 'created_at',
     header: 'Fecha',
     render: row => (
@@ -162,11 +169,13 @@ const COLUMNS: Column<MovementRow>[] = [
 ]
 
 const REFERENCE_FILTER_OPTIONS: { value: string; label: string }[] = [
-  { value: '',               label: 'Todos los orígenes' },
-  { value: 'order',         label: 'Pedido' },
+  { value: '', label: 'Todos los orígenes' },
+  { value: 'order', label: 'Pedido' },
+  { value: 'manual', label: 'Manual' },
+  { value: 'initial', label: 'Stock inicial' },
+  { value: 'transfer', label: 'Transferencia' },
+  { value: 'purchase_receipt', label: 'Recepción compra' },
   { value: 'invoice_cancel', label: 'Anulación factura' },
-  { value: 'manual',        label: 'Manual' },
-  { value: 'initial',       label: 'Stock inicial' },
 ]
 
 export function MovimientosClient() {
@@ -177,6 +186,19 @@ export function MovimientosClient() {
   const [search, setSearch]           = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [refType, setRefType]         = useState('')
+  const [warehouseId, setWarehouseId] = useState('')
+  const [warehouses, setWarehouses]   = useState<Warehouse[]>([])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const data = await fetchJson<{ data: Warehouse[] }>('/api/v1/inventory/warehouses?limit=100')
+        setWarehouses(data.data ?? [])
+      } catch {
+        setWarehouses([])
+      }
+    })()
+  }, [])
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search), 300)
@@ -190,6 +212,7 @@ export function MovimientosClient() {
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
     if (debouncedSearch) params.set('search', debouncedSearch)
     if (refType)         params.set('reference_type', refType)
+    if (warehouseId)     params.set('warehouse_id', warehouseId)
     ;(async () => {
       try {
         const data = await fetchJson<{ data: MovementRow[]; total: number }>(`/api/v1/inventory/movements?${params}`)
@@ -200,13 +223,14 @@ export function MovimientosClient() {
         setRows([])
       }
     })()
-  }, [page, debouncedSearch, refType])
+  }, [page, debouncedSearch, refType, warehouseId])
 
   return (
     <div className="flex flex-col h-full">
       <TopBar breadcrumbs={[{ label: 'Inventario' }, { label: 'Movimientos' }]} />
       <InventarioSubNav />
-      <PageBody>
+      <PageBody className="flex flex-col gap-5">
+        <InventoryStockHint screen="movimientos" />
         {error && <p className="text-danger text-sm mb-4">{error}</p>}
         <DataTable
           columns={COLUMNS}
@@ -214,13 +238,23 @@ export function MovimientosClient() {
           keyExtractor={row => row.id}
           emptyMessage="Sin movimientos registrados."
           toolbar={
-            <>
+            <div className="flex flex-wrap items-center gap-2">
               <Input
                 placeholder="Buscar por producto o SKU…"
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(1) }}
                 className="w-full sm:w-64"
               />
+              <select
+                className="h-8 rounded-md border border-border bg-surface px-2 text-[13px] text-fg-muted focus:outline-none focus:ring-2 focus:ring-border-strong"
+                value={warehouseId}
+                onChange={e => { setWarehouseId(e.target.value); setPage(1) }}
+              >
+                <option value="">Todos los depósitos</option>
+                {warehouses.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
               <select
                 className="h-8 rounded-md border border-border bg-surface px-2 text-[13px] text-fg-muted focus:outline-none focus:ring-2 focus:ring-border-strong"
                 value={refType}
@@ -230,7 +264,7 @@ export function MovimientosClient() {
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
-            </>
+            </div>
           }
           footer={
             total > 0 ? (
