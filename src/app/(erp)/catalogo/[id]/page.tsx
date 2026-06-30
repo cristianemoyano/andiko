@@ -10,6 +10,7 @@ import type ProductVariant from '@/modules/catalog/product-variant.model'
 import { ProductDetailClient } from './ProductDetailClient'
 import { CatalogoSubNav } from '../CatalogoSubNav'
 import { VariantsSectionClient } from './VariantsSectionClient'
+import { InventoryStockHint } from '@/components/erp/InventoryStockHint'
 
 export const metadata = { title: 'Producto — Andiko ERP' }
 
@@ -107,6 +108,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                       ? String(variant.stock_quantity)
                       : 'Sin seguimiento de stock'}
                   />
+                  {variant.manage_stock && (
+                    <div className="px-4 pb-3">
+                      <InventoryStockHint screen="catalog" showStockLink />
+                    </div>
+                  )}
                 </Section>
               )}
 

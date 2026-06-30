@@ -18,6 +18,36 @@ const SPECIAL_PERMISSION_LABELS: Record<string, string> = {
   'sales:scope_own': 'Ventas · Solo propias',
 }
 
+/** Qué habilita cada permiso en la matriz (alcance funcional). */
+const PERMISSION_DESCRIPTIONS: Record<string, string> = {
+  'panel:read': 'Panel ejecutivo, KPIs y alertas de stock.',
+
+  'contacts:read': 'Ver clientes, proveedores y direcciones.',
+  'contacts:write': 'Crear y editar contactos.',
+  'contacts:delete': 'Eliminar contactos.',
+
+  'products:read': 'Catálogo, categorías, listas de precios e importación.',
+  'products:write': 'Crear y editar productos, precios e importar catálogo.',
+  'products:delete': 'Eliminar productos del catálogo.',
+
+  'sales:read': 'Presupuestos, pedidos, facturas, cobros y devoluciones.',
+  'sales:write': 'Crear y editar documentos de venta, cobrar y anular.',
+  'sales:delete': 'Eliminar presupuestos y pedidos en borrador.',
+  'sales:scope_own': 'Limita ventas a documentos del vendedor logueado.',
+
+  'inventory:read': 'Depósitos, stock, movimientos, transferencias (consulta), reposición y remitos.',
+  'inventory:write': 'Ajustes de stock, transferencias, mínimos/alertas, remitos y stock default por depósito.',
+  'inventory:delete': 'Eliminar depósitos.',
+
+  'purchases:read': 'Órdenes de compra, recepciones, facturas de proveedor y pagos.',
+  'purchases:write': 'Crear y editar compras, recepcionar mercadería y registrar pagos.',
+  'purchases:delete': 'Eliminar órdenes de compra en borrador.',
+
+  'accounting:read': 'Plan de cuentas, asientos, libros e informes.',
+  'accounting:write': 'Crear asientos y configurar contabilidad.',
+  'accounting:delete': 'Eliminar asientos en borrador.',
+}
+
 /** Human-readable label for matrix permissions (client + server). */
 export function permissionDisplayLabel(name: string): string {
   const special = SPECIAL_PERMISSION_LABELS[name]
@@ -25,6 +55,11 @@ export function permissionDisplayLabel(name: string): string {
 
   const [resource, action] = name.split(':')
   return `${MODULE_LABELS[resource] ?? resource} · ${ACTION_LABELS[action] ?? action}`
+}
+
+/** Alcance funcional mostrado en la matriz de permisos. */
+export function permissionDescription(name: string): string {
+  return PERMISSION_DESCRIPTIONS[name] ?? ''
 }
 
 /** Preferred row order within the Ventas module filter. */

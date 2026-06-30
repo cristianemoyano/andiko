@@ -6,6 +6,7 @@ export const warehouseSchema = z.object({
   description: z.string().nullable().optional(),
   branch_id:   z.string().uuid().nullable().optional(),
   is_active:   z.boolean().optional(),
+  default_minimum_quantity: z.coerce.number().min(0).optional(),
 })
 
 export const warehouseUpdateSchema = warehouseSchema.partial()

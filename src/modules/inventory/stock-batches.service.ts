@@ -143,6 +143,46 @@ export async function consumeFefo(
   return allocations
 }
 
+/**
+ * Repairs legacy rows where `stock_items.quantity` was set without matching
+ * batch rows (e.g. dev seed). Puts any orphan quantity on the default batch so
+ * outbound FEFO consumption can proceed.
+ */
+export async function ensureBatchesMatchAggregate(
+  params: { orgId: string; stockItemId: string; aggregateQty: Decimal },
+  t: Transaction,
+): Promise<void> {
+  const { orgId, stockItemId, aggregateQty } = params
+
+  const batches = await StockItemBatch.findAll({
+    where: { stock_item_id: stockItemId },
+    transaction: t,
+    lock: true,
+  })
+
+  const batchSum = batches.reduce((sum, b) => sum.plus(b.quantity), new Decimal(0))
+  const orphan = aggregateQty.minus(batchSum)
+  if (orphan.lte(0)) return
+
+  const defaultBatch = batches.find(b => b.batch_code === null)
+  if (!defaultBatch) {
+    await StockItemBatch.create(
+      {
+        org_id:        orgId,
+        stock_item_id: stockItemId,
+        batch_code:    null,
+        expiry_date:   null,
+        quantity:      orphan.toFixed(4),
+      },
+      { transaction: t },
+    )
+    return
+  }
+
+  const next = new Decimal(defaultBatch.quantity).plus(orphan)
+  await defaultBatch.update({ quantity: next.toFixed(4) }, { transaction: t })
+}
+
 /** Returns the earliest expiry_date among live, positive-qty batches, or null. */
 export async function earliestExpiry(stockItemId: string, t: Transaction): Promise<string | null> {
   const batch = await StockItemBatch.findOne({

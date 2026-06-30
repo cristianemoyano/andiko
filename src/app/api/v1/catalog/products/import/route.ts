@@ -6,6 +6,14 @@ import { parseCsvText } from '@/lib/csv'
 import { encodeImportStreamEvent } from '@/lib/import-progress'
 import { sanitizeImportDefaultsFromClient } from '@/modules/catalog/products-csv-adapter'
 import { importProducts, type ImportAction } from '@/modules/catalog/products.service'
+import { getWarehouse, listWarehouses } from '@/modules/inventory/warehouses.service'
+
+class ImportStockWarehouseError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ImportStockWarehouseError'
+  }
+}
 
 const importQuerySchema = z.object({
   action: z.enum(['create', 'update', 'upsert']),
@@ -31,6 +39,7 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
   const mapping = formData.get('mapping')
   const import_source = formData.get('import_source')
   const import_defaults = formData.get('import_defaults')
+  const import_warehouse_id = formData.get('import_warehouse_id')
   const stream = formData.get('stream')
 
   if (!(file instanceof File)) {
@@ -68,6 +77,19 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
     const importDefaults = sanitizeImportDefaultsFromClient(
       typeof import_defaults === 'string' ? import_defaults : undefined,
     )
+    const stockWarehouseId =
+      typeof import_warehouse_id === 'string' && import_warehouse_id.trim()
+        ? import_warehouse_id.trim()
+        : undefined
+
+    const { total: warehouseCount } = await listWarehouses({ page: 1, limit: 1 }, ctx)
+    if (warehouseCount > 0) {
+      if (!stockWarehouseId) {
+        throw new ImportStockWarehouseError('Seleccioná el depósito donde cargar el stock del CSV.')
+      }
+      await getWarehouse(stockWarehouseId, ctx.orgId)
+    }
+
     return importProducts(
       rawRows,
       mappedRows,
@@ -77,6 +99,7 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
       resolveActorId(session),
       importSource,
       importDefaults,
+      { stockWarehouseId: stockWarehouseId ?? null },
       onProgress,
     )
   }
@@ -99,6 +122,8 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
         } catch (err: unknown) {
           if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
             enqueue(encodeImportStreamEvent({ type: 'error', error: 'No hay organización en contexto.' }))
+          } else if (err instanceof ImportStockWarehouseError) {
+            enqueue(encodeImportStreamEvent({ type: 'error', error: err.message }))
           } else if (err instanceof Error && err.message === 'IMPORT_VALIDATION_ERRORS') {
             const importErrors = (err as Error & { importErrors: { row: number; message: string }[] }).importErrors
             enqueue(encodeImportStreamEvent({
@@ -132,6 +157,9 @@ export const POST = withPermission('products:write', async (req, _ctx, session) 
   } catch (err: unknown) {
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
       return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
+    }
+    if (err instanceof ImportStockWarehouseError) {
+      return NextResponse.json({ error: err.message, code: 'VALIDATION_ERROR' }, { status: 422 })
     }
     if (err instanceof Error && err.message === 'IMPORT_VALIDATION_ERRORS') {
       const importErrors = (err as Error & { importErrors: unknown[] }).importErrors

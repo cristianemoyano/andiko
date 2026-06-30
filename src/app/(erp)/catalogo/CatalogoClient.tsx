@@ -60,8 +60,9 @@ const CATALOG_IMPORT_DEFAULT_FIELDS: ImportDefaultFieldConfig[] = [
   {
     key: 'manage_stock',
     label: 'Gestionar stock',
-    description: 'Si la celda está vacía: sí / no (se interpreta como en el resto del import).',
+    description: 'Si la celda está vacía (por defecto: sí).',
     inputKind: 'select',
+    defaultValue: '1',
     options: [
       { value: '', label: '— Sin valor por defecto —' },
       { value: '1', label: 'Sí (1)' },
@@ -170,20 +171,28 @@ export function CatalogoClient({ showWooColumn = false }: { showWooColumn?: bool
   const [savedImportFieldMaps, setSavedImportFieldMaps] = useState<
     Array<{ external_header: string; internal_field_key: string }>
   >([])
+  const [importWarehouses, setImportWarehouses] = useState<Array<{ id: string; name: string }>>([])
 
   useEffect(() => {
     if (!importOpen) return
     let mounted = true
     ;(async () => {
       try {
-        const data = await fetchJson<{
-          data?: Array<{ external_header: string; internal_field_key: string }>
-        }>('/api/v1/catalog/import-field-maps')
+        const [mapsData, whData] = await Promise.all([
+          fetchJson<{
+            data?: Array<{ external_header: string; internal_field_key: string }>
+          }>('/api/v1/catalog/import-field-maps'),
+          fetchJson<{ data?: Array<{ id: string; name: string }> }>(
+            '/api/v1/catalog/import-warehouses',
+          ),
+        ])
         if (!mounted) return
-        setSavedImportFieldMaps(data?.data ?? [])
+        setSavedImportFieldMaps(mapsData?.data ?? [])
+        setImportWarehouses(whData?.data ?? [])
       } catch {
         if (!mounted) return
         setSavedImportFieldMaps([])
+        setImportWarehouses([])
       }
     })()
     return () => {
@@ -621,6 +630,10 @@ export function CatalogoClient({ showWooColumn = false }: { showWooColumn?: bool
         importUrl="/api/v1/catalog/products/import"
         importSource="catalog_csv"
         supportsStreamProgress
+        stockWarehouse={{
+          options: importWarehouses.map((w) => ({ value: w.id, label: w.name })),
+          label: 'Depósito',
+        }}
         defaultFillFields={CATALOG_IMPORT_DEFAULT_FIELDS}
         onImported={async (_result, effectiveMapping) => {
           notifySuccess('Productos importados correctamente')

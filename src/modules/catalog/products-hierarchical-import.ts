@@ -6,6 +6,7 @@ import ProductCategory from './product-category.model'
 import ProductVariant from './product-variant.model'
 import { persistUnmappedCsvColumns } from './catalog-import-persist'
 import { syncImportedPriceToDefaultList } from './catalog-import-price-list'
+import { bindImportStockWarehouse, syncImportedStockIfMapped } from './catalog-import-stock'
 import { allocateUniqueVariantSku } from './allocate-variant-sku'
 import { formatSku, normalizeProductImagesForDb, slugForImportedProduct, importBasePrice } from './product.utils'
 import { resolveOrCreateCategoryIdForImport } from './catalog-import-category'
@@ -14,7 +15,7 @@ import type { ProductInput, ProductUpdateInput } from './product.schema'
 import type { TenantContext } from '@/lib/tenancy'
 import { whereOrg } from '@/lib/tenancy'
 import logger from '@/lib/logger'
-import type { ImportAction, ImportResult } from './products.service'
+import type { ImportAction, ImportResult, CatalogImportOptions } from './products.service'
 import type { ImportProgressCallback } from '@/lib/import-progress'
 import { createImportProgressReporter } from '@/lib/import-progress'
 import {
@@ -68,6 +69,7 @@ function buildProductUpdate(
 ): ProductUpdateInput {
   const input = rowToProductUpdateInput(normalized, categoryId, {
     priceMapped: mapped ? 'base_price' in mapped : undefined,
+    stockMapped: mapped ? 'stock_quantity' in mapped : undefined,
   })
   if (images.length > 0) input.images = images
   return input
@@ -115,6 +117,14 @@ async function createProductHierarchical(
     { transaction },
   )
   await syncImportedPriceToDefaultList(ctx.orgId, variant.id, base_price, actorId, transaction)
+  await syncImportedStockIfMapped({
+    orgId:         ctx.orgId,
+    variantId:     variant.id,
+    manageStock:   manage_stock ?? true,
+    stockQuantity: stock_quantity,
+    actorId,
+    transaction,
+  })
   return { productId: product.id, variantId: variant.id }
 }
 
@@ -128,6 +138,7 @@ async function updateProductHierarchical(
   actorId: string,
   ctx: TenantContext,
   transaction: Transaction,
+  stockMapped: boolean,
 ) {
   const { barcode, cost_price, base_price, stock_quantity, manage_stock, images, ...productData } = input
   const slug = productData.name
@@ -150,7 +161,7 @@ async function updateProductHierarchical(
       barcode: barcode ?? variant.barcode,
       cost_price: cost_price ?? variant.cost_price,
       base_price: base_price !== undefined ? importBasePrice(base_price) : importBasePrice(variant.base_price),
-      stock_quantity: stock_quantity ?? variant.stock_quantity,
+      stock_quantity: stockMapped ? variant.stock_quantity : (stock_quantity ?? variant.stock_quantity),
       manage_stock: manage_stock ?? variant.manage_stock,
       import_external_id: variantExternalId,
       updated_by: actorId,
@@ -164,6 +175,15 @@ async function updateProductHierarchical(
     actorId,
     transaction,
   )
+  const effectiveManageStock = manage_stock !== undefined ? manage_stock : variant.manage_stock
+  await syncImportedStockIfMapped({
+    orgId:         ctx.orgId,
+    variantId:     variant.id,
+    manageStock:   effectiveManageStock,
+    stockQuantity: stock_quantity ?? Number(variant.stock_quantity),
+    actorId,
+    transaction,
+  })
 }
 
 export async function importProductsHierarchical(
@@ -174,6 +194,7 @@ export async function importProductsHierarchical(
   ctx: TenantContext,
   actorId: string,
   importSource: string,
+  importOptions: CatalogImportOptions = {},
   onProgress?: ImportProgressCallback,
 ): Promise<ImportResult> {
   const errors: ImportResult['errors'] = []
@@ -198,6 +219,7 @@ export async function importProductsHierarchical(
   )
 
   await sequelize.transaction(async (t) => {
+    bindImportStockWarehouse(t, importOptions.stockWarehouseId ?? null)
     const byExternalId = new Map<string, { mapped: Record<string, string>; raw: Record<string, string>; rowNum: number; index: number }>()
     const variationsByParent = new Map<string, { mapped: Record<string, string>; raw: Record<string, string>; rowNum: number; index: number }[]>()
 
@@ -312,6 +334,7 @@ export async function importProductsHierarchical(
           actorId,
           ctx,
           t,
+          'stock_quantity' in mapped,
         )
         updated++
         await persistUnmappedCsvColumns(raw, columnMapping, importSource, ctx.orgId, variantExtId, existingProduct.id, defaultVar.id, t)
@@ -428,6 +451,14 @@ export async function importProductsHierarchical(
           })
           if (newV?.id) {
             await syncImportedPriceToDefaultList(ctx.orgId, newV.id, importBasePrice(chNorm.base_price), actorId, t)
+            await syncImportedStockIfMapped({
+              orgId:         ctx.orgId,
+              variantId:     newV.id,
+              manageStock:   parseManage(chNorm.manage_stock) ?? true,
+              stockQuantity: parseStock(chNorm.stock_quantity),
+              actorId,
+              transaction:   t,
+            })
           }
           await persistUnmappedCsvColumns(
             ch.raw,
@@ -499,6 +530,7 @@ export async function importProductsHierarchical(
               { transaction: t },
             )
           } else {
+            const chStockMapped = 'stock_quantity' in ch.mapped
             await v.update(
               {
                 sku: chSku,
@@ -507,7 +539,7 @@ export async function importProductsHierarchical(
                 cost_price: chNorm.cost_price ?? v.cost_price,
                 base_price: chNorm.base_price !== undefined ? importBasePrice(chNorm.base_price) : importBasePrice(v.base_price),
                 manage_stock: parseManage(chNorm.manage_stock) ?? v.manage_stock,
-                stock_quantity: parseStock(chNorm.stock_quantity) ?? v.stock_quantity,
+                stock_quantity: chStockMapped ? v.stock_quantity : (parseStock(chNorm.stock_quantity) ?? v.stock_quantity),
                 import_external_id: chExt,
                 updated_by: actorId,
               },
@@ -520,6 +552,14 @@ export async function importProductsHierarchical(
           })
           if (vFinal?.id) {
             await syncImportedPriceToDefaultList(ctx.orgId, vFinal.id, importBasePrice(chNorm.base_price), actorId, t)
+            await syncImportedStockIfMapped({
+              orgId:         ctx.orgId,
+              variantId:     vFinal.id,
+              manageStock:   parseManage(chNorm.manage_stock) ?? vFinal.manage_stock,
+              stockQuantity: parseStock(chNorm.stock_quantity) ?? Number(vFinal.stock_quantity),
+              actorId,
+              transaction:   t,
+            })
           }
           await persistUnmappedCsvColumns(ch.raw, columnMapping, importSource, ctx.orgId, chExt, product.id, vFinal?.id ?? null, t)
           processedExtIds.add(chExt)

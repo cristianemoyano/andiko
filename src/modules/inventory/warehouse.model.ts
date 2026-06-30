@@ -10,11 +10,12 @@ export interface WarehouseAttributes extends Timestamps, AuditFields {
   name: string
   description: string | null
   is_active: boolean
+  default_minimum_quantity: string
 }
 
 type WarehouseCreationAttributes = Optional<
   WarehouseAttributes,
-  | 'id' | 'branch_id' | 'description' | 'is_active'
+  | 'id' | 'branch_id' | 'description' | 'is_active' | 'default_minimum_quantity'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -25,6 +26,7 @@ class Warehouse extends AuditModel<WarehouseAttributes, WarehouseCreationAttribu
   declare name: string
   declare description: string | null
   declare is_active: boolean
+  declare default_minimum_quantity: string
 }
 
 Warehouse.init(
@@ -34,6 +36,7 @@ Warehouse.init(
     name:        { type: DataTypes.STRING(255), allowNull: false },
     description: { type: DataTypes.TEXT },
     is_active:   { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    default_minimum_quantity: { type: DataTypes.DECIMAL(15, 4), allowNull: false, defaultValue: '0' },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'warehouses', paranoid: true, underscored: true }

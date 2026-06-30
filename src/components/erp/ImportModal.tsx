@@ -24,6 +24,15 @@ export type ImportDefaultFieldConfig = {
   inputKind: 'text' | 'select'
   options?: { value: string; label: string }[]
   placeholder?: string
+  /** Valor inicial en el formulario de defaults (p. ej. gestionar stock = sí). */
+  defaultValue?: string
+}
+
+/** Depósito destino al importar catálogo con inventario activo. */
+export type ImportStockWarehouseConfig = {
+  label?: string
+  description?: string
+  options: { value: string; label: string }[]
 }
 
 export interface ImportModalProps {
@@ -50,6 +59,12 @@ export interface ImportModalProps {
   defaultFillFields?: ImportDefaultFieldConfig[]
   /** Si true, pide progreso en tiempo real vía NDJSON (`stream=1`). */
   supportsStreamProgress?: boolean
+  /** Depósito destino cuando se mapea stock (catálogo + inventario activo). */
+  stockWarehouse?: ImportStockWarehouseConfig
+  /** Oculta el selector crear/actualizar/upsert (p. ej. import de stock en depósito). */
+  hideActionSelect?: boolean
+  /** Texto bajo el resumen en el paso de confirmación. */
+  confirmHint?: string
 }
 
 type Step = 'upload' | 'mapping' | 'confirm' | 'importing' | 'result'
@@ -99,6 +114,9 @@ export function ImportModal({
   importSource = 'catalog_csv',
   defaultFillFields = [],
   supportsStreamProgress = false,
+  stockWarehouse,
+  hideActionSelect = false,
+  confirmHint,
 }: ImportModalProps) {
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -116,6 +134,8 @@ export function ImportModal({
   const [serverError, setServerError] = useState<string | null>(null)
   /** Valores por defecto cuando la celda CSV está vacía (claves según defaultFillFields). */
   const [fillDefaults, setFillDefaults] = useState<Record<string, string>>({})
+  const [stockWarehouseId, setStockWarehouseId] = useState('')
+  const [stockWarehouseError, setStockWarehouseError] = useState<string | null>(null)
   const [importProgress, setImportProgress] = useState<{ processed: number; total: number } | null>(null)
   const [progressEta, setProgressEta] = useState<string | null>(null)
   const importEstimateTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -130,6 +150,8 @@ export function ImportModal({
     setMapping({})
     setMappingErrors({})
     setFillDefaults({})
+    setStockWarehouseId('')
+    setStockWarehouseError(null)
     setImportProgress(null)
     setProgressEta(null)
     if (importEstimateTimerRef.current) {
@@ -190,7 +212,7 @@ export function ImportModal({
       setMapping(autoMap)
       if (defaultFillFields.length > 0) {
         const init: Record<string, string> = {}
-        for (const f of defaultFillFields) init[f.key] = ''
+        for (const f of defaultFillFields) init[f.key] = f.defaultValue ?? ''
         setFillDefaults(init)
       } else {
         setFillDefaults({})
@@ -198,6 +220,23 @@ export function ImportModal({
       setStep('mapping')
     }
     reader.readAsText(f)
+  }
+
+  const stockWarehouseOptions = stockWarehouse?.options ?? []
+  const showStockWarehousePicker = Boolean(stockWarehouse)
+  const stockWarehouseRequired = stockWarehouseOptions.length > 0
+
+  function validateStockWarehouse(): boolean {
+    if (!stockWarehouseRequired) {
+      setStockWarehouseError(null)
+      return true
+    }
+    if (!stockWarehouseId.trim()) {
+      setStockWarehouseError('Elegí el depósito donde cargar el stock.')
+      return false
+    }
+    setStockWarehouseError(null)
+    return true
   }
 
   function validateMapping(): boolean {
@@ -209,6 +248,10 @@ export function ImportModal({
     }
     setMappingErrors(errs)
     return Object.keys(errs).length === 0
+  }
+
+  function validateConfirm(): boolean {
+    return validateStockWarehouse()
   }
 
   function stopImportEstimateTimer() {
@@ -248,6 +291,7 @@ export function ImportModal({
 
   async function handleSubmit() {
     if (!file) return
+    if (!validateConfirm()) return
     setLoading(true)
     setServerError(null)
     setStep('importing')
@@ -266,11 +310,18 @@ export function ImportModal({
 
     const fd = new FormData()
     fd.append('file', file)
-    fd.append('action', action)
+    if (!hideActionSelect) {
+      fd.append('action', action)
+    } else {
+      fd.append('action', 'upsert')
+    }
     fd.append('mapping', JSON.stringify(effectiveMapping))
     if (importSource.trim()) fd.append('import_source', importSource.trim())
     if (Object.keys(defaultsPayload).length > 0) {
       fd.append('import_defaults', JSON.stringify(defaultsPayload))
+    }
+    if (stockWarehouseId.trim()) {
+      fd.append('import_warehouse_id', stockWarehouseId.trim())
     }
     if (supportsStreamProgress) fd.append('stream', '1')
 
@@ -512,17 +563,63 @@ export function ImportModal({
               <div><span className="font-medium">Filas:</span> {rowCount}</div>
               <div><span className="font-medium">Campos mapeados:</span> {mappedCount} de {fields.length}</div>
             </div>
+            {showStockWarehousePicker && stockWarehouse && (
+              <div className="rounded border border-border-strong bg-surface px-3 py-3 space-y-2">
+                <label htmlFor="import-stock-warehouse-confirm" className="block text-[12px] font-medium text-fg">
+                  {stockWarehouse.label ?? 'Depósito'}
+                </label>
+                {stockWarehouseRequired ? (
+                  <>
+                    <select
+                      id="import-stock-warehouse-confirm"
+                      value={stockWarehouseId}
+                      onChange={(e) => {
+                        setStockWarehouseId(e.target.value)
+                        if (e.target.value.trim()) setStockWarehouseError(null)
+                      }}
+                      className={`w-full h-8 text-[13px] border rounded-sm px-2 bg-surface focus:outline-none focus:border-ring ${
+                        stockWarehouseError ? 'border-danger' : 'border-border-strong'
+                      }`}
+                    >
+                      <option value="">— Elegir depósito —</option>
+                      {stockWarehouseOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    {stockWarehouseError && (
+                      <p className="text-[11px] text-danger">{stockWarehouseError}</p>
+                    )}
+                    <p className="text-[11px] text-fg-muted leading-snug">
+                      {stockWarehouse.description ??
+                        'El stock del CSV se carga solo en productos que gestionen stock. No se sobrescribe stock ya existente en ese depósito.'}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-[12px] text-fg-muted leading-snug">
+                    No hay depósitos en la organización. Creá uno en Inventario para cargar stock al importar.
+                  </p>
+                )}
+              </div>
+            )}
             <div>
-              <label className="block text-[12px] font-medium text-fg-muted mb-1">Acción ante registros existentes</label>
-              <select
-                value={action}
-                onChange={e => setAction(e.target.value as ImportAction)}
-                className="w-full h-8 text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring"
-              >
-                {(Object.entries(ACTION_LABELS) as [ImportAction, string][]).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
+              {hideActionSelect ? (
+                <p className="text-[12px] text-fg-muted leading-relaxed">
+                  {confirmHint ?? 'Se aplicarán las cantidades del CSV en este depósito (productos del catálogo que gestionen stock).'}
+                </p>
+              ) : (
+                <>
+                  <label className="block text-[12px] font-medium text-fg-muted mb-1">Acción ante registros existentes</label>
+                  <select
+                    value={action}
+                    onChange={e => setAction(e.target.value as ImportAction)}
+                    className="w-full h-8 text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring"
+                  >
+                    {(Object.entries(ACTION_LABELS) as [ImportAction, string][]).map(([val, label]) => (
+                      <option key={val} value={val}>{label}</option>
+                    ))}
+                  </select>
+                </>
+              )}
             </div>
             {serverError && (
               <div className="rounded border border-danger bg-danger-bg px-3 py-2 text-[13px] text-danger">
@@ -558,7 +655,7 @@ export function ImportModal({
             </div>
             <div className="rounded border border-border bg-surface-muted px-4 py-3 text-[13px] text-fg-muted space-y-1">
               <div><span className="font-medium">Archivo:</span> {file?.name}</div>
-              <div><span className="font-medium">Acción:</span> {ACTION_LABELS[action]}</div>
+              <div><span className="font-medium">Acción:</span> {hideActionSelect ? 'Cargar cantidades' : ACTION_LABELS[action]}</div>
             </div>
           </div>
         )}
@@ -625,7 +722,11 @@ export function ImportModal({
             </Button>
           )}
           {step === 'confirm' && (
-            <Button size="sm" onClick={handleSubmit} disabled={loading}>
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={loading || (stockWarehouseRequired && !stockWarehouseId.trim())}
+            >
               Importar
             </Button>
           )}

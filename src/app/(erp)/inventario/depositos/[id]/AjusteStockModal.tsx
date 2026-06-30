@@ -158,8 +158,8 @@ export function AjusteStockModal({ warehouseId, onClose, onSaved }: AjusteStockM
     <Dialog
       open
       onOpenChange={open => { if (!open) onClose() }}
-      title="Stock y alertas"
-      description="Podés cambiar solo el mínimo y el vencimiento dejando la cantidad igual: no se registra movimiento. Si cambiás la cantidad, se registra un ajuste y luego se guardan las alertas (MVP sin lotes)."
+      title="Cargar o ajustar stock"
+      description="Elegí el producto y la cantidad en este depósito. Podés cambiar solo el mínimo o el vencimiento sin mover stock."
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <FormField label="Producto / Variante" error={errors.variant} required>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { permissionDisplayLabel, sortPermissionsForGroup } from './permission-labels'
+import { permissionDisplayLabel, permissionDescription, sortPermissionsForGroup } from './permission-labels'
 
 describe('permissionDisplayLabel', () => {
   it('labels sales:scope_own for the matrix', () => {
@@ -8,6 +8,18 @@ describe('permissionDisplayLabel', () => {
 
   it('labels standard module actions', () => {
     expect(permissionDisplayLabel('sales:read')).toBe('Ventas · Leer')
+  })
+})
+
+describe('permissionDescription', () => {
+  it('describes inventory permissions for the matrix', () => {
+    expect(permissionDescription('inventory:read')).toContain('transferencias')
+    expect(permissionDescription('inventory:write')).toContain('transferencias')
+    expect(permissionDescription('inventory:write')).toContain('mínimos')
+  })
+
+  it('returns empty string for unknown permissions', () => {
+    expect(permissionDescription('unknown:perm')).toBe('')
   })
 })
 

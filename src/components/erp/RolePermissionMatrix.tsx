@@ -17,7 +17,7 @@ type MatrixColumn =
   | { kind: 'custom'; id: string; name: string; allows_pos: boolean; user_count: number; readonly: false }
 
 interface MatrixPayload {
-  permissions: Array<{ name: MatrixPermission; label: string; group: string }>
+  permissions: Array<{ name: MatrixPermission; label: string; description: string; group: string }>
   columns: MatrixColumn[]
   grants: Record<string, MatrixPermission[]>
 }
@@ -507,6 +507,11 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
                         </span>
                       )}
                       {permissionDisplayLabel(perm.name)}
+                      {perm.description ? (
+                        <span className="block text-[10px] text-fg-subtle font-normal mt-0.5 max-w-md leading-snug">
+                          {perm.description}
+                        </span>
+                      ) : null}
                     </td>
                     {visibleColumns.map(col => {
                       const key = columnKey(col)

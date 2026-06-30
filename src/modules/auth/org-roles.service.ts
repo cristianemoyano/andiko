@@ -24,7 +24,7 @@ import { seedDefaultOrgRoles } from '@/modules/auth/org-roles-seed'
 
 export { seedDefaultOrgRoles }
 
-import { permissionDisplayLabel } from '@/lib/permission-labels'
+import { permissionDisplayLabel, permissionDescription } from '@/lib/permission-labels'
 
 function permissionGroup(name: MatrixPermission): string {
   return isPanelPermission(name) ? 'panel' : name.split(':')[0]
@@ -92,6 +92,7 @@ export async function listOrgRolesMatrix(orgId: string) {
     permissions: ASSIGNABLE_MATRIX_PERMISSIONS.map(name => ({
       name,
       label: permissionDisplayLabel(name),
+      description: permissionDescription(name),
       group: permissionGroup(name as MatrixPermission),
     })),
     columns: [

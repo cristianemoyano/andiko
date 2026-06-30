@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
-import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { DataTable, TablePagination, InventoryStockHint, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { InventarioSubNav } from '../InventarioSubNav'
 import type { DeliveryNote, DeliveryNoteStatus } from './types'
@@ -102,8 +102,9 @@ export function RemitosClient() {
       />
       <InventarioSubNav />
 
-      <PageBody>
-        {error && <p className="mb-3 text-sm text-danger">{error}</p>}
+      <PageBody className="flex flex-col gap-5">
+        <InventoryStockHint screen="remitos" />
+        {error && <p className="text-danger text-sm">{error}</p>}
         <DataTable
           columns={COLUMNS}
           data={notes}

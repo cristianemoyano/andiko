@@ -9,6 +9,7 @@ import { Button } from '@/components/primitives/Button'
 import { Badge } from '@/components/primitives/Badge'
 import { InventarioSubNav } from '../InventarioSubNav'
 import { DepositoModal } from './DepositoModal'
+import { InventoryStockHint } from '@/components/erp/InventoryStockHint'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 type Warehouse = {
@@ -89,7 +90,8 @@ export function DepositosClient() {
       />
       <InventarioSubNav />
 
-      <PageBody>
+      <PageBody className="flex flex-col gap-5">
+        <InventoryStockHint screen="depositos" />
         {error && <p className="text-danger text-sm mb-4">{error}</p>}
         <DataTable
           columns={COLUMNS}
