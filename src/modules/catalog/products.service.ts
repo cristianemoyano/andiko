@@ -6,8 +6,9 @@ import sequelize from '@/lib/db'
 import Product from './product.model'
 import ProductCategory from './product-category.model'
 import ProductVariant from './product-variant.model'
-import { generateSlug, formatSku, normalizeProductImagesForDb, slugForImportedProduct } from './product.utils'
+import { generateSlug, formatSku, normalizeProductImagesForDb, slugForImportedProduct, importBasePrice } from './product.utils'
 import { persistUnmappedCsvColumns } from './catalog-import-persist'
+import { syncImportedPriceToDefaultList } from './catalog-import-price-list'
 import { resolveOrCreateCategoryIdForImport } from './catalog-import-category'
 import { allocateUniqueVariantSku } from './allocate-variant-sku'
 import { importProductsHierarchical } from './products-hierarchical-import'
@@ -272,6 +273,28 @@ export async function deleteProduct(id: UUID, actorId: UUID, ctx: TenantContext)
   logger.info({ productId: id, actorId }, 'product deleted')
 }
 
+export async function deleteProductsBulk(ids: UUID[], actorId: UUID, ctx: TenantContext) {
+  const uniqueIds = [...new Set(ids)]
+  const errors: { id: string; message: string }[] = []
+  let deleted = 0
+
+  for (const id of uniqueIds) {
+    try {
+      await deleteProduct(id, actorId, ctx)
+      deleted++
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message === 'PRODUCT_NOT_FOUND'
+          ? 'Producto no encontrado'
+          : 'No se pudo eliminar'
+      errors.push({ id, message })
+    }
+  }
+
+  logger.info({ deleted, failed: errors.length, actorId }, 'products bulk deleted')
+  return { deleted, errors }
+}
+
 export type ImportAction = 'create' | 'update' | 'upsert'
 
 export type ImportResult = {
@@ -417,7 +440,9 @@ export async function importProducts(
         const images = parseProductCsvImages(mapped.images_urls ?? '')
         const rowInput = rowToProductInput(normalized, categoryId)
         if (images.length > 0) rowInput.images = images
-        const rowUpdate = rowToProductUpdateInput(normalized, categoryId)
+        const rowUpdate = rowToProductUpdateInput(normalized, categoryId, {
+          priceMapped: 'base_price' in mapped,
+        })
         if (images.length > 0) rowUpdate.images = images
 
         const importExt = importExtEarly
@@ -542,7 +567,7 @@ async function createProductFromImport(
       barcode: barcode ?? null,
       is_default: true,
       cost_price: cost_price ?? null,
-      base_price: base_price ?? null,
+      base_price: importBasePrice(base_price),
       manage_stock: manage_stock ?? true,
       stock_quantity: stock_quantity ?? 0,
       import_external_id: opts.importExternalId,
@@ -551,6 +576,7 @@ async function createProductFromImport(
     },
     { transaction },
   )
+  await syncImportedPriceToDefaultList(ctx.orgId, variant.id, base_price, actorId, transaction)
   return { productId: product.id, variantId: variant.id }
 }
 
@@ -589,7 +615,7 @@ async function updateProductFromImport(
   const variantUpdates: Record<string, unknown> = {}
   if (barcode !== undefined) variantUpdates.barcode = barcode
   if (cost_price !== undefined) variantUpdates.cost_price = cost_price
-  if (base_price !== undefined) variantUpdates.base_price = base_price
+  if (base_price !== undefined) variantUpdates.base_price = importBasePrice(base_price)
   if (stock_quantity !== undefined) variantUpdates.stock_quantity = stock_quantity
   if (manage_stock !== undefined) variantUpdates.manage_stock = manage_stock
   if (opts?.importExternalId !== undefined && opts.importExternalId !== null) {
@@ -598,6 +624,11 @@ async function updateProductFromImport(
 
   if (Object.keys(variantUpdates).length > 0) {
     await variant.update({ ...variantUpdates, updated_by: actorId }, { transaction })
+  }
+
+  if (variant.org_id) {
+    const priceToSync = base_price !== undefined ? importBasePrice(base_price) : importBasePrice(variant.base_price)
+    await syncImportedPriceToDefaultList(variant.org_id, variant.id, priceToSync, actorId, transaction)
   }
 }
 

@@ -16,6 +16,8 @@ export const bulkPriceAdjustmentSchema = z.object({
   ]),
   /** Porcentaje (ej. 10 = 10%) o monto fijo ARS según adjustment_type */
   value: z.string().regex(/^\d+(\.\d{1,4})?$/),
+  /** Incluir variantes sin precio (se tratan como $0). Por defecto no. */
+  include_without_price: z.boolean().optional().default(false),
   dry_run: z.boolean().optional().default(false),
 }).superRefine((data, ctx) => {
   if (data.target === 'price_list' && !data.price_list_id) {
@@ -27,7 +29,13 @@ export type BulkPriceAdjustmentInput = z.infer<typeof bulkPriceAdjustmentSchema>
 
 export interface BulkPriceAdjustmentPreview {
   affected_count: number
-  sample: Array<{ variant_id: string; sku: string; current_price: string; new_price: string }>
+  sample: Array<{
+    variant_id: string
+    product_name: string
+    sku: string
+    current_price: string
+    new_price: string
+  }>
 }
 
 export interface BulkPriceAdjustmentResult extends BulkPriceAdjustmentPreview {

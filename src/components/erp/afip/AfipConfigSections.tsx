@@ -10,6 +10,7 @@ import { Badge } from '@/components/primitives/Badge'
 import { DataTable, ConfirmDialog, type Column } from '@/components/erp'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { ORG_IVA_CONDITION_OPTIONS } from '@/modules/auth/org-iva-conditions'
 
 type Environment = 'homologacion' | 'produccion'
 
@@ -23,13 +24,7 @@ const ENVIRONMENT_OPTIONS = [
   { value: 'produccion', label: 'Producción' },
 ]
 
-const ORG_IVA_OPTIONS = [
-  { value: 'responsable_inscripto', label: 'Responsable inscripto' },
-  { value: 'monotributista', label: 'Monotributista' },
-  { value: 'exento', label: 'Exento' },
-  { value: 'consumidor_final', label: 'Consumidor final' },
-  { value: 'no_responsable', label: 'No responsable' },
-]
+const ORG_IVA_OPTIONS = ORG_IVA_CONDITION_OPTIONS
 
 export function AfipConfigSection({
   title,

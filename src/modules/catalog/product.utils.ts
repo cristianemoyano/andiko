@@ -28,3 +28,24 @@ export function slugForImportedProduct(name: string, importExternalId: string | 
   const suffix = `-i-${ext}`.slice(0, 80)
   return `${base}${suffix}`.slice(0, 265)
 }
+
+/** Etiqueta de variante para listados: nombre del producto y, si difiere, el de la variante. */
+export function variantDisplayName(productName: string, variantName: string | null | undefined): string {
+  const product = productName.trim()
+  const variant = (variantName ?? '').trim()
+  if (variant && variant !== product) return `${product} — ${variant}`
+  return product || variant
+}
+
+const ZERO_PRICE = '0.00'
+
+/** Precio base en importación / backfill: vacío → $0 (producto igual entra al catálogo y a la lista). */
+export function importBasePrice(value: string | null | undefined): string {
+  const trimmed = (value ?? '').trim()
+  if (trimmed === '') return ZERO_PRICE
+  return trimmed.replace(',', '.')
+}
+
+export function isMissingBasePrice(value: string | null | undefined): boolean {
+  return (value ?? '').trim() === ''
+}

@@ -8,6 +8,7 @@ import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { fetchLandingPath } from '@/lib/landing-path-client'
 import { useCapabilities } from './CapabilitiesContext'
 
 type UserHit = {
@@ -197,6 +198,8 @@ export function SysAdminImpersonation() {
       })
       await update({ impersonation: { userId: user.id } })
       await refreshCapabilities()
+      const path = await fetchLandingPath()
+      router.push(path)
       router.refresh()
       setRecentUsers(pushRecentImpersonation(user))
       setModalOpen(false)
@@ -213,6 +216,8 @@ export function SysAdminImpersonation() {
     setError(null)
     await update({ impersonation: null })
     await refreshCapabilities()
+    const path = await fetchLandingPath()
+    router.push(path)
     router.refresh()
   }
 

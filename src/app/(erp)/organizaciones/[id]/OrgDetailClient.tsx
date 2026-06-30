@@ -15,7 +15,7 @@ import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { Dialog } from '@/components/primitives/Dialog'
 import { BranchModal, type BranchRow } from './BranchModal'
 import { OrgUserModal, type OrgUserRow } from './OrgUserModal'
-import { SearchableSelect, type SearchableSelectOption } from '@/components/erp/SearchableSelect'
+import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import { formatCuit } from '@/modules/contacts/contact.utils'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
@@ -26,6 +26,11 @@ import { orgApiPaths } from '@/lib/org-api-paths'
 import { canManageOrgUserFromList } from '@/lib/org-user-management-access'
 import { useCapabilities } from '@/components/layout/CapabilitiesContext'
 import { RolePermissionMatrix } from '@/components/erp/RolePermissionMatrix'
+import {
+  ORG_IVA_CONDITION_HINT,
+  ORG_IVA_CONDITION_LABEL,
+  ORG_IVA_CONDITION_OPTIONS,
+} from '@/modules/auth/org-iva-conditions'
 
 interface OrgPayload {
   id: string
@@ -39,18 +44,6 @@ interface OrgPayload {
   created_at: string
   updated_at: string
 }
-
-const IVA_CONDITION_OPTIONS: SearchableSelectOption[] = [
-  { value: 'responsable_inscripto', label: 'Responsable Inscripto' },
-  { value: 'monotributista', label: 'Monotributista' },
-  { value: 'consumidor_final', label: 'Consumidor Final' },
-  { value: 'exento', label: 'Exento' },
-  { value: 'no_responsable', label: 'No Responsable' },
-]
-
-const IVA_CONDITION_LABEL: Record<string, string> = Object.fromEntries(
-  IVA_CONDITION_OPTIONS.map(o => [o.value, o.label]),
-)
 
 interface DetailResponse {
   organization: OrgPayload
@@ -511,7 +504,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               <div>
                 <p className="text-[12px] text-fg-muted">Condición IVA</p>
                 <p className="text-[13px] text-fg">
-                  {org.iva_condition ? IVA_CONDITION_LABEL[org.iva_condition] ?? org.iva_condition : '—'}
+                  {org.iva_condition ? ORG_IVA_CONDITION_LABEL[org.iva_condition as keyof typeof ORG_IVA_CONDITION_LABEL] ?? org.iva_condition : '—'}
                 </p>
               </div>
               <div>
@@ -710,9 +703,10 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               <SearchableSelect
                 value={orgIvaCondition}
                 onChange={setOrgIvaCondition}
-                options={IVA_CONDITION_OPTIONS}
+                options={ORG_IVA_CONDITION_OPTIONS}
                 placeholder="Seleccionar…"
               />
+              <p className="mt-1 text-[11px] text-fg-muted">{ORG_IVA_CONDITION_HINT}</p>
             </FormField>
             <FormField label="Domicilio fiscal" htmlFor="edit_org_fiscal_address" error={orgFieldErrors.fiscal_address?.[0]}>
               <Input

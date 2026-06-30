@@ -1,7 +1,10 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { resolveCapabilities } from '@/lib/capabilities'
+import { shouldSkipOnboardingEnforcement } from '@/lib/onboarding-guards'
+import { resolveDefaultLandingPath } from '@/lib/panel-access'
 import { resolvePostAuthRedirect } from '@/lib/post-auth-redirect'
+import { getEffectiveOrganizationSettings } from '@/modules/auth/organization-settings.service'
 import { getOnboardingStatus } from '@/modules/auth/onboarding.service'
 import { OnboardingWizardClient } from './OnboardingWizardClient'
 
@@ -13,13 +16,22 @@ export default async function OnboardingPage({ searchParams }: Props) {
   const session = await auth()
   if (!session) redirect('/login')
 
-  const caps = await resolveCapabilities(session)
-  if (!caps?.onboarding.manage) {
+  const orgId = session.user.orgId
+  if (!orgId) {
     redirect(await resolvePostAuthRedirect(session))
   }
 
-  const orgId = session.user.orgId
-  if (!orgId) redirect('/login')
+  if (shouldSkipOnboardingEnforcement(session.user)) {
+    const caps = await resolveCapabilities(session)
+    const enabledModules = (await getEffectiveOrganizationSettings(orgId)).enabled_modules
+    redirect(resolveDefaultLandingPath(caps, enabledModules))
+  }
+
+  const caps = await resolveCapabilities(session)
+  if (!caps?.onboarding.manage) {
+    const enabledModules = (await getEffectiveOrganizationSettings(orgId)).enabled_modules
+    redirect(resolveDefaultLandingPath(caps, enabledModules))
+  }
 
   const { revisit } = await searchParams
   const allowRevisit = revisit === '1'

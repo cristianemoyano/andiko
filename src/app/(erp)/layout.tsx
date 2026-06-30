@@ -8,7 +8,11 @@ import { resolveModuleForPath, type OrgModuleKey } from '@/modules/auth/organiza
 import { resolveCapabilities } from '@/lib/capabilities'
 import { hasModuleReadAccess } from '@/lib/nav-module-access'
 import { resolveModuleAccessRedirect, SIN_ACCESO_PATH } from '@/lib/panel-access'
-import { isOnboardingPath, shouldLayoutForceOnboardingRedirect } from '@/lib/onboarding-guards'
+import {
+  isOnboardingPath,
+  shouldLayoutForceOnboardingRedirect,
+  shouldSkipOnboardingEnforcement,
+} from '@/lib/onboarding-guards'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { MenuPanel } from '@/components/layout/MenuPanel'
@@ -32,7 +36,7 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
   const enabledModules: OrgModuleKey[] | undefined = settings?.enabled_modules
   let showOnboardingResume = false
 
-  if (orgId) {
+  if (orgId && !shouldSkipOnboardingEnforcement(session.user)) {
     const canManageOnboarding = capabilities?.onboarding.manage ?? false
 
     if (canManageOnboarding) {

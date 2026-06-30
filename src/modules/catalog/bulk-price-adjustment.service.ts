@@ -4,6 +4,7 @@ import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
 import Product from './product.model'
 import ProductVariant from './product-variant.model'
+import { importBasePrice, isMissingBasePrice, variantDisplayName } from './product.utils'
 import { getPriceList } from './price-list.service'
 import type { BulkPriceAdjustmentInput, BulkPriceAdjustmentPreview, BulkPriceAdjustmentResult } from './bulk-price-adjustment.schema'
 import type { UUID } from '@/types'
@@ -34,29 +35,54 @@ function applyAdjustment(current: string, input: BulkPriceAdjustmentInput): stri
   }
 }
 
+function resolveVariantCurrentPrice(
+  basePrice: string | null | undefined,
+  listPrice: string | undefined,
+  includeWithoutPrice: boolean,
+): string | null {
+  if (listPrice !== undefined) return String(listPrice)
+  if (!isMissingBasePrice(basePrice)) return String(basePrice)
+  if (includeWithoutPrice) return importBasePrice(basePrice)
+  return null
+}
+
 async function loadVariantsWithPrices(
   input: BulkPriceAdjustmentInput,
   orgId: string,
-): Promise<Array<{ id: UUID; sku: string; current_price: string }>> {
+): Promise<Array<{ id: UUID; sku: string; product_name: string; current_price: string }>> {
   const productWhere: Record<string, unknown> = { ...orgWhere(orgId), status: 'active' }
   if (input.category_id) productWhere.category_id = input.category_id
 
   const variants = await ProductVariant.findAll({
-    attributes: ['id', 'sku', 'base_price'],
+    where: orgWhere(orgId),
+    attributes: ['id', 'sku', 'name', 'base_price'],
     include: [{
       model: Product,
       as: 'product',
-      attributes: ['id'],
+      attributes: ['id', 'name'],
       required: true,
       where: productWhere,
     }],
-    order: [['sku', 'ASC']],
+    order: [[{ model: Product, as: 'product' }, 'name', 'ASC'], ['sku', 'ASC']],
   })
+
+  const toRow = (v: ProductVariant, currentPrice: string) => {
+    const product = v.get('product') as Product
+    return {
+      id: v.id,
+      sku: v.sku,
+      product_name: variantDisplayName(product.name, v.name),
+      current_price: currentPrice,
+    }
+  }
 
   if (input.target === 'base_price') {
     return variants
-      .filter(v => v.base_price != null)
-      .map(v => ({ id: v.id, sku: v.sku, current_price: v.base_price! }))
+      .map((v) => {
+        const current = resolveVariantCurrentPrice(v.base_price, undefined, input.include_without_price)
+        return current != null ? toRow(v, current) : null
+      })
+      .filter((row): row is { id: UUID; sku: string; product_name: string; current_price: string } => row !== null)
   }
 
   const priceListId = input.price_list_id!
@@ -70,12 +96,12 @@ async function loadVariantsWithPrices(
   const priceByVariant = new Map(listItems.map(i => [i.product_variant_id, i.price]))
 
   return variants
-    .map(v => {
-      const current = priceByVariant.get(v.id) ?? v.base_price
-      if (current == null) return null
-      return { id: v.id, sku: v.sku, current_price: current }
+    .map((v) => {
+      const listPrice = priceByVariant.has(v.id) ? priceByVariant.get(v.id)! : undefined
+      const current = resolveVariantCurrentPrice(v.base_price, listPrice, input.include_without_price)
+      return current != null ? toRow(v, current) : null
     })
-    .filter((row): row is { id: UUID; sku: string; current_price: string } => row !== null)
+    .filter((row): row is { id: UUID; sku: string; product_name: string; current_price: string } => row !== null)
 }
 
 export async function previewBulkPriceAdjustment(
@@ -85,6 +111,7 @@ export async function previewBulkPriceAdjustment(
   const rows = await loadVariantsWithPrices(input, orgId)
   const sample = rows.slice(0, PREVIEW_SAMPLE_SIZE).map(r => ({
     variant_id: r.id,
+    product_name: r.product_name,
     sku: r.sku,
     current_price: r.current_price,
     new_price: applyAdjustment(r.current_price, input),
@@ -156,6 +183,7 @@ export async function applyBulkPriceAdjustment(
 
   const sample = updates.slice(0, PREVIEW_SAMPLE_SIZE).map(r => ({
     variant_id: r.id,
+    product_name: r.product_name,
     sku: r.sku,
     current_price: r.current_price,
     new_price: r.new_price,

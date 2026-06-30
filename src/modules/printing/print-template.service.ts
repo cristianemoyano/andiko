@@ -1,7 +1,8 @@
 import 'server-only'
 import { cache } from 'react'
 import OrganizationSetting from '@/modules/auth/organization-setting.model'
-import Organization, { type OrgIvaCondition } from '@/modules/auth/organization.model'
+import Organization from '@/modules/auth/organization.model'
+import { ORG_IVA_CONDITION_LABEL, type OrgIvaCondition } from '@/modules/auth/org-iva-conditions'
 import {
   DEFAULT_PRINT_TEMPLATE,
   mergePrintTemplate,
@@ -10,13 +11,7 @@ import {
   type PrintTemplateUpdateInput,
 } from './print-template.schema'
 
-export const ORG_IVA_CONDITION_LABEL: Record<OrgIvaCondition, string> = {
-  responsable_inscripto: 'Responsable Inscripto',
-  monotributista: 'Monotributista',
-  consumidor_final: 'Consumidor Final',
-  exento: 'Exento',
-  no_responsable: 'No Responsable',
-}
+export { ORG_IVA_CONDITION_LABEL } from '@/modules/auth/org-iva-conditions'
 
 /** Org's real fiscal data, used by the template to populate the fiscal block. */
 export interface OrgFiscalData {
@@ -42,7 +37,9 @@ function fiscalFromOrg(org: Organization): OrgFiscalData {
     legal_name: org.legal_name,
     cuit: org.cuit,
     iva_condition: org.iva_condition,
-    iva_condition_label: org.iva_condition ? ORG_IVA_CONDITION_LABEL[org.iva_condition] : null,
+    iva_condition_label: org.iva_condition
+      ? ORG_IVA_CONDITION_LABEL[org.iva_condition as OrgIvaCondition]
+      : null,
     fiscal_address: org.fiscal_address,
   }
 }

@@ -2,6 +2,14 @@ export function isOnboardingPath(pathname: string): boolean {
   return pathname === '/onboarding' || pathname.startsWith('/onboarding/')
 }
 
+/** Sys-admin impersonation must not enter the onboarding funnel (avoids redirect loops). */
+export function shouldSkipOnboardingEnforcement(user: {
+  realRole?: string | null
+  impersonation?: unknown
+}): boolean {
+  return user.realRole === 'sys-admin' && user.impersonation != null
+}
+
 /** Force redirect to onboarding from ERP layout (not when pathname is unknown). */
 export function shouldLayoutForceOnboardingRedirect(
   pathname: string,

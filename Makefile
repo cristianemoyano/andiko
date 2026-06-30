@@ -1,7 +1,7 @@
 .PHONY: up down reset logs db shell dev \
 	woo-up woo-down woo-bootstrap woo-credentials woo-reset \
-	prod-push prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-migrate prod-migrate-status \
-	prod-create-sysadmin prod-health prod-backup prod-logs prod-renew-certs
+	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-sync-nginx-conf prod-migrate prod-migrate-status \
+	prod-create-sysadmin prod-health prod-backup prod-disk-check prod-logs prod-renew-certs prod-portainer-auth
 
 # =============================================================================
 # Development — infra local (postgres, pgadmin, Next.js)
@@ -79,6 +79,11 @@ prod-push:
 	@test -n "$(TAG)" || (echo "TAG is required: make prod-push TAG=v0.26.0" && exit 1)
 	TAG=$(TAG) bash infra/scripts/push-image.sh
 
+prod-release:
+	TAG=$(TAG) SKIP_PULL=$(SKIP_PULL) SKIP_PUSH=$(SKIP_PUSH) SKIP_MIGRATE=$(SKIP_MIGRATE) \
+		RELEASE_BRANCH=$(RELEASE_BRANCH) RELEASE_WAIT_SECONDS=$(RELEASE_WAIT_SECONDS) \
+		bash infra/scripts/release.sh
+
 prod-bootstrap-vps:
 	sudo bash infra/scripts/bootstrap-vps.sh
 
@@ -94,6 +99,11 @@ prod-deploy:
 
 prod-ssl:
 	bash infra/scripts/init-ssl.sh
+
+prod-sync-nginx-conf:
+	bash infra/scripts/sync-nginx-conf.sh
+	@NGINX_CONTAINER=$$(docker ps -q -f name=andiko_nginx | head -n1); \
+	if [ -n "$$NGINX_CONTAINER" ]; then docker exec $$NGINX_CONTAINER nginx -s reload; fi
 
 prod-migrate:
 	@test -n "$(TAG)" || (echo "TAG is required: make prod-migrate TAG=v0.26.0" && exit 1)
@@ -116,8 +126,15 @@ prod-health:
 prod-backup:
 	bash infra/scripts/backup-db.sh
 
+prod-disk-check:
+	bash infra/scripts/disk-check.sh
+
 prod-logs:
 	docker service logs -f andiko_app
 
 prod-renew-certs:
 	bash infra/certbot/renew.sh
+
+prod-portainer-auth:
+	PORTAINER_AUTH_USER=$(PORTAINER_AUTH_USER) PORTAINER_AUTH_PASSWORD=$(PORTAINER_AUTH_PASSWORD) \
+		bash infra/scripts/init-portainer-auth.sh

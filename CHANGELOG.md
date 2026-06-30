@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.33.0](https://github.com/cristianemoyano/andiko/compare/v0.32.0...v0.33.0) (2026-06-30)
+
+### Features
+
+* **core:** add make prod-disk-check for VPS disk diagnostics ([f714507](https://github.com/cristianemoyano/andiko/commit/f71450730770285350505ab350ecc407e6cd7355))
+* **core:** add Portainer and Docker log rotation on VPS ([40c5c50](https://github.com/cristianemoyano/andiko/commit/40c5c509bc4ee389440404300d804111c6a1e5d7))
+* **core:** add prod-release orchestrated deploy command ([ba3bf5d](https://github.com/cristianemoyano/andiko/commit/ba3bf5dd1d52aafc172f4144ba9263acffd8e909))
+* **core:** improve price lists, catalog bulk ops, and onboarding ([cfd37f8](https://github.com/cristianemoyano/andiko/commit/cfd37f86d6ec7b548c66a044113f51eb3460fd54))
+* **core:** prompt for release tag in prod-release ([146f131](https://github.com/cristianemoyano/andiko/commit/146f1313aca93633ef9a1ac691b06254af4d3309))
+
+### Bug Fixes
+
+* **core:** detect release tag on VPS without node ([6d5cb84](https://github.com/cristianemoyano/andiko/commit/6d5cb84fbde6188e5b7ea85cc3737e40f13d2f64))
+* **core:** keep nginx live configs outside git repo on VPS ([67407f8](https://github.com/cristianemoyano/andiko/commit/67407f8a32d786bf19edeaa396ea20bc9b81d0ca))
+* **core:** make Portainer htpasswd readable by nginx worker ([efc952e](https://github.com/cristianemoyano/andiko/commit/efc952ee371047e84ff8a16c29cc6de06e2cedef))
+* **core:** restore nginx bootstrap confs in repo for new VPS ([24e9f22](https://github.com/cristianemoyano/andiko/commit/24e9f228155770b39b154364a8957f6078145a78))
+
 ## [0.32.0](https://github.com/cristianemoyano/andiko/compare/v0.31.0...v0.32.0) (2026-06-29)
 
 ### Features

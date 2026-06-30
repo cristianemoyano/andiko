@@ -2,13 +2,14 @@
 
 Operator runbook: **[docs/deployment/production.md](../docs/deployment/production.md)**
 
-Quick reference:
+**Production VPS is configured.** Routine deploy:
 
 ```bash
-make prod-push TAG=v0.26.0   # laptop — build + push to GHCR
-make prod-init               # VPS — once
-make prod-deploy TAG=v0.26.0
-make prod-ssl
-make prod-migrate TAG=v0.26.0
-make prod-health
+ssh root@187.77.235.70
+cd /root/andiko
+make prod-release
 ```
+
+**URLs:** [andiko.cloud](https://andiko.cloud) · [portainer.andiko.cloud](https://portainer.andiko.cloud)
+
+New VPS bootstrap: see [production.md § New VPS bootstrap](../docs/deployment/production.md#new-vps-bootstrap-first-time-only).

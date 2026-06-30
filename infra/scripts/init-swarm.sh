@@ -30,8 +30,10 @@ POSTGRES_DATA_DIR="${POSTGRES_DATA_DIR:-/var/lib/andiko/postgres}"
 CERTBOT_CERTS_DIR="${CERTBOT_CERTS_DIR:-/var/lib/andiko/certs}"
 CERTBOT_WWW_DIR="${CERTBOT_WWW_DIR:-/var/lib/andiko/certbot-www}"
 BACKUP_LOCAL_DIR="${BACKUP_LOCAL_DIR:-/var/lib/andiko/backups}"
+PORTAINER_DATA_DIR="${PORTAINER_DATA_DIR:-/var/lib/andiko/portainer}"
+NGINX_CONF_DIR="${NGINX_CONF_DIR:-/var/lib/andiko/nginx/conf.d}"
 
-for dir in "$POSTGRES_DATA_DIR" "$CERTBOT_CERTS_DIR" "$CERTBOT_WWW_DIR" "$BACKUP_LOCAL_DIR"; do
+for dir in "$POSTGRES_DATA_DIR" "$CERTBOT_CERTS_DIR" "$CERTBOT_WWW_DIR" "$BACKUP_LOCAL_DIR" "$PORTAINER_DATA_DIR" "$NGINX_CONF_DIR"; do
   if [ ! -d "$dir" ]; then
     echo "Creating $dir"
     sudo mkdir -p "$dir"
@@ -73,6 +75,8 @@ create_or_update_secret database_url "${DATABASE_URL}"
 create_or_update_secret auth_secret "${AUTH_SECRET}"
 create_or_update_secret auth_url "${AUTH_URL:-https://andiko.cloud}"
 create_or_update_secret cron_secret "${CRON_SECRET}"
+
+bash "$SCRIPT_DIR/sync-nginx-conf.sh"
 
 echo ""
 echo "Init complete. Next steps:"

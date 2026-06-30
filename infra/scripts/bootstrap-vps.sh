@@ -22,6 +22,7 @@ apt-get install -y \
   gettext-base \
   openssl \
   python3 \
+  apache2-utils \
   ufw
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -67,7 +68,7 @@ echo "Bootstrap complete."
 echo ""
 echo "Next steps (as ${DEPLOY_USER}):"
 echo "  1. Hostinger panel: allow TCP 22, 80, 443 if a cloud firewall is enabled"
-echo "  2. DNS: andiko.cloud + www → this server's public IP"
+echo "  2. DNS: andiko.cloud + www + portainer.andiko.cloud → this server's public IP"
 echo "  3. GitHub SSH key (if repo is private):"
 echo "       ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519"
 echo "       cat ~/.ssh/id_ed25519.pub   # add at github.com/settings/keys"

@@ -210,6 +210,8 @@ Productos y servicios. Requisito mínimo para facturar.
 - [x] Datos de logística / shipping por SKU (peso, dimensiones, bultos/presentaciones)
 - [x] Importación CSV de productos con progreso en tiempo real (stream NDJSON)
 - [x] Script de conversión WooCommerce → Andiko (`scripts/convert-wc-products-to-andiko.mjs`)
+- [x] Listas de precios: detalle paginado, fill desde catálogo, clonar, hint lista predeterminada, sync import→lista default, toggle productos sin precio
+- [x] Catálogo: eliminación masiva de productos; ajustes masivos con toggle sin precio base
 
 ---
 
@@ -664,6 +666,21 @@ Ideas validadas pero sin fecha definida.
   - Reglas/promociones (por cantidad, por categoría, combos)
   - Descuentos por cliente y por lista de precios con vigencia
   - Descuento por condición de pago (contado/anticipado)
+
+**Infra VPS (observabilidad y disco):**
+
+- [ ] Logrotate para `/var/log/andiko-*.log` (crons backup/certbot)
+- [ ] `make prod-prune` — limpieza de imágenes Docker viejas
+- [x] `make prod-disk-check` — diagnóstico de disco
+- [ ] `daemon.json.example` — defaults globales de logging Docker
+
+**Logging de plataforma:**
+
+- [ ] `LOG_LEVEL`, redacción de secretos en pino, `requestId` (AsyncLocalStorage)
+- [ ] `handleApiError` centralizado en api-handler
+- [ ] HTTP access logging
+- [ ] Convenciones `action` + `logger.error` en transacciones de módulos críticos
+- [ ] `docs/observability/logging.md`
 
 ---
 

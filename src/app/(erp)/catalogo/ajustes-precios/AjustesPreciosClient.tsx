@@ -14,7 +14,7 @@ import { notifyApiError, notifySuccess } from '@/lib/notify'
 
 type Category = { id: string; name: string }
 type PriceList = { id: string; name: string; is_default: boolean }
-type PreviewRow = { variant_id: string; sku: string; current_price: string; new_price: string }
+type PreviewRow = { variant_id: string; product_name: string; sku: string; current_price: string; new_price: string }
 type PreviewResult = { affected_count: number; sample: PreviewRow[]; updated_count?: number }
 
 const ADJUSTMENT_OPTIONS = [
@@ -46,6 +46,7 @@ export function AjustesPreciosClient() {
     category_id: '',
     adjustment_type: 'percent_increase' as typeof ADJUSTMENT_OPTIONS[number]['value'],
     value: '',
+    include_without_price: false,
   })
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export function AjustesPreciosClient() {
       category_id: form.category_id || undefined,
       adjustment_type: form.adjustment_type,
       value: form.value,
+      include_without_price: form.include_without_price,
       dry_run: dryRun,
     }
   }
@@ -193,6 +195,24 @@ export function AjustesPreciosClient() {
                 </FormField>
               </div>
 
+              <label className="flex items-start gap-2 text-sm text-fg-muted cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.include_without_price}
+                  onChange={(e) => {
+                    setForm(f => ({ ...f, include_without_price: e.target.checked }))
+                    setPreview(null)
+                  }}
+                  className="accent-brand-600 mt-0.5"
+                />
+                <span>
+                  Incluir productos sin precio base
+                  <span className="block text-[11px] text-fg-subtle mt-0.5">
+                    Se tratarán como $0,00 en el cálculo del ajuste
+                  </span>
+                </span>
+              </label>
+
               <div className="flex gap-2 pt-2">
                 <Button type="submit" variant="secondary" disabled={loading || !form.value}>
                   {loading ? 'Calculando…' : 'Vista previa'}
@@ -221,7 +241,7 @@ export function AjustesPreciosClient() {
                 <table className="w-full text-[13px]">
                   <thead>
                     <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                      <th className="px-4 py-2">SKU</th>
+                      <th className="px-4 py-2">Producto</th>
                       <th className="px-4 py-2 text-right">Actual</th>
                       <th className="px-4 py-2 text-right">Nuevo</th>
                     </tr>
@@ -229,7 +249,12 @@ export function AjustesPreciosClient() {
                   <tbody>
                     {preview.sample.map(row => (
                       <tr key={row.variant_id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-2 font-mono text-xs">{row.sku}</td>
+                        <td className="px-4 py-2">
+                          <span className="text-fg leading-snug">{row.product_name}</span>
+                          {row.sku && (
+                            <span className="block font-mono text-[11px] text-fg-subtle mt-0.5">{row.sku}</span>
+                          )}
+                        </td>
                         <td className="px-4 py-2 text-right tabular-nums text-fg-muted">{formatMoney(row.current_price)}</td>
                         <td className="px-4 py-2 text-right tabular-nums font-medium text-fg">{formatMoney(row.new_price)}</td>
                       </tr>
