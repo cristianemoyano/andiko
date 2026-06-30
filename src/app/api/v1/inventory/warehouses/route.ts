@@ -39,6 +39,12 @@ export const POST = withPermission('inventory:write', async (req, _ctx, session)
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
       return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
     }
+    if (err instanceof Error && err.message === 'BRANCH_WAREHOUSE_ALREADY_ASSIGNED') {
+      return NextResponse.json(
+        { error: 'Esa sucursal ya tiene un depósito activo asignado.', code: err.message },
+        { status: 409 },
+      )
+    }
     throw err
   }
 })

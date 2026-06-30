@@ -8,7 +8,7 @@ import Product from '@/modules/catalog/product.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
 import StockItem from '@/modules/inventory/stock-item.model'
 import { slugForImportedProduct } from '@/modules/catalog/product.utils'
-import { resolveDefaultWarehouse } from '@/modules/inventory/warehouses.service'
+import { resolveWarehouseForBranch } from '@/modules/inventory/branch-warehouse.resolution'
 import { applyMovement } from '@/modules/inventory/stock-movements.service'
 import WoocommerceSite from './woocommerce-site.model'
 import WoocommerceProductLink from './woocommerce-product-link.model'
@@ -419,7 +419,7 @@ export async function applyImport(site: WoocommerceSite, options: WoocommerceImp
  * directly so the inventory ledger stays consistent.
  */
 async function seedErpStockFromWoo(site: WoocommerceSite, units: WooUnit[]): Promise<void> {
-  const warehouseId = await resolveDefaultWarehouse(site.branch_id, site.org_id!)
+  const warehouseId = await resolveWarehouseForBranch(site.branch_id, site.org_id!)
   if (!warehouseId) return
   const actor = actorFor(site)
 

@@ -3,6 +3,7 @@ import { withPermission } from '@/lib/api-handler'
 import { resolveTenantContext } from '@/lib/tenancy'
 import { salesReturnQuerySchema, createSalesReturnSchema } from '@/modules/sales/sales-return.schema'
 import { listSalesReturns, createReturnFromOrder } from '@/modules/sales/sales-returns.service'
+import { saleLineItemValidationResponse } from '@/lib/sales-route-errors'
 
 export const GET = withPermission('sales:read', async (req, _ctx, session) => {
   const parsed = salesReturnQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
@@ -37,6 +38,8 @@ export const POST = withPermission('sales:write', async (req, _ctx, session) => 
 })
 
 function mapReturnError(err: unknown) {
+  const lineErr = saleLineItemValidationResponse(err)
+  if (lineErr) return lineErr
   if (!(err instanceof Error)) throw err
   const map: Record<string, { status: number; message: string }> = {
     ORDER_NOT_FOUND:                 { status: 404, message: 'Pedido no encontrado' },

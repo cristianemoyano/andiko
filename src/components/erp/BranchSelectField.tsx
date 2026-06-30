@@ -31,6 +31,7 @@ interface BranchSelectFieldProps {
    * - otherwise the only option when there is exactly one
    */
   autoDefaultFromSession?: boolean
+  clearable?: boolean
 }
 
 export function BranchSelectField({
@@ -44,6 +45,7 @@ export function BranchSelectField({
   fetchUrl = '/api/v1/branches',
   optionLabel = defaultLabel,
   autoDefaultFromSession = true,
+  clearable = false,
 }: BranchSelectFieldProps) {
   const { data: session } = useSession()
   const [options, setOptions] = useState<SearchableSelectOption[]>([])
@@ -98,7 +100,7 @@ export function BranchSelectField({
         options={options}
         placeholder={placeholder}
         disabled={disabled || options.length === 0}
-        clearable={false}
+        clearable={clearable}
         error={!!error}
       />
     </FormField>

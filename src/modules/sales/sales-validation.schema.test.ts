@@ -16,7 +16,14 @@ import { salesQuoteSchema } from './sales-quote.schema'
 import { salesOrderSchema } from './sales-order.schema'
 import { invoiceSchema } from './invoice.schema'
 
+const productId = '4a91f463-89d9-4315-ad56-58a778806ec2'
+const variantId = 'f5359181-7b9d-4f0d-b20f-f17e278f4f1a'
+const branchId = 'dca2056e-1e30-4932-b3ea-08cdf4d6214a'
+const contactId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+
 const baseItem = {
+  product_id: productId,
+  variant_id: variantId,
   description: 'Producto test',
   quantity: 1,
   unit_price: 100,
@@ -28,15 +35,24 @@ const baseItem = {
 describe('sales schemas contact requirement', () => {
   it('requires contact_id on quote create', () => {
     const parsed = salesQuoteSchema.safeParse({
-      branch_id: 'f5359181-7b9d-4f0d-b20f-f17e278f4f1a',
+      branch_id: branchId,
       items: [baseItem],
+    })
+    expect(parsed.success).toBe(false)
+  })
+
+  it('requires catalog product on each line item', () => {
+    const parsed = salesOrderSchema.safeParse({
+      contact_id: contactId,
+      branch_id: branchId,
+      items: [{ ...baseItem, product_id: undefined, variant_id: undefined, description: 'Solo texto' }],
     })
     expect(parsed.success).toBe(false)
   })
 
   it('requires contact_id on order create', () => {
     const parsed = salesOrderSchema.safeParse({
-      branch_id: 'f5359181-7b9d-4f0d-b20f-f17e278f4f1a',
+      branch_id: branchId,
       items: [baseItem],
     })
     expect(parsed.success).toBe(false)
@@ -44,8 +60,8 @@ describe('sales schemas contact requirement', () => {
 
   it('requires contact_id on invoice create', () => {
     const parsed = invoiceSchema.safeParse({
-      branch_id: 'f5359181-7b9d-4f0d-b20f-f17e278f4f1a',
-      order_id: 'dca2056e-1e30-4932-b3ea-08cdf4d6214a',
+      branch_id: branchId,
+      order_id: 'dca2056e-1e30-4932-b3ea-08cdf4d6214b',
       items: [baseItem],
     })
     expect(parsed.success).toBe(false)
@@ -55,8 +71,8 @@ describe('sales schemas contact requirement', () => {
 describe('sales order snapshot fields', () => {
   it('accepts shipping and billing snapshot payload', () => {
     const parsed = salesOrderSchema.safeParse({
-      contact_id: '4a91f463-89d9-4315-ad56-58a778806ec2',
-      branch_id: 'f5359181-7b9d-4f0d-b20f-f17e278f4f1a',
+      contact_id: contactId,
+      branch_id: branchId,
       promised_date: '2026-04-24T00:00:00.000Z',
       shipping_street: 'Av. Siempre Viva',
       shipping_city: 'Mendoza',

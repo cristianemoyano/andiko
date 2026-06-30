@@ -21,6 +21,7 @@ import { StatusPipeline } from '@/components/erp/StatusPipeline'
 import { WooOrderStatusBadge } from '@/components/erp/WooOrderStatusBadge'
 import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
 import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
+import { catalogProductRequiredMessage, findLineWithoutCatalogProduct, findLineExceedingBranchStock, insufficientBranchStockMessage, type BranchStockMap } from '@/lib/sales-line-items-form'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { VentasBranchField } from '@/components/erp/VentasBranchField'
@@ -228,6 +229,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
   const [createContactSeed, setCreateContactSeed] = useState('')
   const [paymentCondition, setPaymentCondition] = useState<PaymentCondition>('cash')
   const [items, setItems]                       = useState<LineItemInput[]>([makeEmptyLine()])
+  const [branchStockMap, setBranchStockMap]     = useState<BranchStockMap>({})
   const [notes, setNotes]                       = useState('')
   const [internalNotes, setInternalNotes]       = useState('')
 
@@ -360,6 +362,22 @@ export function OrderDetail({ id }: OrderDetailProps) {
       return
     }
 
+    if (!contactOnlyEdit) {
+      const lineWithoutProduct = findLineWithoutCatalogProduct(items)
+      if (lineWithoutProduct >= 0) {
+        setSaving(false)
+        setServerError(catalogProductRequiredMessage(lineWithoutProduct))
+        return
+      }
+
+      const lineOverStock = findLineExceedingBranchStock(items, branchStockMap)
+      if (lineOverStock >= 0) {
+        setSaving(false)
+        setServerError(insufficientBranchStockMessage(lineOverStock))
+        return
+      }
+    }
+
     const body = contactOnlyEdit
       ? buildContactBody()
       : {
@@ -460,6 +478,10 @@ export function OrderDetail({ id }: OrderDetailProps) {
     } catch {
       return []
     }
+  }, [])
+
+  const handleStockMapChange = useCallback((map: BranchStockMap) => {
+    setBranchStockMap(map)
   }, [])
 
   useEffect(() => {
@@ -915,7 +937,13 @@ export function OrderDetail({ id }: OrderDetailProps) {
           {/* Items */}
           {editMode && !contactOnlyEdit ? (
             <div className="bg-surface border border-border rounded-sm p-5">
-              <SalesLineItemsEditor items={items} onChange={setItems} priceListId={priceListId} />
+              <SalesLineItemsEditor
+                items={items}
+                onChange={setItems}
+                priceListId={priceListId}
+                branchId={branchId}
+                onStockMapChange={handleStockMapChange}
+              />
             </div>
           ) : (
             <div className="bg-surface border border-border rounded-sm overflow-hidden">

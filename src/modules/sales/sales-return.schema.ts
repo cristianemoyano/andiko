@@ -1,14 +1,12 @@
 import { z } from 'zod'
 import { paginationSchema } from '@/lib/pagination'
-import { IVA_RATES, type IvaRate } from '@/types'
 import {
   SALES_RETURN_STATUSES,
   SALES_RETURN_OPERATION_TYPES,
   REFUND_DISPOSITIONS,
 } from './sales-return.model'
 import { REFUND_METHODS } from './sales-refund.model'
-
-const ivaRateEnum = z.enum([...IVA_RATES] as [IvaRate, ...IvaRate[]])
+import { lineItemSchema } from './sales-quote.schema'
 
 export const returnItemInputSchema = z.object({
   order_item_id: z.string().uuid().optional(),
@@ -24,16 +22,7 @@ export const returnItemInputSchema = z.object({
   }
 })
 
-export const exchangeItemInputSchema = z.object({
-  product_id:   z.string().uuid().nullable().optional(),
-  variant_id:   z.string().uuid().nullable().optional(),
-  description:  z.string().min(1).max(500),
-  quantity:     z.coerce.number().positive(),
-  unit_price:   z.coerce.number().min(0),
-  discount_pct: z.coerce.number().min(0).max(100).default(0),
-  iva_rate:     ivaRateEnum.default('21'),
-  sort_order:   z.coerce.number().int().min(0).default(0),
-})
+export const exchangeItemInputSchema = lineItemSchema
 
 export const createSalesReturnSchema = z.object({
   order_id:           z.string().uuid(),

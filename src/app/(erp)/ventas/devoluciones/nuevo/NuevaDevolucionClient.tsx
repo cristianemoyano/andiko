@@ -10,6 +10,7 @@ import { FormField } from '@/components/primitives/FormField'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
 import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
 import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
+import { catalogProductRequiredMessage, findLineWithoutCatalogProduct } from '@/lib/sales-line-items-form'
 import { VentasSubNav } from '../../VentasSubNav'
 import type { Order } from '../../types'
 import { fetchJson } from '@/lib/fetch-json'
@@ -33,6 +34,7 @@ export function NuevaDevolucionClient() {
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [exchangeItems, setExchangeItems] = useState<LineItemInput[]>([makeEmptyLine()])
   const [saving, setSaving] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!orderId) return
@@ -65,6 +67,8 @@ export function NuevaDevolucionClient() {
 
   const handleSubmit = async () => {
     if (!orderId) return
+    setServerError(null)
+
     const items = (order?.items ?? [])
       .map(item => ({ order_item_id: item.id, quantity: parseFloat(quantities[item.id] || '0') }))
       .filter(i => i.quantity > 0)
@@ -78,20 +82,22 @@ export function NuevaDevolucionClient() {
     }
 
     if (operationType === 'exchange') {
-      const validExchange = exchangeItems
-        .filter(i => i.product_id && parseFloat(i.quantity) > 0)
-        .map((item, idx) => ({
-          product_id:   item.product_id,
-          variant_id:   item.variant_id,
-          description:  item.description,
-          quantity:     parseFloat(item.quantity),
-          unit_price:   parseFloat(item.unit_price),
-          discount_pct: parseFloat(item.discount_pct) || 0,
-          iva_rate:     item.iva_rate,
-          sort_order:   idx,
-        }))
-      if (validExchange.length === 0) return
-      payload.exchange_items = validExchange
+      const lineWithoutProduct = findLineWithoutCatalogProduct(exchangeItems)
+      if (lineWithoutProduct >= 0) {
+        setServerError(catalogProductRequiredMessage(lineWithoutProduct))
+        return
+      }
+
+      payload.exchange_items = exchangeItems.map((item, idx) => ({
+        product_id:   item.product_id!,
+        variant_id:   item.variant_id!,
+        description:  item.description,
+        quantity:     parseFloat(item.quantity) || 0,
+        unit_price:   parseFloat(item.unit_price) || 0,
+        discount_pct: parseFloat(item.discount_pct) || 0,
+        iva_rate:     item.iva_rate,
+        sort_order:   idx,
+      }))
     }
 
     setSaving(true)
@@ -154,6 +160,12 @@ export function NuevaDevolucionClient() {
                   taxAmount={0}
                   total={difference}
                 />
+              )}
+
+              {serverError && (
+                <p className="text-[13px] text-danger" role="alert">
+                  {serverError}
+                </p>
               )}
 
               <Button onClick={() => void handleSubmit()} disabled={saving}>

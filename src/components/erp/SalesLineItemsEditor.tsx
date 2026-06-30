@@ -1,12 +1,17 @@
 'use client'
 
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/primitives/Button'
 import { CurrencyInput } from '@/components/primitives/CurrencyInput'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import type { IvaRate } from '@/types'
 import { fetchJson } from '@/lib/fetch-json'
+import {
+  formatBranchStockLabel,
+  type BranchStockMap,
+} from '@/lib/sales-line-items-form'
 
 export interface LineItemInput {
   id: string
@@ -23,6 +28,8 @@ export interface SalesLineItemsEditorProps {
   items: LineItemInput[]
   onChange: (items: LineItemInput[]) => void
   priceListId?: string | null
+  branchId?: string | null
+  onStockMapChange?: (map: BranchStockMap) => void
   disabled?: boolean
 }
 
@@ -33,6 +40,12 @@ type SaleProduct = {
   sku: string
   iva_rate: string
   price: string
+}
+
+type BranchStockRow = {
+  variant_id: string
+  quantity: string
+  manage_stock: boolean
 }
 
 const IVA_OPTIONS: { value: IvaRate; label: string }[] = [
@@ -94,6 +107,35 @@ export function calcTotals(items: LineItemInput[]) {
   }
 }
 
+function computeOverstockLines(items: LineItemInput[], stockByVariant: BranchStockMap): Set<number> {
+  const over = new Set<number>()
+  const demandByVariant = new Map<string, { total: number; lineIndexes: number[] }>()
+
+  items.forEach((item, index) => {
+    if (!item.variant_id) return
+    const stock = stockByVariant[item.variant_id]
+    if (!stock?.manage_stock) return
+    const qty = parseFloat(item.quantity) || 0
+    if (qty <= 0) return
+    const prev = demandByVariant.get(item.variant_id)
+    if (prev) {
+      prev.total += qty
+      prev.lineIndexes.push(index)
+    } else {
+      demandByVariant.set(item.variant_id, { total: qty, lineIndexes: [index] })
+    }
+  })
+
+  for (const [variantId, demand] of demandByVariant) {
+    const available = stockByVariant[variantId]?.quantity ?? 0
+    if (demand.total > available) {
+      for (const index of demand.lineIndexes) over.add(index)
+    }
+  }
+
+  return over
+}
+
 interface ProductCellProps {
   productId: string | null
   priceListId?: string | null
@@ -138,7 +180,117 @@ function ProductCell({ productId, priceListId, disabled, onSelect }: ProductCell
   )
 }
 
-export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }: SalesLineItemsEditorProps) {
+export function SalesLineItemsEditor({
+  items,
+  onChange,
+  priceListId,
+  branchId,
+  onStockMapChange,
+  disabled,
+}: SalesLineItemsEditorProps) {
+  const [stockByVariant, setStockByVariant] = useState<BranchStockMap>({})
+
+  const variantIds = useMemo(
+    () => [...new Set(items.map((item) => item.variant_id).filter((id): id is string => Boolean(id)))],
+    [items],
+  )
+  const variantIdsKey = variantIds.join(',')
+
+  const onStockMapChangeRef = useRef(onStockMapChange)
+  useEffect(() => {
+    onStockMapChangeRef.current = onStockMapChange
+  }, [onStockMapChange])
+
+  const onChangeRef = useRef(onChange)
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
+  const itemsRef = useRef(items)
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
+
+  const prevPriceListIdRef = useRef<string | null | undefined>(undefined)
+
+  useEffect(() => {
+    if (variantIds.length === 0) return
+
+    if (prevPriceListIdRef.current === undefined) {
+      prevPriceListIdRef.current = priceListId ?? null
+      return
+    }
+    if (prevPriceListIdRef.current === (priceListId ?? null)) return
+    prevPriceListIdRef.current = priceListId ?? null
+
+    let cancelled = false
+    const params = new URLSearchParams({ variant_ids: variantIds.join(',') })
+    if (priceListId) params.set('price_list_id', priceListId)
+
+    void fetchJson<{ data: Record<string, string> }>(`/api/v1/catalog/price-lists/effective-prices?${params}`)
+      .then((res) => {
+        if (cancelled) return
+        const prices = res.data ?? {}
+        onChangeRef.current(
+          itemsRef.current.map((item) => {
+            if (!item.variant_id) return item
+            const nextPrice = prices[item.variant_id]
+            if (!nextPrice) return item
+            const current = parseFloat(item.unit_price) || 0
+            const next = parseFloat(nextPrice) || 0
+            if (current === next) return item
+            return { ...item, unit_price: nextPrice }
+          }),
+        )
+      })
+      .catch(() => { /* keep current prices on fetch failure */ })
+
+    return () => { cancelled = true }
+  }, [priceListId, variantIdsKey, variantIds])
+
+  useEffect(() => {
+    if (!branchId || variantIds.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stock when branch or lines change
+      setStockByVariant({})
+      onStockMapChangeRef.current?.({})
+      return
+    }
+
+    let cancelled = false
+    const params = new URLSearchParams({
+      branch_id: branchId,
+      variant_ids: variantIds.join(','),
+    })
+
+    void fetchJson<{ data: BranchStockRow[] }>(`/api/v1/sales/branch-stock?${params}`)
+      .then((res) => {
+        if (cancelled) return
+        const map: BranchStockMap = {}
+        for (const row of res.data ?? []) {
+          map[row.variant_id] = {
+            quantity: parseFloat(row.quantity) || 0,
+            manage_stock: row.manage_stock,
+          }
+        }
+        setStockByVariant(map)
+        onStockMapChangeRef.current?.(map)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setStockByVariant({})
+        onStockMapChangeRef.current?.({})
+      })
+
+    return () => { cancelled = true }
+  }, [branchId, variantIds])
+
+  const overstockLines = useMemo(
+    () => computeOverstockLines(items, stockByVariant),
+    [items, stockByVariant],
+  )
+
+  const showStock = Boolean(branchId)
+
   function updateItem(id: string, patch: Partial<LineItemInput>) {
     onChange(items.map(i => i.id === id ? { ...i, ...patch } : i))
   }
@@ -165,17 +317,44 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
     if (items.length > 1) onChange(items.filter(i => i.id !== id))
   }
 
+  function renderStockLabel(item: LineItemInput, lineIndex: number) {
+    if (!showStock || !item.variant_id) return null
+    const stock = stockByVariant[item.variant_id]
+    if (!stock) return <span className="text-[10px] text-fg-subtle">Stock: …</span>
+    if (!stock.manage_stock) {
+      return <span className="text-[10px] text-fg-subtle">Sin control de stock</span>
+    }
+    const over = overstockLines.has(lineIndex)
+    return (
+      <span className={`text-[10px] tabular-nums ${over ? 'text-danger font-medium' : 'text-fg-muted'}`}>
+        Stock: {formatBranchStockLabel(stock.quantity)}
+      </span>
+    )
+  }
+
   return (
     <div>
       <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide mb-2">
         Ítems
       </p>
+      {showStock && overstockLines.size > 0 && (
+        <p className="text-[12px] text-danger mb-2">
+          Hay ítems sin stock suficiente en la sucursal.{' '}
+          <Link href="/inventario/transferencias" className="underline underline-offset-2">
+            Hacé una transferencia
+          </Link>{' '}
+          antes de guardar.
+        </p>
+      )}
       <div className="border border-border rounded-sm overflow-hidden">
         <table className="w-full text-[12px]">
           <thead>
             <tr className="bg-surface-muted border-b border-border">
               <th className="px-2 py-2 text-left font-medium text-fg-muted w-[22%]">Producto</th>
               <th className="px-2 py-2 text-left font-medium text-fg-muted">Descripción</th>
+              {showStock && (
+                <th className="px-2 py-2 text-right font-medium text-fg-muted w-20">Stock</th>
+              )}
               <th className="px-2 py-2 text-right font-medium text-fg-muted w-14">Cant.</th>
               <th className="px-2 py-2 text-right font-medium text-fg-muted w-28">P. unitario</th>
               <th className="px-2 py-2 text-right font-medium text-fg-muted w-16">Desc %</th>
@@ -185,17 +364,20 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
             </tr>
           </thead>
           <tbody>
-            {items.map(item => {
+            {items.map((item, lineIndex) => {
               const c = calcLine(item)
+              const over = overstockLines.has(lineIndex)
               return (
                 <tr key={item.id} className="border-b border-border last:border-0">
                   <td className="px-2 py-1">
-                    <ProductCell
-                      productId={item.product_id}
-                      priceListId={priceListId}
-                      disabled={disabled}
-                      onSelect={(productId, product) => handleProductSelect(item.id, productId, product)}
-                    />
+                    <div className="flex flex-col gap-0.5">
+                      <ProductCell
+                        productId={item.product_id}
+                        priceListId={priceListId}
+                        disabled={disabled}
+                        onSelect={(productId, product) => handleProductSelect(item.id, productId, product)}
+                      />
+                    </div>
                   </td>
                   <td className="px-2 py-1">
                     <input
@@ -206,9 +388,14 @@ export function SalesLineItemsEditor({ items, onChange, priceListId, disabled }:
                       disabled={disabled}
                     />
                   </td>
+                  {showStock && (
+                    <td className="px-2 py-1 text-right align-top pt-2">
+                      {renderStockLabel(item, lineIndex)}
+                    </td>
+                  )}
                   <td className="px-2 py-1">
                     <input
-                      className="w-full h-7 text-[12px] text-right bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted"
+                      className={`w-full h-7 text-[12px] text-right bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted ${over ? 'text-danger font-medium' : ''}`}
                       value={item.quantity}
                       onChange={e => updateItem(item.id, { quantity: e.target.value })}
                       inputMode="decimal"

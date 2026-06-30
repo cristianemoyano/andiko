@@ -24,6 +24,8 @@ import {
   getWooOrderChannelForSalesOrder,
   getWooOrderChannelSummariesForSalesOrders,
 } from '@/modules/integrations/woocommerce/woo-order-channel.utils'
+import { assertSaleLineItemsFromActiveCatalog } from './sales-line-items.validation'
+import { assertSaleLineItemsHaveBranchStock } from './sales-line-stock.service'
 
 export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
@@ -118,6 +120,13 @@ async function serializeSalesOrderDetail(order: SalesOrder, orgId: string) {
 export async function createOrder(input: SalesOrderInput, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
     const { items, branch_id, ...orderFields } = input
+    await assertSaleLineItemsFromActiveCatalog(items, ctx.orgId, t)
+    await assertSaleLineItemsHaveBranchStock(
+      items.map((item) => ({ variant_id: item.variant_id, quantity: item.quantity })),
+      branch_id,
+      ctx.orgId,
+      t,
+    )
     void whereBranch(ctx, branch_id)
     const order_number = await nextDocumentNumber(ctx.orgId, branch_id, 'order', t)
 
@@ -144,8 +153,8 @@ export async function createOrder(input: SalesOrderInput, ctx: TenantContext, ac
       items.map((item, idx) => ({
         order_id:     order.id,
         org_id:       ctx.orgId,
-        product_id:   item.product_id ?? null,
-        variant_id:   item.variant_id ?? null,
+        product_id:   item.product_id,
+        variant_id:   item.variant_id,
         description:  item.description,
         quantity:     String(item.quantity),
         unit_price:   String(item.unit_price),
@@ -257,6 +266,14 @@ export async function updateOrder(
     const updateData: Record<string, unknown> = { updated_by: actorId }
 
     if (input.items) {
+      await assertSaleLineItemsFromActiveCatalog(input.items, order.org_id!, t)
+      const branchIdForStock = (input.branch_id ?? order.branch_id) as string
+      await assertSaleLineItemsHaveBranchStock(
+        input.items.map((item) => ({ variant_id: item.variant_id, quantity: item.quantity })),
+        branchIdForStock,
+        order.org_id!,
+        t,
+      )
       const itemTotals = input.items.map(item =>
         calcLineItem(item.quantity, item.unit_price, item.discount_pct ?? 0, (item.iva_rate ?? '21') as IvaRate)
       )
@@ -268,8 +285,8 @@ export async function updateOrder(
         input.items.map((item, idx) => ({
           order_id:     id,
           org_id:       order.org_id,
-          product_id:   item.product_id ?? null,
-          variant_id:   item.variant_id ?? null,
+          product_id:   item.product_id,
+          variant_id:   item.variant_id,
           description:  item.description,
           quantity:     String(item.quantity),
           unit_price:   String(item.unit_price),
@@ -305,8 +322,26 @@ export async function updateOrder(
 
     await order.update({ ...rest, ...updateData }, { transaction: t })
 
+    const effectiveBranchId = (input.branch_id ?? order.branch_id) as string
+
     // Stock hooks: deduct when confirmed, restore when cancelled from confirmed
     if (input.status === 'confirmed' && prevStatus !== 'confirmed') {
+      if (!input.items) {
+        const currentItems = await SalesOrderItem.findAll({
+          where: { order_id: id },
+          attributes: ['variant_id', 'quantity'],
+          transaction: t,
+        })
+        await assertSaleLineItemsHaveBranchStock(
+          currentItems.map((item) => ({
+            variant_id: item.variant_id as string,
+            quantity: Number(item.quantity),
+          })),
+          effectiveBranchId,
+          ctx.orgId,
+          t,
+        )
+      }
       const { deductStockForOrder } = await import('@/modules/inventory/stock-movements.service')
       await deductStockForOrder(id, ctx.orgId, actorId, t)
     } else if (input.status === 'cancelled' && prevStatus === 'confirmed') {

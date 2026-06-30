@@ -23,11 +23,12 @@ import ProductVariant from '@/modules/catalog/product-variant.model'
 import { BRANCH_AFIP_ATTRIBUTES } from './sales-branch-associations'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
 import { issueCreditNoteInTransaction } from './credit-notes.service'
+import { assertSaleLineItemsFromActiveCatalog } from './sales-line-items.validation'
 import DebitNote from './debit-note.model'
 import { issueDebitNoteInTransaction } from './debit-notes.service'
 import { createSalesRefund } from './sales-refunds.service'
 import { postReturnAccounting } from '@/modules/accounting/sales-return-accounting.service'
-import { resolveDefaultWarehouse } from '@/modules/inventory/warehouses.service'
+import { resolveWarehouseForBranch } from '@/modules/inventory/branch-warehouse.resolution'
 import {
   restoreStockForReturn,
   deductStockForExchange,
@@ -156,8 +157,7 @@ export async function createReturnFromOrder(input: CreateSalesReturnInput, ctx: 
     })
 
     const warehouseId = input.warehouse_id
-      ?? await resolveDefaultWarehouse(order.branch_id, orgId, t)
-    if (!warehouseId) throw new Error('WAREHOUSE_REQUIRED')
+      ?? await resolveWarehouseForBranch(order.branch_id, orgId, t)
 
     const return_number = await nextDocumentNumber(orgId, order.branch_id, 'sales_return', t)
     const { returnedTotals, exchangeTotals, differenceTotal, returnItems, exchangeItems } =
@@ -558,6 +558,10 @@ async function buildReturnLines(
 
   const returnedTotals = calcDocumentTotals(returnLineTotals)
 
+  if (input.exchange_items && input.exchange_items.length > 0) {
+    await assertSaleLineItemsFromActiveCatalog(input.exchange_items, orgId, t)
+  }
+
   const exchangeLineTotals = []
   const exchangeItems: Array<Omit<SalesReturnExchangeItemAttributes, 'id' | 'return_id' | 'org_id' | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'>> = []
 
@@ -570,8 +574,8 @@ async function buildReturnLines(
     )
     exchangeLineTotals.push(totals)
     exchangeItems.push({
-      product_id:   line.product_id ?? null,
-      variant_id:   line.variant_id ?? null,
+      product_id:   line.product_id,
+      variant_id:   line.variant_id,
       description:  line.description,
       quantity:     String(line.quantity),
       unit_price:   String(line.unit_price),

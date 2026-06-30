@@ -4,6 +4,7 @@ import { resolveOrgScope } from '@/lib/session-org'
 import { resolveTenantContext } from '@/lib/tenancy'
 import { invoiceSchema, invoiceQuerySchema } from '@/modules/sales/invoice.schema'
 import { listInvoices, createInvoice } from '@/modules/sales/invoices.service'
+import { saleLineItemValidationResponse } from '@/lib/sales-route-errors'
 
 export const GET = withPermission('sales:read', async (req, _ctx, session) => {
   const parsed = invoiceQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
@@ -32,6 +33,8 @@ export const POST = withPermission('sales:write', async (req, _ctx, session) => 
     const invoice = await createInvoice(parsed.data, orgScope.orgId, resolveActorId(session))
     return NextResponse.json(invoice, { status: 201 })
   } catch (err: unknown) {
+    const lineErr = saleLineItemValidationResponse(err)
+    if (lineErr) return lineErr
     if (err instanceof Error) {
       if (err.message === 'ORDER_NOT_FOUND')     return NextResponse.json({ error: 'Pedido no encontrado', code: 'ORDER_NOT_FOUND' }, { status: 404 })
       if (err.message === 'ORDER_NOT_DELIVERED') return NextResponse.json({ error: 'El pedido debe estar entregado para generar una factura', code: 'ORDER_NOT_DELIVERED' }, { status: 409 })

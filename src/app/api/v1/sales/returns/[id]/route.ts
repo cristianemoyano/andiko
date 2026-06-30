@@ -3,6 +3,7 @@ import { withPermission } from '@/lib/api-handler'
 import { resolveTenantContext } from '@/lib/tenancy'
 import { updateSalesReturnSchema } from '@/modules/sales/sales-return.schema'
 import { getSalesReturn, updateSalesReturn } from '@/modules/sales/sales-returns.service'
+import { saleLineItemValidationResponse } from '@/lib/sales-route-errors'
 
 type P = { id: string }
 
@@ -39,6 +40,8 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     const row = await updateSalesReturn(id, parsed.data, tenantCtx)
     return NextResponse.json(row)
   } catch (err) {
+    const lineErr = saleLineItemValidationResponse(err)
+    if (lineErr) return lineErr
     if (err instanceof Error) {
       if (err.message === 'SALES_RETURN_NOT_FOUND') return NextResponse.json({ error: 'Devolución no encontrada', code: err.message }, { status: 404 })
       if (err.message === 'SALES_RETURN_NOT_EDITABLE') return NextResponse.json({ error: 'La devolución no es editable', code: err.message }, { status: 409 })

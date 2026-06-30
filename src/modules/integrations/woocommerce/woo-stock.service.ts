@@ -3,7 +3,7 @@ import Decimal from 'decimal.js'
 import type { Transaction } from 'sequelize'
 import logger from '@/lib/logger'
 import StockItem from '@/modules/inventory/stock-item.model'
-import { resolveDefaultWarehouse } from '@/modules/inventory/warehouses.service'
+import { BranchWarehouseResolutionError, resolveWarehouseForBranch } from '@/modules/inventory/branch-warehouse.resolution'
 import WoocommerceSite from './woocommerce-site.model'
 import WoocommerceProductLink from './woocommerce-product-link.model'
 import { buildClientForSite } from './woo-sites.service'
@@ -42,7 +42,16 @@ export async function enqueueStockSync(
   })
   hasSitesCache.set(orgId, { value: sites.length > 0, expires: Date.now() + HAS_SITES_TTL_MS })
   for (const site of sites) {
-    const siteWarehouse = await resolveDefaultWarehouse(site.branch_id, orgId, t)
+    let siteWarehouse: string
+    try {
+      siteWarehouse = await resolveWarehouseForBranch(site.branch_id, orgId, t)
+    } catch (err) {
+      if (err instanceof BranchWarehouseResolutionError) {
+        logger.warn({ siteId: site.id, branchId: site.branch_id, code: err.code }, 'woocommerce stock sync skipped: branch warehouse not configured')
+        continue
+      }
+      throw err
+    }
     if (siteWarehouse !== warehouseId) continue
     await enqueue({ orgId, siteId: site.id, kind: 'stock', payload: { variant_id: variantId }, t })
   }
@@ -54,8 +63,7 @@ export async function enqueueStockSync(
  * at zero and rounded down to a whole unit (avoids overselling fractional stock).
  */
 export async function computeAvailableForSite(site: WoocommerceSite, variantId: string): Promise<number> {
-  const warehouseId = await resolveDefaultWarehouse(site.branch_id, site.org_id!)
-  if (!warehouseId) return 0
+  const warehouseId = await resolveWarehouseForBranch(site.branch_id, site.org_id!)
   const total = (await StockItem.sum('quantity', {
     where: { variant_id: variantId, warehouse_id: warehouseId },
   })) as number | null

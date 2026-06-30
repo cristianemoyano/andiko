@@ -7,8 +7,8 @@ const ivaRateEnum          = z.enum([...IVA_RATES] as [IvaRate, ...IvaRate[]])
 const paymentConditionEnum = z.enum([...PAYMENT_CONDITIONS] as [PaymentCondition, ...PaymentCondition[]])
 
 export const lineItemSchema = z.object({
-  product_id:   z.string().uuid().nullable().optional(),
-  variant_id:   z.string().uuid().nullable().optional(),
+  product_id:   z.string().uuid(),
+  variant_id:   z.string().uuid(),
   description:  z.string().min(1).max(500),
   quantity:     z.coerce.number().positive(),
   unit_price:   z.coerce.number().min(0),
