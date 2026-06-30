@@ -40,8 +40,8 @@ vi.mock('./stock-movements.service', () => ({
   applyMovement: vi.fn(),
 }))
 
-vi.mock('./warehouses.service', () => ({
-  resolveDefaultWarehouse: vi.fn(),
+vi.mock('./branch-warehouse.resolution', () => ({
+  resolveWarehouseForBranch: vi.fn(),
 }))
 
 vi.mock('./delivery-notes.utils', () => ({
@@ -64,7 +64,7 @@ import DeliveryNote from './delivery-note.model'
 import DeliveryNoteItem from './delivery-note-item.model'
 import StockMovement from './stock-movement.model'
 import { applyMovement } from './stock-movements.service'
-import { resolveDefaultWarehouse } from './warehouses.service'
+import { resolveWarehouseForBranch } from './branch-warehouse.resolution'
 import {
   createDeliveryNote,
   issueDeliveryNote,
@@ -221,16 +221,20 @@ describe('issueDeliveryNote', () => {
     expect(applyMovement).not.toHaveBeenCalled()
   })
 
-  it('throws DELIVERY_NOTE_NO_WAREHOUSE when deducting without warehouse', async () => {
+  it('propagates missing branch warehouse when deducting without explicit warehouse', async () => {
     const note = {
       id: 'dn-4', status: 'draft', deducts_stock: true,
       warehouse_id: null, branch_id: 'b1', delivery_number: 'RTO-01-0004',
       update: vi.fn(),
     }
     ;(DeliveryNote.findOne as Mock).mockResolvedValue(note)
-    ;(resolveDefaultWarehouse as Mock).mockResolvedValue(null)
+    ;(resolveWarehouseForBranch as Mock).mockRejectedValue(
+      Object.assign(new Error('not configured'), { code: 'BRANCH_WAREHOUSE_NOT_CONFIGURED' }),
+    )
 
-    await expect(issueDeliveryNote('dn-4', ORG, ACTOR)).rejects.toThrow('DELIVERY_NOTE_NO_WAREHOUSE')
+    await expect(issueDeliveryNote('dn-4', ORG, ACTOR)).rejects.toMatchObject({
+      code: 'BRANCH_WAREHOUSE_NOT_CONFIGURED',
+    })
   })
 
   it('throws DELIVERY_NOTE_NOT_DRAFT when note is not in draft', async () => {

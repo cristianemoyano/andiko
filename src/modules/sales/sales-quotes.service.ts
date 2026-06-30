@@ -18,6 +18,8 @@ import type { IvaRate } from '@/types'
 import type { TenantContext } from '@/lib/tenancy'
 import { whereBranch } from '@/lib/tenancy'
 import { isWithinSalesOwnScope, whereSalesDocumentScope } from './sales-scope'
+import { assertSaleLineItemsFromActiveCatalog } from './sales-line-items.validation'
+import { assertSaleLineItemsHaveBranchStock } from './sales-line-stock.service'
 
 export async function listQuotes(query: SalesQuoteQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
@@ -76,6 +78,13 @@ export async function getQuote(id: string, ctx: TenantContext) {
 export async function createQuote(input: SalesQuoteInput, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
     const { items, branch_id, ...quoteFields } = input
+    await assertSaleLineItemsFromActiveCatalog(items, ctx.orgId, t)
+    await assertSaleLineItemsHaveBranchStock(
+      items.map((item) => ({ variant_id: item.variant_id, quantity: item.quantity })),
+      branch_id,
+      ctx.orgId,
+      t,
+    )
     void whereBranch(ctx, branch_id)
     const quote_number = await nextDocumentNumber(ctx.orgId, branch_id, 'quote', t)
 
@@ -102,7 +111,8 @@ export async function createQuote(input: SalesQuoteInput, ctx: TenantContext, ac
       items.map((item, idx) => ({
         quote_id:   quote.id,
         org_id:     ctx.orgId,
-        product_id: item.product_id ?? null,
+        product_id: item.product_id,
+        variant_id: item.variant_id,
         description: item.description,
         quantity:   String(item.quantity),
         unit_price: String(item.unit_price),
@@ -135,6 +145,14 @@ export async function updateQuote(id: string, input: SalesQuoteUpdateInput, ctx:
     const updateData: Record<string, unknown> = { updated_by: actorId }
 
     if (input.items) {
+      await assertSaleLineItemsFromActiveCatalog(input.items, ctx.orgId, t)
+      const branchId = (input.branch_id ?? quote.branch_id) as string
+      await assertSaleLineItemsHaveBranchStock(
+        input.items.map((item) => ({ variant_id: item.variant_id, quantity: item.quantity })),
+        branchId,
+        ctx.orgId,
+        t,
+      )
       const itemTotals = input.items.map(item =>
         calcLineItem(item.quantity, item.unit_price, item.discount_pct ?? 0, (item.iva_rate ?? '21') as IvaRate)
       )
@@ -146,7 +164,8 @@ export async function updateQuote(id: string, input: SalesQuoteUpdateInput, ctx:
         input.items.map((item, idx) => ({
           quote_id:     id,
           org_id:       quote.org_id,
-          product_id:   item.product_id ?? null,
+          product_id:   item.product_id,
+          variant_id:   item.variant_id,
           description:  item.description,
           quantity:     String(item.quantity),
           unit_price:   String(item.unit_price),
@@ -244,6 +263,7 @@ export async function convertQuoteToOrder(id: string, ctx: TenantContext, actorI
         order_id:       order.id,
         org_id:         ctx.orgId,
         product_id:     item.product_id,
+        variant_id:     item.variant_id,
         description:    item.description,
         quantity:       item.quantity,
         unit_price:     item.unit_price,

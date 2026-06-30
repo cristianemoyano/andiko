@@ -3,6 +3,8 @@ import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { salesOrderUpdateSchema } from '@/modules/sales/sales-order.schema'
 import { getOrder, updateOrder, deleteOrder } from '@/modules/sales/sales-orders.service'
+import { saleLineItemValidationResponse, saleLineStockValidationResponse } from '@/lib/sales-route-errors'
+import { branchWarehouseResolutionResponse } from '@/lib/inventory-route-errors'
 
 type P = { id: string }
 
@@ -37,6 +39,12 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     const order = await updateOrder(id, parsed.data, ctxTenant, resolveActorId(session), submittedKeys)
     return NextResponse.json(order)
   } catch (err: unknown) {
+    const lineErr = saleLineItemValidationResponse(err)
+    if (lineErr) return lineErr
+    const stockErr = saleLineStockValidationResponse(err)
+    if (stockErr) return stockErr
+    const branchWarehouseErr = branchWarehouseResolutionResponse(err)
+    if (branchWarehouseErr) return branchWarehouseErr
     if (err instanceof TenancyError) {
       if (err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
         return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
@@ -54,6 +62,12 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
         return NextResponse.json(
           { error: 'La sucursal solo se puede cambiar en pedidos en borrador.', code: 'BRANCH_NOT_CHANGEABLE' },
           { status: 409 },
+        )
+      }
+      if (err.message === 'INSUFFICIENT_STOCK') {
+        return NextResponse.json(
+          { error: 'Stock insuficiente en el depósito de la sucursal. Transferí mercadería antes de confirmar el pedido.', code: 'INSUFFICIENT_STOCK' },
+          { status: 422 },
         )
       }
     }

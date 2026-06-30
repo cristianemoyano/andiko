@@ -379,3 +379,40 @@ export async function getEffectivePrice(priceListId: UUID, variantId: UUID, orgI
   const variant = await ProductVariant.findByPk(variantId, { attributes: ['base_price'] })
   return variant?.base_price ?? null
 }
+
+/** Precio efectivo por variante: ítem de lista si existe, si no `base_price`. */
+export async function getEffectivePricesForVariants(
+  priceListId: string | null | undefined,
+  variantIds: string[],
+  orgId: string,
+): Promise<Record<string, string>> {
+  const uniqueIds = [...new Set(variantIds.filter(Boolean))]
+  if (uniqueIds.length === 0) return {}
+
+  const variants = await ProductVariant.findAll({
+    where: { id: { [Op.in]: uniqueIds }, org_id: orgId },
+    attributes: ['id', 'base_price'],
+  })
+
+  const prices: Record<string, string> = {}
+  for (const variant of variants) {
+    prices[variant.id] = (variant.base_price as string | null) ?? '0.00'
+  }
+
+  if (!priceListId) return prices
+
+  const listItems = await PriceListItem.findAll({
+    where: {
+      price_list_id: priceListId,
+      product_variant_id: { [Op.in]: uniqueIds },
+      ...orgWhere(orgId),
+    },
+    attributes: ['product_variant_id', 'price'],
+  })
+
+  for (const item of listItems) {
+    prices[item.product_variant_id] = item.price
+  }
+
+  return prices
+}

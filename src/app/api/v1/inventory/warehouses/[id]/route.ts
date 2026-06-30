@@ -45,6 +45,12 @@ export const PATCH = withPermission<P>('inventory:write', async (req, ctx, sessi
     if (err instanceof Error && err.message === 'WAREHOUSE_NOT_FOUND') {
       return NextResponse.json({ error: 'Depósito no encontrado', code: 'NOT_FOUND' }, { status: 404 })
     }
+    if (err instanceof Error && err.message === 'BRANCH_WAREHOUSE_ALREADY_ASSIGNED') {
+      return NextResponse.json(
+        { error: 'Esa sucursal ya tiene un depósito activo asignado.', code: err.message },
+        { status: 409 },
+      )
+    }
     throw err
   }
 })

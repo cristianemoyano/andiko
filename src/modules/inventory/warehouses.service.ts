@@ -7,6 +7,9 @@ import type { TenantContext } from '@/lib/tenancy'
 import Warehouse from './warehouse.model'
 import type { WarehouseInput, WarehouseUpdateInput, WarehouseQuery } from './warehouse.schema'
 import type { Transaction } from 'sequelize'
+import { resolveWarehouseForBranch } from './branch-warehouse.resolution'
+
+export { resolveWarehouseForBranch, BranchWarehouseResolutionError } from './branch-warehouse.resolution'
 
 export async function listWarehouses(query: WarehouseQuery, ctx: TenantContext) {
   const { page, limit, search, branch_id } = query
@@ -46,7 +49,31 @@ function withDecimalDefaultMinimum<T extends { default_minimum_quantity?: number
   }
 }
 
+async function assertBranchWarehouseAssignable(
+  orgId: string,
+  branchId: string | null | undefined,
+  excludeWarehouseId?: string,
+  transaction?: Transaction,
+): Promise<void> {
+  if (!branchId) return
+
+  const where: Record<string, unknown> = {
+    org_id: orgId,
+    branch_id: branchId,
+    is_active: true,
+  }
+  if (excludeWarehouseId) {
+    where.id = { [Op.ne]: excludeWarehouseId }
+  }
+
+  const existing = await Warehouse.count({ where, transaction })
+  if (existing > 0) {
+    throw new Error('BRANCH_WAREHOUSE_ALREADY_ASSIGNED')
+  }
+}
+
 export async function createWarehouse(input: WarehouseInput, ctx: TenantContext, actorId: string) {
+  await assertBranchWarehouseAssignable(ctx.orgId, input.branch_id)
   const warehouse = await Warehouse.create({
     ...withDecimalDefaultMinimum(input),
     org_id:     ctx.orgId,
@@ -60,6 +87,12 @@ export async function createWarehouse(input: WarehouseInput, ctx: TenantContext,
 export async function updateWarehouse(id: string, input: WarehouseUpdateInput, ctx: TenantContext, actorId: string) {
   const warehouse = await Warehouse.findOne({ where: { id, org_id: ctx.orgId } })
   if (!warehouse) throw new Error('WAREHOUSE_NOT_FOUND')
+
+  const nextBranchId = input.branch_id !== undefined ? input.branch_id : warehouse.branch_id
+  const nextIsActive = input.is_active !== undefined ? input.is_active : warehouse.is_active
+  if (nextBranchId && nextIsActive) {
+    await assertBranchWarehouseAssignable(ctx.orgId, nextBranchId, id)
+  }
 
   await warehouse.update({ ...withDecimalDefaultMinimum(input), updated_by: actorId })
   logger.info({ warehouseId: id, orgId: ctx.orgId, actorId }, 'warehouse updated')
@@ -75,33 +108,11 @@ export async function deleteWarehouse(id: string, ctx: TenantContext, actorId: s
   logger.info({ warehouseId: id, orgId: ctx.orgId, actorId }, 'warehouse soft-deleted')
 }
 
+/** @deprecated Usar `resolveWarehouseForBranch`. Alias mantenido por compatibilidad interna. */
 export async function resolveDefaultWarehouse(
   branchId: string | null,
   orgId: string,
   t?: Transaction,
-): Promise<string | null> {
-  // Try branch-specific warehouse first, then fall back to any org warehouse
-  const candidates = branchId
-    ? [{ org_id: orgId, is_active: true, branch_id: branchId }, { org_id: orgId, is_active: true }]
-    : [{ org_id: orgId, is_active: true }]
-
-  for (const where of candidates) {
-    const warehouse = await Warehouse.findOne({
-      where,
-      order: [['created_at', 'ASC']],
-      attributes: ['id'],
-      transaction: t,
-    })
-    if (warehouse) return warehouse.id
-  }
-
-  return null
-}
-
-export async function resolveWarehouseForBranch(
-  branchId: string | null,
-  orgId: string,
-  t?: Transaction,
-): Promise<string | null> {
-  return resolveDefaultWarehouse(branchId, orgId, t)
+): Promise<string> {
+  return resolveWarehouseForBranch(branchId, orgId, t)
 }

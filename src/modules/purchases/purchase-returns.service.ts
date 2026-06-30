@@ -17,7 +17,7 @@ import { nextPurchaseDocNumber, calcLineItem, calcDocumentTotals } from './purch
 import { recalcOrderReturnStatus, RETURNABLE_PURCHASE_ORDER_STATUSES } from './purchase-orders.service'
 import { recalcSupplierInvoiceBalance } from './supplier-invoices.service'
 import { postPurchaseReturnAccounting } from '@/modules/accounting/purchase-return-accounting.service'
-import { resolveDefaultWarehouse } from '@/modules/inventory/warehouses.service'
+import { resolveWarehouseForBranch } from '@/modules/inventory/branch-warehouse.resolution'
 import {
   deductStockForPurchaseReturn,
   addStockForPurchaseExchange,
@@ -120,8 +120,7 @@ export async function createPurchaseReturn(input: CreatePurchaseReturnInput, ctx
     })
 
     const warehouseId = input.warehouse_id
-      ?? await resolveDefaultWarehouse(order.branch_id, orgId, t)
-    if (!warehouseId) throw new Error('WAREHOUSE_REQUIRED')
+      ?? await resolveWarehouseForBranch(order.branch_id, orgId, t)
 
     const return_number = await nextPurchaseDocNumber(orgId, order.branch_id, 'purchase_return', t)
     const { returnedTotals, exchangeTotals, differenceTotal, returnItems, exchangeItems } =

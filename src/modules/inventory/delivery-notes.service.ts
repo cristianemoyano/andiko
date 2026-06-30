@@ -10,7 +10,7 @@ import DeliveryNoteItem from './delivery-note-item.model'
 import StockMovement from './stock-movement.model'
 import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { applyMovement } from './stock-movements.service'
-import { resolveDefaultWarehouse } from './warehouses.service'
+import { resolveWarehouseForBranch } from './branch-warehouse.resolution'
 import { nextDeliveryNumber } from './delivery-notes.utils'
 import { ensureDeliveryNoteAssociations } from './delivery-note-associations'
 import type { DeliveryNoteInput, DeliveryNoteUpdateInput, DeliveryNoteQuery } from './delivery-note.schema'
@@ -225,8 +225,7 @@ export async function issueDeliveryNote(id: string, orgId: string, actorId: stri
     if (note.status !== 'draft') throw new Error('DELIVERY_NOTE_NOT_DRAFT')
 
     if (note.deducts_stock) {
-      const warehouseId = note.warehouse_id ?? await resolveDefaultWarehouse(note.branch_id, orgId, t)
-      if (!warehouseId) throw new Error('DELIVERY_NOTE_NO_WAREHOUSE')
+      const warehouseId = note.warehouse_id ?? await resolveWarehouseForBranch(note.branch_id, orgId, t)
 
       const items = await DeliveryNoteItem.findAll({ where: { delivery_note_id: id }, transaction: t })
 

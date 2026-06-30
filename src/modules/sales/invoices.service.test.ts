@@ -40,6 +40,12 @@ vi.mock('./sales.utils', () => ({
   calcLineItem:       vi.fn().mockReturnValue({ subtotal: '100.00', discount_amount: '0.00', tax_base: '100.00', tax_amount: '21.00', total: '121.00' }),
   calcDocumentTotals: vi.fn().mockReturnValue({ subtotal: '100.00', discount_amount: '0.00', tax_amount: '21.00', total: '121.00' }),
 }))
+vi.mock('./sales-line-items.validation', () => ({
+  assertSaleLineItemsFromActiveCatalog: vi.fn().mockResolvedValue(undefined),
+}))
+vi.mock('./sales-line-stock.service', () => ({
+  assertSaleLineItemsHaveBranchStock: vi.fn().mockResolvedValue(undefined),
+}))
 
 import Invoice from './invoice.model'
 import { issueInvoice, cancelInvoice, listInvoices, getInvoice } from './invoices.service'

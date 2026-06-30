@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, InventoryStockHint, type Column } from '@/components/erp'
@@ -15,6 +15,7 @@ import { InventarioSubNav } from '../../InventarioSubNav'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/layout/Tabs'
 import { AjusteStockModal } from './AjusteStockModal'
 import { CargarDesdeCatalogoModal } from './CargarDesdeCatalogoModal'
+import { DepositoModal } from '../DepositoModal'
 import type { StockMovementType, StockReferenceType } from '@/modules/inventory/stock-movement.model'
 import { STOCK_EXPIRY_WARNING_DAYS } from '@/modules/inventory/inventory.constants'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
@@ -233,8 +234,18 @@ const MOVEMENT_COLUMNS: Column<MovementRow>[] = [
 
 const PAGE_SIZE = 20
 
+type Warehouse = {
+  id: string
+  name: string
+  description: string | null
+  branch_id: string | null
+  is_active: boolean
+  default_minimum_quantity?: string
+}
+
 export function DepositoDetail() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
 
   const [stock, setStock]             = useState<StockRow[] | null>(null)
   const [stockTotal, setStockTotal]   = useState(0)
@@ -244,9 +255,9 @@ export function DepositoDetail() {
   const [movTotal, setMovTotal]       = useState(0)
   const [movPage, setMovPage]         = useState(1)
 
-  const [warehouseName, setName]      = useState('')
-  const [warehouseDescription, setWarehouseDescription] = useState<string | null>(null)
+  const [warehouse, setWarehouse]     = useState<Warehouse | null>(null)
   const [defaultMinimum, setDefaultMinimum] = useState('0')
+  const [editOpen, setEditOpen]       = useState(false)
   const [defaultMinError, setDefaultMinError] = useState<string | null>(null)
   const [savingDefault, setSavingDefault] = useState(false)
   const [applyConfirmOpen, setApplyConfirmOpen] = useState(false)
@@ -268,14 +279,13 @@ export function DepositoDetail() {
         fetchJson<{ data: MovementRow[]; total: number }>(
           `/api/v1/inventory/movements?warehouse_id=${id}&page=${movPage}&limit=${PAGE_SIZE}`,
         ),
-        fetchJson<{ name: string; description?: string | null; default_minimum_quantity?: string }>(`/api/v1/inventory/warehouses/${id}`),
+        fetchJson<Warehouse>(`/api/v1/inventory/warehouses/${id}`),
       ])
       setStock(stockData.data ?? [])
       setStockTotal(stockData.total ?? 0)
       setMovements(movData.data ?? [])
       setMovTotal(movData.total ?? 0)
-      setName(whData.name ?? '')
-      setWarehouseDescription(whData.description ?? null)
+      setWarehouse(whData)
       setDefaultMinimum(whData.default_minimum_quantity ?? '0')
     } catch (e) {
       notifyApiError(e)
@@ -340,10 +350,13 @@ export function DepositoDetail() {
       <TopBar
         breadcrumbs={[
           { label: 'Depósitos', href: '/inventario/depositos' },
-          { label: warehouseName || '…' },
+          { label: warehouse?.name || '…' },
         ]}
         actions={
           <div className="flex gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} disabled={!warehouse}>
+              Editar
+            </Button>
             <Button size="sm" variant="secondary" asChild>
               <Link href={`/inventario/transferencias?from=${id}`}>Transferir</Link>
             </Button>
@@ -369,10 +382,10 @@ export function DepositoDetail() {
                 ← Depósitos
               </Link>
               <h1 className="text-[20px] font-bold text-fg tracking-tight">
-                {warehouseName || '…'}
+                {warehouse?.name || '…'}
               </h1>
-              {warehouseDescription ? (
-                <p className="text-[13px] text-fg-muted">{warehouseDescription}</p>
+              {warehouse?.description ? (
+                <p className="text-[13px] text-fg-muted">{warehouse.description}</p>
               ) : (
                 <p className="text-[13px] text-fg-muted">Stock y movimientos de este depósito</p>
               )}
@@ -500,6 +513,18 @@ export function DepositoDetail() {
         variant="warning"
         onConfirm={() => applyDefaultMinimum(false)}
       />
+
+      {editOpen && warehouse && (
+        <DepositoModal
+          warehouse={warehouse}
+          onClose={() => setEditOpen(false)}
+          onSaved={() => {
+            setEditOpen(false)
+            setRefresh(r => r + 1)
+          }}
+          onDeleted={() => router.push('/inventario/depositos')}
+        />
+      )}
     </div>
   )
 }

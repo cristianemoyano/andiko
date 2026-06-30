@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/erp/EmptyState'
 import { StatusPipeline } from '@/components/erp/StatusPipeline'
 import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
 import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
+import { catalogProductRequiredMessage, findLineWithoutCatalogProduct, findLineExceedingBranchStock, insufficientBranchStockMessage, type BranchStockMap } from '@/lib/sales-line-items-form'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { VentasBranchField } from '@/components/erp/VentasBranchField'
@@ -96,6 +97,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
   const [validUntil, setValidUntil]             = useState<Date | null>(null)
   const [paymentCondition, setPaymentCondition] = useState<PaymentCondition>('cash')
   const [items, setItems]                       = useState<LineItemInput[]>([makeEmptyLine()])
+  const [branchStockMap, setBranchStockMap]     = useState<BranchStockMap>({})
   const [notes, setNotes]                       = useState('')
   const [internalNotes, setInternalNotes]       = useState('')
 
@@ -187,10 +189,17 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
       return
     }
 
-    const lineWithoutProduct = items.findIndex(item => !item.product_id)
+    const lineWithoutProduct = findLineWithoutCatalogProduct(items)
     if (lineWithoutProduct >= 0) {
       setSaving(false)
-      setServerError(`Completá el producto en la línea ${lineWithoutProduct + 1} antes de guardar.`)
+      setServerError(catalogProductRequiredMessage(lineWithoutProduct))
+      return
+    }
+
+    const lineOverStock = findLineExceedingBranchStock(items, branchStockMap)
+    if (lineOverStock >= 0) {
+      setSaving(false)
+      setServerError(insufficientBranchStockMessage(lineOverStock))
       return
     }
 
@@ -295,6 +304,10 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
     } catch {
       return []
     }
+  }, [])
+
+  const handleStockMapChange = useCallback((map: BranchStockMap) => {
+    setBranchStockMap(map)
   }, [])
 
   if (loading) {
@@ -563,7 +576,13 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
           {/* Items */}
           {editMode ? (
             <div className="bg-surface border border-border rounded-sm p-5">
-              <SalesLineItemsEditor items={items} onChange={setItems} priceListId={priceListId} />
+              <SalesLineItemsEditor
+                items={items}
+                onChange={setItems}
+                priceListId={priceListId}
+                branchId={branchId}
+                onStockMapChange={handleStockMapChange}
+              />
             </div>
           ) : (
             <div className="bg-surface border border-border rounded-sm overflow-hidden">

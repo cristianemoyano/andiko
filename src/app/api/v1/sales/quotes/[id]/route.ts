@@ -3,6 +3,8 @@ import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { salesQuoteUpdateSchema } from '@/modules/sales/sales-quote.schema'
 import { getQuote, updateQuote, deleteQuote } from '@/modules/sales/sales-quotes.service'
+import { saleLineItemValidationResponse, saleLineStockValidationResponse } from '@/lib/sales-route-errors'
+import { branchWarehouseResolutionResponse } from '@/lib/inventory-route-errors'
 
 type P = { id: string }
 
@@ -36,6 +38,12 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     const quote = await updateQuote(id, parsed.data, ctxTenant, resolveActorId(session))
     return NextResponse.json(quote)
   } catch (err: unknown) {
+    const lineErr = saleLineItemValidationResponse(err)
+    if (lineErr) return lineErr
+    const stockErr = saleLineStockValidationResponse(err)
+    if (stockErr) return stockErr
+    const branchWarehouseErr = branchWarehouseResolutionResponse(err)
+    if (branchWarehouseErr) return branchWarehouseErr
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
       return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
     }

@@ -1,6 +1,10 @@
 # Production Docker Swarm stack for Andiko.
 # Deploy via: make prod-deploy TAG=vX.Y.Z
 # Requires envsubst and variables from infra/.env.production (see deploy.sh).
+#
+# Resource sizing targets Hostinger KVM 4 (4 vCPU, 16 GB RAM). Limits cap runaway
+# usage; reservations document minimums for scheduling. Tune via Portainer if
+# sustained usage differs after load grows.
 
 x-logging: &default-logging
   driver: local
@@ -26,6 +30,13 @@ services:
       placement:
         constraints:
           - node.role == manager
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
     logging: *default-logging
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
@@ -56,6 +67,13 @@ services:
         failure_action: rollback
       rollback_config:
         order: stop-first
+      resources:
+        limits:
+          cpus: '2'
+          memory: 3G
+        reservations:
+          cpus: '0.25'
+          memory: 768M
     logging: *default-logging
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/health || exit 1']
@@ -88,6 +106,13 @@ services:
       placement:
         constraints:
           - node.role == manager
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
     logging: *default-logging
 
   portainer:
@@ -103,6 +128,13 @@ services:
       placement:
         constraints:
           - node.role == manager
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
     logging: *default-logging
 
 networks:

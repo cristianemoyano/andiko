@@ -3,6 +3,7 @@ import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { resolveTenantContext, tenancyErrorResponse } from '@/lib/tenancy'
 import { invoiceUpdateSchema } from '@/modules/sales/invoice.schema'
 import { getInvoice, updateInvoice, deleteInvoice } from '@/modules/sales/invoices.service'
+import { saleLineItemValidationResponse } from '@/lib/sales-route-errors'
 
 type P = { id: string }
 
@@ -36,6 +37,8 @@ export const PATCH = withPermission<P>('sales:write', async (req, ctx, session) 
     const invoice = await updateInvoice(id, parsed.data, tenantResult.ctx, resolveActorId(session))
     return NextResponse.json(invoice)
   } catch (err: unknown) {
+    const lineErr = saleLineItemValidationResponse(err)
+    if (lineErr) return lineErr
     const tenancyResp = tenancyErrorResponse(err)
     if (tenancyResp) return tenancyResp
     if (err instanceof Error) {

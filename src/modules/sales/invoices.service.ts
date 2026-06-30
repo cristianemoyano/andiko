@@ -18,6 +18,7 @@ import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.ut
 import { FISCAL_NUMBER_SOURCE_ATTRS } from '@/lib/fiscal-document-number'
 import type { TenantContext } from '@/lib/tenancy'
 import { whereSalesDocumentScope } from './sales-scope'
+import { assertSaleLineItemsFromActiveCatalog } from './sales-line-items.validation'
 import type { IvaRate } from '@/types'
 
 export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
@@ -125,6 +126,8 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
 
     const invoice_number = await nextDocumentNumber(orgId, branch_id, 'invoice', t)
 
+    await assertSaleLineItemsFromActiveCatalog(items, orgId, t)
+
     const itemTotals = items.map(item =>
       calcLineItem(item.quantity, item.unit_price, item.discount_pct ?? 0, (item.iva_rate ?? '21') as IvaRate)
     )
@@ -150,7 +153,8 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
       items.map((item, idx) => ({
         invoice_id:   invoice.id,
         org_id:       orgId,
-        product_id:   item.product_id ?? null,
+        product_id:   item.product_id,
+        variant_id:   item.variant_id,
         description:  item.description,
         quantity:     String(item.quantity),
         unit_price:   String(item.unit_price),
@@ -177,6 +181,7 @@ export async function updateInvoice(id: string, input: InvoiceUpdateInput, ctx: 
     const updateData: Record<string, unknown> = { updated_by: actorId }
 
     if (input.items) {
+      await assertSaleLineItemsFromActiveCatalog(input.items, invoice.org_id!, t)
       const itemTotals = input.items.map(item =>
         calcLineItem(item.quantity, item.unit_price, item.discount_pct ?? 0, (item.iva_rate ?? '21') as IvaRate)
       )

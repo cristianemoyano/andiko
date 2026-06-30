@@ -7,6 +7,7 @@ import { Input } from '@/components/primitives/Input'
 import { Textarea } from '@/components/primitives/Textarea'
 import { Button } from '@/components/primitives/Button'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
+import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 type Warehouse = {
@@ -22,13 +23,15 @@ interface DepositoModalProps {
   warehouse: Warehouse | null
   onClose: () => void
   onSaved: () => void
+  onDeleted?: () => void
 }
 
-export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProps) {
+export function DepositoModal({ warehouse, onClose, onSaved, onDeleted }: DepositoModalProps) {
   const isEdit = !!warehouse
 
   const [name, setName]               = useState(warehouse?.name ?? '')
   const [description, setDescription] = useState(warehouse?.description ?? '')
+  const [branchId, setBranchId]       = useState<string | null>(warehouse?.branch_id ?? null)
   const [defaultMinimum, setDefaultMinimum] = useState(warehouse?.default_minimum_quantity ?? '0')
   const [errors, setErrors]           = useState<Record<string, string>>({})
   const [serverError, setServerError] = useState<string | null>(null)
@@ -39,6 +42,7 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional form reset when warehouse prop changes
     setName(warehouse?.name ?? '')
     setDescription(warehouse?.description ?? '')
+    setBranchId(warehouse?.branch_id ?? null)
     setDefaultMinimum(warehouse?.default_minimum_quantity ?? '0')
     setErrors({})
     setServerError(null)
@@ -62,6 +66,7 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || null,
+          branch_id: branchId,
           default_minimum_quantity: Number(defaultMinimum),
         }),
       })
@@ -77,7 +82,8 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
     try {
       await fetchJson(`/api/v1/inventory/warehouses/${warehouse!.id}`, { method: 'DELETE' })
       setConfirmDelete(false)
-      onSaved()
+      if (onDeleted) onDeleted()
+      else onSaved()
     } catch (e) {
       setServerError(getApiErrorMessage(e))
       setConfirmDelete(false)
@@ -108,6 +114,18 @@ export function DepositoModal({ warehouse, onClose, onSaved }: DepositoModalProp
               rows={2}
             />
           </FormField>
+
+          <BranchSelectField
+            value={branchId}
+            onChange={setBranchId}
+            label="Sucursal"
+            placeholder="Sin sucursal (depósito central)"
+            autoDefaultFromSession={false}
+            clearable
+          />
+          <p className="text-[11px] text-fg-subtle -mt-2">
+            Cada sucursal debe tener un único depósito activo. Los depósitos centrales no tienen sucursal y abastecen vía transferencias.
+          </p>
 
           <FormField label="Stock mínimo default" error={errors.default_minimum}>
             <Input

@@ -10,7 +10,7 @@ import StockItem from './stock-item.model'
 import StockMovement from './stock-movement.model'
 import Warehouse from './warehouse.model'
 import type { StockMovementType, StockReferenceType } from './stock-movement.model'
-import { resolveDefaultWarehouse } from './warehouses.service'
+import { resolveWarehouseForBranch } from './branch-warehouse.resolution'
 import type { StockMovementQuery } from './stock-movement.schema'
 import ProductVariant from '@/modules/catalog/product-variant.model'
 import Product from '@/modules/catalog/product.model'
@@ -180,11 +180,7 @@ export async function deductStockForOrder(orderId: string, orgId: string, actorI
   const order = await SalesOrder.findByPk(orderId, { attributes: ['id', 'branch_id'], transaction: t })
   if (!order) return
 
-  const warehouseId = await resolveDefaultWarehouse(order.branch_id, orgId, t)
-  if (!warehouseId) {
-    logger.warn({ orderId, orgId }, 'no warehouse found for order branch — skipping stock deduction')
-    return
-  }
+  const warehouseId = await resolveWarehouseForBranch(order.branch_id, orgId, t)
 
   const items = await SalesOrderItem.findAll({
     where: { order_id: orderId },
@@ -258,8 +254,7 @@ export async function restoreRemainingStockForOrder(
   const order = await SalesOrder.findByPk(orderId, { attributes: ['id', 'branch_id'], transaction: t })
   if (!order?.branch_id) return
 
-  const warehouseId = await resolveDefaultWarehouse(order.branch_id, orgId, t)
-  if (!warehouseId) return
+  const warehouseId = await resolveWarehouseForBranch(order.branch_id, orgId, t)
 
   const items = await SalesOrderItem.findAll({
     where: { order_id: orderId },
