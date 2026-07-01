@@ -31,6 +31,7 @@ interface KpisData {
     facturado: { value: number; pct_change: number; spark: number[] }
     cobrado:   { value: number; pct_change: number; spark: number[] }
     por_cobrar: { value: number; overdue_count: number }
+    por_pagar: { value: number; overdue_count: number }
     saldo_cuenta: null
   }
   counts: { productos: number; clientes: number; proveedores: number; comprobantes: number }
@@ -38,6 +39,14 @@ interface KpisData {
   gastos: DonutSegment[]
   performance_series: PerformanceSeriesPoint[]
   analytics: PanelAnalyticsData
+}
+
+interface TopDebtRow {
+  contact_id: string
+  legal_name: string
+  trade_name: string | null
+  current: string
+  balance: string
 }
 
 interface RecentInvoice {
@@ -148,6 +157,67 @@ function CountCard({ label, value, icon }: { label: string; value: React.ReactNo
   )
 }
 
+function TopDebtsCard({
+  title, href, total, overdueCount, rows, loading, emptyMessage,
+}: {
+  title: string
+  href: string
+  total: number
+  overdueCount: number
+  rows: TopDebtRow[]
+  loading: boolean
+  emptyMessage: string
+}) {
+  return (
+    <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4 flex flex-col gap-3 min-w-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold text-fg-subtle uppercase tracking-[0.06em]">{title}</div>
+          <div className="font-mono text-lg font-medium text-fg leading-none mt-1">
+            {loading ? <Skeleton className="h-5 w-28" /> : ars(total)}
+          </div>
+          {!loading && (
+            overdueCount > 0
+              ? <span className="text-[11px] font-medium text-warning">{overdueCount} vencida{overdueCount > 1 ? 's' : ''}</span>
+              : <span className="text-[11px] text-success">Al día</span>
+          )}
+        </div>
+        <Link href={href} className="text-[12px] text-brand-accent hover:underline shrink-0">
+          Ver todos →
+        </Link>
+      </div>
+      <div className="flex flex-col divide-y divide-border">
+        {topDebtsBody(rows, loading, emptyMessage)}
+      </div>
+    </div>
+  )
+}
+
+function topDebtsBody(rows: TopDebtRow[], loading: boolean, emptyMessage: string) {
+  if (loading) {
+    return Array.from({ length: 3 }).map((_, i) => (
+      <div key={i} className="flex items-center justify-between gap-2 py-2">
+        <Skeleton className="h-3.5 w-32" />
+        <Skeleton className="h-3.5 w-16" />
+      </div>
+    ))
+  }
+  if (rows.length === 0) {
+    return <p className="py-2 text-[12px] text-fg-subtle">{emptyMessage}</p>
+  }
+  return rows.map(row => {
+    const overdue = parseFloat(row.balance) - parseFloat(row.current) > 0
+    return (
+      <div key={row.contact_id} className="flex items-center justify-between gap-2 py-2 min-w-0">
+        <span className="text-[12px] text-fg truncate">{row.trade_name || row.legal_name}</span>
+        <span className={`font-mono text-[12px] tabular-nums shrink-0 ${overdue ? 'text-warning' : 'text-fg-muted'}`}>
+          {ars(parseFloat(row.balance))}
+        </span>
+      </div>
+    )
+  })
+}
+
 // ── Icons ───────────────────────────────────────────────────────────────────
 
 const IconBox = () => (
@@ -247,6 +317,9 @@ function PanelClientContent({
   const [stockAlerts, setStockAlerts] = useState<StockAlerts | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | undefined>()
   const [performanceSeries, setPerformanceSeries] = useState<PerformanceSeriesPoint[]>([])
+  const [topReceivables, setTopReceivables] = useState<TopDebtRow[]>([])
+  const [topPayables, setTopPayables] = useState<TopDebtRow[]>([])
+  const [topDebtsLoading, setTopDebtsLoading] = useState(true)
 
   const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -322,6 +395,24 @@ function PanelClientContent({
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [period, branchId, fromDate, toDate])
+
+  // Top 5 clientes/proveedores con mayor saldo (aging "a hoy", no depende del período)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setTopDebtsLoading before async fetch is intentional; avoids stale loading UI when branch filter changes
+    setTopDebtsLoading(true)
+    const bq = branchId && branchId !== 'all' ? `&branch_id=${branchId}` : ''
+
+    Promise.all([
+      fetchJson<{ data: TopDebtRow[] }>(`/api/v1/sales/reports/receivables-aging?limit=5&page=1${bq}`),
+      fetchJson<{ data: TopDebtRow[] }>(`/api/v1/purchases/reports/payables-aging?limit=5&page=1${bq}`),
+    ])
+      .then(([receivables, payables]) => {
+        setTopReceivables(receivables.data ?? [])
+        setTopPayables(payables.data ?? [])
+      })
+      .catch(() => {})
+      .finally(() => setTopDebtsLoading(false))
+  }, [branchId])
 
   const kpis = kpisData?.kpis
   const counts = kpisData?.counts
@@ -409,6 +500,33 @@ function PanelClientContent({
               sub={<span className="text-[11px] text-fg-subtle line-clamp-2">Módulo contabilidad pendiente</span>}
             />
           </div>
+        </div>
+      </PanelWidgetSlot>
+    ),
+    top_debts: (
+      <PanelWidgetSlot widgetId="top_debts">
+        <div className="flex justify-end mb-1">
+          <PanelWidgetMenu widgetId="top_debts" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <TopDebtsCard
+            title="Cuentas por cobrar — top 5"
+            href="/ventas/reportes?view=cobranzas"
+            total={kpis?.por_cobrar.value ?? 0}
+            overdueCount={kpis?.por_cobrar.overdue_count ?? 0}
+            rows={topReceivables}
+            loading={topDebtsLoading}
+            emptyMessage="Sin saldos pendientes de clientes."
+          />
+          <TopDebtsCard
+            title="Cuentas por pagar — top 5"
+            href="/compras/reportes?view=deudas"
+            total={kpis?.por_pagar.value ?? 0}
+            overdueCount={kpis?.por_pagar.overdue_count ?? 0}
+            rows={topPayables}
+            loading={topDebtsLoading}
+            emptyMessage="Sin saldos pendientes con proveedores."
+          />
         </div>
       </PanelWidgetSlot>
     ),
@@ -615,6 +733,9 @@ function PanelClientContent({
     performanceSeries,
     kpis,
     counts,
+    topReceivables,
+    topPayables,
+    topDebtsLoading,
     lastUpdated,
     loading,
     analytics,

@@ -59,6 +59,10 @@ interface InvoiceKpiRow {
   cxc_value: string
   overdue_count: string
 }
+interface SupplierInvoiceKpiRow {
+  cxp_value: string
+  overdue_count: string
+}
 interface CountsRow {
   productos: string
   clientes: string
@@ -115,6 +119,7 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
   const { from, to, prevFrom, prevTo } = resolveDateRange(filters)
   const bc = branchClause('i', filters.branch_id)
   const bc2 = branchClause('p', filters.branch_id)
+  const bc3 = branchClause('si', filters.branch_id)
 
   const [invoiceRows] = await sequelize.query<InvoiceKpiRow>(`
     SELECT
@@ -125,6 +130,14 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
     FROM invoices i
     WHERE i.org_id = :orgId AND i.deleted_at IS NULL ${bc}
   `, { replacements: { orgId, from, to, prevFrom, prevTo }, type: QueryTypes.SELECT })
+
+  const [supplierInvoiceRows] = await sequelize.query<SupplierInvoiceKpiRow>(`
+    SELECT
+      COALESCE(SUM(CASE WHEN si.status IN ('issued', 'partially_paid') THEN CAST(si.balance AS NUMERIC) END), 0)::text AS cxp_value,
+      COUNT(CASE WHEN si.status IN ('issued', 'partially_paid') AND si.due_date < NOW() AND CAST(si.balance AS NUMERIC) > 0 THEN 1 END)::text AS overdue_count
+    FROM supplier_invoices si
+    WHERE si.org_id = :orgId AND si.deleted_at IS NULL ${bc3}
+  `, { replacements: { orgId }, type: QueryTypes.SELECT })
 
   const [cobradoRows] = await sequelize.query<KpiRow>(`
     SELECT
@@ -168,6 +181,10 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
     por_cobrar: {
       value: parseFloat(invoiceRows?.cxc_value ?? '0'),
       overdue_count: parseInt(invoiceRows?.overdue_count ?? '0', 10),
+    },
+    por_pagar: {
+      value: parseFloat(supplierInvoiceRows?.cxp_value ?? '0'),
+      overdue_count: parseInt(supplierInvoiceRows?.overdue_count ?? '0', 10),
     },
     saldo_cuenta: null,
   }
