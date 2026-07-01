@@ -58,6 +58,9 @@ Infraestructura base sin lógica de negocio.
 - [x] Formulario de contacto en landing vía Web3Forms (`ContactForm`, sin BD)
 - [x] Landing de producto completa en `/` (desde diseño Claude Design): header sticky + nav con smooth-scroll, hero con mockup denso del panel ERP (`DashboardMockup`), secciones Módulos / Por qué / Métricas + rubros / Beta privada, footer. Lenguaje visual de marketing (botones 4px, tarjetas 12px, badges pill, foco teal) distinto del UI de producto.
 - [ ] Mencionar el módulo POS en la landing (ausente en el diseño actual; pendiente decidir tarjeta/copy)
+- [x] Documentación operativa GTM: packaging, programa beta, runbooks onboarding y soporte (`docs/gtm/`)
+- [x] Documentación dev: getting-started, cross-module checklist, PR template (`.github/`)
+- [x] README del proyecto, MULTITENANCY y production runbook alineados con estado v0.35+
 
 ---
 

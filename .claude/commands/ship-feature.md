@@ -128,9 +128,8 @@ Format: `<type>(<scope>): <short description>`
 | `docs` | documentation only |
 
 **Scope:**
-- ERP modules: `sales`, `inventory`, `purchases`, `contacts`, `accounting`, `auth`
+- ERP modules: `sales`, `inventory`, `purchases`, `contacts`, `accounting`, `auth`, `catalog`, `afip`, `billing`, `pos`, `integrations`, `communications`, `storage`
 - Cross-cutting / infra: `core`
-- Use `core` for POS features, CI/CD, monorepo config, shared packages
 
 Header max 100 characters. Body lines max 100 characters.
 

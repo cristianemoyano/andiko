@@ -297,6 +297,25 @@ src/app/(erp)/{module}/
 
 ---
 
+## Cross-module features and documentation
+
+Features that touch sales, inventory, purchases, AFIP, accounting, billing, POS, or WooCommerce **must** follow [docs/dev/cross-module-checklist.md](docs/dev/cross-module-checklist.md) before merge.
+
+**Commit scopes** (enforced by commitlint): `sales`, `inventory`, `purchases`, `contacts`, `accounting`, `auth`, `core`, `catalog`, `afip`, `billing`, `pos`, `integrations`, `communications`, `storage`.
+
+**Key docs:**
+
+| Doc | Purpose |
+|-----|---------|
+| [docs/MULTITENANCY.md](docs/MULTITENANCY.md) | org_id / branch_id rules (keep updated) |
+| [docs/dev/getting-started.md](docs/dev/getting-started.md) | Local setup for new developers |
+| [docs/gtm/](docs/gtm/) | Packaging, onboarding and support runbooks |
+| [.github/pull_request_template.md](.github/pull_request_template.md) | PR checklist |
+
+**Module index files** (`src/modules/*/index.ts`) should re-export public services/models — never leave placeholder comments on implemented modules.
+
+---
+
 ## Decision Heuristics
 
 **When adding a new field:**

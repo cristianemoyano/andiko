@@ -39,7 +39,7 @@ All orgs (multi-tenant) share one app instance and one database.
 | Portainer | [https://portainer.andiko.cloud](https://portainer.andiko.cloud) |
 | GHCR image | `ghcr.io/cristianemoyano/andiko` |
 | Swarm stack | `andiko` |
-| Current tag | `v0.32.0` (update per release) |
+| Current tag | `v0.35.0` — usar el valor de `package.json` / último tag en GitHub Releases |
 
 `infra/.env.production` on the VPS holds secrets — never commit it. See [Environment file](#environment-file) when editing or provisioning a new host.
 
@@ -64,10 +64,10 @@ make prod-release
 Prompts for the tag interactively (default from `package.json`). Override when needed:
 
 ```bash
-make prod-release TAG=v0.32.0
-make prod-release TAG=v0.32.0 SKIP_PUSH=1    # image already in GHCR (e.g. pushed from laptop)
-make prod-release TAG=v0.32.0 SKIP_PULL=1    # code already up to date on VPS
-make prod-release TAG=v0.32.0 SKIP_MIGRATE=1  # no migration files in this release
+make prod-release TAG=v0.35.0
+make prod-release TAG=v0.35.0 SKIP_PUSH=1    # image already in GHCR (e.g. pushed from laptop)
+make prod-release TAG=v0.35.0 SKIP_PULL=1    # code already up to date on VPS
+make prod-release TAG=v0.35.0 SKIP_MIGRATE=1  # no migration files in this release
 ```
 
 **Verify after deploy:**
@@ -85,12 +85,12 @@ If you need to run steps separately:
 
 ```bash
 # Laptop (optional — prod-release can build/push from VPS)
-make prod-push TAG=v0.32.0
+make prod-push TAG=v0.35.0
 
 # VPS
 cd /root/andiko && git pull origin develop
-make prod-migrate TAG=v0.32.0
-make prod-deploy TAG=v0.32.0
+make prod-migrate TAG=v0.35.0
+make prod-deploy TAG=v0.35.0
 make prod-health
 ```
 
@@ -261,8 +261,8 @@ After bootstrap, use [Deploy a release (routine)](#deploy-a-release-routine) for
 Included in `make prod-release`. Run standalone only when debugging or using [manual deploy](#manual-deploy-advanced):
 
 ```bash
-make prod-migrate TAG=v0.32.0
-make prod-migrate-status TAG=v0.32.0
+make prod-migrate TAG=v0.35.0
+make prod-migrate-status TAG=v0.35.0
 ```
 
 Emergency fallback: `POST /api/admin/migrate` with `Authorization: Bearer $MIGRATION_SECRET` if configured.
@@ -273,7 +273,7 @@ Create the first sys-admin (or reset password) on the VPS:
 
 ```bash
 make prod-create-sysadmin \
-  TAG=v0.32.0 \
+  TAG=v0.35.0 \
   EMAIL=admin@andiko.cloud \
   PASSWORD='your-secure-password-min-16-chars' \
   NAME='Sys Admin'

@@ -1,5 +1,7 @@
 # Plan: Cobertura del gap competitivo vs Artics
 
+> **Nota (2026-07):** Este plan es histórico (jun 2026). Muchos ítems marcados como gap ya están implementados (AFIP, NC/ND, remitos, lotes FEFO, cuenta corriente, POS medios de pago). Usar [docs/ROADMAP.md](../ROADMAP.md) como fuente de verdad del estado actual.
+
 ## Contexto
 
 Andiko es un ERP modular (Next.js, PostgreSQL, Sequelize) con POS offline en Electron + SQLite y sincronización al cloud. Este documento traduce el gap frente al discurso comercial de **Artics** (POS + ERP para comercios argentinos) en un plan por fases accionable, enlazando trabajo ya espiralado en el repo.
