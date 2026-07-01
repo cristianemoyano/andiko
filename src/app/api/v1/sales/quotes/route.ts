@@ -3,6 +3,7 @@ import { withPermission, resolveActorId } from '@/lib/api-handler'
 import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import { salesQuoteSchema, salesQuoteQuerySchema } from '@/modules/sales/sales-quote.schema'
 import { listQuotes, createQuote } from '@/modules/sales/sales-quotes.service'
+import { listQuotesExpiringSoon } from '@/modules/sales/sales-quote-expiration.service'
 import { saleLineItemValidationResponse, saleLineStockValidationResponse } from '@/lib/sales-route-errors'
 import { branchWarehouseResolutionResponse } from '@/lib/inventory-route-errors'
 
@@ -15,6 +16,10 @@ export const GET = withPermission('sales:read', async (req, _ctx, session) => {
     const ctxTenantResult = await resolveTenantContext(session.user)
     if ('error' in ctxTenantResult) return ctxTenantResult.error
     const ctxTenant = ctxTenantResult.ctx
+    if (parsed.data.expiring_within_days) {
+      const data = await listQuotesExpiringSoon(parsed.data.expiring_within_days, ctxTenant)
+      return NextResponse.json({ data })
+    }
     const result = await listQuotes(parsed.data, ctxTenant)
     return NextResponse.json(result)
   } catch (err: unknown) {

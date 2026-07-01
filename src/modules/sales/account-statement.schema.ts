@@ -38,3 +38,12 @@ export const accountStatementSummaryListQuerySchema = paginationSchema.extend({
 })
 
 export type AccountStatementSummaryListQuery = z.infer<typeof accountStatementSummaryListQuerySchema>
+
+/** Reporte de antigüedad de saldos (aging) de cuentas por cobrar, a hoy. */
+export const receivablesAgingQuerySchema = paginationSchema.extend({
+  /** Busca por razón social, nombre de fantasía o CUIT. */
+  search: z.string().optional(),
+  branch_id: z.string().uuid().optional(),
+})
+
+export type ReceivablesAgingQuery = z.infer<typeof receivablesAgingQuerySchema>

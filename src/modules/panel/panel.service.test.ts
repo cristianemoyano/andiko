@@ -30,6 +30,7 @@ describe('panel.service', () => {
           cxc_value: '30000.00',
           overdue_count: '2',
         }] as never)
+        .mockResolvedValueOnce([{ cxp_value: '18000.00', overdue_count: '1' }] as never)
         .mockResolvedValueOnce([{ current: '120000.00', previous: '130000.00' }] as never)
         .mockResolvedValueOnce([] as never)
 
@@ -41,6 +42,8 @@ describe('panel.service', () => {
       expect(result.cobrado.pct_change).toBe(-8)
       expect(result.por_cobrar.value).toBe(30000)
       expect(result.por_cobrar.overdue_count).toBe(2)
+      expect(result.por_pagar.value).toBe(18000)
+      expect(result.por_pagar.overdue_count).toBe(1)
       expect(result.saldo_cuenta).toBeNull()
     })
 
@@ -53,6 +56,7 @@ describe('panel.service', () => {
           cxc_value: '0',
           overdue_count: '0',
         }] as never)
+        .mockResolvedValueOnce([{ cxp_value: '0', overdue_count: '0' }] as never)
         .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
         .mockResolvedValueOnce([] as never)
 
@@ -71,6 +75,7 @@ describe('panel.service', () => {
           cxc_value: '0',
           overdue_count: '0',
         }] as never)
+        .mockResolvedValueOnce([{ cxp_value: '0', overdue_count: '0' }] as never)
         .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
         .mockResolvedValueOnce([] as never)
 

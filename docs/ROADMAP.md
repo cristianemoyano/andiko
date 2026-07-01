@@ -204,6 +204,7 @@ Vista ejecutiva del negocio. Primer pantalla post-login.
 - [x] Queries del panel optimizadas (CTEs en lugar de subqueries correlacionadas; 13→7 round-trips SQL)
 - [x] Cache in-memory 60s en endpoints del panel (`/kpis`, `/recent-invoices`, `/activity`)
 - [x] Migración: índices compuestos para reportes del panel (`issue_date`, `payment_date`, `updated_at`)
+- [x] KPI Cuentas por pagar + widget top 5 cobranzas/deudas (enlaza a reportes de aging)
 
 ---
 
@@ -316,6 +317,7 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 
 ### Frontend
 - [x] Presupuestos con vigencia y estado (listado + detalle + modal)
+- [x] Expiración automática de presupuestos vencidos (cron) + filtro "Por vencer (7d)"
 - [x] Conversión presupuesto → pedido → factura en un flujo (UI en detalle + navegación entre secciones)
 - [x] Descuentos por ítem (modales de líneas; descuento a nivel documento según backend en totales)
 - [x] Registro de cobros parciales y totales (UI en detalle de factura + listado de cobros)
@@ -329,6 +331,7 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] **Devoluciones y cambios de venta** — `sales_returns` (parcial/total, múltiples por pedido); stock IN/OUT; NC con ítems + AFIP; reembolsos (`sales_refunds`) o saldo a favor; estados de pedido `partial_returned` / `returned`; UI `/ventas/devoluciones`; flujo POS post-venta
 - [x] Listado de cuentas corrientes por cliente
 - [x] Reportes: ventas por período, por cliente, por producto
+- [x] Reporte de cobranzas (aging CxC por cliente, buckets de vencimiento, export CSV)
 - [x] **Impresión y exportación de documentos (MVP)** — Módulo `printing` (registro por dominio/recurso), API `GET /api/v1/printing/[domain]/[resource]/[id]`, vistas print bajo `/ventas/...` y `/compras/...` (layout A4, PDF vía `window.print()` + `@media print`). Borradores imprimibles con marca **BORRADOR** (uso interno).
 - [x] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página. *(Editor en `/configuracion`, link en sidebar, validación Zod + merge sobre defaults.)*
 - [x] Editor visual de template (tipografía, paleta, secciones visibles). *(Vista previa en vivo del documento mientras se edita.)*
@@ -404,8 +407,10 @@ Ciclo de compras: orden → recepción → factura proveedor → pago.
 
 ### Pendientes
 - [x] Cuenta corriente proveedor — `/compras/cuenta-corriente` con historial de facturas + pagos, saldo, vencido y filtros por período (mismo patrón que ventas CC)
+- [x] Listado agregado de CC proveedor (endpoint único, sin N+1)
 - [x] Conciliación orden → recepción → factura (alertas de diferencias de precio/cantidad)
 - [x] Reportes: compras por período, por proveedor, por categoría de producto
+- [x] Reporte de deudas con proveedores (aging CxP, export CSV)
 - [x] **Devoluciones y cambios de compra** — `purchase_returns` (devolución/cambio a proveedor, parcial/total); stock OUT para lo devuelto e IN para el cambio; reduce el saldo de la factura proveedor (neto del cambio); estados de orden `partial_returned` / `returned`; asiento contable automático; filas negativas en Libro IVA Compras; UI `/compras/devoluciones`
 
 ---

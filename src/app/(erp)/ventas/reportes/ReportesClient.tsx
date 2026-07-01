@@ -41,12 +41,52 @@ type ReportResponse = {
   truncated: boolean
 }
 
+type AgingRow = {
+  contact_id: string
+  legal_name: string
+  trade_name: string | null
+  cuit: string | null
+  invoices_count: number
+  current: string
+  bucket_1_30: string
+  bucket_31_60: string
+  bucket_61_90: string
+  bucket_90_plus: string
+  balance: string
+}
+
+type AgingTotals = Omit<AgingRow, 'contact_id' | 'legal_name' | 'trade_name' | 'cuit'>
+
+type AgingResponse = {
+  data: AgingRow[]
+  totals: AgingTotals
+  total: number
+  page: number
+  limit: number
+  pages: number
+}
+
 const EMPTY_TOTALS: ReportTotals = { documents: 0, quantity: null, subtotal: '0.00', tax: '0.00', total: '0.00' }
+
+const EMPTY_AGING_TOTALS: AgingTotals = {
+  invoices_count: 0,
+  current: '0.00',
+  bucket_1_30: '0.00',
+  bucket_31_60: '0.00',
+  bucket_61_90: '0.00',
+  bucket_90_plus: '0.00',
+  balance: '0.00',
+}
 
 const GROUP_BY_OPTIONS: Array<{ value: GroupBy; label: string }> = [
   { value: 'period', label: 'Por período' },
   { value: 'customer', label: 'Por cliente' },
   { value: 'product', label: 'Por producto' },
+]
+
+const REPORT_VIEW_OPTIONS: Array<{ value: 'ventas' | 'cobranzas'; label: string }> = [
+  { value: 'ventas', label: 'Ventas' },
+  { value: 'cobranzas', label: 'Cobranzas (aging)' },
 ]
 
 const GRANULARITY_OPTIONS: Array<{ value: Granularity; label: string }> = [
@@ -106,6 +146,49 @@ function exportCsv(rows: ReportRow[], totals: ReportTotals, groupBy: GroupBy) {
   URL.revokeObjectURL(url)
 }
 
+function exportAgingCsv(rows: AgingRow[], totals: AgingTotals) {
+  const headers: CsvHeader[] = [
+    { key: 'legal_name', label: 'Cliente' },
+    { key: 'cuit', label: 'CUIT' },
+    { key: 'current', label: 'No vencido' },
+    { key: 'bucket_1_30', label: '1-30 días' },
+    { key: 'bucket_31_60', label: '31-60 días' },
+    { key: 'bucket_61_90', label: '61-90 días' },
+    { key: 'bucket_90_plus', label: '+90 días' },
+    { key: 'balance', label: 'Saldo total' },
+  ]
+  const csvRows: Record<string, unknown>[] = [
+    ...rows.map(r => ({
+      legal_name: r.legal_name,
+      cuit: r.cuit ?? '',
+      current: r.current,
+      bucket_1_30: r.bucket_1_30,
+      bucket_31_60: r.bucket_31_60,
+      bucket_61_90: r.bucket_61_90,
+      bucket_90_plus: r.bucket_90_plus,
+      balance: r.balance,
+    })),
+    {
+      legal_name: 'Total',
+      cuit: '',
+      current: totals.current,
+      bucket_1_30: totals.bucket_1_30,
+      bucket_31_60: totals.bucket_31_60,
+      bucket_61_90: totals.bucket_61_90,
+      bucket_90_plus: totals.bucket_90_plus,
+      balance: totals.balance,
+    },
+  ]
+  const csv = toCsvText(csvRows, headers)
+  const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `reporte-cobranzas-aging-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export interface VentasReportesClientProps {
   subnav?: ReactNode
   breadcrumbs?: { label: string; href?: string }[]
@@ -119,6 +202,9 @@ export function VentasReportesClient({
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
+  const [view, setView] = useState<'ventas' | 'cobranzas'>(() => (
+    searchParams.get('view') === 'cobranzas' ? 'cobranzas' : 'ventas'
+  ))
   const [groupBy, setGroupBy] = useState<GroupBy>(() => parseGroupBy(searchParams.get('group_by')))
   const [granularity, setGranularity] = useState<Granularity>(() => parseGranularity(searchParams.get('granularity')))
   const [fromDate, setFromDate] = useState(() => searchParams.get('from') ?? '')
@@ -130,15 +216,22 @@ export function VentasReportesClient({
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const [agingSearch, setAgingSearch] = useState('')
+  const [agingRows, setAgingRows] = useState<AgingRow[]>([])
+  const [agingTotals, setAgingTotals] = useState<AgingTotals>(EMPTY_AGING_TOTALS)
+  const [agingError, setAgingError] = useState<string | null>(null)
+  const [agingLoading, setAgingLoading] = useState(true)
+
   useEffect(() => {
     const params = new URLSearchParams()
+    if (view !== 'ventas') params.set('view', view)
     if (groupBy !== 'period') params.set('group_by', groupBy)
     if (groupBy === 'period' && granularity !== 'month') params.set('granularity', granularity)
     if (fromDate) params.set('from', fromDate)
     if (toDate) params.set('to', toDate)
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [groupBy, granularity, fromDate, toDate, pathname, router])
+  }, [view, groupBy, granularity, fromDate, toDate, pathname, router])
 
   const loadReport = useCallback(async () => {
     const params = new URLSearchParams({ group_by: groupBy })
@@ -163,9 +256,34 @@ export function VentasReportesClient({
   }, [groupBy, granularity, fromDate, toDate])
 
   useEffect(() => {
+    if (view !== 'ventas') return
     const t = setTimeout(() => { void loadReport() }, 0)
     return () => clearTimeout(t)
-  }, [loadReport])
+  }, [view, loadReport])
+
+  const loadAging = useCallback(async () => {
+    const params = new URLSearchParams({ limit: '100' })
+    if (agingSearch) params.set('search', agingSearch)
+    setAgingLoading(true)
+    try {
+      const d = await fetchJson<AgingResponse>(`/api/v1/sales/reports/receivables-aging?${params}`)
+      setAgingRows(d.data ?? [])
+      setAgingTotals(d.totals ?? EMPTY_AGING_TOTALS)
+      setAgingError(null)
+    } catch (e) {
+      setAgingError(getApiErrorMessage(e))
+      setAgingRows([])
+      setAgingTotals(EMPTY_AGING_TOTALS)
+    } finally {
+      setAgingLoading(false)
+    }
+  }, [agingSearch])
+
+  useEffect(() => {
+    if (view !== 'cobranzas') return
+    const t = setTimeout(() => { void loadAging() }, 0)
+    return () => clearTimeout(t)
+  }, [view, loadAging])
 
   const columns = useMemo<Column<ReportRow>[]>(() => {
     const cols: Column<ReportRow>[] = [
@@ -226,6 +344,135 @@ export function VentasReportesClient({
     [rows],
   )
 
+  const agingColumns = useMemo<Column<AgingRow>[]>(() => [
+    {
+      key: 'legal_name',
+      header: 'Cliente',
+      render: row => (
+        <div className="min-w-0">
+          <span className="font-medium text-fg">{row.legal_name}</span>
+          {row.trade_name ? <p className="truncate text-[12px] text-fg-muted">{row.trade_name}</p> : null}
+        </div>
+      ),
+    },
+    {
+      key: 'current',
+      header: 'No vencido',
+      align: 'right',
+      render: row => <span className="tabular-nums text-fg-muted">{formatARS(row.current)}</span>,
+    },
+    {
+      key: 'bucket_1_30',
+      header: '1-30 días',
+      align: 'right',
+      render: row => <span className="tabular-nums text-fg-muted">{formatARS(row.bucket_1_30)}</span>,
+    },
+    {
+      key: 'bucket_31_60',
+      header: '31-60 días',
+      align: 'right',
+      render: row => <span className="tabular-nums text-fg-muted">{formatARS(row.bucket_31_60)}</span>,
+    },
+    {
+      key: 'bucket_61_90',
+      header: '61-90 días',
+      align: 'right',
+      render: row => <span className="tabular-nums text-fg-muted">{formatARS(row.bucket_61_90)}</span>,
+    },
+    {
+      key: 'bucket_90_plus',
+      header: '+90 días',
+      align: 'right',
+      render: row => <span className="tabular-nums text-danger">{formatARS(row.bucket_90_plus)}</span>,
+    },
+    {
+      key: 'balance',
+      header: 'Saldo total',
+      align: 'right',
+      render: row => <span className="tabular-nums font-medium text-fg">{formatARS(row.balance)}</span>,
+    },
+  ], [])
+
+  if (view === 'cobranzas') {
+    return (
+      <div className="flex h-full flex-col">
+        <TopBar
+          breadcrumbs={breadcrumbs}
+          actions={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => exportAgingCsv(agingRows, agingTotals)}
+              disabled={agingRows.length === 0}
+            >
+              Exportar CSV
+            </Button>
+          }
+        />
+        {subnav}
+
+        <PageBody>
+          {agingError && <p className="mb-3 text-sm text-danger">{agingError}</p>}
+
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-sm border border-border-strong bg-surface p-0.5" role="group" aria-label="Vista">
+              {REPORT_VIEW_OPTIONS.map(option => (
+                <Button
+                  key={option.value}
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  aria-pressed={view === option.value}
+                  className={view === option.value
+                    ? 'bg-brand-600 text-white hover:bg-brand-600 hover:text-white'
+                    : ''}
+                  onClick={() => setView(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+
+            <input
+              type="text"
+              className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
+              placeholder="Buscar cliente o CUIT..."
+              value={agingSearch}
+              onChange={e => setAgingSearch(e.target.value)}
+            />
+
+            <span className="flex-1" />
+            <span className="text-[12px] text-fg-muted">
+              {agingTotals.invoices_count} factura{agingTotals.invoices_count !== 1 ? 's' : ''} con saldo
+            </span>
+          </div>
+
+          <DataTable
+            columns={agingColumns}
+            data={agingRows}
+            keyExtractor={row => row.contact_id}
+            emptyMessage={agingLoading ? 'Cargando…' : 'No hay clientes con saldo pendiente.'}
+            footer={
+              agingRows.length > 0 ? (
+                <div className="flex items-center justify-between px-3 py-2 text-[13px] font-medium text-fg">
+                  <span>Total</span>
+                  <div className="flex items-center gap-6">
+                    <span className="tabular-nums">No vencido {formatARS(agingTotals.current)}</span>
+                    <span className="tabular-nums">1-30 {formatARS(agingTotals.bucket_1_30)}</span>
+                    <span className="tabular-nums">31-60 {formatARS(agingTotals.bucket_31_60)}</span>
+                    <span className="tabular-nums">61-90 {formatARS(agingTotals.bucket_61_90)}</span>
+                    <span className="tabular-nums">+90 {formatARS(agingTotals.bucket_90_plus)}</span>
+                    <span className="tabular-nums">Saldo {formatARS(agingTotals.balance)}</span>
+                  </div>
+                </div>
+              ) : undefined
+            }
+          />
+        </PageBody>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full flex-col">
       <TopBar
@@ -247,6 +494,24 @@ export function VentasReportesClient({
         )}
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-sm border border-border-strong bg-surface p-0.5" role="group" aria-label="Vista">
+            {REPORT_VIEW_OPTIONS.map(option => (
+              <Button
+                key={option.value}
+                type="button"
+                size="xs"
+                variant="ghost"
+                aria-pressed={view === option.value}
+                className={view === option.value
+                  ? 'bg-brand-600 text-white hover:bg-brand-600 hover:text-white'
+                  : ''}
+                onClick={() => setView(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+
           <div className="inline-flex rounded-sm border border-border-strong bg-surface p-0.5" role="group" aria-label="Agrupar por">
             {GROUP_BY_OPTIONS.map(option => (
               <Button

@@ -12,9 +12,10 @@ import { EmailLogsTab } from './EmailLogsTab'
 import { AppearanceTab } from './AppearanceTab'
 import { AfipConfigTab } from './AfipConfigTab'
 import { IntegracionesTab } from './IntegracionesTab'
+import { TermsAndConditionsTab } from './TermsAndConditionsTab'
 import { useCapabilities } from '@/components/layout/CapabilitiesContext'
 
-type Section = 'impresion' | 'plantillas-email' | 'emails-enviados' | 'apariencia' | 'afip' | 'integraciones'
+type Section = 'impresion' | 'plantillas-email' | 'emails-enviados' | 'apariencia' | 'afip' | 'integraciones' | 'terminos-condiciones'
 
 const SECTION_LABEL: Record<Section, string> = {
   impresion: 'Plantilla de impresión',
@@ -23,6 +24,7 @@ const SECTION_LABEL: Record<Section, string> = {
   apariencia: 'Apariencia',
   afip: 'AFIP',
   integraciones: 'Integraciones',
+  'terminos-condiciones': 'Términos y condiciones',
 }
 
 function parseSection(value: string | null): Section {
@@ -32,6 +34,7 @@ function parseSection(value: string | null): Section {
     || value === 'apariencia'
     || value === 'afip'
     || value === 'integraciones'
+    || value === 'terminos-condiciones'
   ) {
     return value
   }
@@ -66,7 +69,9 @@ export function ConfiguracionClient({
             ? 'emails-enviados'
             : tabs.afip
               ? 'afip'
-              : 'apariencia'
+              : tabs.terminosCondiciones
+                ? 'terminos-condiciones'
+                : 'apariencia'
 
   const section = (
     (requested === 'impresion' && tabs.impresion) ||
@@ -74,7 +79,8 @@ export function ConfiguracionClient({
     (requested === 'emails-enviados' && tabs.emailsEnviados) ||
     (requested === 'apariencia' && tabs.apariencia) ||
     (requested === 'afip' && tabs.afip) ||
-    (requested === 'integraciones' && tabs.integraciones)
+    (requested === 'integraciones' && tabs.integraciones) ||
+    (requested === 'terminos-condiciones' && tabs.terminosCondiciones)
   ) ? requested : defaultSection
 
   function handleSectionChange(next: string) {
@@ -110,6 +116,7 @@ export function ConfiguracionClient({
             {tabs.apariencia && <TabsTrigger value="apariencia">Apariencia</TabsTrigger>}
             {tabs.afip && <TabsTrigger value="afip">AFIP</TabsTrigger>}
             {tabs.integraciones && <TabsTrigger value="integraciones">Integraciones</TabsTrigger>}
+            {tabs.terminosCondiciones && <TabsTrigger value="terminos-condiciones">Términos y condiciones</TabsTrigger>}
           </TabsList>
 
           {tabs.impresion && (
@@ -140,6 +147,11 @@ export function ConfiguracionClient({
           {tabs.integraciones && (
             <TabsContent value="integraciones">
               <IntegracionesTab />
+            </TabsContent>
+          )}
+          {tabs.terminosCondiciones && (
+            <TabsContent value="terminos-condiciones">
+              <TermsAndConditionsTab />
             </TabsContent>
           )}
         </Tabs>
