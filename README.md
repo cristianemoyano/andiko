@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Andiko ERP
 
-## Getting Started
+ERP modular cloud para PyMEs argentinas. Stack: Next.js (App Router), TypeScript, Sequelize, PostgreSQL.
 
-First, run the development server:
+**Producción:** [andiko.cloud](https://andiko.cloud) · **Versión actual:** ver `package.json` (`0.35.0` al momento de este README).
+
+## Módulos
+
+| Módulo | Ruta ERP | Descripción |
+|--------|----------|-------------|
+| Contactos | `/contactos` | Clientes y proveedores |
+| Catálogo | `/catalogo` | Productos, listas de precios |
+| Ventas | `/ventas` | Presupuesto → pedido → factura → cobro |
+| Inventario | `/inventario` | Depósitos, stock, lotes, remitos |
+| Compras | `/compras` | OC → recepción → factura proveedor |
+| Contabilidad | `/contabilidad` | Plan de cuentas, asientos, balances |
+| POS | `/pos` + `apps/pos` | Punto de venta offline (Electron) |
+
+Documentación extendida: [AGENTS.md](AGENTS.md) (reglas de desarrollo), [docs/ROADMAP.md](docs/ROADMAP.md) (producto), [docs/dev/getting-started.md](docs/dev/getting-started.md) (setup local).
+
+## Requisitos
+
+- Node.js 24+
+- pnpm 9+
+- Docker (PostgreSQL local vía Compose)
+
+## Setup local
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local   # ajustar DATABASE_URL y AUTH_SECRET
+make up                      # PostgreSQL 16 + pgAdmin
+pnpm migrate up
+pnpm db:seed                 # datos de desarrollo (opcional)
+pnpm dev                     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Credenciales seed (dev): ver salida de `pnpm db:seed` o `src/db/dev/seed-dev.ts`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Comandos útiles
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Comando | Descripción |
+|---------|-------------|
+| `pnpm check` | typecheck + lint + test en paralelo |
+| `pnpm test` | Vitest |
+| `pnpm migrate status` | estado de migraciones |
+| `pnpm storybook` | design system |
+| `make dev` | alias de entorno local |
 
-## Learn More
+## Monorepo
 
-To learn more about Next.js, take a look at the following resources:
+- `src/` — ERP web (Next.js)
+- `apps/pos/` — POS Electron (versión independiente, tag `pos/v*`)
+- `packages/ui`, `packages/db` — compartidos
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Despliegue
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Runbook VPS: [docs/deployment/production.md](docs/deployment/production.md).
 
-## Deploy on Vercel
+```bash
+make prod-release TAG=v0.35.0   # usar tag de release actual
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Contribuir
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Branching: features en `feature/*` o PRs a `develop`; releases a `main` vía `/release`.
+- Commits: Conventional Commits con scope obligatorio (`feat(sales): …`).
+- Ver [docs/dev/getting-started.md](docs/dev/getting-started.md) y [AGENTS.md](AGENTS.md).
+
+## GTM / operaciones comercial
+
+- [Packaging y precios beta](docs/gtm/packaging.md)
+- [Onboarding de clientes](docs/gtm/client-onboarding-runbook.md)
+- [Soporte](docs/gtm/support-runbook.md)
+- [Programa beta](docs/gtm/beta-program.md)
