@@ -42,6 +42,7 @@ interface GroupedDataTableProps<P extends object, C extends object> {
   parentKey: (row: P) => string
   childKey: (row: C) => string
   onRowClick?: (row: P) => void
+  getParentRowProps?: (row: P) => React.HTMLAttributes<HTMLTableRowElement>
   toolbar?: React.ReactNode
   footer?: React.ReactNode
   emptyMessage?: string
@@ -198,6 +199,7 @@ export function GroupedDataTable<P extends object, C extends object>({
   parentKey,
   childKey,
   onRowClick,
+  getParentRowProps,
   toolbar,
   footer,
   emptyMessage = 'Sin registros.',
@@ -270,6 +272,7 @@ export function GroupedDataTable<P extends object, C extends object>({
                       if (t?.closest('[data-stop-row-click]')) return
                       onRowClick(parent)
                     } : undefined}
+                    {...getParentRowProps?.(parent)}
                     className={cn(
                       'group border-b border-border last:border-0 hover:bg-surface-muted transition-colors',
                       onRowClick && 'cursor-pointer',

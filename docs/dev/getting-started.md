@@ -70,14 +70,24 @@ Sincronización contra ERP local: configurar URL y token de dispositivo desde `/
 
 ## 6. Tests
 
-- Framework: **Vitest** (nunca Jest)
-- Unitarios junto al servicio: `*.service.test.ts`
-- Integración cross-módulo: `src/modules/**/*.integration.test.ts` (en PR abierto / CI)
+- **Unitarios:** Vitest — `*.service.test.ts` junto al servicio (`pnpm test`)
+- **Integración E2E:** Cucumber + Playwright en `tests/integration/` (tenant `integration`)
 
 ```bash
+# Unitarios
 pnpm test
 pnpm test -- src/modules/sales/invoices.service.test.ts
+
+# Integración (requiere DB + seed + app en :3000)
+NODE_ENV=development pnpm db:seed-dev
+pnpm dev   # otra terminal
+HEADLESS=true pnpm test:integration --profile headed
+
+# Solo escenarios implementados (sin @skip)
+HEADLESS=true pnpm test:integration --profile headed --tags "not @skip"
 ```
+
+Estado y backlog de cobertura E2E: [docs/ROADMAP.md#calidad--tests-de-integración-e2e](../ROADMAP.md#calidad--tests-de-integración-e2e).
 
 ## 7. Migraciones
 

@@ -90,7 +90,11 @@ const ITEMS_COLUMNS = (
     key: 'sku',
     header: 'SKU',
     mobileRole: 'subtitle',
-    render: row => <span className="font-mono text-xs text-fg-muted">{row.variant?.sku ?? '—'}</span>,
+    render: row => (
+      <span className="font-mono text-xs text-fg-muted" data-testid="price-list-item-sku" data-sku={row.variant?.sku ?? ''}>
+        {row.variant?.sku ?? '—'}
+      </span>
+    ),
   },
   {
     key: 'name',
@@ -593,6 +597,7 @@ export function PriceListDetailClient({ priceList: initialPriceList }: { priceLi
             <FormField label="Buscar por SKU o nombre" htmlFor="pl_sku">
               <Input
                 id="pl_sku"
+                data-testid="price-list-sku-input"
                 placeholder={searching ? 'Buscando…' : 'Ej: RES-A4 o nombre del producto'}
                 value={skuQuery}
                 onChange={(e) => {
@@ -615,6 +620,7 @@ export function PriceListDetailClient({ priceList: initialPriceList }: { priceLi
             <FormField label="Precio" htmlFor="pl_price" error={formError ?? undefined}>
               <Input
                 id="pl_price"
+                data-testid="price-list-price-input"
                 type="number"
                 step="0.01"
                 min="0"
@@ -624,7 +630,7 @@ export function PriceListDetailClient({ priceList: initialPriceList }: { priceLi
                 placeholder="0,00"
               />
             </FormField>
-            <Button size="sm" type="submit" className="w-full sm:w-auto" disabled={saving || !selectedVariantId || !price}>
+            <Button size="sm" type="submit" data-testid="price-list-save-price-btn" className="w-full sm:w-auto" disabled={saving || !selectedVariantId || !price}>
               {saving ? '…' : 'Agregar precio'}
             </Button>
           </div>

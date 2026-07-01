@@ -5,12 +5,13 @@ interface FormFieldProps {
   label: string
   htmlFor?: string
   error?: string
+  errorTestId?: string
   required?: boolean
   className?: string
   children: React.ReactNode
 }
 
-function FormField({ label, htmlFor, error, required, className, children }: FormFieldProps) {
+function FormField({ label, htmlFor, error, errorTestId, required, className, children }: FormFieldProps) {
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       <Label.Root
@@ -24,7 +25,7 @@ function FormField({ label, htmlFor, error, required, className, children }: For
       {children}
 
       {error && (
-        <p role="alert" className="text-xs text-danger">
+        <p role="alert" className="text-xs text-danger" data-testid={errorTestId}>
           {error}
         </p>
       )}

@@ -42,7 +42,8 @@ Credenciales seed (dev): ver salida de `pnpm db:seed` o `src/db/dev/seed-dev.ts`
 | Comando | Descripción |
 |---------|-------------|
 | `pnpm check` | typecheck + lint + test en paralelo |
-| `pnpm test` | Vitest |
+| `pnpm test` | Vitest (unitarios) |
+| `pnpm test:integration` | Cucumber + Playwright (E2E; ver `docs/dev/getting-started.md`) |
 | `pnpm migrate status` | estado de migraciones |
 | `pnpm storybook` | design system |
 | `make dev` | alias de entorno local |
