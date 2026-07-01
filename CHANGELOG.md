@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.36.0](https://github.com/cristianemoyano/andiko/compare/v0.35.0...v0.36.0) (2026-07-01)
+
+### Features
+
+* **core:** add Gherkin/Playwright integration test suite with tenant `integration` ([237f132](https://github.com/cristianemoyano/andiko/commit/237f132))
+* **core:** expand E2E coverage for catalog, contacts, financials, purchases, and sales list flows ([d7b146a](https://github.com/cristianemoyano/andiko/commit/d7b146a))
+
+### Bug Fixes
+
+* **core:** stabilize integration tests (locators, seed, env) ([ddbbf98](https://github.com/cristianemoyano/andiko/commit/ddbbf98))
+* **core:** resolve typecheck errors on integration seed and test steps ([3bde61f](https://github.com/cristianemoyano/andiko/commit/3bde61f))
+
+### Documentation
+
+* **core:** refresh stale docs, GTM runbooks, and integration test roadmap ([5fcd64a](https://github.com/cristianemoyano/andiko/commit/5fcd64a), [dcbe97c](https://github.com/cristianemoyano/andiko/commit/dcbe97c))
+
 ## [0.35.0](https://github.com/cristianemoyano/andiko/compare/v0.34.0...v0.35.0) (2026-06-30)
 
 ### Features
