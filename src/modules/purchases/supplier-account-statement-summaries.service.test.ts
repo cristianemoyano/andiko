@@ -67,17 +67,17 @@ describe('listSupplierAccountStatementSummaries', () => {
     expect(result.page).toBe(1)
   })
 
-  it('scopes by org and excludes draft/cancelled invoices', async () => {
+  it('scopes by org and open payable statuses only', async () => {
     mockRows([])
 
     await listSupplierAccountStatementSummaries({ page: 1, limit: 20, only_with_balance: true }, tenantCtx)
 
     const [sql, options] = queryMock.mock.calls[0] as [string, { replacements: Record<string, unknown> }]
     expect(sql).toContain('si.org_id = :orgId')
-    expect(sql).toContain('si.status NOT IN (:excludedStatuses)')
+    expect(sql).toContain('si.status IN (:openStatuses)')
     expect(sql).toContain('si.deleted_at IS NULL')
     expect(options.replacements.orgId).toBe('org-1')
-    expect(options.replacements.excludedStatuses).toEqual(['draft', 'cancelled'])
+    expect(options.replacements.openStatuses).toEqual(['received', 'partially_paid'])
   })
 
   it('filters by allowed branches when the context restricts them', async () => {

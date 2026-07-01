@@ -4,10 +4,8 @@ import Decimal from 'decimal.js'
 import sequelize from '@/lib/db'
 import { paginate, toPaginated } from '@/lib/pagination'
 import type { TenantContext } from '@/lib/tenancy'
+import { OPEN_PAYABLE_INVOICE_STATUSES } from './supplier-invoice.constants'
 import type { SupplierAccountStatementSummaryListQuery } from './supplier-account-statement-summary.schema'
-
-/** Supplier invoices in these statuses are excluded from account statement summaries. */
-const EXCLUDED_INVOICE_STATUSES = ['draft', 'cancelled'] as const
 
 export type SupplierAccountStatementSummaryRow = {
   contact_id: string
@@ -38,8 +36,7 @@ type CountRow = { count: string }
 
 /**
  * Listado global de cuentas corrientes de proveedores: una fila por proveedor con
- * facturación, saldo y saldo vencido agregados sobre facturas de compra no
- * draft/cancelled (org/branch scoped).
+ * facturación, saldo y saldo vencido agregados sobre facturas recibidas o parcialmente pagadas
  */
 export async function listSupplierAccountStatementSummaries(
   query: SupplierAccountStatementSummaryListQuery,
@@ -61,7 +58,7 @@ export async function listSupplierAccountStatementSummaries(
     JOIN contacts c ON c.id = si.contact_id AND c.deleted_at IS NULL
     WHERE si.org_id = :orgId
       AND si.deleted_at IS NULL
-      AND si.status NOT IN (:excludedStatuses)
+      AND si.status IN (:openStatuses)
       ${branchClause}
       ${searchClause}
     GROUP BY c.id, c.legal_name, c.trade_name, c.cuit
@@ -70,7 +67,7 @@ export async function listSupplierAccountStatementSummaries(
 
   const replacements: Record<string, unknown> = {
     orgId: ctx.orgId,
-    excludedStatuses: [...EXCLUDED_INVOICE_STATUSES],
+    openStatuses: [...OPEN_PAYABLE_INVOICE_STATUSES],
   }
   if (ctx.allowedBranchIds.length > 0) replacements.branchIds = ctx.allowedBranchIds
   if (search) replacements.search = `%${search}%`

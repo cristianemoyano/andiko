@@ -4,10 +4,8 @@ import Decimal from 'decimal.js'
 import sequelize from '@/lib/db'
 import { paginate, toPaginated } from '@/lib/pagination'
 import { TenancyError, TENANCY_ERROR_CODES, type TenantContext } from '@/lib/tenancy'
+import { OPEN_PAYABLE_INVOICE_STATUSES } from './supplier-invoice.constants'
 import type { PayablesAgingQuery } from './supplier-account-statement-summary.schema'
-
-/** Supplier invoices in these statuses are excluded from the payables aging report. */
-const EXCLUDED_INVOICE_STATUSES = ['draft', 'cancelled'] as const
 
 export type PayablesAgingRow = {
   contact_id: string
@@ -71,7 +69,7 @@ const BUCKET_COLUMNS = `
       AND (si.due_date IS NULL OR si.due_date >= NOW())
       THEN CAST(si.balance AS NUMERIC) ELSE 0 END), 0)::text AS current,
     COALESCE(SUM(CASE WHEN CAST(si.balance AS NUMERIC) > 0 AND si.due_date < NOW()
-      AND EXTRACT(DAY FROM NOW() - si.due_date) BETWEEN 1 AND 30
+      AND EXTRACT(DAY FROM NOW() - si.due_date) BETWEEN 0 AND 30
       THEN CAST(si.balance AS NUMERIC) ELSE 0 END), 0)::text AS bucket_1_30,
     COALESCE(SUM(CASE WHEN CAST(si.balance AS NUMERIC) > 0 AND si.due_date < NOW()
       AND EXTRACT(DAY FROM NOW() - si.due_date) BETWEEN 31 AND 60
@@ -118,7 +116,7 @@ function mapTotals(row: RawTotalsRow | undefined): PayablesAgingTotals {
  * Reporte de antigüedad de saldos (aging) de cuentas por pagar: para cada proveedor
  * con saldo pendiente, desglosa cuánto cae en cada bucket de días de atraso sobre
  * `due_date` (a hoy: `current`, `1_30`, `31_60`, `61_90`, `90_plus`), sobre
- * facturas de compra no draft/cancelled (org/branch scoped). Solo proveedores con saldo > 0.
+ * facturas recibidas o parcialmente pagadas (org/branch scoped). Solo proveedores con saldo > 0.
  */
 export async function getPayablesAging(query: PayablesAgingQuery, ctx: TenantContext) {
   const { offset, limit } = paginate(query.page, query.limit)
@@ -140,7 +138,7 @@ export async function getPayablesAging(query: PayablesAgingQuery, ctx: TenantCon
   const baseWhereClause = `
     WHERE si.org_id = :orgId
       AND si.deleted_at IS NULL
-      AND si.status NOT IN (:excludedStatuses)
+      AND si.status IN (:openStatuses)
       ${branchClause}
       ${searchClause}
   `
@@ -155,7 +153,7 @@ export async function getPayablesAging(query: PayablesAgingQuery, ctx: TenantCon
 
   const replacements: Record<string, unknown> = {
     orgId: ctx.orgId,
-    excludedStatuses: [...EXCLUDED_INVOICE_STATUSES],
+    openStatuses: [...OPEN_PAYABLE_INVOICE_STATUSES],
   }
   if (query.branch_id) replacements.branchId = query.branch_id
   else if (ctx.allowedBranchIds.length > 0) replacements.branchIds = ctx.allowedBranchIds

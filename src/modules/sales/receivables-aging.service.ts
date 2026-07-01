@@ -4,6 +4,7 @@ import Decimal from 'decimal.js'
 import sequelize from '@/lib/db'
 import { paginate, toPaginated } from '@/lib/pagination'
 import { TenancyError, TENANCY_ERROR_CODES, type TenantContext } from '@/lib/tenancy'
+import { OPEN_RECEIVABLE_INVOICE_STATUSES } from './invoice.constants'
 import type { ReceivablesAgingQuery } from './account-statement.schema'
 
 export type ReceivablesAgingRow = {
@@ -68,7 +69,7 @@ const BUCKET_COLUMNS = `
       AND (i.due_date IS NULL OR i.due_date >= NOW())
       THEN CAST(i.balance AS NUMERIC) ELSE 0 END), 0)::text AS current,
     COALESCE(SUM(CASE WHEN CAST(i.balance AS NUMERIC) > 0 AND i.due_date < NOW()
-      AND EXTRACT(DAY FROM NOW() - i.due_date) BETWEEN 1 AND 30
+      AND EXTRACT(DAY FROM NOW() - i.due_date) BETWEEN 0 AND 30
       THEN CAST(i.balance AS NUMERIC) ELSE 0 END), 0)::text AS bucket_1_30,
     COALESCE(SUM(CASE WHEN CAST(i.balance AS NUMERIC) > 0 AND i.due_date < NOW()
       AND EXTRACT(DAY FROM NOW() - i.due_date) BETWEEN 31 AND 60
@@ -115,7 +116,7 @@ function mapTotals(row: RawTotalsRow | undefined): ReceivablesAgingTotals {
  * Reporte de antigüedad de saldos (aging) de cuentas por cobrar: para cada cliente
  * con saldo pendiente, desglosa cuánto cae en cada bucket de días de atraso sobre
  * `due_date` (a hoy: `current`, `1_30`, `31_60`, `61_90`, `90_plus`), sobre
- * facturas no anuladas (org/branch scoped). Solo incluye clientes con saldo > 0.
+ * facturas emitidas o parcialmente pagadas (org/branch scoped). Solo incluye clientes con saldo > 0.
  */
 export async function getReceivablesAging(query: ReceivablesAgingQuery, ctx: TenantContext) {
   const { offset, limit } = paginate(query.page, query.limit)
@@ -137,7 +138,7 @@ export async function getReceivablesAging(query: ReceivablesAgingQuery, ctx: Ten
   const baseWhereClause = `
     WHERE i.org_id = :orgId
       AND i.deleted_at IS NULL
-      AND i.status <> 'cancelled'
+      AND i.status IN (:openStatuses)
       ${branchClause}
       ${searchClause}
   `
@@ -150,7 +151,10 @@ export async function getReceivablesAging(query: ReceivablesAgingQuery, ctx: Ten
     HAVING COALESCE(SUM(CAST(i.balance AS NUMERIC)), 0) > 0
   `
 
-  const replacements: Record<string, unknown> = { orgId: ctx.orgId }
+  const replacements: Record<string, unknown> = {
+    orgId: ctx.orgId,
+    openStatuses: [...OPEN_RECEIVABLE_INVOICE_STATUSES],
+  }
   if (query.branch_id) replacements.branchId = query.branch_id
   else if (ctx.allowedBranchIds.length > 0) replacements.branchIds = ctx.allowedBranchIds
   if (search) replacements.search = `%${search}%`

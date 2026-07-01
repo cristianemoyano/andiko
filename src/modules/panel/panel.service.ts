@@ -1,6 +1,8 @@
 import 'server-only'
 import sequelize from '@/lib/db'
 import { QueryTypes } from 'sequelize'
+import { OPEN_PAYABLE_INVOICE_STATUSES } from '@/modules/purchases/supplier-invoice.constants'
+import { OPEN_RECEIVABLE_INVOICE_STATUSES } from '@/modules/sales/invoice.constants'
 
 export type PanelPeriod = 'last_week' | 'last_month' | 'last_3months' | 'last_year' | 'custom'
 
@@ -125,19 +127,19 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
     SELECT
       COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to THEN CAST(i.total AS NUMERIC) END), 0)::text AS facturado_current,
       COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :prevFrom AND i.issue_date < :from THEN CAST(i.total AS NUMERIC) END), 0)::text AS facturado_previous,
-      COALESCE(SUM(CASE WHEN i.status IN ('issued', 'partially_paid') THEN CAST(i.balance AS NUMERIC) END), 0)::text AS cxc_value,
-      COUNT(CASE WHEN i.status IN ('issued', 'partially_paid') AND i.due_date < NOW() AND CAST(i.balance AS NUMERIC) > 0 THEN 1 END)::text AS overdue_count
+      COALESCE(SUM(CASE WHEN i.status IN (:openReceivableStatuses) THEN CAST(i.balance AS NUMERIC) END), 0)::text AS cxc_value,
+      COUNT(CASE WHEN i.status IN (:openReceivableStatuses) AND i.due_date < NOW() AND CAST(i.balance AS NUMERIC) > 0 THEN 1 END)::text AS overdue_count
     FROM invoices i
     WHERE i.org_id = :orgId AND i.deleted_at IS NULL ${bc}
-  `, { replacements: { orgId, from, to, prevFrom, prevTo }, type: QueryTypes.SELECT })
+  `, { replacements: { orgId, from, to, prevFrom, prevTo, openReceivableStatuses: [...OPEN_RECEIVABLE_INVOICE_STATUSES] }, type: QueryTypes.SELECT })
 
   const [supplierInvoiceRows] = await sequelize.query<SupplierInvoiceKpiRow>(`
     SELECT
-      COALESCE(SUM(CASE WHEN si.status IN ('issued', 'partially_paid') THEN CAST(si.balance AS NUMERIC) END), 0)::text AS cxp_value,
-      COUNT(CASE WHEN si.status IN ('issued', 'partially_paid') AND si.due_date < NOW() AND CAST(si.balance AS NUMERIC) > 0 THEN 1 END)::text AS overdue_count
+      COALESCE(SUM(CASE WHEN si.status IN (:openPayableStatuses) THEN CAST(si.balance AS NUMERIC) END), 0)::text AS cxp_value,
+      COUNT(CASE WHEN si.status IN (:openPayableStatuses) AND si.due_date < NOW() AND CAST(si.balance AS NUMERIC) > 0 THEN 1 END)::text AS overdue_count
     FROM supplier_invoices si
     WHERE si.org_id = :orgId AND si.deleted_at IS NULL ${bc3}
-  `, { replacements: { orgId }, type: QueryTypes.SELECT })
+  `, { replacements: { orgId, openPayableStatuses: [...OPEN_PAYABLE_INVOICE_STATUSES] }, type: QueryTypes.SELECT })
 
   const [cobradoRows] = await sequelize.query<KpiRow>(`
     SELECT

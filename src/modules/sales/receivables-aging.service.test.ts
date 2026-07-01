@@ -79,17 +79,18 @@ describe('getReceivablesAging', () => {
     expect(result.total).toBe(1)
   })
 
-  it('scopes by org, excludes cancelled invoices and always applies HAVING balance > 0', async () => {
+  it('scopes by org, open receivable statuses only, and always applies HAVING balance > 0', async () => {
     mockCalls([])
 
     await getReceivablesAging({ page: 1, limit: 20 }, tenantCtx)
 
     const [sql, options] = queryMock.mock.calls[0] as [string, { replacements: Record<string, unknown> }]
     expect(sql).toContain('i.org_id = :orgId')
-    expect(sql).toContain("i.status <> 'cancelled'")
+    expect(sql).toContain('i.status IN (:openStatuses)')
     expect(sql).toContain('i.deleted_at IS NULL')
     expect(sql).toContain('HAVING COALESCE(SUM(CAST(i.balance AS NUMERIC)), 0) > 0')
     expect(options.replacements.orgId).toBe('org-1')
+    expect(options.replacements.openStatuses).toEqual(['issued', 'partially_paid'])
   })
 
   it('computes bucket ranges via EXTRACT(DAY FROM NOW() - due_date)', async () => {
@@ -98,7 +99,7 @@ describe('getReceivablesAging', () => {
     await getReceivablesAging({ page: 1, limit: 20 }, tenantCtx)
 
     const [sql] = queryMock.mock.calls[0] as [string]
-    expect(sql).toContain('BETWEEN 1 AND 30')
+    expect(sql).toContain('BETWEEN 0 AND 30')
     expect(sql).toContain('BETWEEN 31 AND 60')
     expect(sql).toContain('BETWEEN 61 AND 90')
     expect(sql).toContain('EXTRACT(DAY FROM NOW() - i.due_date) > 90')
