@@ -96,6 +96,8 @@ const COLUMNS: Column<Quote>[] = [
   },
 ]
 
+const EXPIRING_SOON_DAYS = 7
+
 export function PresupuestosClient() {
   const router = useRouter()
   const [quotes, setQuotes]   = useState<Quote[]>([])
@@ -103,10 +105,32 @@ export function PresupuestosClient() {
   const [page, setPage]       = useState(1)
   const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | ''>('')
+  const [expiringSoon, setExpiringSoon] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
+
+    if (expiringSoon) {
+      const params = new URLSearchParams({ expiring_within_days: String(EXPIRING_SOON_DAYS) })
+      ;(async () => {
+        setListError(null)
+        try {
+          const data = await fetchJson<{ data: Quote[] }>(`/api/v1/sales/quotes?${params}`)
+          if (!mounted) return
+          const rows = Array.isArray(data?.data) ? data.data : []
+          setQuotes(rows)
+          setTotal(rows.length)
+        } catch (e) {
+          if (!mounted) return
+          setListError(getApiErrorMessage(e))
+          setQuotes([])
+          setTotal(0)
+        }
+      })()
+      return () => { mounted = false }
+    }
+
     const params = new URLSearchParams({
       page:  String(page),
       limit: String(PAGE_SIZE),
@@ -132,7 +156,7 @@ export function PresupuestosClient() {
       }
     })()
     return () => { mounted = false }
-  }, [page, search, statusFilter])
+  }, [page, search, statusFilter, expiringSoon])
 
   return (
     <div className="flex flex-col h-full">
@@ -174,18 +198,29 @@ export function PresupuestosClient() {
               <select
                 className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
                 value={statusFilter}
+                disabled={expiringSoon}
                 onChange={e => { setStatusFilter(e.target.value as QuoteStatus | ''); setPage(1) }}
               >
                 {STATUS_OPTIONS.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                aria-pressed={expiringSoon}
+                className={expiringSoon ? 'bg-brand-600 text-white hover:bg-brand-600 hover:text-white' : ''}
+                onClick={() => { setExpiringSoon(v => !v); setPage(1) }}
+              >
+                Por vencer ({EXPIRING_SOON_DAYS}d)
+              </Button>
               <span className="flex-1" />
               <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>
           }
           footer={
-            total > 0 ? (
+            !expiringSoon && total > 0 ? (
               <TablePagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
             ) : undefined
           }

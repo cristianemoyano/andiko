@@ -9,6 +9,8 @@ import User from '@/modules/auth/user.model'
 export const SUPPLIER_INVOICE_STATUSES = ['draft', 'received', 'partially_paid', 'paid', 'cancelled'] as const
 export type SupplierInvoiceStatus = typeof SUPPLIER_INVOICE_STATUSES[number]
 
+export { OPEN_PAYABLE_INVOICE_STATUSES } from './supplier-invoice.constants'
+
 export interface SupplierInvoiceAttributes extends Timestamps, AuditFields {
   id: UUID
   branch_id: UUID | null

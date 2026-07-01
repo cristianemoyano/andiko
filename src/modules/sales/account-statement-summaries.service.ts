@@ -4,6 +4,7 @@ import Decimal from 'decimal.js'
 import sequelize from '@/lib/db'
 import { paginate, toPaginated } from '@/lib/pagination'
 import type { TenantContext } from '@/lib/tenancy'
+import { OPEN_RECEIVABLE_INVOICE_STATUSES } from './invoice.constants'
 import type { AccountStatementSummaryListQuery } from './account-statement.schema'
 
 export type AccountStatementSummaryRow = {
@@ -35,7 +36,7 @@ type CountRow = { count: string }
 
 /**
  * Listado global de cuentas corrientes: una fila por cliente con facturación,
- * saldo y saldo vencido agregados sobre facturas no anuladas (org/branch scoped).
+ * saldo y saldo vencido agregados sobre facturas emitidas o parcialmente pagadas (org/branch scoped).
  */
 export async function listAccountStatementSummaries(
   query: AccountStatementSummaryListQuery,
@@ -57,14 +58,17 @@ export async function listAccountStatementSummaries(
     JOIN contacts c ON c.id = i.contact_id AND c.deleted_at IS NULL
     WHERE i.org_id = :orgId
       AND i.deleted_at IS NULL
-      AND i.status <> 'cancelled'
+      AND i.status IN (:openStatuses)
       ${branchClause}
       ${searchClause}
     GROUP BY c.id, c.legal_name, c.trade_name, c.cuit
     ${havingClause}
   `
 
-  const replacements: Record<string, unknown> = { orgId: ctx.orgId }
+  const replacements: Record<string, unknown> = {
+    orgId: ctx.orgId,
+    openStatuses: [...OPEN_RECEIVABLE_INVOICE_STATUSES],
+  }
   if (ctx.allowedBranchIds.length > 0) replacements.branchIds = ctx.allowedBranchIds
   if (search) replacements.search = `%${search}%`
 

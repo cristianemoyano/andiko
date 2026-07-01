@@ -10,6 +10,8 @@ import User from '@/modules/auth/user.model'
 export const INVOICE_STATUSES = ['draft', 'issued', 'partially_paid', 'paid', 'cancelled'] as const
 export type InvoiceStatus = typeof INVOICE_STATUSES[number]
 
+export { OPEN_RECEIVABLE_INVOICE_STATUSES } from './invoice.constants'
+
 export interface InvoiceAttributes extends Timestamps, AuditFields {
   id: UUID
   branch_id: UUID | null

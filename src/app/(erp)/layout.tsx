@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { getOnboardingStatus } from '@/modules/auth/onboarding.service'
+import { hasAcceptedCurrentTerms } from '@/modules/auth/terms-acceptance.service'
 import { OnboardingResumeBannerGate } from '@/components/layout/OnboardingResumeBannerGate'
+import { TermsAcceptanceGate } from '@/components/layout/TermsAcceptanceGate'
 import { getEffectiveOrganizationSettings, isModuleEnabled } from '@/modules/auth/organization-settings.service'
 import { resolveModuleForPath, type OrgModuleKey } from '@/modules/auth/organization-modules'
 import { resolveCapabilities } from '@/lib/capabilities'
@@ -23,6 +25,9 @@ import { capabilitiesProviderKey } from '@/components/layout/capabilities-provid
 export default async function ErpLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session) redirect('/login')
+
+  const requiresTermsAcceptance =
+    !session.user.impersonation && !(await hasAcceptedCurrentTerms(session.user.id!))
 
   const orgId = session.user.orgId
   const headersList = await headers()
@@ -92,6 +97,7 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
           {showOnboardingResume ? <OnboardingResumeBannerGate enabled /> : null}
           {children}
         </main>
+        <TermsAcceptanceGate required={requiresTermsAcceptance} />
         <BottomNav enabledModules={enabledModules} />
         <MenuPanel
           enabledModules={enabledModules}
