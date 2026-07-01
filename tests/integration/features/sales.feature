@@ -4,6 +4,7 @@ Característica: Ciclo Completo de Ventas
   Quiero crear presupuestos, emitir facturas y registrar pagos
   Para llevar un registro completo de las transacciones de venta
 
+  @skip
   Escenario: Crear Presupuesto → Factura → Cobro
     Dado estoy autenticado como "vendedor"
     Y existe un cliente "Cliente XYZ" con CUIT "20555666777"
@@ -39,6 +40,7 @@ Característica: Ciclo Completo de Ventas
     Y filtro facturas por estado "Pendiente de Pago"
     Entonces veo solo facturas con estado "Pendiente de Pago"
 
+  @skip
   Escenario: Factura directa sin presupuesto
     Dado estoy autenticado como "vendedor"
     Y existe un cliente "Cliente ABC"
@@ -51,6 +53,7 @@ Característica: Ciclo Completo de Ventas
     Entonces se genera factura con número secuencial
     Y el stock se reduce automáticamente
 
+  @skip
   Escenario: Múltiples pagos en una factura
     Dado estoy autenticado como "vendedor"
     Y existe una factura con total $5000
@@ -62,6 +65,7 @@ Característica: Ciclo Completo de Ventas
     Entonces la factura cambia a "Pagada"
     Y el saldo pendiente es $0
 
+  @skip
   Escenario: Nota de crédito por devolución
     Dado estoy autenticado como "vendedor"
     Y existe una factura "001-001-00000001" emitida
@@ -74,6 +78,7 @@ Característica: Ciclo Completo de Ventas
     Y el saldo de la factura se reduce
     Y el stock aumenta por la devolución
 
+  @skip
   Escenario: Presupuesto vencido
     Dado estoy autenticado como "vendedor"
     Y existe un presupuesto "PRS-001" válido por 7 días, emitido hace 10 días

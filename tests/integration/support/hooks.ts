@@ -1,6 +1,11 @@
+import path from 'node:path'
+import { config as loadEnv } from 'dotenv'
 import { Before, After, BeforeAll, AfterAll, Status } from '@cucumber/cucumber'
 import { chromium, Browser } from '@playwright/test'
 import type { World } from './world'
+
+loadEnv({ path: path.resolve(process.cwd(), '.env.local') })
+loadEnv()
 
 let browser: Browser
 

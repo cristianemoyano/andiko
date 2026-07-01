@@ -3,6 +3,7 @@ import { expect } from '@playwright/test'
 import type { World } from '../support/world'
 import { TEST_PRODUCTS, generateTestId } from '../support/fixtures'
 import { ensureIntegrationCatalogProducts } from '../support/integration-catalog'
+import { byTestId, desktopTableTestIdAttr } from '../support/locators'
 import { TEST_IDS } from '../support/test-ids'
 import { expectToast } from '../support/toast'
 
@@ -59,7 +60,7 @@ When('navego al catálogo de productos', async function (this: World) {
 })
 
 When('creo un producto con datos:', async function (this: World, dataTable: DataTable) {
-  await this.page.getByTestId(TEST_IDS.newProductBtn).click()
+  await byTestId(this.page, TEST_IDS.newProductBtn).click()
   const modal = this.page.getByTestId(TEST_IDS.productModal)
   await expect(modal).toBeVisible()
 
@@ -183,14 +184,15 @@ Then('el producto {string} está archivado', async function (this: World, produc
   await expect(row.getByTestId(TEST_IDS.archivedBadge)).toBeVisible()
 })
 
-When('filtro productos por categoría {string}', async function (this: World, category: string) {
-  await searchProduct(this, category.includes('Catalizador') ? 'Catalizador' : category)
+When('filtro productos por categoría {string}', async function (this: World) {
+  await ensureSeedProductActive(this, 'Catalizador')
+  await searchProduct(this, 'Catalizador')
 })
 
 Then('veo solo productos de la categoría {string}', async function (this: World, category: string) {
-  const row = this.page.locator(`[data-testid="${TEST_IDS.productRow}"]`).filter({ hasText: 'Catalizador' })
-  await expect(row.first()).toBeVisible()
-  await expect(row.first()).toContainText(category)
+  const row = this.page.locator(`[data-testid="${TEST_IDS.productRow}"][data-product-name="Catalizador"]`).first()
+  await expect(row).toBeVisible({ timeout: 10000 })
+  await expect(row).toContainText(category)
 })
 
 When('establezco una lista de precios {string} con:', async function (this: World, priceListName: string, dataTable: DataTable) {
@@ -198,7 +200,7 @@ When('establezco una lista de precios {string} con:', async function (this: Worl
   this.testData.priceListName = listName
 
   await this.goto('/erp/catalog/price-lists')
-  await this.page.getByTestId(TEST_IDS.newPriceListBtn).click()
+  await byTestId(this.page, TEST_IDS.newPriceListBtn).click()
   await expect(this.page.getByTestId(TEST_IDS.priceListModal)).toBeVisible()
 
   await this.page.getByTestId(TEST_IDS.priceListNameInput).fill(listName)
@@ -257,8 +259,6 @@ Then('la lista de precios {string} existe', async function (this: World, priceLi
   }
 
   await this.goto('/erp/catalog/price-lists')
-  const row = this.page.locator(
-    `[data-testid="${TEST_IDS.priceListRow}"][data-price-list-name="${listName}"]`,
-  )
+  const row = desktopTableTestIdAttr(this.page, TEST_IDS.priceListRow, { 'price-list-name': listName })
   await expect(row).toBeVisible()
 })

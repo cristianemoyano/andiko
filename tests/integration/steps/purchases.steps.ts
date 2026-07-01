@@ -1,4 +1,4 @@
-import { When, Then } from '@cucumber/cucumber'
+import { When, Then, Given } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import { setDefaultTimeout } from '@cucumber/cucumber'
 import type { World } from '../support/world'
@@ -83,6 +83,25 @@ async function captureStockBaselines(world: World, productNames: string[]): Prom
   }
   world.lastResult.stockBaselines = baselines
 }
+
+async function ensureIntegrationSentPurchaseOrder(world: World): Promise<string> {
+  const response = await world.page.request.get(
+    `${world.apiUrl}/purchases/orders?status=sent&limit=5`,
+  )
+  const body = await response.json() as { data?: Array<{ id: string; order_number: string }> }
+  if (!response.ok() || !body.data?.length) {
+    throw new Error(
+      'Seed incompleto: no hay orden de compra enviada. Ejecutá pnpm db:seed-dev.',
+    )
+  }
+  const order = body.data[0]!
+  world.testData.orders = [{ type: 'purchase', number: order.order_number, id: order.id }]
+  return order.order_number
+}
+
+Given('existe una orden de compra enviada de integración', async function (this: World) {
+  await ensureIntegrationSentPurchaseOrder(this)
+})
 
 When('navego a compras', async function (this: World) {
   await this.goto('/erp/purchases/orders')
@@ -322,15 +341,23 @@ Then('el saldo del proveedor es {float}', async function (this: World, expectedB
 })
 
 When('busco la orden de compra {string}', async function (this: World, orderNumber: string) {
+  let searchTerm = orderNumber
+  if (orderNumber === 'OC-001' || orderNumber === 'OC-002' || orderNumber === 'OC-003') {
+    searchTerm = await ensureIntegrationSentPurchaseOrder(this)
+  }
+
   await this.goto('/erp/purchases/orders')
-  const searchInput = this.page.locator('input[placeholder*="Buscar" i]')
-  await searchInput.fill(orderNumber)
+  const searchInput = this.page.getByPlaceholder(/número/i)
+  await searchInput.fill(searchTerm)
   await this.page.waitForTimeout(500)
+  this.lastResult.orderNumber = searchTerm
 })
 
 Then('veo la orden en la lista', async function (this: World) {
-  const orderNumber = this.testData.orders?.[0]?.number
-  await expect(this.page.locator('table')).toContainText(orderNumber || 'OC')
+  const orderNumber = (this.lastResult.orderNumber as string | undefined)
+    ?? this.testData.orders?.[0]?.number
+  if (!orderNumber) throw new Error('No hay número de orden en contexto')
+  await expect(this.page.locator('table')).toContainText(orderNumber)
 })
 
 When('aplico un filtro de estado {string}', async function (this: World, status: string) {

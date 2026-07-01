@@ -4,6 +4,7 @@ import type { World } from '../support/world'
 import { parseCurrency } from '../support/fixtures'
 import { TEST_IDS } from '../support/test-ids'
 import { expectToast } from '../support/toast'
+import { desktopTableTestIdAttr, desktopTableTestIds } from '../support/locators'
 
 import { findContactInOrg } from '../support/org-context'
 
@@ -83,9 +84,7 @@ async function openCustomerAccountStatement(world: World, customerName: string):
     (r) => r.url().includes('/account-statement') && r.status() === 200,
   )
 
-  await world.page.locator(
-    `[data-testid="${TEST_IDS.accountStatementRow}"][data-customer-name="${customerName}"]`,
-  ).click()
+  await desktopTableTestIdAttr(world.page, TEST_IDS.accountStatementRow, { 'customer-name': customerName }).click()
 
   await detailPromise
   await world.page.waitForURL(/contact_id=/, { timeout: 10000 })
@@ -216,9 +215,7 @@ When('consulto el estado de {string}', async function (this: World, customerName
     (r) => r.url().includes('/account-statement') && r.status() === 200,
   )
 
-  await this.page.locator(
-    `[data-testid="${TEST_IDS.accountStatementRow}"][data-customer-name="${customerName}"]`,
-  ).click()
+  await desktopTableTestIdAttr(this.page, TEST_IDS.accountStatementRow, { 'customer-name': customerName }).click()
 
   await detailPromise
   await this.page.waitForURL(/contact_id=/, { timeout: 10000 })
@@ -361,7 +358,7 @@ When('genero reporte de deudas pendientes', async function (this: World) {
 })
 
 async function assertReceivableCustomerCount(world: World, expectedCount: number): Promise<void> {
-  const rows = world.page.getByTestId(TEST_IDS.accountStatementRow)
+  const rows = desktopTableTestIds(world.page, TEST_IDS.accountStatementRow)
   await expect.poll(async () => rows.count(), { timeout: 10000 }).toBe(expectedCount)
 }
 
@@ -388,9 +385,7 @@ When('consulto vencimiento de deudas de {string}', async function (this: World, 
   await this.page.getByTestId(TEST_IDS.accountStatementSearch).fill(customerName)
   await this.page.waitForTimeout(500)
 
-  await this.page.locator(
-    `[data-testid="${TEST_IDS.accountStatementRow}"][data-customer-name="${customerName}"]`,
-  ).click()
+  await desktopTableTestIdAttr(this.page, TEST_IDS.accountStatementRow, { 'customer-name': customerName }).click()
 
   await this.page.waitForURL(/contact_id=/, { timeout: 10000 })
 })

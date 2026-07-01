@@ -11,8 +11,15 @@ import SalesOrderItem from '@/modules/sales/sales-order-item.model'
 import Account from '@/modules/accounting/account.model'
 import JournalEntry from '@/modules/accounting/journal-entry.model'
 import JournalEntryLine from '@/modules/accounting/journal-entry-line.model'
+import PurchaseOrder from '@/modules/purchases/purchase-order.model'
+import PurchaseOrderItem from '@/modules/purchases/purchase-order-item.model'
 import { nextEntryNumber } from '@/modules/accounting/accounting.utils'
 import { calcLineItem, calcDocumentTotals, nextDocumentNumber } from '@/modules/sales/sales.utils'
+import {
+  calcLineItem as calcPurchaseLine,
+  calcDocumentTotals as calcPurchaseTotals,
+  nextPurchaseDocNumber,
+} from '@/modules/purchases/purchases.utils'
 import type { IvaRate } from '@/types'
 import type Branch from '@/modules/auth/branch.model'
 import { slugifyText } from '@/lib/slug'
@@ -494,6 +501,86 @@ export async function seedIntegrationAccounting(
       created_by: actorId,
       updated_by: actorId,
     })),
+    { transaction: t },
+  )
+}
+
+export async function seedIntegrationPurchases(
+  orgId: string,
+  branch: Branch,
+  actorId: string,
+  contacts: Contact[],
+  variantsBySku: Map<string, ProductVariant>,
+  t: import('sequelize').Transaction,
+): Promise<void> {
+  const existing = await PurchaseOrder.findOne({
+    where: { org_id: orgId, notes: 'Integration seed purchase order' },
+    transaction: t,
+  })
+  if (existing) return
+
+  const supplier = contacts.find((contact) => contact.legal_name === 'Proveedor Químicos')
+  if (!supplier) return
+
+  const variant = variantsBySku.get('RES-001')
+  const iva_rate: IvaRate = '21'
+  const line = {
+    product_id: variant?.product_id ?? null,
+    variant_id: variant?.id ?? null,
+    description: 'Resina Epóxica',
+    quantity: '10',
+    unit_price: '150.50',
+    discount_pct: '0.00',
+    iva_rate,
+    sort_order: 0,
+  }
+  const lineTotal = calcPurchaseLine(line.quantity, line.unit_price, line.discount_pct, line.iva_rate)
+  const docTotals = calcPurchaseTotals([lineTotal])
+
+  const order_number = await nextPurchaseDocNumber(orgId, branch.id, 'purchase_order', t)
+  const order = await PurchaseOrder.create(
+    {
+      org_id: orgId,
+      branch_id: branch.id,
+      contact_id: supplier.id,
+      order_number,
+      buyer_id: actorId,
+      status: 'sent',
+      expected_date: new Date('2026-07-15'),
+      currency: 'ARS',
+      payment_condition: 'net_30',
+      subtotal: docTotals.subtotal,
+      discount_amount: docTotals.discount_amount,
+      tax_amount: docTotals.tax_amount,
+      total: docTotals.total,
+      notes: 'Integration seed purchase order',
+      internal_notes: null,
+      created_by: actorId,
+      updated_by: actorId,
+    },
+    { transaction: t },
+  )
+
+  await PurchaseOrderItem.create(
+    {
+      org_id: orgId,
+      order_id: order.id,
+      product_id: line.product_id,
+      variant_id: line.variant_id,
+      description: line.description,
+      quantity: line.quantity,
+      received_qty: '0',
+      unit_price: line.unit_price,
+      discount_pct: line.discount_pct,
+      iva_rate: line.iva_rate,
+      subtotal: lineTotal.subtotal,
+      discount_amount: lineTotal.discount_amount,
+      tax_amount: lineTotal.tax_amount,
+      total: lineTotal.total,
+      sort_order: line.sort_order,
+      created_by: actorId,
+      updated_by: actorId,
+    },
     { transaction: t },
   )
 }

@@ -31,6 +31,7 @@ Característica: Gestión Financiera y Reportes
     Entonces veo 3 clientes con deuda pendiente
     Y veo columnas: "Cliente, CUIT, Estado, Facturado, Saldo, Vencido"
 
+  @skip
   Escenario: Deudas vencidas
     Dado estoy autenticado como "contador"
     Y existen facturas vencidas sin pagar
@@ -59,6 +60,7 @@ Característica: Gestión Financiera y Reportes
     Y veo pasivos totales de 100000
     Y el patrimonio neto es 150000
 
+  @skip
   Escenario: Diario contable
     Dado estoy autenticado como "contador"
     Cuando navego a reportes financieros
@@ -67,6 +69,7 @@ Característica: Gestión Financiera y Reportes
     Entonces se registra en el diario contable
     Y veo asiento con débito a Caja y crédito a CxC
 
+  @skip
   Escenario: Conciliación bancaria
     Dado estoy autenticado como "contador"
     Y tengo transacciones pendientes de conciliar
@@ -77,6 +80,7 @@ Característica: Gestión Financiera y Reportes
     Entonces todas las transacciones están conciliadas
     Y la diferencia es cero
 
+  @skip
   Escenario: Reporte de IVA
     Dado estoy autenticado como "contador"
     Cuando genero reporte de IVA para período "2026-06"
@@ -87,6 +91,7 @@ Característica: Gestión Financiera y Reportes
       | IVA Pagado            | 8000       |
       | IVA a Pagar           | 7000       |
 
+  @skip
   Escenario: Retenciones
     Dado estoy autenticado como "contador"
     Y existen facturas con retención

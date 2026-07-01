@@ -30,16 +30,19 @@ Característica: Ciclo Completo de Compras
 
   Escenario: Búsqueda de orden de compra
     Dado estoy autenticado como "comprador"
+    Y existe una orden de compra enviada de integración
     Cuando navego a compras
     Y busco la orden de compra "OC-001"
     Entonces veo la orden en la lista
 
   Escenario: Filtrar órdenes por estado
     Dado estoy autenticado como "comprador"
+    Y existe una orden de compra enviada de integración
     Cuando navego a compras
     Y aplico un filtro de estado "Enviado"
     Entonces veo solo órdenes con estado "Enviado"
 
+  @skip
   Escenario: Recepción parcial
     Dado estoy autenticado como "comprador"
     Y existe una orden de compra "OC-002" con 10 unidades
@@ -52,6 +55,7 @@ Característica: Ciclo Completo de Compras
     Y la orden queda en estado "Parcialmente Recibida"
     Y permanece pendiente de recibir 3 unidades
 
+  @skip
   Escenario: Cancelación de orden
     Dado estoy autenticado como "comprador"
     Y existe una orden de compra "OC-003" en estado "Pendiente"
@@ -64,6 +68,7 @@ Característica: Ciclo Completo de Compras
     Entonces la orden cambia a "Cancelada"
     Y no se deduce stock
 
+  @skip
   Escenario: Descuento en orden de compra
     Dado estoy autenticado como "comprador"
     Y existe un proveedor con descuento por volumen

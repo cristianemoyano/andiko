@@ -5,6 +5,35 @@ import { parseCurrency } from '../support/fixtures'
 import { assertProductStockInOrg } from '../support/org-context'
 import { TEST_IDS } from '../support/test-ids'
 
+const INVOICE_STATUS_FILTER: Record<string, string> = {
+  'Pendiente de Pago': 'issued',
+  Emitida: 'issued',
+  'Pago parcial': 'partially_paid',
+  Pagada: 'paid',
+  Borrador: 'draft',
+  Anulada: 'cancelled',
+}
+
+const INVOICE_STATUS_LABEL: Record<string, string> = {
+  'Pendiente de Pago': 'Emitida',
+  issued: 'Emitida',
+  partially_paid: 'Pago parcial',
+  paid: 'Pagada',
+  draft: 'Borrador',
+  cancelled: 'Anulada',
+}
+
+async function resolveIntegrationInvoiceNumber(world: World, hint: string): Promise<string> {
+  if (hint !== '001-001-00000001') return hint
+
+  const response = await world.page.request.get(`${world.apiUrl}/sales/invoices?limit=10`)
+  const body = await response.json() as { data?: Array<{ invoice_number: string }> }
+  if (!response.ok() || !body.data?.length) {
+    throw new Error('Seed incompleto: no hay facturas. Ejecutá pnpm db:seed-dev.')
+  }
+  return body.data[0]!.invoice_number
+}
+
 Given('existen productos con stock: {string}={int}, {string}={int}', async function (
   this: World,
   product1: string,
@@ -26,7 +55,7 @@ Given('existen productos con stock: {string}={int}, {string}={int}', async funct
 })
 
 When('navego a ventas', async function (this: World) {
-  await this.goto('/erp/sales')
+  await this.goto('/erp/sales/invoices')
 })
 
 When('creo un presupuesto para {string} válido por {int} días con:', async function (
@@ -129,7 +158,7 @@ When('confirmo el presupuesto a factura', async function (this: World) {
 
 Then('se genera factura con estado {string}', async function (this: World, status: string) {
   // Verify we're on the invoice detail page
-  await expect(this.page).toHaveURL(/\/sales\/invoices/)
+  await expect(this.page).toHaveURL(/\/ventas\/facturas/)
 
   const statusBadge = this.page.getByTestId(TEST_IDS.invoiceStatus)
   await expect(statusBadge).toContainText(status)
@@ -224,7 +253,7 @@ Then('se registra una deuda pendiente', async function (this: World) {
   await this.goto('/erp/sales/receivables')
 
   // Search for customer
-  const searchInput = this.page.locator('input[placeholder*="search" i]')
+  const searchInput = this.page.getByTestId(TEST_IDS.accountStatementSearch)
   await searchInput.fill(customerName)
 
   // Verify customer appears in receivables
@@ -235,30 +264,37 @@ Then('se registra una deuda pendiente', async function (this: World) {
 When('busco la factura {string}', async function (this: World, invoiceNumber: string) {
   await this.goto('/erp/sales/invoices')
 
-  const searchInput = this.page.locator('input[placeholder*="factura" i], input[placeholder*="invoice" i]')
-  await searchInput.fill(invoiceNumber)
+  const searchTerm = await resolveIntegrationInvoiceNumber(this, invoiceNumber)
+  this.lastResult.invoiceId = searchTerm
 
-  await this.page.waitForTimeout(300)
+  const searchInput = this.page.getByPlaceholder(/cliente o número/i)
+  await searchInput.fill(searchTerm)
+  await this.page.waitForTimeout(600)
 })
 
 Then('veo la factura en la lista', async function (this: World) {
-  const table = this.page.locator('table')
-  const invoiceNumber = String(this.lastResult.invoiceId ?? 'INV')
-  await expect(table).toContainText(invoiceNumber)
+  const invoiceNumber = String(this.lastResult.invoiceId ?? '')
+  if (!invoiceNumber) throw new Error('No hay número de factura en contexto')
+  await expect(this.page.locator('table')).toContainText(invoiceNumber)
 })
 
 When('filtro facturas por estado {string}', async function (this: World, status: string) {
-  const statusFilter = this.page.locator('select[name="status"]')
-  await statusFilter.selectOption(status)
+  await this.goto('/erp/sales/invoices')
+  const value = INVOICE_STATUS_FILTER[status] ?? status
+  const statusFilter = this.page.locator('select').filter({
+    has: this.page.locator('option', { hasText: 'Todos los estados' }),
+  })
+  await statusFilter.selectOption(value)
+  await this.page.waitForTimeout(600)
 })
 
 Then('veo solo facturas con estado {string}', async function (this: World, status: string) {
-  const table = this.page.locator('table')
-  const rows = table.locator('tbody tr')
+  const expectedLabel = INVOICE_STATUS_LABEL[status] ?? status
+  const rows = this.page.locator('table tbody tr').filter({ hasNotText: /facturas se generan|registro/i })
+  const count = await rows.count()
+  expect(count).toBeGreaterThan(0)
 
-  for (let i = 0; i < (await rows.count()); i++) {
-    const row = rows.nth(i)
-    const statusCell = row.locator('td:nth-child(3)')
-    await expect(statusCell).toContainText(status)
+  for (let i = 0; i < count; i++) {
+    await expect(rows.nth(i)).toContainText(expectedLabel)
   }
 })

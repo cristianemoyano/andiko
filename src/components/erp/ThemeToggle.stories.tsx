@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { ThemeProvider } from '@teispace/next-themes'
+import { ThemeProvider } from 'next-themes'
 import { ThemeToggle } from './ThemeToggle'
 
 const meta: Meta<typeof ThemeToggle> = {

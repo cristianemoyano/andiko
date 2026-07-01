@@ -17,10 +17,11 @@ export interface EffectiveOrganizationSettings {
   is_default: boolean
 }
 
-async function loadEffectiveSettings(orgId: string): Promise<EffectiveOrganizationSettings> {
+async function loadEffectiveSettings(orgId: string, t?: Transaction): Promise<EffectiveOrganizationSettings> {
   const row = await OrganizationSetting.findOne({
     where: { org_id: orgId },
     attributes: ['enabled_modules', 'enabled_features'],
+    transaction: t,
   })
   return {
     org_id: orgId,
@@ -69,5 +70,5 @@ export async function updateOrganizationSettings(
       enabled_features: input.enabled_features ?? {},
     }, { transaction: t })
   }
-  return loadEffectiveSettings(orgId)
+  return loadEffectiveSettings(orgId, t)
 }

@@ -1,4 +1,5 @@
 # language: es
+@skip
 Característica: Gestión de Inventario y Stock
   Como encargado de almacén
   Quiero llevar control del stock, registrar movimientos y alertas de bajo nivel

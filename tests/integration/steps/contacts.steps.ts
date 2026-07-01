@@ -3,6 +3,7 @@ import { expect } from '@playwright/test'
 import type { World } from '../support/world'
 import { findContactInOrg } from '../support/org-context'
 import { resetIntegrationSupplierLedger } from '../support/integration-catalog'
+import { byTestId, byTestIdAttr, desktopTableTestIdAttr } from '../support/locators'
 import { generateTestId } from '../support/fixtures'
 import { INTEGRATION_SUPPLIERS } from '@/db/dev/integration-seed-data'
 import { TEST_IDS } from '../support/test-ids'
@@ -65,7 +66,7 @@ When('navego a contactos', async function (this: World) {
 })
 
 When('creo un nuevo contacto proveedor con:', async function (this: World, dataTable: DataTable) {
-  await this.page.getByTestId(TEST_IDS.newContactBtn).click()
+  await byTestId(this.page, TEST_IDS.newContactBtn).click()
   await expect(this.page.getByTestId(TEST_IDS.contactModal)).toBeVisible()
 
   const row = parseFieldValueTable(dataTable)
@@ -94,7 +95,7 @@ When('creo un nuevo contacto proveedor con:', async function (this: World, dataT
 })
 
 When('creo un nuevo contacto cliente con:', async function (this: World, dataTable: DataTable) {
-  await this.page.getByTestId(TEST_IDS.newContactBtn).click()
+  await byTestId(this.page, TEST_IDS.newContactBtn).click()
   await expect(this.page.getByTestId(TEST_IDS.contactModal)).toBeVisible()
 
   const row = parseFieldValueTable(dataTable)
@@ -134,9 +135,7 @@ Then('veo el contacto {string}', async function (this: World, contactName: strin
   const name = contactName === 'el creado' && this.testData.createdContactName
     ? this.testData.createdContactName
     : contactName
-  const row = this.page.locator(
-    `[data-testid="${TEST_IDS.contactRow}"][data-contact-name="${name}"]`,
-  )
+  const row = desktopTableTestIdAttr(this.page, TEST_IDS.contactRow, { 'contact-name': name })
   await expect(row).toBeVisible()
 })
 
@@ -145,18 +144,16 @@ Then('veo el contacto creado', async function (this: World) {
   if (!name) throw new Error('No hay contacto creado en testData')
   await this.page.getByTestId(TEST_IDS.contactSearch).fill(name)
   await this.page.waitForTimeout(500)
-  const row = this.page.locator(
-    `[data-testid="${TEST_IDS.contactRow}"][data-contact-name="${name}"]`,
-  )
+  const row = desktopTableTestIdAttr(this.page, TEST_IDS.contactRow, { 'contact-name': name })
   await expect(row).toBeVisible()
 })
 
 When('edito el contacto {string}', async function (this: World, contactName: string) {
   await this.page.getByTestId(TEST_IDS.contactSearch).fill(contactName)
   await this.page.waitForTimeout(500)
-  await this.page.locator(
-    `[data-testid="${TEST_IDS.editContactBtn}"][data-contact-name="${contactName}"]`,
-  ).click()
+  const row = this.page.getByRole('row').filter({ hasText: contactName }).first()
+  await row.getByRole('button', { name: 'Más acciones' }).click()
+  await byTestIdAttr(this.page, TEST_IDS.editContactBtn, { 'contact-name': contactName }).click()
   await expect(this.page.getByTestId(TEST_IDS.contactModal)).toBeVisible()
 })
 

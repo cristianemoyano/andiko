@@ -65,6 +65,7 @@ import {
   seedIntegrationContacts,
   seedIntegrationFinancials,
   seedIntegrationAccounting,
+  seedIntegrationPurchases,
 } from './integration-seed'
 
 const MIN_PROD_PASSWORD_LENGTH = 16
@@ -1520,6 +1521,7 @@ async function run() {
           const defaultBranch = branches[0]!
           await seedIntegrationFinancials(org.id, defaultBranch, user.id, contacts, variantsBySku, t)
           await seedIntegrationAccounting(org.id, user.id, t)
+          await seedIntegrationPurchases(org.id, defaultBranch, user.id, contacts, variantsBySku, t)
         } else if (isSeedGerente(u)) {
           variantsBySku = await seedCatalog(org.id, user.id, t)
           const contacts = await seedContacts(org.id, user.id, t)
