@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, type HTMLAttributes } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
@@ -548,7 +548,7 @@ export function CatalogoClient({ showWooColumn = false }: { showWooColumn?: bool
           getParentRowProps={p => ({
             'data-testid': 'product-row',
             'data-product-name': p.name,
-          })}
+          } as HTMLAttributes<HTMLTableRowElement>)}
           onRowClick={p => router.push(`/catalogo/${p.id}`)}
           selection={tableSelection}
           emptyMessage="No hay productos. Creá el primero."

@@ -298,7 +298,11 @@ When('registro un pago de {float} a {string}', async function (this: World, amou
     throw new Error(`Registrar pago falló: ${paymentResponse.status()} ${await paymentResponse.text()}`)
   }
 
-  this.testData.supplier = { ...this.testData.supplier, name: supplierName }
+  this.testData.supplier = {
+    ...this.testData.supplier,
+    name: supplierName,
+    cuit: this.testData.supplier?.cuit ?? '',
+  }
   this.lastResult.paymentAmount = amount
   await expect(this.page.getByTestId(TEST_IDS.supplierInvoiceStatus)).toContainText('Pagada', { timeout: 10000 })
 })
@@ -315,7 +319,11 @@ When('registro un pago del total de la factura a {string}', async function (this
     throw new Error(`Registrar pago falló: ${paymentResponse.status()} ${await paymentResponse.text()}`)
   }
 
-  this.testData.supplier = { ...this.testData.supplier, name: supplierName }
+  this.testData.supplier = {
+    ...this.testData.supplier,
+    name: supplierName,
+    cuit: this.testData.supplier?.cuit ?? '',
+  }
   await expect(this.page.getByTestId(TEST_IDS.supplierInvoiceStatus)).toContainText('Pagada', { timeout: 10000 })
 })
 

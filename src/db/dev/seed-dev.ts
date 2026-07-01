@@ -58,7 +58,6 @@ import {
   seedBillerSummaryLine,
   SEED_PLAN_BY_ORG_SLUG,
 } from '@/db/dev/seed-billing-plans'
-import { DEFAULT_ENABLED_MODULES } from '@/modules/auth/organization-modules'
 import { INTEGRATION_TENANT, INTEGRATION_TEST_USERS } from './integration-seed-data'
 import {
   seedIntegrationCatalog,
@@ -238,7 +237,7 @@ function buildIntegrationTenant(): SeedConfig['tenants'][number] {
         email: INTEGRATION_TEST_USERS.vendedor.email,
         password: INTEGRATION_TEST_USERS.vendedor.password,
         name: INTEGRATION_TEST_USERS.vendedor.name,
-        role: INTEGRATION_TEST_USERS.vendedor.role,
+        orgRoleName: 'Vendedor',
         branchIndex: 0,
         allowedBranchIndexes: [0],
       },
@@ -246,7 +245,7 @@ function buildIntegrationTenant(): SeedConfig['tenants'][number] {
         email: INTEGRATION_TEST_USERS.comprador.email,
         password: INTEGRATION_TEST_USERS.comprador.password,
         name: INTEGRATION_TEST_USERS.comprador.name,
-        role: INTEGRATION_TEST_USERS.comprador.role,
+        orgRoleName: 'Gerente de compras',
         branchIndex: 0,
         allowedBranchIndexes: [0],
       },
@@ -254,7 +253,7 @@ function buildIntegrationTenant(): SeedConfig['tenants'][number] {
         email: INTEGRATION_TEST_USERS.contador.email,
         password: INTEGRATION_TEST_USERS.contador.password,
         name: INTEGRATION_TEST_USERS.contador.name,
-        role: INTEGRATION_TEST_USERS.contador.role,
+        orgRoleName: 'Contador',
         branchIndex: 0,
         allowedBranchIndexes: [0],
       },

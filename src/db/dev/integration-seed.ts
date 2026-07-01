@@ -1,3 +1,4 @@
+import type { CreationAttributes } from 'sequelize'
 import Contact from '@/modules/contacts/contact.model'
 import ProductCategory from '@/modules/catalog/product-category.model'
 import Product from '@/modules/catalog/product.model'
@@ -30,10 +31,13 @@ import {
 } from './integration-seed-data'
 
 /** findOrCreate ignores soft-deleted rows but the unique (slug, org_id) still blocks INSERT. */
+type ProductCreateAttrs = CreationAttributes<Product>
+type VariantCreateAttrs = CreationAttributes<ProductVariant>
+
 async function findOrRestoreProduct(
   orgId: string,
   slug: string,
-  defaults: Parameters<typeof Product.create>[0],
+  defaults: ProductCreateAttrs,
   t: import('sequelize').Transaction,
 ): Promise<Product> {
   const existing = await Product.findOne({
@@ -54,7 +58,7 @@ async function findOrRestoreProduct(
 async function findOrRestoreVariant(
   orgId: string,
   sku: string,
-  defaults: Parameters<typeof ProductVariant.create>[0],
+  defaults: VariantCreateAttrs,
   t: import('sequelize').Transaction,
 ): Promise<ProductVariant> {
   const existing = await ProductVariant.findOne({
@@ -171,7 +175,7 @@ export async function seedIntegrationCatalog(
       unit_of_measure: productSeed.unit,
       ncm_code: null,
       tags: [] as string[],
-      images: [] as string[],
+      images: [] as ProductCreateAttrs['images'],
       created_by: actorId,
       updated_by: actorId,
     }
