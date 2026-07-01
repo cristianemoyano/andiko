@@ -61,6 +61,52 @@ Infraestructura base sin lógica de negocio.
 - [x] Documentación operativa GTM: packaging, programa beta, runbooks onboarding y soporte (`docs/gtm/`)
 - [x] Documentación dev: getting-started, cross-module checklist, PR template (`.github/`)
 - [x] README del proyecto, MULTITENANCY y production runbook alineados con estado v0.35+
+- [x] Suite de tests de integración E2E (Cucumber + Playwright): tenant `integration`, seed dedicado, 27 escenarios activos — ver [Calidad — Tests E2E](#calidad--tests-de-integración-e2e)
+
+---
+
+## Calidad — Tests de integración (E2E)
+
+Suite Gherkin en `tests/integration/` (Cucumber + Playwright). Complementa ~111 archivos Vitest de servicios; **no reemplaza** tests unitarios de lógica financiera/AFIP.
+
+**Ejecución local:** `pnpm db:seed-dev` → `pnpm dev` → `HEADLESS=true pnpm test:integration --profile headed`  
+**Tenant:** org `integration` (`test-admin@andiko.local` / `Test123456!`)  
+**Estado (PR #64):** 27 escenarios pasando · 22 `@skip` (sin automatizar aún)
+
+### Cubierto hoy (smoke operativo)
+
+| Módulo | Escenarios | Qué valida |
+|--------|------------|------------|
+| Auth | 4 | Login, credenciales inválidas, logout, guard de rutas |
+| Catálogo | 6 | CRUD producto, búsqueda, archivar, lista de precios |
+| Contactos | 7 | CRUD, CUIT, CBU, filtros |
+| Finanzas (CxC) | 5 | Deuda por cliente, abono, listado CxC, estado de cuenta, balance patrimonial (seed) |
+| Compras | 3 | Ciclo OC → recepción → factura proveedor → pago; búsqueda y filtro por estado |
+| Ventas | 2 | Búsqueda y filtro de facturas (listado) |
+
+### Pendiente — prioridad beta (des-skipear)
+
+Orden sugerido por impacto en negocio:
+
+1. [ ] **Ventas — ciclo completo** (`@skip`): Presupuesto → factura → cobro + impacto en stock. *Gap más crítico vs. valor del ERP.*
+2. [ ] **Inventario** (`@skip` en toda la feature): consulta de stock, deducción por venta, alertas, lotes, transferencias, conteo físico. *Sin steps implementados (`inventory.steps.ts`).*
+3. [ ] **Ventas — cobros múltiples y NC por devolución** (`@skip`): operación diaria de cobranzas y devoluciones.
+4. [ ] **Ventas — factura directa y presupuesto vencido** (`@skip`).
+5. [ ] **Finanzas — reporte IVA** (`@skip`): requisito contador/AFIP en UI.
+6. [ ] **Compras — recepción parcial, cancelación de OC, descuento por volumen** (`@skip`).
+7. [ ] **Finanzas — deudas vencidas, diario contable, conciliación bancaria, retenciones** (`@skip`).
+
+### Pendiente — infra y CI
+
+- [ ] Job CI en `develop`: PostgreSQL + seed + dev server + `pnpm test:integration:ci`
+- [ ] Aislar mutaciones entre escenarios (orden de ejecución / reset por feature)
+- [ ] Perfil sin `parallel` en CI hasta tener fixtures independientes por escenario
+- [ ] AFIP / emisión fiscal en E2E (hoy cubierto en unit: `src/modules/afip/*.test.ts`)
+- [ ] POS, multitenancy cross-org, billing SaaS
+
+### Excluido a propósito
+
+- [ ] Sesión expirada tras 30 min (`@skip` en auth): impracticable en E2E; requiere mock de TTL o test de API.
 
 ---
 
