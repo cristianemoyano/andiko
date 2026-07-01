@@ -92,6 +92,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="w-full max-w-[420px] landing-enter landing-enter-delay-1">{children}</div>
 
         <AppVersion className="mt-8 lg:hidden" />
+
+        <div className="mt-4 flex items-center gap-3">
+          <a href="/legales/terminos" className="text-xs text-fg-subtle hover:underline">
+            Términos
+          </a>
+          <a href="/legales/privacidad" className="text-xs text-fg-subtle hover:underline">
+            Privacidad
+          </a>
+        </div>
       </div>
     </div>
   )
