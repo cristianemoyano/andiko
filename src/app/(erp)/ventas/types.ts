@@ -115,6 +115,7 @@ export interface OrderItem {
   description: string
   quantity: string
   returned_qty?: string
+  shipped_qty?: string
   unit_price: string
   discount_pct: string
   iva_rate: IvaRate

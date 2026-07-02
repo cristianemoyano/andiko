@@ -30,6 +30,8 @@ import type { Order, PaymentCondition } from '../../types'
 import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
 import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
+import { CreateShipmentDialog } from './CreateShipmentDialog'
+import { OrderShipmentsSection } from './OrderShipmentsSection'
 import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError } from '@/lib/notify'
@@ -237,6 +239,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
   const [confirmConvert, setConfirmConvert]   = useState(false)
   const [confirmCancel, setConfirmCancel]     = useState(false)
   const [transitioning, setTransitioning]     = useState(false)
+  const [createShipmentOpen, setCreateShipmentOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -545,6 +548,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
   const editLockReason = orderEditLockReason(order, relatedInvoices)
   const canReturn = ['delivered', 'partial_returned'].includes(order.status)
   const canDeliver  = order.status === 'confirmed' || order.status === 'in_progress' || order.status === 'delivered'
+  const canShip = ['confirmed', 'in_progress', 'partial_returned'].includes(order.status)
 
   const editTotals = editMode ? calcTotals(items) : null
 
@@ -573,6 +577,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
           onClick: () => handleTransition(t.next),
           disabled: transitioning,
         })),
+        ...(canShip ? [{ id: 'create-shipment', label: 'Generar envío', onClick: () => setCreateShipmentOpen(true) }] : []),
         ...(canDeliver ? [{ id: 'delivery-note', label: 'Crear remito', onClick: () => router.push(`/inventario/remitos/nuevo?order_id=${order.id}`) }] : []),
         ...(canReturn ? [
           { id: 'return', label: 'Registrar devolución', onClick: () => router.push(`/ventas/devoluciones/nuevo?order_id=${order.id}`) },
@@ -934,6 +939,15 @@ export function OrderDetail({ id }: OrderDetailProps) {
             </div>
           </div>
 
+          {!editMode && (
+            <OrderShipmentsSection
+              orderId={order.id}
+              refresh={refresh}
+              canCreate={canShip}
+              onCreateRequest={() => setCreateShipmentOpen(true)}
+            />
+          )}
+
           {/* Items */}
           {editMode && !contactOnlyEdit ? (
             <div className="bg-surface border border-border rounded-sm p-5">
@@ -1033,6 +1047,13 @@ export function OrderDetail({ id }: OrderDetailProps) {
           setContactOption(option)
           setContactId(option.value)
         }}
+      />
+
+      <CreateShipmentDialog
+        open={createShipmentOpen}
+        onOpenChange={setCreateShipmentOpen}
+        order={order}
+        onCreated={() => setRefresh(r => r + 1)}
       />
     </div>
   )

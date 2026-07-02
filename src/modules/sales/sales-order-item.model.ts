@@ -20,12 +20,13 @@ export interface SalesOrderItemAttributes extends Timestamps, AuditFields {
   tax_amount: string
   total: string
   returned_qty: string
+  shipped_qty: string
   sort_order: number
 }
 
 type SalesOrderItemCreationAttributes = Optional<
   SalesOrderItemAttributes,
-  | 'id' | 'product_id' | 'variant_id' | 'discount_pct' | 'iva_rate' | 'sort_order' | 'returned_qty'
+  | 'id' | 'product_id' | 'variant_id' | 'discount_pct' | 'iva_rate' | 'sort_order' | 'returned_qty' | 'shipped_qty'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -45,6 +46,7 @@ class SalesOrderItem extends AuditModel<SalesOrderItemAttributes, SalesOrderItem
   declare tax_amount: string
   declare total: string
   declare returned_qty: string
+  declare shipped_qty: string
   declare sort_order: number
 }
 
@@ -65,6 +67,7 @@ SalesOrderItem.init(
     tax_amount:      { type: DataTypes.DECIMAL(15, 2), allowNull: false },
     total:           { type: DataTypes.DECIMAL(15, 2), allowNull: false },
     returned_qty:    { type: DataTypes.DECIMAL(15, 4), allowNull: false, defaultValue: '0.0000' },
+    shipped_qty:     { type: DataTypes.DECIMAL(15, 4), allowNull: false, defaultValue: '0.0000' },
     sort_order:      { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
     ...auditColumnDefs,
   },

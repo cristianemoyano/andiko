@@ -49,6 +49,7 @@ export const ROUTE_PREFIX_TO_MODULE: ReadonlyArray<{ prefix: string; module: Org
   { prefix: '/compras/libro-iva', module: 'accounting' },
   { prefix: '/compras/reportes', module: 'accounting' },
   { prefix: '/ventas', module: 'sales' },
+  { prefix: '/logistica', module: 'sales' },
   { prefix: '/inventario', module: 'inventory' },
   { prefix: '/compras', module: 'purchases' },
   { prefix: '/contabilidad', module: 'accounting' },
@@ -60,6 +61,8 @@ export const ROUTE_PREFIX_TO_MODULE: ReadonlyArray<{ prefix: string; module: Org
 /** Sidebar nav id → module key */
 export const NAV_ID_TO_MODULE: Record<string, OrgModuleKey> = {
   ventas: 'sales',
+  // Logística MVP: vive dentro del módulo de ventas (fulfillment de pedidos).
+  logistica: 'sales',
   inventario: 'inventory',
   compras: 'purchases',
   contabilidad: 'accounting',
