@@ -5,6 +5,7 @@ const MODULE_LABELS: Record<string, string> = {
   inventory: 'Inventario',
   purchases: 'Compras',
   accounting: 'Contabilidad',
+  logistics: 'Logística',
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -16,6 +17,7 @@ const ACTION_LABELS: Record<string, string> = {
 const SPECIAL_PERMISSION_LABELS: Record<string, string> = {
   'panel:read': 'Panel · Ver',
   'sales:scope_own': 'Ventas · Solo propias',
+  'logistics:scope_assigned': 'Logística · Solo asignados',
 }
 
 /** Qué habilita cada permiso en la matriz (alcance funcional). */
@@ -34,6 +36,11 @@ const PERMISSION_DESCRIPTIONS: Record<string, string> = {
   'sales:write': 'Crear y editar documentos de venta, cobrar y anular.',
   'sales:delete': 'Eliminar presupuestos y pedidos en borrador.',
   'sales:scope_own': 'Limita ventas a documentos del vendedor logueado.',
+
+  'logistics:read': 'Envíos, transportistas, vehículos y seguimiento de entregas.',
+  'logistics:write': 'Crear envíos, despachar, registrar eventos y gestionar flota.',
+  'logistics:delete': 'Eliminar transportistas y vehículos.',
+  'logistics:scope_assigned': 'Limita logística a envíos asignados al repartidor logueado.',
 
   'inventory:read': 'Depósitos, stock, movimientos, transferencias (consulta), reposición y remitos.',
   'inventory:write': 'Ajustes de stock, transferencias, mínimos/alertas, remitos y stock default por depósito.',
@@ -70,15 +77,35 @@ export const SALES_PERMISSION_ORDER = [
   'sales:scope_own',
 ] as const
 
+export const LOGISTICS_PERMISSION_ORDER = [
+  'logistics:read',
+  'logistics:write',
+  'logistics:delete',
+  'logistics:scope_assigned',
+] as const
+
 export function sortPermissionsForGroup<T extends { name: string }>(group: string, perms: T[]): T[] {
-  if (group !== 'sales') return perms
-  const order = SALES_PERMISSION_ORDER as readonly string[]
-  return [...perms].sort((a, b) => {
-    const ai = order.indexOf(a.name)
-    const bi = order.indexOf(b.name)
-    if (ai === -1 && bi === -1) return a.name.localeCompare(b.name)
-    if (ai === -1) return 1
-    if (bi === -1) return -1
-    return ai - bi
-  })
+  if (group === 'sales') {
+    const order = SALES_PERMISSION_ORDER as readonly string[]
+    return [...perms].sort((a, b) => {
+      const ai = order.indexOf(a.name)
+      const bi = order.indexOf(b.name)
+      if (ai === -1 && bi === -1) return a.name.localeCompare(b.name)
+      if (ai === -1) return 1
+      if (bi === -1) return -1
+      return ai - bi
+    })
+  }
+  if (group === 'logistics') {
+    const order = LOGISTICS_PERMISSION_ORDER as readonly string[]
+    return [...perms].sort((a, b) => {
+      const ai = order.indexOf(a.name)
+      const bi = order.indexOf(b.name)
+      if (ai === -1 && bi === -1) return a.name.localeCompare(b.name)
+      if (ai === -1) return 1
+      if (bi === -1) return -1
+      return ai - bi
+    })
+  }
+  return perms
 }

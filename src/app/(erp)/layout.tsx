@@ -8,7 +8,7 @@ import { TermsAcceptanceGate } from '@/components/layout/TermsAcceptanceGate'
 import { getEffectiveOrganizationSettings, isModuleEnabled } from '@/modules/auth/organization-settings.service'
 import { resolveModuleForPath, type OrgModuleKey } from '@/modules/auth/organization-modules'
 import { resolveCapabilities } from '@/lib/capabilities'
-import { hasModuleReadAccess } from '@/lib/nav-module-access'
+import { hasLogisticsReadAccess, hasModuleReadAccess } from '@/lib/nav-module-access'
 import { resolveModuleAccessRedirect, SIN_ACCESO_PATH } from '@/lib/panel-access'
 import {
   isOnboardingPath,
@@ -58,7 +58,9 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
       if (moduleForPath) {
         const moduleDisabled = !(await isModuleEnabled(orgId, moduleForPath))
         const moduleForbidden = capabilities
-          ? !hasModuleReadAccess(moduleForPath, capabilities.permissions)
+          ? pathname.startsWith('/logistica')
+            ? !hasLogisticsReadAccess(capabilities.permissions)
+            : !hasModuleReadAccess(moduleForPath, capabilities.permissions)
           : false
 
         if (moduleDisabled || moduleForbidden) {

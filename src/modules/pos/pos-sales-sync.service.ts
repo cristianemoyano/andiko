@@ -11,6 +11,7 @@ import type { IvaRate } from '@/modules/catalog/product.model'
 import type { PosDeviceContext } from '@/lib/pos-auth'
 import type { PosSaleAuthorizeInput } from './pos-fiscal.schema'
 import { deductStockForOrder } from '@/modules/inventory/stock-movements.service'
+import { findDefaultSaleVariant } from '@/modules/catalog/products.service'
 
 function calcItem(qty: number, unitPrice: string, ivaRate: IvaRate) {
   const unitGross = new Decimal(unitPrice)
@@ -62,7 +63,11 @@ async function resolvePosOrderLineIds(
     attributes: ['id'],
   })
   if (product) {
-    return { product_id: product.id, variant_id: null }
+    const defaultVariant = await findDefaultSaleVariant(String(product.id), orgId)
+    return {
+      product_id: String(product.id),
+      variant_id: defaultVariant ? String(defaultVariant.id) : null,
+    }
   }
 
   return { product_id: item.product_id ?? null, variant_id: item.variant_id ?? null }

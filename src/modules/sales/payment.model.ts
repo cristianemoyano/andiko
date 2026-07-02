@@ -4,9 +4,9 @@ import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields } from '@/types'
 import Invoice from './invoice.model'
 import User from '@/modules/auth/user.model'
+import { PAYMENT_METHODS, type PaymentMethod } from './payment.constants'
 
-export const PAYMENT_METHODS = ['cash', 'transfer', 'check', 'card', 'other'] as const
-export type PaymentMethod = typeof PAYMENT_METHODS[number]
+export { PAYMENT_METHODS, type PaymentMethod } from './payment.constants'
 
 export interface PaymentAttributes extends Timestamps, AuditFields {
   id: UUID

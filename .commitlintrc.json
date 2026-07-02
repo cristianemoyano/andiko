@@ -3,7 +3,8 @@
   "rules": {
     "scope-enum": [2, "always", [
       "sales", "inventory", "purchases", "contacts", "accounting", "auth", "core",
-      "catalog", "afip", "billing", "pos", "integrations", "communications", "storage"
+      "catalog", "afip", "billing", "pos", "integrations", "communications", "storage",
+      "logistics"
     ]],
     "scope-empty": [2, "never"]
   }

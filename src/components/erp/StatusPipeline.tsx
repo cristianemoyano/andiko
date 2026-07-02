@@ -16,7 +16,7 @@ const PIPELINES: Record<DocType, Step[]> = {
   order: [
     { value: 'draft',       label: 'Borrador' },
     { value: 'confirmed',   label: 'Confirmado' },
-    { value: 'in_progress', label: 'En proceso' },
+    { value: 'in_progress', label: 'En preparación' },
     { value: 'delivered',   label: 'Entregado' },
   ],
   invoice: [

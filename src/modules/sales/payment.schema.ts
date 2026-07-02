@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { paginationSchema } from '@/lib/pagination'
-import { PAYMENT_METHODS, type PaymentMethod } from './payment.model'
+import { PAYMENT_METHODS, type PaymentMethod } from './payment.constants'
 
 const paymentMethodEnum = z.enum([...PAYMENT_METHODS] as [PaymentMethod, ...PaymentMethod[]])
 

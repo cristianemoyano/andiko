@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
+import { AccountMovementSheet } from '@/components/erp/AccountMovementSheet'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { Button } from '@/components/primitives/Button'
 import { StatusBadge } from '@/components/primitives/Badge'
@@ -19,6 +20,7 @@ import {
   ACCOUNT_DEBT_STATUS_LABEL,
   ACCOUNT_MOVEMENT_TYPE_LABEL,
 } from '../types'
+import { getAccountMovementHref } from '@/lib/account-statement-navigation'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
 const SUMMARY_PAGE_SIZE = 20
@@ -39,12 +41,94 @@ const BALANCE_FILTER_OPTIONS: Array<{ value: 'with_balance' | 'all'; label: stri
   { value: 'all', label: 'Todos los clientes' },
 ]
 
-const MOVEMENT_TYPE_FILTER_OPTIONS: Array<{ value: '' | 'invoice' | 'payment' | 'credit_note'; label: string }> = [
+const MOVEMENT_TYPE_FILTER_OPTIONS: Array<{ value: '' | 'invoice' | 'payment' | 'credit_note' | 'refund'; label: string }> = [
   { value: '', label: 'Todos los movimientos' },
   { value: 'invoice', label: 'Facturas' },
   { value: 'payment', label: 'Cobros' },
   { value: 'credit_note', label: 'Notas de crédito' },
+  { value: 'refund', label: 'Reembolsos' },
 ]
+
+function createMovementColumns(): Column<AccountStatementLine>[] {
+  return [
+    {
+      key: 'date',
+      header: 'Fecha',
+      render: row => new Date(row.date).toLocaleDateString('es-AR'),
+    },
+    {
+      key: 'movement_type',
+      header: 'Tipo',
+      render: row => (
+        <span data-testid="account-movement-row" data-movement-type={row.movement_type}>
+          {ACCOUNT_MOVEMENT_TYPE_LABEL[row.movement_type]}
+        </span>
+      ),
+    },
+    {
+      key: 'document_number',
+      header: 'Comprobante',
+      render: row => {
+        const href = getAccountMovementHref('sales', row)
+        return (
+          <span className="inline-flex min-w-0 flex-col">
+            <span className={`font-mono text-[12px] ${href ? 'font-medium text-accent' : 'text-fg-muted'}`}>
+              {row.document_number}
+            </span>
+            {row.description ? (
+              <span className="text-[12px] text-fg-muted truncate">{row.description}</span>
+            ) : null}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'due_date',
+      header: 'Vencimiento',
+      render: row => (
+        row.due_date ? (
+          <span
+            className="tabular-nums text-[12px] text-fg-muted"
+            {...(row.movement_type === 'invoice' ? { 'data-testid': 'due-date' } : {})}
+          >
+            {new Date(row.due_date).toLocaleDateString('es-AR')}
+          </span>
+        ) : (
+          <span className="text-fg-subtle">—</span>
+        )
+      ),
+    },
+    {
+      key: 'debit',
+      header: 'Debe',
+      align: 'right',
+      render: row => (
+        <span className="tabular-nums text-fg-muted">{Number(row.debit) > 0 ? formatARS(row.debit) : '—'}</span>
+      ),
+    },
+    {
+      key: 'credit',
+      header: 'Haber',
+      align: 'right',
+      render: row => (
+        <span className="tabular-nums text-fg-muted">{Number(row.credit) > 0 ? formatARS(row.credit) : '—'}</span>
+      ),
+    },
+    {
+      key: 'running_balance',
+      header: 'Saldo',
+      align: 'right',
+      render: row => {
+        const running = Number(row.running_balance)
+        return (
+          <span className={`tabular-nums font-medium ${running > 0 ? 'text-danger' : 'text-success'}`}>
+            {formatARS(row.running_balance)}
+          </span>
+        )
+      },
+    },
+  ]
+}
 
 const SUMMARY_COLUMNS: Column<AccountStatementSummaryRow>[] = [
   {
@@ -105,78 +189,6 @@ const SUMMARY_COLUMNS: Column<AccountStatementSummaryRow>[] = [
       return (
         <span className={`tabular-nums ${overdue > 0 ? 'font-medium text-danger' : 'text-fg-muted'}`}>
           {formatARS(row.overdue_balance)}
-        </span>
-      )
-    },
-  },
-]
-
-const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
-  {
-    key: 'date',
-    header: 'Fecha',
-    render: row => new Date(row.date).toLocaleDateString('es-AR'),
-  },
-  {
-    key: 'movement_type',
-    header: 'Tipo',
-    render: row => (
-      <span data-testid="account-movement-row" data-movement-type={row.movement_type}>
-        {ACCOUNT_MOVEMENT_TYPE_LABEL[row.movement_type]}
-      </span>
-    ),
-  },
-  {
-    key: 'document_number',
-    header: 'Comprobante',
-    render: row => (
-      <div className="min-w-0">
-        <p className="font-mono text-[12px] text-fg-muted">{row.document_number}</p>
-        {row.description ? <p className="text-[12px] text-fg-muted truncate">{row.description}</p> : null}
-      </div>
-    ),
-  },
-  {
-    key: 'due_date',
-    header: 'Vencimiento',
-    render: row => (
-      row.due_date ? (
-        <span
-          className="tabular-nums text-[12px] text-fg-muted"
-          {...(row.movement_type === 'invoice' ? { 'data-testid': 'due-date' } : {})}
-        >
-          {new Date(row.due_date).toLocaleDateString('es-AR')}
-        </span>
-      ) : (
-        <span className="text-fg-subtle">—</span>
-      )
-    ),
-  },
-  {
-    key: 'debit',
-    header: 'Debe',
-    align: 'right',
-    render: row => (
-      <span className="tabular-nums text-fg-muted">{Number(row.debit) > 0 ? formatARS(row.debit) : '—'}</span>
-    ),
-  },
-  {
-    key: 'credit',
-    header: 'Haber',
-    align: 'right',
-    render: row => (
-      <span className="tabular-nums text-fg-muted">{Number(row.credit) > 0 ? formatARS(row.credit) : '—'}</span>
-    ),
-  },
-  {
-    key: 'running_balance',
-    header: 'Saldo',
-    align: 'right',
-    render: row => {
-      const running = Number(row.running_balance)
-      return (
-        <span className={`tabular-nums font-medium ${running > 0 ? 'text-danger' : 'text-success'}`}>
-          {formatARS(row.running_balance)}
         </span>
       )
     },
@@ -324,10 +336,20 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
   const [lineTotal, setLineTotal] = useState(0)
   const [linePage, setLinePage] = useState(1)
   const [lineSearch, setLineSearch] = useState('')
-  const [lineTypeFilter, setLineTypeFilter] = useState<'' | 'invoice' | 'payment' | 'credit_note'>('')
+  const [lineTypeFilter, setLineTypeFilter] = useState<'' | 'invoice' | 'payment' | 'credit_note' | 'refund'>('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [detailError, setDetailError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedMovement, setSelectedMovement] = useState<AccountStatementLine | null>(null)
+  const [movementSheetOpen, setMovementSheetOpen] = useState(false)
+
+  const movementColumns = useMemo(() => createMovementColumns(), [])
+
+  const openMovement = (row: AccountStatementLine) => {
+    setSelectedMovement(row)
+    setMovementSheetOpen(true)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -340,6 +362,7 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
       ...(toDate ? { to: toDate } : {}),
     })
     ;(async () => {
+      setLoading(true)
       setDetailError(null)
       try {
         const payload = await fetchJson<AccountStatementResponse>(
@@ -355,6 +378,8 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
         setDetailError(getApiErrorMessage(e))
         setLineItems([])
         setLineTotal(0)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     })()
     return () => { cancelled = true }
@@ -384,18 +409,19 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryMetric label="Saldo" value={summary.balance} emphasis testId="customer-debt" />
-          <SummaryMetric label="Vencido" value={summary.overdue_balance} testId="customer-overdue-balance" />
-          <SummaryMetric label="Facturado" value={summary.total_invoiced} />
-          <SummaryMetric label="Cobrado" value={summary.total_paid} />
+          <SummaryMetric label="Saldo" value={loading ? '…' : summary.balance} emphasis testId="customer-debt" />
+          <SummaryMetric label="Vencido" value={loading ? '…' : summary.overdue_balance} testId="customer-overdue-balance" />
+          <SummaryMetric label="Facturado" value={loading ? '…' : summary.total_invoiced} />
+          <SummaryMetric label="Cobrado" value={loading ? '…' : summary.total_paid} />
         </div>
       </div>
 
       <DataTable
-        columns={MOVEMENT_COLUMNS}
+        columns={movementColumns}
         data={lineItems}
         keyExtractor={row => row.id}
-        emptyMessage="No hay movimientos para este cliente."
+        onRowClick={openMovement}
+        emptyMessage={loading ? 'Cargando movimientos…' : 'No hay movimientos para este cliente.'}
         toolbar={
           <>
             <div className="relative flex items-center">
@@ -417,7 +443,7 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
               className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
               value={lineTypeFilter}
               onChange={(e) => {
-                setLineTypeFilter(e.target.value as '' | 'invoice' | 'payment' | 'credit_note')
+                setLineTypeFilter(e.target.value as '' | 'invoice' | 'payment' | 'credit_note' | 'refund')
                 setLinePage(1)
               }}
             >
@@ -457,6 +483,14 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
             />
           ) : undefined
         }
+      />
+
+      <AccountMovementSheet
+        module="sales"
+        line={selectedMovement}
+        movementTypeLabel={ACCOUNT_MOVEMENT_TYPE_LABEL}
+        open={movementSheetOpen}
+        onOpenChange={setMovementSheetOpen}
       />
     </div>
   )

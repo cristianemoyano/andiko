@@ -52,11 +52,35 @@ vi.mock('./delivery-note-associations', () => ({
   ensureDeliveryNoteAssociations: vi.fn(),
 }))
 
+vi.mock('@/modules/logistics/carrier-account.model', () => ({
+  default: { findOne: vi.fn() },
+}))
+
 vi.mock('@/modules/catalog/product-variant.model', () => ({
   default: { findByPk: vi.fn() },
 }))
 
 vi.mock('@/modules/catalog/product.model', () => ({
+  default: { findByPk: vi.fn() },
+}))
+
+vi.mock('@/modules/auth/branch.model', () => ({
+  default: { findByPk: vi.fn() },
+}))
+
+vi.mock('@/modules/contacts/contact.model', () => ({
+  default: { findByPk: vi.fn() },
+}))
+
+vi.mock('@/modules/auth/user.model', () => ({
+  default: { findByPk: vi.fn() },
+}))
+
+vi.mock('./warehouse.model', () => ({
+  default: { findByPk: vi.fn() },
+}))
+
+vi.mock('@/modules/sales/sales-order.model', () => ({
   default: { findByPk: vi.fn() },
 }))
 

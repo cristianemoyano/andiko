@@ -105,10 +105,16 @@ export async function allocateInbound(
  * Returns one allocation per batch touched (positive quantities).
  */
 export async function consumeFefo(
-  params: { stockItemId: string; quantity: Decimal },
+  params: {
+    stockItemId: string
+    quantity: Decimal
+    /** Reservas: el remanente se descuenta del lote default (puede quedar negativo). */
+    allowNegative?: boolean
+    orgId?: string
+  },
   t: Transaction,
 ): Promise<BatchAllocation[]> {
-  const { stockItemId, quantity } = params
+  const { stockItemId, quantity, allowNegative, orgId } = params
 
   const batches = await StockItemBatch.findAll({
     where: { stock_item_id: stockItemId },
@@ -137,6 +143,26 @@ export async function consumeFefo(
   }
 
   if (remaining.gt(0)) {
+    if (allowNegative) {
+      if (!orgId) throw new Error('INSUFFICIENT_STOCK')
+      let defaultBatch = batches.find((b) => b.batch_code === null)
+      if (!defaultBatch) {
+        defaultBatch = await StockItemBatch.create(
+          {
+            org_id:        orgId,
+            stock_item_id: stockItemId,
+            batch_code:    null,
+            expiry_date:   null,
+            quantity:      '0',
+          },
+          { transaction: t },
+        )
+      }
+      const next = new Decimal(defaultBatch.quantity).minus(remaining)
+      await defaultBatch.update({ quantity: next.toFixed(4) }, { transaction: t })
+      allocations.push({ batchId: defaultBatch.id, quantity: remaining })
+      return allocations
+    }
     throw new Error('INSUFFICIENT_STOCK')
   }
 

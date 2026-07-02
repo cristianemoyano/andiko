@@ -4,6 +4,7 @@ import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields } from '@/types'
 import PriceList from './price-list.model'
 import ProductVariant from './product-variant.model'
+import { ensureAssociation, registeredModel } from '@/lib/sequelize-models'
 
 interface PriceListItemAttributes extends Timestamps, AuditFields {
   id: UUID
@@ -39,10 +40,21 @@ PriceListItem.init(
   { sequelize, tableName: 'price_list_items', paranoid: true, underscored: true }
 )
 
-PriceList.hasMany(PriceListItem, { foreignKey: 'price_list_id', as: 'items' })
-PriceListItem.belongsTo(PriceList, { foreignKey: 'price_list_id', as: 'price_list' })
+const PriceListModel = registeredModel('PriceList', PriceList)
+const PriceListItemModel = registeredModel('PriceListItem', PriceListItem)
+const ProductVariantModel = registeredModel('ProductVariant', ProductVariant)
 
-ProductVariant.hasMany(PriceListItem, { foreignKey: 'product_variant_id', as: 'price_list_items' })
-PriceListItem.belongsTo(ProductVariant, { foreignKey: 'product_variant_id', as: 'variant' })
+ensureAssociation(PriceListModel, 'items', () => {
+  PriceListModel.hasMany(PriceListItemModel, { foreignKey: 'price_list_id', as: 'items' })
+})
+ensureAssociation(PriceListItemModel, 'price_list', () => {
+  PriceListItemModel.belongsTo(PriceListModel, { foreignKey: 'price_list_id', as: 'price_list' })
+})
+ensureAssociation(ProductVariantModel, 'price_list_items', () => {
+  ProductVariantModel.hasMany(PriceListItemModel, { foreignKey: 'product_variant_id', as: 'price_list_items' })
+})
+ensureAssociation(PriceListItemModel, 'variant', () => {
+  PriceListItemModel.belongsTo(ProductVariantModel, { foreignKey: 'product_variant_id', as: 'variant' })
+})
 
 export default PriceListItem

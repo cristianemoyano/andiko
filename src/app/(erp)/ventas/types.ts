@@ -1,4 +1,5 @@
 import type { IvaRate, PaymentCondition } from '@/types'
+import type { ProductType } from '@/modules/catalog/product.model'
 import type { AfipDocStatus, AfipObservationView } from '@/components/erp'
 
 export type { IvaRate, PaymentCondition }
@@ -90,7 +91,7 @@ export type OrderStatus = 'draft' | 'confirmed' | 'in_progress' | 'delivered' | 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   draft:            'Borrador',
   confirmed:        'Confirmado',
-  in_progress:      'En proceso',
+  in_progress:      'En preparación',
   delivered:        'Entregado',
   partial_returned: 'Devolución parcial',
   returned:         'Devuelto',
@@ -112,9 +113,11 @@ export interface OrderItem {
   id: string
   product_id: string | null
   variant_id: string | null
+  product_type?: ProductType | null
   description: string
   quantity: string
   returned_qty?: string
+  shipped_qty?: string
   unit_price: string
   discount_pct: string
   iva_rate: IvaRate
@@ -268,7 +271,7 @@ export interface Invoice extends AfipDocumentFields {
 // --- Account statement (cuenta corriente) ---
 
 export type AccountDebtStatus = 'up_to_date' | 'with_balance' | 'overdue'
-export type AccountMovementType = 'invoice' | 'payment' | 'credit_note'
+export type AccountMovementType = 'invoice' | 'payment' | 'credit_note' | 'refund'
 
 export const ACCOUNT_DEBT_STATUS_LABEL: Record<AccountDebtStatus, string> = {
   up_to_date: 'Al día',
@@ -280,6 +283,7 @@ export const ACCOUNT_MOVEMENT_TYPE_LABEL: Record<AccountMovementType, string> = 
   invoice:     'Factura',
   payment:     'Cobro',
   credit_note: 'Nota de crédito',
+  refund:      'Reembolso',
 }
 
 export interface AccountStatementSummary {
@@ -296,6 +300,7 @@ export interface AccountStatementLine {
   id: string
   movement_type: AccountMovementType
   movement_id: string
+  related_id: string | null
   date: string
   document_number: string
   description: string | null

@@ -25,6 +25,7 @@ export async function createProductVariant(input: ProductVariantInput, actorId: 
         cost_price: input.cost_price ?? null,
         base_price: input.base_price ?? null,
         manage_stock: input.manage_stock ?? true,
+        allow_backorder: (input.manage_stock ?? true) ? (input.allow_backorder ?? false) : false,
         stock_quantity: input.stock_quantity ?? 0,
         is_default: input.is_default ?? false,
         created_by: actorId,
@@ -51,6 +52,12 @@ export async function updateProductVariant(id: UUID, input: ProductVariantUpdate
     if (input.cost_price !== undefined) payload.cost_price = input.cost_price
     if (input.base_price !== undefined) payload.base_price = input.base_price
     if (input.manage_stock !== undefined) payload.manage_stock = input.manage_stock
+    const effectiveManageStock = input.manage_stock ?? variant.manage_stock
+    if (input.manage_stock === false || !effectiveManageStock) {
+      payload.allow_backorder = false
+    } else if (input.allow_backorder !== undefined) {
+      payload.allow_backorder = input.allow_backorder
+    }
     if (input.stock_quantity !== undefined) payload.stock_quantity = input.stock_quantity
 
     await variant.update(payload as Parameters<typeof variant.update>[0], { transaction: t })

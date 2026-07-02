@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
+import { AccountMovementSheet } from '@/components/erp/AccountMovementSheet'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -17,7 +18,13 @@ import {
   ACCOUNT_DEBT_STATUS_LABEL,
   ACCOUNT_MOVEMENT_TYPE_LABEL,
 } from '../../ventas/types'
+import { getAccountMovementHref } from '@/lib/account-statement-navigation'
 import { fetchJson } from '@/lib/fetch-json'
+
+const PURCHASE_MOVEMENT_TYPE_LABEL: Record<'invoice' | 'payment', string> = {
+  invoice: ACCOUNT_MOVEMENT_TYPE_LABEL.invoice,
+  payment: ACCOUNT_MOVEMENT_TYPE_LABEL.payment,
+}
 
 const CONTACT_PAGE_SIZE = 20
 const LINE_PAGE_SIZE = 20
@@ -118,57 +125,66 @@ const BASE_CONTACT_COLUMNS: Column<ContactStatementRow>[] = [
   },
 ]
 
-const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
-  {
-    key: 'date',
-    header: 'Fecha',
-    render: row => new Date(row.date).toLocaleDateString('es-AR'),
-  },
-  {
-    key: 'movement_type',
-    header: 'Tipo',
-    render: row => ACCOUNT_MOVEMENT_TYPE_LABEL[row.movement_type],
-  },
-  {
-    key: 'document_number',
-    header: 'Comprobante',
-    render: row => (
-      <div className="min-w-0">
-        <p className="font-mono text-[12px] text-fg-muted">{row.document_number}</p>
-        {row.description ? <p className="text-[12px] text-fg-muted truncate">{row.description}</p> : null}
-      </div>
-    ),
-  },
-  {
-    key: 'debit',
-    header: 'Debe',
-    align: 'right',
-    render: row => (
-      <span className="tabular-nums text-fg-muted">{Number(row.debit) > 0 ? formatARS(row.debit) : '—'}</span>
-    ),
-  },
-  {
-    key: 'credit',
-    header: 'Haber',
-    align: 'right',
-    render: row => (
-      <span className="tabular-nums text-fg-muted">{Number(row.credit) > 0 ? formatARS(row.credit) : '—'}</span>
-    ),
-  },
-  {
-    key: 'running_balance',
-    header: 'Saldo',
-    align: 'right',
-    render: row => {
-      const running = Number(row.running_balance)
-      return (
-        <span className={`tabular-nums font-medium ${running > 0 ? 'text-danger' : 'text-success'}`}>
-          {formatARS(row.running_balance)}
-        </span>
-      )
+function createPurchaseMovementColumns(): Column<AccountStatementLine>[] {
+  return [
+    {
+      key: 'date',
+      header: 'Fecha',
+      render: row => new Date(row.date).toLocaleDateString('es-AR'),
     },
-  },
-]
+    {
+      key: 'movement_type',
+      header: 'Tipo',
+      render: row => PURCHASE_MOVEMENT_TYPE_LABEL[row.movement_type as 'invoice' | 'payment'],
+    },
+    {
+      key: 'document_number',
+      header: 'Comprobante',
+      render: row => {
+        const href = getAccountMovementHref('purchases', row)
+        return (
+          <span className="inline-flex min-w-0 flex-col">
+            <span className={`font-mono text-[12px] ${href ? 'font-medium text-accent' : 'text-fg-muted'}`}>
+              {row.document_number}
+            </span>
+            {row.description ? (
+              <span className="text-[12px] text-fg-muted truncate">{row.description}</span>
+            ) : null}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'debit',
+      header: 'Debe',
+      align: 'right',
+      render: row => (
+        <span className="tabular-nums text-fg-muted">{Number(row.debit) > 0 ? formatARS(row.debit) : '—'}</span>
+      ),
+    },
+    {
+      key: 'credit',
+      header: 'Haber',
+      align: 'right',
+      render: row => (
+        <span className="tabular-nums text-fg-muted">{Number(row.credit) > 0 ? formatARS(row.credit) : '—'}</span>
+      ),
+    },
+    {
+      key: 'running_balance',
+      header: 'Saldo',
+      align: 'right',
+      render: row => {
+        const running = Number(row.running_balance)
+        return (
+          <span className={`tabular-nums font-medium ${running > 0 ? 'text-danger' : 'text-success'}`}>
+            {formatARS(row.running_balance)}
+          </span>
+        )
+      },
+    },
+  ]
+}
 
 export function CuentaCorrienteProveedorClient() {
   const [contactRows, setContactRows] = useState<ContactStatementRow[]>([])
@@ -187,6 +203,15 @@ export function CuentaCorrienteProveedorClient() {
   const [lineTypeFilter, setLineTypeFilter] = useState<'' | 'invoice' | 'payment'>('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+  const [selectedMovement, setSelectedMovement] = useState<AccountStatementLine | null>(null)
+  const [movementSheetOpen, setMovementSheetOpen] = useState(false)
+
+  const movementColumns = useMemo(() => createPurchaseMovementColumns(), [])
+
+  const openMovement = (row: AccountStatementLine) => {
+    setSelectedMovement(row)
+    setMovementSheetOpen(true)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -381,9 +406,10 @@ export function CuentaCorrienteProveedorClient() {
             </div>
 
             <DataTable
-              columns={MOVEMENT_COLUMNS}
+              columns={movementColumns}
               data={lineItems}
               keyExtractor={row => row.id}
+              onRowClick={openMovement}
               emptyMessage="No hay movimientos para este proveedor."
               toolbar={
                 <>
@@ -446,6 +472,14 @@ export function CuentaCorrienteProveedorClient() {
                   />
                 ) : undefined
               }
+            />
+
+            <AccountMovementSheet
+              module="purchases"
+              line={selectedMovement}
+              movementTypeLabel={PURCHASE_MOVEMENT_TYPE_LABEL}
+              open={movementSheetOpen}
+              onOpenChange={setMovementSheetOpen}
             />
           </div>
         </div>

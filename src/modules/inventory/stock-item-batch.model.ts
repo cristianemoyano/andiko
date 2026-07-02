@@ -3,6 +3,7 @@ import sequelize from '@/lib/db'
 import type { UUID } from '@/types'
 import StockItem from './stock-item.model'
 import StockMovement from './stock-movement.model'
+import { ensureAssociation, registeredModel } from '@/lib/sequelize-models'
 
 export interface StockItemBatchAttributes {
   id: UUID
@@ -49,10 +50,21 @@ StockItemBatch.init(
   { sequelize, tableName: 'stock_item_batches', paranoid: true, underscored: true },
 )
 
-StockItem.hasMany(StockItemBatch, { foreignKey: 'stock_item_id', as: 'batches' })
-StockItemBatch.belongsTo(StockItem, { foreignKey: 'stock_item_id', as: 'stockItem' })
+const StockItemModel = registeredModel('StockItem', StockItem)
+const StockItemBatchModel = registeredModel('StockItemBatch', StockItemBatch)
+const StockMovementModel = registeredModel('StockMovement', StockMovement)
 
-StockItemBatch.hasMany(StockMovement, { foreignKey: 'batch_id', as: 'movements' })
-StockMovement.belongsTo(StockItemBatch, { foreignKey: 'batch_id', as: 'batch' })
+ensureAssociation(StockItemModel, 'batches', () => {
+  StockItemModel.hasMany(StockItemBatchModel, { foreignKey: 'stock_item_id', as: 'batches' })
+})
+ensureAssociation(StockItemBatchModel, 'stockItem', () => {
+  StockItemBatchModel.belongsTo(StockItemModel, { foreignKey: 'stock_item_id', as: 'stockItem' })
+})
+ensureAssociation(StockItemBatchModel, 'movements', () => {
+  StockItemBatchModel.hasMany(StockMovementModel, { foreignKey: 'batch_id', as: 'movements' })
+})
+ensureAssociation(StockMovementModel, 'batch', () => {
+  StockMovementModel.belongsTo(StockItemBatchModel, { foreignKey: 'batch_id', as: 'batch' })
+})
 
 export default StockItemBatch

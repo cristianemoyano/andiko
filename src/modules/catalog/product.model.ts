@@ -3,6 +3,7 @@ import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields } from '@/types'
 import ProductCategory from './product-category.model'
+import { ensureAssociation, registeredModel } from '@/lib/sequelize-models'
 
 export type ProductType     = 'simple' | 'service'
 export type ProductStatus   = 'draft' | 'active' | 'archived'
@@ -85,7 +86,14 @@ Product.init(
   { sequelize, tableName: 'products', paranoid: true, underscored: true }
 )
 
-Product.belongsTo(ProductCategory, { foreignKey: 'category_id', as: 'category' })
-ProductCategory.hasMany(Product, { foreignKey: 'category_id', as: 'products' })
+const ProductModel = registeredModel('Product', Product)
+const ProductCategoryModel = registeredModel('ProductCategory', ProductCategory)
+
+ensureAssociation(ProductModel, 'category', () => {
+  ProductModel.belongsTo(ProductCategoryModel, { foreignKey: 'category_id', as: 'category' })
+})
+ensureAssociation(ProductCategoryModel, 'products', () => {
+  ProductCategoryModel.hasMany(ProductModel, { foreignKey: 'category_id', as: 'products' })
+})
 
 export default Product

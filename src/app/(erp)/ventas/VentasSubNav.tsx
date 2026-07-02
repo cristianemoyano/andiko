@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { SalesWorkflowHelp } from '@/components/erp/SalesWorkflowHelp'
 
 const LINKS = [
   { href: '/ventas/presupuestos', label: 'Presupuestos' },
@@ -18,7 +19,7 @@ export function VentasSubNav() {
   const pathname = usePathname()
   return (
     <nav
-      className="flex gap-1 overflow-x-auto px-5 py-2 bg-surface-muted border-b border-border flex-shrink-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      className="flex items-center gap-1 overflow-x-auto px-5 py-2 bg-surface-muted border-b border-border flex-shrink-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       aria-label="Secciones de ventas"
     >
       {LINKS.map(({ href, label }) => (
@@ -35,6 +36,9 @@ export function VentasSubNav() {
           {label}
         </Link>
       ))}
+      <div className="ml-auto shrink-0 pl-2 sticky right-0 bg-surface-muted">
+        <SalesWorkflowHelp label={null} side="bottom" align="end" />
+      </div>
     </nav>
   )
 }

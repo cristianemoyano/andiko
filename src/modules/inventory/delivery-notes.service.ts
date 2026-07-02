@@ -13,6 +13,12 @@ import { applyMovement } from './stock-movements.service'
 import { resolveWarehouseForBranch } from './branch-warehouse.resolution'
 import { nextDeliveryNumber } from './delivery-notes.utils'
 import { ensureDeliveryNoteAssociations } from './delivery-note-associations'
+import CarrierAccount from '@/modules/logistics/carrier-account.model'
+import Branch from '@/modules/auth/branch.model'
+import Contact from '@/modules/contacts/contact.model'
+import User from '@/modules/auth/user.model'
+import Warehouse from './warehouse.model'
+import SalesOrder from '@/modules/sales/sales-order.model'
 import type { DeliveryNoteInput, DeliveryNoteUpdateInput, DeliveryNoteQuery } from './delivery-note.schema'
 
 /**
@@ -32,6 +38,31 @@ async function orderAlreadyDeductedStock(orderId: string, orgId: string, t: Tran
   return count > 0
 }
 
+async function resolveCarrierFields(
+  carrierAccountId: string | null | undefined,
+  orgId: string,
+  branchId: string,
+  t: Transaction,
+): Promise<{ carrier_account_id: string | null; carrier: string | null }> {
+  if (!carrierAccountId) {
+    return { carrier_account_id: null, carrier: null }
+  }
+
+  const account = await CarrierAccount.findOne({
+    where: {
+      id: carrierAccountId,
+      org_id: orgId,
+      is_active: true,
+      [Op.or]: [{ branch_id: branchId }, { branch_id: null }],
+    },
+    attributes: ['id', 'name'],
+    transaction: t,
+  })
+  if (!account) throw new Error('CARRIER_ACCOUNT_NOT_FOUND')
+
+  return { carrier_account_id: account.id, carrier: account.name }
+}
+
 export async function listDeliveryNotes(query: DeliveryNoteQuery, orgId: string) {
   ensureDeliveryNoteAssociations()
 
@@ -48,10 +79,6 @@ export async function listDeliveryNotes(query: DeliveryNoteQuery, orgId: string)
       { delivery_number: { [Op.iLike]: `%${search}%` } },
     ]
   }
-
-  const { default: Branch }    = await import('@/modules/auth/branch.model')
-  const { default: Contact }   = await import('@/modules/contacts/contact.model')
-  const { default: Warehouse } = await import('./warehouse.model')
 
   const { rows, count } = await DeliveryNote.findAndCountAll({
     where,
@@ -75,18 +102,13 @@ export async function listDeliveryNotes(query: DeliveryNoteQuery, orgId: string)
 export async function getDeliveryNote(id: string, orgId: string) {
   ensureDeliveryNoteAssociations()
 
-  const { default: Branch }      = await import('@/modules/auth/branch.model')
-  const { default: Contact }     = await import('@/modules/contacts/contact.model')
-  const { default: Warehouse }   = await import('./warehouse.model')
-  const { default: User }        = await import('@/modules/auth/user.model')
-  const { default: SalesOrder }  = await import('@/modules/sales/sales-order.model')
-
   const note = await DeliveryNote.findByPk(id, {
     include: [
       { model: Branch,           as: 'branch',    attributes: ['id', 'name', 'branch_code'] },
       { model: Contact,          as: 'contact',   attributes: ['id', 'legal_name', 'trade_name'], required: false },
       { model: Warehouse,        as: 'warehouse', attributes: ['id', 'name'], required: false },
       { model: User,             as: 'issuer',    attributes: ['id', 'name'], required: false },
+      { model: CarrierAccount,   as: 'carrierAccount', attributes: ['id', 'name', 'kind'], required: false },
       { model: DeliveryNoteItem, as: 'items' },
       { model: SalesOrder,       as: 'order',     attributes: ['id', 'order_number', 'status'], required: false },
     ],
@@ -101,9 +123,20 @@ export async function createDeliveryNote(input: DeliveryNoteInput, orgId: string
   ensureDeliveryNoteAssociations()
 
   return sequelize.transaction(async (t) => {
-    const { items, branch_id, ...fields } = input
+    const { items, branch_id, carrier_account_id, ...fields } = input
 
     const docNumber = await nextDeliveryNumber(orgId, branch_id, t)
+
+    let warehouseId = fields.warehouse_id ?? null
+    if (!warehouseId) {
+      try {
+        warehouseId = await resolveWarehouseForBranch(branch_id, orgId, t)
+      } catch {
+        // Borrador sin depósito; al emitir se resuelve de nuevo si hace falta.
+      }
+    }
+
+    const carrierFields = await resolveCarrierFields(carrier_account_id, orgId, branch_id, t)
 
     // If linked to an order that already deducted stock on confirmation, this
     // note only documents the delivery and must not move stock again.
@@ -114,6 +147,8 @@ export async function createDeliveryNote(input: DeliveryNoteInput, orgId: string
     const note = await DeliveryNote.create(
       {
         ...fields,
+        ...carrierFields,
+        warehouse_id:    warehouseId,
         branch_id,
         org_id:          orgId,
         delivery_number: docNumber,
@@ -157,9 +192,13 @@ export async function updateDeliveryNote(id: string, input: DeliveryNoteUpdateIn
     if (!note) throw new Error('DELIVERY_NOTE_NOT_FOUND')
     if (note.status !== 'draft') throw new Error('DELIVERY_NOTE_NOT_DRAFT')
 
-    const { items, branch_id: nextBranchId, ...fields } = input
+    const { items, branch_id: nextBranchId, carrier_account_id, ...fields } = input
 
     const branchPatch: Record<string, unknown> = {}
+    const effectiveBranchId = nextBranchId ?? note.branch_id!
+    const carrierPatch = carrier_account_id !== undefined
+      ? await resolveCarrierFields(carrier_account_id, orgId, effectiveBranchId, t)
+      : {}
     if (nextBranchId && nextBranchId !== note.branch_id) {
       assertDraftBranchChange(note.status)
       Object.assign(branchPatch, await buildBranchRenumberPatch({
@@ -195,7 +234,7 @@ export async function updateDeliveryNote(id: string, input: DeliveryNoteUpdateIn
       )
     }
 
-    await note.update({ ...fields, ...branchPatch, updated_by: actorId }, { transaction: t })
+    await note.update({ ...fields, ...carrierPatch, ...branchPatch, updated_by: actorId }, { transaction: t })
     return note
   })
 }

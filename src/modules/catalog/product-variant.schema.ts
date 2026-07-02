@@ -8,6 +8,7 @@ export const productVariantSchema = z.object({
   cost_price:     z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().optional(),
   base_price:     z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().optional(),
   manage_stock:   z.boolean().optional(),
+  allow_backorder: z.boolean().optional(),
   stock_quantity: z.coerce.number().int().min(0).optional(),
   is_default:     z.boolean().optional(),
   weight_kg:      z.string().regex(/^\d+(\.\d{1,3})?$/).nullable().optional(),
