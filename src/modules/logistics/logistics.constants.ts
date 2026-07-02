@@ -19,6 +19,26 @@ export type ShipmentEventSource = typeof SHIPMENT_EVENT_SOURCES[number]
 
 export const TERMINAL_SHIPMENT_STATUSES: readonly ShipmentStatus[] = ['delivered', 'returned', 'cancelled']
 
+export const SHIPMENT_STATUS_LABEL: Record<ShipmentStatus, string> = {
+  pending:          'Pendiente',
+  ready_to_ship:    'Listo para despachar',
+  dispatched:       'Despachado',
+  in_transit:       'En camino',
+  out_for_delivery: 'En reparto',
+  delivered:        'Entregado',
+  failed:           'Entrega fallida',
+  returned:         'Devuelto',
+  cancelled:        'Cancelado',
+}
+
+export const FULFILLMENT_KIND_LABEL: Record<FulfillmentKind, string> = {
+  in_house:         'Reparto propio',
+  andreani:         'Andreani',
+  correo_argentino: 'Correo Argentino',
+  oca:              'OCA',
+  manual:           'Otro courier',
+}
+
 /**
  * Máquina de estados del envío. `failed` es reintentable (nuevo intento de
  * entrega o devolución al remitente); `delivered`, `returned` y `cancelled`

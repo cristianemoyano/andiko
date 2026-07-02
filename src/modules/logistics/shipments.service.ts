@@ -391,6 +391,21 @@ export async function assignShipmentDriver(id: string, input: ShipmentAssignDriv
   return getShipment(id, ctx)
 }
 
+/**
+ * Usuarios de la organización asignables como chofer de reparto propio.
+ * Expuesto bajo permisos de ventas (a diferencia de /settings/users) porque
+ * el operador que despacha no suele tener settings:read.
+ */
+export async function listDrivers(ctx: TenantContext) {
+  const rows = await User.findAll({
+    where: { org_id: ctx.orgId, is_active: true },
+    attributes: ['id', 'name'],
+    order: [['name', 'ASC']],
+    limit: 200,
+  })
+  return rows.map(r => r.get({ plain: true }))
+}
+
 /** Estados del envío alcanzables desde el estado actual (para la UI). */
 export function nextShipmentStatuses(current: ShipmentStatus): ShipmentStatus[] {
   return (['ready_to_ship', 'dispatched', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned', 'cancelled'] as const)
