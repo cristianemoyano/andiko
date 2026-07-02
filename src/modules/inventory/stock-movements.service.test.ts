@@ -195,6 +195,40 @@ describe('applyMovement', () => {
     expect(StockMovement.create).not.toHaveBeenCalled()
   })
 
+  it('allows negative aggregate when allowNegativeStock is set', async () => {
+    const item = mockStockItem('3.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+    ;(consumeFefo as Mock).mockResolvedValue([{ batchId: 'b-1', quantity: new Decimal('10') }])
+    ;(earliestExpiry as Mock).mockResolvedValue(null)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+    ;(StockItem.sum as Mock).mockResolvedValue(-7)
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.findByPk as Mock).mockResolvedValue({ allow_backorder: true })
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await applyMovement(
+      {
+        variantId:     'var-1',
+        warehouseId:   'wh-1',
+        orgId:         'org-1',
+        movementType:  'out',
+        referenceType: 'order',
+        referenceId:   'ord-1',
+        quantityDelta: new Decimal('-10'),
+        notes:         null,
+        actorId:       'actor-1',
+        allowNegativeStock: true,
+      },
+      T,
+    )
+
+    expect(item.update).toHaveBeenCalledWith(
+      expect.objectContaining({ quantity: '-7.0000' }),
+      expect.anything(),
+    )
+  })
+
   it('creates stock_item with quantity 0 when it does not exist yet', async () => {
     const item = mockStockItem('0')
     ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, true])

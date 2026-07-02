@@ -6,7 +6,7 @@ import { cancelShipment } from '@/modules/logistics/shipments.service'
 
 const cancelBodySchema = z.object({ reason: z.string().max(255).nullable().optional() })
 
-export const POST = withTenantPermission<{ id: string }>('sales:write', async (req, routeCtx, session, ctx) => {
+export const POST = withTenantPermission<{ id: string }>('logistics:write', async (req, routeCtx, session, ctx) => {
   const { id } = await routeCtx.params
   let body: unknown = {}
   try {

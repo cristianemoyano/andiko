@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 const LINKS = [
   { href: '/logistica/envios', label: 'Envíos' },
   { href: '/logistica/transportistas', label: 'Transportistas' },
+  { href: '/logistica/vehiculos', label: 'Vehículos' },
 ] as const
 
 export function LogisticaSubNav() {

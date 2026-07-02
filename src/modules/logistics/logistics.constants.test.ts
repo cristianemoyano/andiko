@@ -3,8 +3,10 @@ import {
   SHIPMENT_STATUSES,
   SHIPMENT_TRANSITIONS,
   TERMINAL_SHIPMENT_STATUSES,
+  canEditShipment,
   canTransitionShipment,
   assertShipmentTransition,
+  resolveInHouseTrackingNumber,
 } from './logistics.constants'
 
 describe('shipment status machine', () => {
@@ -54,5 +56,27 @@ describe('shipment status machine', () => {
   it('assertShipmentTransition throws a stable error code', () => {
     expect(() => assertShipmentTransition('delivered', 'pending')).toThrowError('SHIPMENT_INVALID_TRANSITION')
     expect(() => assertShipmentTransition('pending', 'dispatched')).not.toThrow()
+  })
+})
+
+describe('resolveInHouseTrackingNumber', () => {
+  it('defaults to the shipment number', () => {
+    expect(resolveInHouseTrackingNumber('ENV-02-0017')).toBe('ENV-02-0017')
+    expect(resolveInHouseTrackingNumber('ENV-02-0017', null)).toBe('ENV-02-0017')
+    expect(resolveInHouseTrackingNumber('ENV-02-0017', '   ')).toBe('ENV-02-0017')
+  })
+
+  it('allows an explicit override', () => {
+    expect(resolveInHouseTrackingNumber('ENV-02-0017', 'ETIQUETA-42')).toBe('ETIQUETA-42')
+  })
+})
+
+describe('canEditShipment', () => {
+  it('allows editing non-terminal shipments', () => {
+    expect(canEditShipment('pending')).toBe(true)
+    expect(canEditShipment('dispatched')).toBe(true)
+    expect(canEditShipment('failed')).toBe(true)
+    expect(canEditShipment('delivered')).toBe(false)
+    expect(canEditShipment('cancelled')).toBe(false)
   })
 })

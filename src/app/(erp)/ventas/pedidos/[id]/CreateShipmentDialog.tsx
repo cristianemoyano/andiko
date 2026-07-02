@@ -7,7 +7,7 @@ import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
 import { Select } from '@/components/primitives/Select'
 import { Textarea } from '@/components/primitives/Textarea'
-import { CurrencyInput } from '@/components/primitives/CurrencyInput'
+import { CurrencyInput, formatARS } from '@/components/primitives/CurrencyInput'
 import { FULFILLMENT_KIND_LABEL, type FulfillmentKind } from '@/modules/logistics/logistics.constants'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifySuccess } from '@/lib/notify'
@@ -39,6 +39,7 @@ export interface CreateShipmentDialogProps {
 
 function pendingLines(order: Order): ShipmentLine[] {
   return (order.items ?? [])
+    .filter(item => item.product_type !== 'service')
     .map(item => {
       const remaining = (parseFloat(item.quantity) || 0) - (parseFloat(item.shipped_qty ?? '0') || 0)
       return {
@@ -57,15 +58,20 @@ export function CreateShipmentDialog({ open, onOpenChange, order, onCreated }: C
   const [lines, setLines] = useState<ShipmentLine[]>([])
   const [trackingNumber, setTrackingNumber] = useState('')
   const [driverId, setDriverId] = useState('')
-  const [vehicleRef, setVehicleRef] = useState('')
+  const [vehicleId, setVehicleId] = useState('')
   const [shippingCost, setShippingCost] = useState('')
   const [deliveryNotes, setDeliveryNotes] = useState('')
   const [drivers, setDrivers] = useState<DriverOption[]>([])
+  const [vehicles, setVehicles] = useState<Array<{ id: string; label: string; plate: string | null }>>([])
   const [saving, setSaving] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
   const carrier = useMemo(() => carriers.find(c => c.id === carrierId) ?? null, [carriers, carrierId])
   const isInHouse = carrier?.kind === 'in_house'
+  const carrierFlatRate = useMemo(() => {
+    const rate = carrier?.settings?.flat_rate
+    return typeof rate === 'number' && rate > 0 ? rate : null
+  }, [carrier])
 
   useEffect(() => {
     if (!open) return
@@ -73,7 +79,7 @@ export function CreateShipmentDialog({ open, onOpenChange, order, onCreated }: C
       setLines(pendingLines(order))
       setTrackingNumber('')
       setDriverId('')
-      setVehicleRef('')
+      setVehicleId('')
       setShippingCost('')
       setDeliveryNotes('')
       setServerError(null)
@@ -104,14 +110,28 @@ export function CreateShipmentDialog({ open, onOpenChange, order, onCreated }: C
     let cancelled = false
     void (async () => {
       try {
-        const res = await fetchJson<{ data: DriverOption[] }>('/api/v1/logistics/drivers')
-        if (!cancelled) setDrivers(res.data ?? [])
+        const [driversRes, vehiclesRes] = await Promise.all([
+          fetchJson<{ data: DriverOption[] }>('/api/v1/logistics/drivers'),
+          fetchJson<{ data: Array<{ id: string; label: string; plate: string | null }> }>('/api/v1/logistics/vehicles?is_active=true&limit=100'),
+        ])
+        if (!cancelled) {
+          setDrivers(driversRes.data ?? [])
+          setVehicles(vehiclesRes.data ?? [])
+        }
       } catch {
-        if (!cancelled) setDrivers([])
+        if (!cancelled) {
+          setDrivers([])
+          setVehicles([])
+        }
       }
     })()
     return () => { cancelled = true }
   }, [open, isInHouse])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync cost field when carrier rate changes
+    if (carrierFlatRate !== null) setShippingCost('')
+  }, [carrierFlatRate])
 
   function setLineQuantity(id: string, quantity: string) {
     setLines(prev => prev.map(line => line.sales_order_item_id === id ? { ...line, quantity } : line))
@@ -140,7 +160,7 @@ export function CreateShipmentDialog({ open, onOpenChange, order, onCreated }: C
           ...(order.contact?.legal_name ? { ship_to_name: order.contact.legal_name } : {}),
           ...(trackingNumber.trim() ? { tracking_number: trackingNumber.trim() } : {}),
           ...(isInHouse && driverId ? { assigned_driver_id: driverId } : {}),
-          ...(isInHouse && vehicleRef.trim() ? { vehicle_ref: vehicleRef.trim() } : {}),
+          ...(isInHouse ? { vehicle_id: vehicleId || null } : {}),
           ...(shippingCost !== '' ? { shipping_cost: parseFloat(shippingCost) || 0 } : {}),
           ...(deliveryNotes.trim() ? { delivery_notes: deliveryNotes.trim() } : {}),
         }),
@@ -213,20 +233,29 @@ export function CreateShipmentDialog({ open, onOpenChange, order, onCreated }: C
 
         {isInHouse && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Chofer" htmlFor="shipment_driver">
+            <p className="sm:col-span-2 rounded-sm border border-border bg-surface-2 px-3 py-2 text-[12px] text-fg-muted">
+              Se asignará un código de seguimiento interno al crear el envío (mismo número ENV de la sucursal).
+            </p>
+            <FormField label="Repartidor" htmlFor="shipment_driver">
               <Select
                 id="shipment_driver"
                 value={driverId}
                 onChange={setDriverId}
-                options={[{ value: '', label: 'Sin chofer asignado' }, ...drivers.map(d => ({ value: d.id, label: d.name }))]}
+                options={[{ value: '', label: 'Sin repartidor asignado' }, ...drivers.map(d => ({ value: d.id, label: d.name }))]}
               />
             </FormField>
             <FormField label="Vehículo" htmlFor="shipment_vehicle">
-              <Input
+              <Select
                 id="shipment_vehicle"
-                value={vehicleRef}
-                onChange={e => setVehicleRef(e.target.value)}
-                placeholder="Ej: Fiorino AB123CD"
+                value={vehicleId}
+                onChange={setVehicleId}
+                options={[
+                  { value: '', label: 'Sin vehículo asignado' },
+                  ...vehicles.map(v => ({
+                    value: v.id,
+                    label: v.plate ? `${v.label} (${v.plate})` : v.label,
+                  })),
+                ]}
               />
             </FormField>
           </div>
@@ -277,9 +306,17 @@ export function CreateShipmentDialog({ open, onOpenChange, order, onCreated }: C
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField label="Costo de envío (ARS)" htmlFor="shipment_cost">
-            <CurrencyInput id="shipment_cost" value={shippingCost} onChange={setShippingCost} />
-          </FormField>
+          {carrierFlatRate !== null ? (
+            <div className="rounded-sm border border-border bg-surface-muted px-3 py-2.5">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-fg-subtle">Costo de envío</p>
+              <p className="mt-1 text-[13px] text-fg tabular-nums">{formatARS(String(carrierFlatRate))}</p>
+              <p className="mt-1 text-[12px] text-fg-muted">Se toma del transportista «{carrier?.name}».</p>
+            </div>
+          ) : (
+            <FormField label="Costo de envío (opcional)" htmlFor="shipment_cost">
+              <CurrencyInput id="shipment_cost" value={shippingCost} onChange={setShippingCost} />
+            </FormField>
+          )}
           <FormField label="Indicaciones de entrega" htmlFor="shipment_notes">
             <Textarea
               id="shipment_notes"

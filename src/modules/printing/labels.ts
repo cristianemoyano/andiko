@@ -17,11 +17,13 @@ export const QUOTE_STATUS_LABEL: Record<string, string> = {
 }
 
 export const ORDER_STATUS_LABEL: Record<string, string> = {
-  draft:       'Borrador',
-  confirmed:   'Confirmado',
-  in_progress: 'En proceso',
-  delivered:   'Entregado',
-  cancelled:   'Cancelado',
+  draft:            'Borrador',
+  confirmed:        'Confirmado',
+  in_progress:      'En preparación',
+  delivered:        'Entregado',
+  partial_returned: 'Devolución parcial',
+  returned:         'Devuelto',
+  cancelled:        'Cancelado',
 }
 
 export const INVOICE_STATUS_LABEL: Record<string, string> = {

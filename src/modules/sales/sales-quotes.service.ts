@@ -7,7 +7,8 @@ import SalesQuote from './sales-quote.model'
 import SalesQuoteItem from './sales-quote-item.model'
 import SalesOrder from './sales-order.model'
 import SalesOrderItem from './sales-order-item.model'
-import type { SalesQuoteInput, SalesQuoteUpdateInput, SalesQuoteQuery } from './sales-quote.schema'
+import type { QuoteStatus } from './sales-quote.model'
+import type { SalesQuoteInput, SalesQuoteUpdateInput, SalesQuoteQuery, SalesQuoteStatusCountsQuery } from './sales-quote.schema'
 import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
 import User from '@/modules/auth/user.model'
@@ -53,6 +54,47 @@ export async function listQuotes(query: SalesQuoteQuery, ctx: TenantContext) {
   })
 
   return toPaginated(rows, count, page, limit)
+}
+
+function buildQuotesListWhere(query: Pick<SalesQuoteQuery, 'search' | 'contact_id'>, ctx: TenantContext) {
+  const where: Record<string, unknown> = whereSalesDocumentScope(ctx) as Record<string, unknown>
+  const { search, contact_id } = query
+  if (contact_id) where.contact_id = contact_id
+  if (search) {
+    where[Op.or as unknown as string] = [
+      { quote_number: { [Op.iLike]: `%${search}%` } },
+    ]
+  }
+  return where
+}
+
+export async function getQuoteStatusCounts(query: SalesQuoteStatusCountsQuery, ctx: TenantContext) {
+  ensureSalesBranchAssociations()
+
+  const where = buildQuotesListWhere(query, ctx)
+  const rows = await SalesQuote.findAll({
+    where,
+    attributes: [
+      'status',
+      [sequelize.fn('COUNT', sequelize.col('SalesQuote.id')), 'count'],
+    ],
+    group: ['status'],
+    raw: true,
+  }) as unknown as Array<{ status: QuoteStatus; count: string }>
+
+  const byStatus = Object.fromEntries(
+    rows.map(row => [row.status, Number(row.count)]),
+  ) as Partial<Record<QuoteStatus, number>>
+
+  return {
+    '': Object.values(byStatus).reduce((sum, n) => sum + n, 0),
+    draft:     byStatus.draft ?? 0,
+    sent:      byStatus.sent ?? 0,
+    accepted:  byStatus.accepted ?? 0,
+    rejected:  byStatus.rejected ?? 0,
+    expired:   byStatus.expired ?? 0,
+    cancelled: byStatus.cancelled ?? 0,
+  }
 }
 
 export async function getQuote(id: string, ctx: TenantContext) {

@@ -113,6 +113,45 @@ export function withTenantPermission<P extends Record<string, string> = Record<s
   })
 }
 
+/** Tenant-scoped route that accepts any one of the listed permissions (first match wins). */
+export function withTenantAnyPermission<P extends Record<string, string> = Record<string, string>>(
+  permissions: Permission[],
+  handler: TenantRouteHandler<P>,
+): (req: NextRequest, ctx: RouteContext<P>) => Promise<NextResponse> {
+  return async (req: NextRequest, ctx: RouteContext<P>): Promise<NextResponse> => {
+    const session = await auth()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
+    }
+
+    const user = session.user as AuthedSession['user']
+    const role = user.role as UserRole
+    const orgId = effectiveOrgId(session)
+    const orgRoleId = user.orgRoleId ?? null
+
+    let allowed = false
+    for (const permission of permissions) {
+      const moduleKey = moduleForPermission(permission)
+      if (moduleKey && !isRealSysAdmin(session)) {
+        if (!orgId) return orgContextRequiredResponse()
+        if (!(await isModuleEnabled(orgId, moduleKey))) continue
+      }
+      if (await can(role, permission, orgId ?? undefined, orgRoleId)) {
+        allowed = true
+        break
+      }
+    }
+
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 })
+    }
+
+    const tenant = await resolveTenantContext(session.user)
+    if ('error' in tenant) return tenant.error
+    return handler(req, ctx, session as AuthedSession, tenant.ctx)
+  }
+}
+
 /**
  * Authenticated + tenant-scoped, but WITHOUT a fixed module permission gate.
  *

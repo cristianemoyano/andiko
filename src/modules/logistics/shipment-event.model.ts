@@ -50,7 +50,7 @@ ShipmentEvent.init(
     created_at:  { type: DataTypes.DATE, allowNull: false },
     created_by:  { type: DataTypes.UUID },
   },
-  { sequelize, tableName: 'shipment_events', underscored: true, updatedAt: false }
+  { sequelize, tableName: 'shipment_events', underscored: true, updatedAt: false, paranoid: false }
 )
 
 if (!Object.prototype.hasOwnProperty.call(ShipmentEvent.associations, 'shipment')) {

@@ -1,5 +1,4 @@
-import { StatusBadge } from '@/components/primitives/Badge'
-import { ORDER_STATUS_LABEL } from '@/modules/printing/labels'
+import { OrderStatusBadge } from './OrderStatusBadge'
 import { WooOrderStatusBadge } from './WooOrderStatusBadge'
 
 export interface SalesOrderStatusCellProps {
@@ -9,11 +8,9 @@ export interface SalesOrderStatusCellProps {
 
 /** ERP + WooCommerce status badges on one compact row. */
 export function SalesOrderStatusCell({ erpStatus, wooStatusLabel }: SalesOrderStatusCellProps) {
-  const erpLabel = ORDER_STATUS_LABEL[erpStatus] ?? erpStatus
-
   return (
     <div className="flex items-center gap-1 flex-wrap max-w-[220px]">
-      <StatusBadge value={erpLabel} className="shrink-0" />
+      <OrderStatusBadge status={erpStatus} className="shrink-0" />
       {wooStatusLabel ? (
         <WooOrderStatusBadge
           label={wooStatusLabel}

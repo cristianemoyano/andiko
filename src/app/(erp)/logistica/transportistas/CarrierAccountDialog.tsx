@@ -146,6 +146,7 @@ export function CarrierAccountDialog({ open, onOpenChange, account, onSaved }: C
         </FormField>
         <FormField label="Costo fijo por envío (ARS)" htmlFor="carrier_flat_rate">
           <CurrencyInput id="carrier_flat_rate" value={flatRate} onChange={setFlatRate} />
+          <p className="text-[12px] text-fg-muted">Se aplica automáticamente al generar envíos con este transportista.</p>
         </FormField>
         <div className="flex items-center justify-between rounded-sm border border-border px-3 py-2.5">
           <span className="text-[13px] text-fg">Activo</span>

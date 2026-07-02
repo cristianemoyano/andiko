@@ -33,6 +33,8 @@ export type TenantContext = {
   allowedBranchIds: string[]
   /** When true, sales document lists/detail are limited to the logged-in salesperson. */
   salesScopeOwn?: boolean
+  /** When true, shipment lists/detail are limited to envíos assigned to the logged-in repartidor. */
+  logisticsScopeAssigned?: boolean
 }
 
 export function orgContextRequiredResponse(): NextResponse {
@@ -91,6 +93,7 @@ export function tenantContextFromPosDevice(device: {
     defaultBranchId: device.branchId,
     allowedBranchIds,
     salesScopeOwn: false,
+    logisticsScopeAssigned: false,
   }
 }
 
@@ -136,13 +139,15 @@ export async function makeTenantContext(sessionUser: AuthedSession['user']): Pro
   }
 
   let salesScopeOwn = false
+  let logisticsScopeAssigned = false
   if (!(isRealSysAdmin && !isImpersonating)) {
-    const { getPermissionsForUser, hasSalesScopeOwn } = await import('@/lib/permissions')
+    const { getPermissionsForUser, hasSalesScopeOwn, hasLogisticsScopeAssigned } = await import('@/lib/permissions')
     const perms = await getPermissionsForUser(
       { role: sessionUser.role, orgRoleId: sessionUser.orgRoleId },
       orgId,
     )
     salesScopeOwn = hasSalesScopeOwn(perms)
+    logisticsScopeAssigned = hasLogisticsScopeAssigned(perms)
   }
 
   return {
@@ -151,6 +156,7 @@ export async function makeTenantContext(sessionUser: AuthedSession['user']): Pro
     defaultBranchId: branchId,
     allowedBranchIds,
     salesScopeOwn,
+    logisticsScopeAssigned,
   }
 }
 

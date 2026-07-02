@@ -14,6 +14,7 @@ import { DatePicker } from '@/components/primitives/DatePicker'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
+import { useBranchDefaultWarehouse } from '@/components/erp/useBranchDefaultWarehouse'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import type { PurchaseOrder } from '../../types'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
@@ -42,7 +43,7 @@ export function NuevaRecepcionClient() {
   const [branchId,            setBranchId]            = useState<string | null>(null)
   const [contactId,           setContactId]           = useState<string | null>(null)
   const [contactInitialOpts,  setContactInitialOpts]  = useState<SearchableSelectOption[]>([])
-  const [warehouseId,         setWarehouseId]         = useState<string | null>(null)
+  const { warehouseId, setWarehouseId, warehouseOptions, searchWarehouses } = useBranchDefaultWarehouse(branchId)
   const [receiptDate,         setReceiptDate]         = useState<Date | null>(new Date())
   const [notes,               setNotes]               = useState('')
   const [items,               setItems]               = useState<ReceiptItem[]>([])
@@ -56,17 +57,6 @@ export function NuevaRecepcionClient() {
         `/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=supplier`,
       )
       return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
-    } catch {
-      return []
-    }
-  }, [])
-
-  const searchWarehouses = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    try {
-      const data = await fetchJson<{ data: Array<{ id: string; name: string }> }>(
-        `/api/v1/inventory/warehouses?search=${encodeURIComponent(q)}&limit=20`,
-      )
-      return (data.data ?? []).map(w => ({ value: w.id, label: w.name }))
     } catch {
       return []
     }
@@ -194,8 +184,10 @@ export function NuevaRecepcionClient() {
                 <SearchableSelect
                   value={warehouseId}
                   onChange={setWarehouseId}
+                  options={warehouseOptions}
                   onSearch={searchWarehouses}
-                  placeholder="Buscar depósito…"
+                  placeholder={branchId ? 'Buscar depósito…' : 'Elegí una sucursal primero'}
+                  disabled={!branchId}
                 />
               </FormField>
 

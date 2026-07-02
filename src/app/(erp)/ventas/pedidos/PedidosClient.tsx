@@ -16,9 +16,10 @@ import {
 } from '@/components/erp'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
-import type { Order, OrderStatus } from '../types'
+import type { Order } from '../types'
 import { PAYMENT_CONDITION_LABEL } from '../types'
 import { VentasSubNav } from '../VentasSubNav'
+import { PedidosStatusNav, type PedidosStatusTab } from './PedidosStatusNav'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { SALES_ORDER_CHANNEL_LABEL } from '@/modules/sales/sales-order-channel.utils'
 import type { SalesOrderSource } from '@/modules/sales/sales-order.model'
@@ -36,17 +37,18 @@ import {
 const PAGE_SIZE = 20
 const PEDIDOS_COLUMNS_STORAGE_KEY = 'andiko.ventas.pedidos.columns.v2'
 
-type SourceFilter = SalesOrderSource | ''
-type ErpStatusFilter = OrderStatus | ''
-type StatusFilter = '' | `erp:${OrderStatus}` | `woo:${WooOrderStatusSlug}`
+const EMPTY_STATUS_COUNTS: Record<PedidosStatusTab, number> = {
+  '': 0,
+  draft: 0,
+  confirmed: 0,
+  in_progress: 0,
+  delivered: 0,
+  returns: 0,
+  cancelled: 0,
+}
 
-const ERP_STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
-  { value: 'draft',       label: 'Borrador' },
-  { value: 'confirmed',   label: 'Confirmado' },
-  { value: 'in_progress', label: 'En proceso' },
-  { value: 'delivered',   label: 'Entregado' },
-  { value: 'cancelled',   label: 'Cancelado' },
-]
+type SourceFilter = SalesOrderSource | ''
+type WooStatusFilter = WooOrderStatusSlug | ''
 
 const SOURCE_OPTIONS: { value: SourceFilter; label: string }[] = [
   { value: '',             label: 'Todos los orígenes' },
@@ -69,11 +71,34 @@ const PEDIDOS_COLUMN_OPTIONS: TableColumnOption[] = [
   { key: 'salesperson',       label: 'Vendedor', defaultVisible: false },
 ]
 
-function parseStatusFilter(value: StatusFilter): { status?: ErpStatusFilter; woo_status?: WooOrderStatusSlug } {
-  if (!value) return {}
-  if (value.startsWith('erp:')) return { status: value.slice(4) as OrderStatus }
-  if (value.startsWith('woo:')) return { woo_status: value.slice(4) as WooOrderStatusSlug }
-  return {}
+function statusTabToQuery(tab: PedidosStatusTab): { status?: string; statuses?: string } {
+  if (!tab) return {}
+  if (tab === 'returns') return { statuses: 'partial_returned,returned' }
+  return { status: tab }
+}
+
+function buildListParams(input: {
+  page: number
+  search: string
+  statusTab: PedidosStatusTab
+  wooStatus: WooStatusFilter
+  source: SourceFilter
+  branchId: string
+  fromDate: string
+  toDate: string
+}): URLSearchParams {
+  const statusQuery = statusTabToQuery(input.statusTab)
+  return new URLSearchParams({
+    page:  String(input.page),
+    limit: String(PAGE_SIZE),
+    ...(input.search ? { search: input.search } : {}),
+    ...statusQuery,
+    ...(input.wooStatus ? { woo_status: input.wooStatus } : {}),
+    ...(input.source ? { source: input.source } : {}),
+    ...(input.branchId ? { branch_id: input.branchId } : {}),
+    ...(input.fromDate ? { from: input.fromDate } : {}),
+    ...(input.toDate ? { to: input.toDate } : {}),
+  })
 }
 
 function buildPedidosColumns(): Column<Order>[] {
@@ -174,9 +199,11 @@ export function PedidosClient() {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [total, setTotal]   = useState(0)
+  const [statusCounts, setStatusCounts] = useState<Record<PedidosStatusTab, number>>(EMPTY_STATUS_COUNTS)
   const [page, setPage]     = useState(1)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('')
+  const [statusTab, setStatusTab] = useState<PedidosStatusTab>('')
+  const [wooStatusFilter, setWooStatusFilter] = useState<WooStatusFilter>('')
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('')
   const [branchFilter, setBranchFilter] = useState('')
   const [fromDate, setFromDate] = useState('')
@@ -194,7 +221,14 @@ export function PedidosClient() {
     [visibleKeys],
   )
 
-  const statusQuery = useMemo(() => parseStatusFilter(statusFilter), [statusFilter])
+  const sharedFilters = useMemo(() => ({
+    search,
+    wooStatus: wooStatusFilter,
+    source: sourceFilter,
+    branchId: branchFilter,
+    fromDate,
+    toDate,
+  }), [search, wooStatusFilter, sourceFilter, branchFilter, fromDate, toDate])
 
   useEffect(() => {
     let mounted = true
@@ -215,17 +249,7 @@ export function PedidosClient() {
 
   useEffect(() => {
     let mounted = true
-    const params = new URLSearchParams({
-      page:  String(page),
-      limit: String(PAGE_SIZE),
-      ...(search ? { search } : {}),
-      ...(statusQuery.status ? { status: statusQuery.status } : {}),
-      ...(statusQuery.woo_status ? { woo_status: statusQuery.woo_status } : {}),
-      ...(sourceFilter ? { source: sourceFilter } : {}),
-      ...(branchFilter ? { branch_id: branchFilter } : {}),
-      ...(fromDate ? { from: fromDate } : {}),
-      ...(toDate ? { to: toDate } : {}),
-    })
+    const params = buildListParams({ page, statusTab, ...sharedFilters })
     ;(async () => {
       setListError(null)
       try {
@@ -245,7 +269,25 @@ export function PedidosClient() {
       }
     })()
     return () => { mounted = false }
-  }, [page, search, statusQuery, sourceFilter, branchFilter, fromDate, toDate])
+  }, [page, statusTab, sharedFilters])
+
+  useEffect(() => {
+    let mounted = true
+    const params = buildListParams({ page: 1, statusTab: '', ...sharedFilters })
+    void (async () => {
+      try {
+        const res = await fetchJson<{ data: Record<PedidosStatusTab, number> }>(
+          `/api/v1/sales/orders/status-counts?${params}`,
+        )
+        if (!mounted) return
+        setStatusCounts({ ...EMPTY_STATUS_COUNTS, ...(res.data ?? {}) })
+      } catch {
+        if (!mounted) return
+        setStatusCounts(EMPTY_STATUS_COUNTS)
+      }
+    })()
+    return () => { mounted = false }
+  }, [sharedFilters])
 
   return (
     <div className="flex flex-col h-full">
@@ -258,6 +300,11 @@ export function PedidosClient() {
         }
       />
       <VentasSubNav />
+      <PedidosStatusNav
+        active={statusTab}
+        counts={statusCounts}
+        onChange={tab => { setStatusTab(tab); setPage(1) }}
+      />
 
       <PageBody>
         {listError && (
@@ -287,16 +334,12 @@ export function PedidosClient() {
               </div>
               <select
                 className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
-                value={statusFilter}
-                onChange={e => { setStatusFilter(e.target.value as StatusFilter); setPage(1) }}
+                value={wooStatusFilter}
+                onChange={e => { setWooStatusFilter(e.target.value as WooStatusFilter); setPage(1) }}
               >
-                <option value="">Todos los estados</option>
-                {ERP_STATUS_OPTIONS.map(o => (
-                  <option key={o.value} value={`erp:${o.value}`}>{o.label}</option>
-                ))}
-                <option disabled value="__sep__">────────────────</option>
+                <option value="">Estado WooCommerce</option>
                 {WOO_ORDER_STATUS_SLUGS.map(slug => (
-                  <option key={slug} value={`woo:${slug}`}>
+                  <option key={slug} value={slug}>
                     {WOO_ORDER_STATUS_LABELS[slug]}
                   </option>
                 ))}

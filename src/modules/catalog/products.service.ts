@@ -176,7 +176,7 @@ async function assertPluCodeAvailable(
 }
 
 export async function createProduct(input: ProductInput, actorId: UUID, ctx: TenantContext) {
-  const { sku, barcode, cost_price, base_price, manage_stock, stock_quantity, images, sold_by_weight, plu_code, ...productData } = input
+  const { sku, barcode, cost_price, base_price, manage_stock, allow_backorder, stock_quantity, images, sold_by_weight, plu_code, ...productData } = input
 
   return sequelize.transaction(async (t) => {
     const slug = generateSlug(productData.name)
@@ -205,6 +205,7 @@ export async function createProduct(input: ProductInput, actorId: UUID, ctx: Ten
         cost_price:     cost_price ?? null,
         base_price:     base_price ?? null,
         manage_stock:   manage_stock ?? true,
+        allow_backorder: (manage_stock ?? true) ? (allow_backorder ?? false) : false,
         stock_quantity: stock_quantity ?? 0,
         sold_by_weight: sold_by_weight ?? false,
         plu_code:       plu_code ?? null,
@@ -222,7 +223,7 @@ export async function createProduct(input: ProductInput, actorId: UUID, ctx: Ten
 export async function updateProduct(id: UUID, input: ProductUpdateInput, actorId: UUID, ctx: TenantContext) {
   const product = await getProduct(id, ctx)
 
-  const { sku, barcode, cost_price, base_price, stock_quantity, manage_stock, images, sold_by_weight, plu_code, ...productData } = input
+  const { sku, barcode, cost_price, base_price, stock_quantity, manage_stock, allow_backorder, images, sold_by_weight, plu_code, ...productData } = input
 
   await sequelize.transaction(async (t) => {
     const payload: Record<string, unknown> = { ...productData, updated_by: actorId }
@@ -248,6 +249,14 @@ export async function updateProduct(id: UUID, input: ProductUpdateInput, actorId
     if (base_price !== undefined)     variantUpdates.base_price     = base_price
     if (stock_quantity !== undefined) variantUpdates.stock_quantity = stock_quantity
     if (manage_stock !== undefined)   variantUpdates.manage_stock   = manage_stock
+    const defaultVariant = (product.get('variants') as ProductVariant[] | undefined)?.find((v) => v.is_default)
+      ?? (product.get('variants') as ProductVariant[] | undefined)?.[0]
+    const effectiveManageStock = manage_stock ?? defaultVariant?.manage_stock ?? true
+    if (!effectiveManageStock) {
+      variantUpdates.allow_backorder = false
+    } else if (allow_backorder !== undefined) {
+      variantUpdates.allow_backorder = allow_backorder
+    }
     if (sold_by_weight !== undefined) variantUpdates.sold_by_weight = sold_by_weight
     if (plu_code !== undefined)       variantUpdates.plu_code       = plu_code
 
@@ -682,6 +691,153 @@ export type SaleProductOption = {
   price: string
 }
 
+export type ResolvedSaleLineRef = SaleProductOption & { ref_id: string }
+
+function formatSaleVariantDisplayName(productName: string, variantName: string | null): string {
+  const trimmedVariant = variantName?.trim()
+  if (!trimmedVariant || trimmedVariant === productName.trim()) return productName
+  if (productName.includes(trimmedVariant)) return productName
+  return `${productName} - ${trimmedVariant}`
+}
+
+async function mapVariantToSaleOption(
+  variant: ProductVariant,
+  priceListId: string | undefined,
+  orgId: string,
+): Promise<SaleProductOption> {
+  const { getEffectivePrice } = await import('./price-list.service')
+  const product = variant.get('product') as Product
+
+  let price = (variant.base_price as string | null) ?? '0.00'
+  if (priceListId) {
+    const listPrice = await getEffectivePrice(priceListId, String(variant.id), orgId)
+    if (listPrice !== null) price = listPrice
+  }
+
+  const productName = String(product.get('name'))
+  const variantName = variant.name ? String(variant.name) : null
+
+  return {
+    product_id:      String(variant.product_id),
+    variant_id:      String(variant.id),
+    name:            formatSaleVariantDisplayName(productName, variantName),
+    sku:             String(variant.sku),
+    iva_rate:        String(product.get('iva_rate')),
+    unit_of_measure: String(product.get('unit_of_measure')),
+    price,
+  }
+}
+
+export async function findDefaultSaleVariant(
+  productId: string,
+  orgId: string,
+  transaction?: Transaction,
+): Promise<ProductVariant | null> {
+  return ProductVariant.findOne({
+    where: { product_id: productId, org_id: orgId },
+    order: [['is_default', 'DESC'], ['created_at', 'ASC']],
+    transaction,
+  })
+}
+
+export async function listSaleVariantsByIds(
+  variantIds: string[],
+  priceListId: string | undefined,
+  orgId: string,
+  opts?: { includeInactive?: boolean },
+): Promise<SaleProductOption[]> {
+  const ids = [...new Set(variantIds.filter(Boolean))]
+  if (ids.length === 0) return []
+
+  const productWhere: Record<string, unknown> = { org_id: orgId }
+  if (!opts?.includeInactive) productWhere.status = 'active'
+
+  const variants = await ProductVariant.findAll({
+    where: { id: { [Op.in]: ids }, org_id: orgId },
+    attributes: ['id', 'product_id', 'sku', 'name', 'base_price'],
+    include: [{
+      model: Product,
+      as: 'product',
+      required: true,
+      where: productWhere,
+      attributes: ['id', 'name', 'iva_rate', 'unit_of_measure'],
+    }],
+  })
+
+  const byId = new Map(variants.map((variant) => [String(variant.id), variant]))
+  const options = await Promise.all(
+    ids
+      .map((id) => byId.get(id))
+      .filter((variant): variant is ProductVariant => Boolean(variant))
+      .map((variant) => mapVariantToSaleOption(variant, priceListId, orgId)),
+  )
+  return options
+}
+
+/** Resolves legacy line refs (variant id stored as product_id, or product id without variant). */
+export async function resolveSaleLineCatalogRefs(
+  rawIds: string[],
+  priceListId: string | undefined,
+  orgId: string,
+  opts?: { includeInactive?: boolean },
+): Promise<ResolvedSaleLineRef[]> {
+  const unique = [...new Set(rawIds.filter(Boolean))]
+  if (unique.length === 0) return []
+
+  const resolved = new Map<string, SaleProductOption>()
+  const productWhere: Record<string, unknown> = { org_id: orgId }
+  if (!opts?.includeInactive) productWhere.status = 'active'
+
+  const variants = await ProductVariant.findAll({
+    where: { id: { [Op.in]: unique }, org_id: orgId },
+    attributes: ['id', 'product_id', 'sku', 'name', 'base_price'],
+    include: [{
+      model: Product,
+      as: 'product',
+      required: true,
+      where: productWhere,
+      attributes: ['id', 'name', 'iva_rate', 'unit_of_measure'],
+    }],
+  })
+
+  for (const variant of variants) {
+    resolved.set(String(variant.id), await mapVariantToSaleOption(variant, priceListId, orgId))
+  }
+
+  const unresolved = unique.filter((id) => !resolved.has(id))
+  if (unresolved.length > 0) {
+    const productLookupWhere: Record<string, unknown> = { id: { [Op.in]: unresolved }, org_id: orgId }
+    if (!opts?.includeInactive) productLookupWhere.status = 'active'
+    const products = await Product.findAll({
+      where: productLookupWhere,
+      attributes: ['id'],
+    })
+    const productIds = new Set(products.map((product) => String(product.id)))
+
+    for (const rawId of unresolved) {
+      if (!productIds.has(rawId)) continue
+      const defaultVariant = await findDefaultSaleVariant(rawId, orgId)
+      if (!defaultVariant) continue
+      const reloadProductWhere: Record<string, unknown> = { org_id: orgId }
+      if (!opts?.includeInactive) reloadProductWhere.status = 'active'
+      await defaultVariant.reload({
+        include: [{
+          model: Product,
+          as: 'product',
+          required: true,
+          where: reloadProductWhere,
+          attributes: ['id', 'name', 'iva_rate', 'unit_of_measure'],
+        }],
+      })
+      resolved.set(rawId, await mapVariantToSaleOption(defaultVariant, priceListId, orgId))
+    }
+  }
+
+  return unique
+    .filter((refId) => resolved.has(refId))
+    .map((refId) => ({ ref_id: refId, ...resolved.get(refId)! }))
+}
+
 export async function listProductsForSale(
   search: string | undefined,
   priceListId: string | undefined,
@@ -689,54 +845,37 @@ export async function listProductsForSale(
   orgId: string,
   manageStock?: boolean,
 ): Promise<SaleProductOption[]> {
-  const { getEffectivePrice } = await import('./price-list.service')
+  const variantWhere: Record<string, unknown> = { org_id: orgId }
+  if (manageStock !== undefined) variantWhere.manage_stock = manageStock
 
-  const where: Record<string, unknown> = { org_id: orgId, status: 'active' }
-  if (search) {
-    where[Op.or as unknown as string] = [
-      { name: { [Op.iLike]: `%${search}%` } },
-      { '$variants.sku$': { [Op.iLike]: `%${search}%` } },
+  const productWhere: Record<string, unknown> = { org_id: orgId, status: 'active' }
+
+  if (search?.trim()) {
+    const q = `%${search.trim()}%`
+    variantWhere[Op.or as unknown as string] = [
+      { sku: { [Op.iLike]: q } },
+      { name: { [Op.iLike]: q } },
+      { '$product.name$': { [Op.iLike]: q } },
     ]
   }
 
-  const variantWhere: Record<string, unknown> = { is_default: true }
-  if (manageStock !== undefined) variantWhere.manage_stock = manageStock
-
-  const rows = await Product.findAll({
-    where,
+  const variants = await ProductVariant.findAll({
+    where: variantWhere,
     limit,
     subQuery: false,
-    order: [['name', 'ASC']],
-    attributes: ['id', 'name', 'iva_rate', 'unit_of_measure'],
+    order: [
+      [{ model: Product, as: 'product' }, 'name', 'ASC'],
+      ['sku', 'ASC'],
+    ],
+    attributes: ['id', 'product_id', 'sku', 'name', 'base_price'],
     include: [{
-      model: ProductVariant,
-      as: 'variants',
-      where: variantWhere,
+      model: Product,
+      as: 'product',
+      where: productWhere,
       required: true,
-      attributes: ['id', 'sku', 'base_price'],
+      attributes: ['id', 'name', 'iva_rate', 'unit_of_measure'],
     }],
   })
 
-  return Promise.all(
-    rows.map(async (row) => {
-      const variants = row.get('variants') as ProductVariant[]
-      const variant = variants[0]
-
-      let price = (variant?.base_price as string | null) ?? '0.00'
-      if (priceListId && variant?.id) {
-        const listPrice = await getEffectivePrice(priceListId, variant.id, orgId)
-        if (listPrice !== null) price = listPrice
-      }
-
-      return {
-        product_id:      row.id,
-        variant_id:      variant.id,
-        name:            row.name,
-        sku:             variant.get('sku') as string,
-        iva_rate:        row.get('iva_rate') as string,
-        unit_of_measure: row.get('unit_of_measure') as string,
-        price,
-      }
-    }),
-  )
+  return Promise.all(variants.map((variant) => mapVariantToSaleOption(variant, priceListId, orgId)))
 }

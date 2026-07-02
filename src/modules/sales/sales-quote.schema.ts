@@ -45,4 +45,9 @@ export const salesQuoteQuerySchema = paginationSchema.extend({
 export type SalesQuoteInput       = z.infer<typeof salesQuoteSchema>
 export type SalesQuoteUpdateInput = z.infer<typeof salesQuoteUpdateSchema>
 export type SalesQuoteQuery       = z.infer<typeof salesQuoteQuerySchema>
+
+export const salesQuoteStatusCountsQuerySchema = salesQuoteQuerySchema
+  .omit({ page: true, limit: true, status: true, expiring_within_days: true })
+
+export type SalesQuoteStatusCountsQuery = z.infer<typeof salesQuoteStatusCountsQuerySchema>
 export type LineItemInput         = z.infer<typeof lineItemSchema>

@@ -10,7 +10,7 @@ import { CurrencyInput } from '@/components/primitives/CurrencyInput'
 import { FULFILLMENT_KIND_LABEL } from '@/modules/logistics/logistics.constants'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifySuccess } from '@/lib/notify'
-import type { ShipmentDetailData, DriverOption } from '../../types'
+import type { ShipmentDetailData, DriverOption, VehicleOption } from '../../types'
 
 export interface DispatchDialogProps {
   open: boolean
@@ -21,11 +21,13 @@ export interface DispatchDialogProps {
 
 export function DispatchDialog({ open, onOpenChange, shipment, onDispatched }: DispatchDialogProps) {
   const isInHouse = shipment.provider_kind === 'in_house'
+  const hasShippingCost = parseFloat(shipment.shipping_cost) > 0
   const [trackingNumber, setTrackingNumber] = useState('')
   const [shippingCost, setShippingCost] = useState('')
   const [driverId, setDriverId] = useState('')
-  const [vehicleRef, setVehicleRef] = useState('')
+  const [vehicleId, setVehicleId] = useState('')
   const [drivers, setDrivers] = useState<DriverOption[]>([])
+  const [vehicles, setVehicles] = useState<VehicleOption[]>([])
   const [saving, setSaving] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -35,7 +37,7 @@ export function DispatchDialog({ open, onOpenChange, shipment, onDispatched }: D
       setTrackingNumber(shipment.tracking_number ?? '')
       setShippingCost(shipment.shipping_cost !== '0.00' ? shipment.shipping_cost : '')
       setDriverId(shipment.assigned_driver_id ?? '')
-      setVehicleRef(shipment.vehicle_ref ?? '')
+      setVehicleId(shipment.vehicle_id ?? '')
       setServerError(null)
     })
   }, [open, shipment])
@@ -45,10 +47,19 @@ export function DispatchDialog({ open, onOpenChange, shipment, onDispatched }: D
     let cancelled = false
     void (async () => {
       try {
-        const res = await fetchJson<{ data: DriverOption[] }>('/api/v1/logistics/drivers')
-        if (!cancelled) setDrivers(res.data ?? [])
+        const [driversRes, vehiclesRes] = await Promise.all([
+          fetchJson<{ data: DriverOption[] }>('/api/v1/logistics/drivers'),
+          fetchJson<{ data: VehicleOption[] }>('/api/v1/logistics/vehicles?is_active=true&limit=100'),
+        ])
+        if (!cancelled) {
+          setDrivers(driversRes.data ?? [])
+          setVehicles(vehiclesRes.data ?? [])
+        }
       } catch {
-        if (!cancelled) setDrivers([])
+        if (!cancelled) {
+          setDrivers([])
+          setVehicles([])
+        }
       }
     })()
     return () => { cancelled = true }
@@ -64,7 +75,7 @@ export function DispatchDialog({ open, onOpenChange, shipment, onDispatched }: D
           ...(trackingNumber.trim() ? { tracking_number: trackingNumber.trim() } : {}),
           ...(shippingCost !== '' ? { shipping_cost: parseFloat(shippingCost) || 0 } : {}),
           ...(isInHouse && driverId ? { assigned_driver_id: driverId } : {}),
-          ...(isInHouse && vehicleRef.trim() ? { vehicle_ref: vehicleRef.trim() } : {}),
+          ...(isInHouse ? { vehicle_id: vehicleId || null } : {}),
         }),
       })
       notifySuccess(`Envío ${shipment.shipment_number} despachado`)
@@ -107,32 +118,58 @@ export function DispatchDialog({ open, onOpenChange, shipment, onDispatched }: D
         )}
         {isInHouse && (
           <>
-            <FormField label="Chofer" htmlFor="driver_id">
+            {(shipment.tracking_number ?? shipment.shipment_number) && (
+              <FormField label="Código de seguimiento interno" htmlFor="internal_tracking">
+                <Input
+                  id="internal_tracking"
+                  value={shipment.tracking_number ?? shipment.shipment_number}
+                  readOnly
+                  className="tabular-nums bg-surface-2"
+                />
+              </FormField>
+            )}
+            <FormField label="Repartidor" htmlFor="driver_id">
               <Select
                 id="driver_id"
                 value={driverId}
                 onChange={setDriverId}
-                options={[{ value: '', label: 'Sin chofer asignado' }, ...drivers.map(d => ({ value: d.id, label: d.name }))]}
-                placeholder="Seleccionar chofer…"
+                options={[{ value: '', label: 'Sin repartidor asignado' }, ...drivers.map(d => ({ value: d.id, label: d.name }))]}
+                placeholder="Seleccionar repartidor…"
               />
             </FormField>
-            <FormField label="Vehículo" htmlFor="vehicle_ref">
-              <Input
-                id="vehicle_ref"
-                value={vehicleRef}
-                onChange={e => setVehicleRef(e.target.value)}
-                placeholder="Ej: Fiorino AB123CD"
+            <FormField label="Vehículo" htmlFor="vehicle_id">
+              <Select
+                id="vehicle_id"
+                value={vehicleId}
+                onChange={setVehicleId}
+                options={[
+                  { value: '', label: 'Sin vehículo asignado' },
+                  ...vehicles.map(v => ({
+                    value: v.id,
+                    label: v.plate ? `${v.label} (${v.plate})` : v.label,
+                  })),
+                ]}
+                placeholder="Seleccionar vehículo…"
               />
             </FormField>
+            {vehicles.length === 0 && (
+              <p className="text-[12px] text-fg-muted">
+                Cargá vehículos en{' '}
+                <a href="/logistica/vehiculos" className="text-brand-600 hover:underline">Logística → Vehículos</a>.
+              </p>
+            )}
           </>
         )}
-        <FormField label="Costo de envío (ARS)" htmlFor="shipping_cost">
-          <CurrencyInput
-            id="shipping_cost"
-            value={shippingCost}
-            onChange={setShippingCost}
-          />
-        </FormField>
+        {!hasShippingCost && (
+          <FormField label="Costo de envío (opcional)" htmlFor="shipping_cost">
+            <CurrencyInput
+              id="shipping_cost"
+              value={shippingCost}
+              onChange={setShippingCost}
+            />
+            <p className="text-[12px] text-fg-muted">Solo si no quedó definido al crear el envío.</p>
+          </FormField>
+        )}
       </div>
     </Dialog>
   )

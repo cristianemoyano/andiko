@@ -115,7 +115,7 @@ describe('assertSaleLineItemsHaveBranchStock', () => {
 
   it('ignores variants without stock control', async () => {
     ;(ProductVariant.findAll as Mock).mockResolvedValue([
-      { id: variantId, manage_stock: false, get: (key: string) => (key === 'product' ? { product_type: 'product' } : undefined) },
+      { id: variantId, manage_stock: false, allow_backorder: false, get: (key: string) => (key === 'product' ? { product_type: 'product' } : undefined) },
     ])
     ;(resolveWarehouseForBranch as Mock).mockResolvedValue('wh-1')
     ;(StockItem.findAll as Mock).mockResolvedValue([{ variant_id: variantId, quantity: '0' }])
@@ -123,6 +123,27 @@ describe('assertSaleLineItemsHaveBranchStock', () => {
     await expect(
       assertSaleLineItemsHaveBranchStock(
         [{ variant_id: variantId, quantity: 99 }],
+        branchId,
+        'org-1',
+      ),
+    ).resolves.toBeUndefined()
+  })
+
+  it('allows quantities above available stock when backorder is enabled', async () => {
+    ;(ProductVariant.findAll as Mock).mockResolvedValue([
+      {
+        id: variantId,
+        manage_stock: true,
+        allow_backorder: true,
+        get: (key: string) => (key === 'product' ? { product_type: 'product' } : undefined),
+      },
+    ])
+    ;(resolveWarehouseForBranch as Mock).mockResolvedValue('wh-1')
+    ;(StockItem.findAll as Mock).mockResolvedValue([{ variant_id: variantId, quantity: '2' }])
+
+    await expect(
+      assertSaleLineItemsHaveBranchStock(
+        [{ variant_id: variantId, quantity: 10 }],
         branchId,
         'org-1',
       ),

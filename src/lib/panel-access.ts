@@ -2,7 +2,7 @@ import { NAV_MODULES } from '@/components/layout/nav-items'
 import { resolveModuleForPath, type OrgModuleKey } from '@/modules/auth/organization-modules'
 import type { Permission } from '@/lib/permissions'
 import type { UiCapabilities } from '@/types/capabilities'
-import { hasModuleReadAccess, isModuleNavVisible } from '@/lib/nav-module-access'
+import { hasLogisticsReadAccess, hasModuleReadAccess, isModuleNavVisible } from '@/lib/nav-module-access'
 
 export const SIN_ACCESO_PATH = '/sin-acceso' as const
 
@@ -22,6 +22,9 @@ export function isPathModuleAccessible(
   if (!moduleForPath) return true
   if (enabledModules && !enabledModules.includes(moduleForPath)) return false
   if (!permissions) return false
+  if (pathname === '/logistica' || pathname.startsWith('/logistica/')) {
+    return hasLogisticsReadAccess(permissions)
+  }
   return hasModuleReadAccess(moduleForPath, permissions)
 }
 

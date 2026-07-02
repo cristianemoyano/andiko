@@ -10,8 +10,18 @@ import type { IvaRate } from '@/types'
 import { fetchJson } from '@/lib/fetch-json'
 import {
   formatBranchStockLabel,
+  lineItemsNeedCatalogResolve,
+  resolveLineItemCatalogRefs,
+  type BranchStockInfo,
   type BranchStockMap,
 } from '@/lib/sales-line-items-form'
+
+type BranchStockRow = {
+  variant_id: string
+  quantity: string
+  manage_stock: boolean
+  allow_backorder: boolean
+}
 
 export interface LineItemInput {
   id: string
@@ -30,6 +40,7 @@ export interface SalesLineItemsEditorProps {
   priceListId?: string | null
   branchId?: string | null
   onStockMapChange?: (map: BranchStockMap) => void
+  onCatalogResolvingChange?: (resolving: boolean) => void
   disabled?: boolean
 }
 
@@ -42,10 +53,49 @@ type SaleProduct = {
   price: string
 }
 
-type BranchStockRow = {
-  variant_id: string
-  quantity: string
-  manage_stock: boolean
+function formatProductOptionSublabel(
+  sku: string,
+  stock?: BranchStockInfo | null,
+): string {
+  if (!stock) return sku
+  if (!stock.manage_stock) return `${sku} · Sin control de stock`
+  if (stock.allow_backorder) {
+    return `${sku} · Stock: ${formatBranchStockLabel(stock.quantity)} · Reservas`
+  }
+  return `${sku} · Stock: ${formatBranchStockLabel(stock.quantity)}`
+}
+
+function saleProductToOption(
+  product: SaleProduct,
+  stock?: BranchStockInfo | null,
+): SearchableSelectOption {
+  return {
+    value: product.variant_id,
+    label: product.name,
+    sublabel: formatProductOptionSublabel(product.sku, stock),
+  }
+}
+
+async function fetchBranchStockMap(
+  branchId: string,
+  variantIds: string[],
+): Promise<BranchStockMap> {
+  if (variantIds.length === 0) return {}
+
+  const params = new URLSearchParams({
+    branch_id: branchId,
+    variant_ids: variantIds.join(','),
+  })
+  const res = await fetchJson<{ data: BranchStockRow[] }>(`/api/v1/sales/branch-stock?${params}`)
+  const map: BranchStockMap = {}
+  for (const row of res.data ?? []) {
+    map[row.variant_id] = {
+      quantity: parseFloat(row.quantity) || 0,
+      manage_stock: row.manage_stock,
+      allow_backorder: row.allow_backorder,
+    }
+  }
+  return map
 }
 
 const IVA_OPTIONS: { value: IvaRate; label: string }[] = [
@@ -114,7 +164,7 @@ function computeOverstockLines(items: LineItemInput[], stockByVariant: BranchSto
   items.forEach((item, index) => {
     if (!item.variant_id) return
     const stock = stockByVariant[item.variant_id]
-    if (!stock?.manage_stock) return
+    if (!stock?.manage_stock || stock.allow_backorder) return
     const qty = parseFloat(item.quantity) || 0
     if (qty <= 0) return
     const prev = demandByVariant.get(item.variant_id)
@@ -137,43 +187,114 @@ function computeOverstockLines(items: LineItemInput[], stockByVariant: BranchSto
 }
 
 interface ProductCellProps {
-  productId: string | null
+  variantId: string | null
   priceListId?: string | null
+  branchId?: string | null
   disabled?: boolean
-  onSelect: (productId: string | null, product?: SaleProduct) => void
+  onSelect: (variantId: string | null, product?: SaleProduct) => void
 }
 
-function ProductCell({ productId, priceListId, disabled, onSelect }: ProductCellProps) {
+function ProductCell({ variantId, priceListId, branchId, disabled, onSelect }: ProductCellProps) {
   const cacheRef = useRef<SaleProduct[]>([])
+  const [selectedOption, setSelectedOption] = useState<SearchableSelectOption | null>(null)
+
+  useEffect(() => {
+    if (!variantId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear label when variant cleared
+      setSelectedOption(null)
+      return
+    }
+
+    let cancelled = false
+    const params = new URLSearchParams({ variant_ids: variantId })
+    if (priceListId) params.set('price_list_id', priceListId)
+
+    void fetchJson<{ data: SaleProduct[] }>(`/api/v1/catalog/products/for-sale?${params}`)
+      .then(async (data) => {
+        if (cancelled) return
+        const product = data.data?.[0] ?? null
+        if (!product) {
+          setSelectedOption(null)
+          return
+        }
+        cacheRef.current = [product, ...cacheRef.current.filter((row) => row.variant_id !== product.variant_id)]
+        let stock: BranchStockInfo | null = null
+        if (branchId) {
+          try {
+            const stockMap = await fetchBranchStockMap(branchId, [product.variant_id])
+            stock = stockMap[product.variant_id] ?? null
+          } catch {
+            stock = null
+          }
+        }
+        if (cancelled) return
+        setSelectedOption(saleProductToOption(product, stock))
+      })
+      .catch(() => {
+        if (!cancelled) setSelectedOption(null)
+      })
+
+    return () => { cancelled = true }
+  }, [variantId, priceListId, branchId])
 
   const searchProducts = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
     const params = new URLSearchParams({ search: q, limit: '20' })
     if (priceListId) params.set('price_list_id', priceListId)
     try {
       const data = await fetchJson<{ data: SaleProduct[] }>(`/api/v1/catalog/products/for-sale?${params}`)
-      cacheRef.current = data.data ?? []
+      const rows = data.data ?? []
+      cacheRef.current = [
+        ...rows,
+        ...cacheRef.current.filter((cached) => !rows.some((row) => row.variant_id === cached.variant_id)),
+      ]
+      let stockMap: BranchStockMap = {}
+      if (branchId && rows.length > 0) {
+        try {
+          stockMap = await fetchBranchStockMap(branchId, rows.map((row) => row.variant_id))
+        } catch {
+          stockMap = {}
+        }
+      }
+      return cacheRef.current.map((row) => saleProductToOption(row, stockMap[row.variant_id] ?? null))
     } catch {
-      cacheRef.current = []
+      cacheRef.current = selectedOption
+        ? cacheRef.current.filter((row) => row.variant_id === selectedOption.value)
+        : []
     }
-    return cacheRef.current.map(p => ({
-      value:    p.product_id,
-      label:    p.name,
-      sublabel: p.sku,
-    }))
-  }, [priceListId])
+    return cacheRef.current.map((row) => saleProductToOption(row))
+  }, [branchId, priceListId, selectedOption])
 
   function handleChange(value: string | null) {
-    if (!value) { onSelect(null); return }
-    const found = cacheRef.current.find(p => p.product_id === value)
+    if (!value) {
+      setSelectedOption(null)
+      onSelect(null)
+      return
+    }
+    const found = cacheRef.current.find((row) => row.variant_id === value)
+    if (found) {
+      void (async () => {
+        let stock: BranchStockInfo | null = null
+        if (branchId) {
+          try {
+            const stockMap = await fetchBranchStockMap(branchId, [found.variant_id])
+            stock = stockMap[found.variant_id] ?? null
+          } catch {
+            stock = null
+          }
+        }
+        setSelectedOption(saleProductToOption(found, stock))
+      })()
+    }
     onSelect(value, found)
   }
 
   return (
     <SearchableSelect
-      value={productId}
+      value={variantId}
       onChange={handleChange}
       onSearch={searchProducts}
-      placeholder="Buscar producto…"
+      options={selectedOption ? [selectedOption] : []}
+      placeholder={variantId && !selectedOption ? 'Cargando…' : 'Buscar producto…'}
       disabled={disabled}
       clearable
     />
@@ -186,9 +307,11 @@ export function SalesLineItemsEditor({
   priceListId,
   branchId,
   onStockMapChange,
+  onCatalogResolvingChange,
   disabled,
 }: SalesLineItemsEditorProps) {
   const [stockByVariant, setStockByVariant] = useState<BranchStockMap>({})
+  const [catalogResolving, setCatalogResolving] = useState(false)
 
   const variantIds = useMemo(
     () => [...new Set(items.map((item) => item.variant_id).filter((id): id is string => Boolean(id)))],
@@ -212,6 +335,44 @@ export function SalesLineItemsEditor({
   }, [items])
 
   const prevPriceListIdRef = useRef<string | null | undefined>(undefined)
+
+  const catalogResolveKey = useMemo(() => {
+    if (!lineItemsNeedCatalogResolve(items)) return ''
+    return items
+      .map((item) => `${item.product_id ?? ''}:${item.variant_id ?? ''}:${item.description ?? ''}`)
+      .join('|')
+  }, [items])
+
+  useEffect(() => {
+    if (!catalogResolveKey) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- no catalog refs to resolve
+      setCatalogResolving(false)
+      onCatalogResolvingChange?.(false)
+      return
+    }
+
+    let cancelled = false
+    setCatalogResolving(true)
+    onCatalogResolvingChange?.(true)
+
+    void resolveLineItemCatalogRefs(itemsRef.current, priceListId)
+      .then((next) => {
+        if (cancelled) return
+        const changed = next.some((item, index) => {
+          const prev = itemsRef.current[index]
+          return item.product_id !== prev?.product_id || item.variant_id !== prev?.variant_id
+        })
+        if (changed) onChangeRef.current(next)
+      })
+      .catch(() => { /* keep manual selection flow */ })
+      .finally(() => {
+        if (cancelled) return
+        setCatalogResolving(false)
+        onCatalogResolvingChange?.(false)
+      })
+
+    return () => { cancelled = true }
+  }, [catalogResolveKey, priceListId, onCatalogResolvingChange])
 
   useEffect(() => {
     if (variantIds.length === 0) return
@@ -270,6 +431,7 @@ export function SalesLineItemsEditor({
           map[row.variant_id] = {
             quantity: parseFloat(row.quantity) || 0,
             manage_stock: row.manage_stock,
+            allow_backorder: row.allow_backorder,
           }
         }
         setStockByVariant(map)
@@ -295,13 +457,13 @@ export function SalesLineItemsEditor({
     onChange(items.map(i => i.id === id ? { ...i, ...patch } : i))
   }
 
-  function handleProductSelect(itemId: string, productId: string | null, product?: SaleProduct) {
-    if (!productId || !product) {
-      updateItem(itemId, { product_id: productId ?? null, variant_id: null })
+  function handleProductSelect(itemId: string, variantId: string | null, product?: SaleProduct) {
+    if (!variantId || !product) {
+      updateItem(itemId, { product_id: null, variant_id: null })
       return
     }
     updateItem(itemId, {
-      product_id:  productId,
+      product_id:  product.product_id,
       variant_id:  product.variant_id,
       description: product.name,
       unit_price:  product.price,
@@ -325,6 +487,13 @@ export function SalesLineItemsEditor({
       return <span className="text-[10px] text-fg-subtle">Sin control de stock</span>
     }
     const over = overstockLines.has(lineIndex)
+    if (stock.allow_backorder) {
+      return (
+        <span className="text-[10px] tabular-nums text-fg-muted">
+          Stock: {formatBranchStockLabel(stock.quantity)} · Reservas
+        </span>
+      )
+    }
     return (
       <span className={`text-[10px] tabular-nums ${over ? 'text-danger font-medium' : 'text-fg-muted'}`}>
         Stock: {formatBranchStockLabel(stock.quantity)}
@@ -337,6 +506,9 @@ export function SalesLineItemsEditor({
       <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide mb-2">
         Ítems
       </p>
+      {catalogResolving && (
+        <p className="text-[12px] text-fg-muted mb-2">Vinculando productos del catálogo…</p>
+      )}
       {showStock && overstockLines.size > 0 && (
         <p className="text-[12px] text-danger mb-2">
           Hay ítems sin stock suficiente en la sucursal.{' '}
@@ -372,10 +544,11 @@ export function SalesLineItemsEditor({
                   <td className="px-2 py-1">
                     <div className="flex flex-col gap-0.5">
                       <ProductCell
-                        productId={item.product_id}
+                        variantId={item.variant_id}
                         priceListId={priceListId}
+                        branchId={branchId}
                         disabled={disabled}
-                        onSelect={(productId, product) => handleProductSelect(item.id, productId, product)}
+                        onSelect={(variantId, product) => handleProductSelect(item.id, variantId, product)}
                       />
                     </div>
                   </td>

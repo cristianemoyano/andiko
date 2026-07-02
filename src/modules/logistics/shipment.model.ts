@@ -21,6 +21,7 @@ export interface ShipmentAttributes extends Timestamps, AuditFields {
   tracking_url: string | null
   label_url: string | null
   assigned_driver_id: UUID | null
+  vehicle_id: UUID | null
   vehicle_ref: string | null
   shipping_cost: string
   currency: string
@@ -45,7 +46,7 @@ type ShipmentCreationAttributes = Optional<
   ShipmentAttributes,
   | 'id' | 'org_id' | 'carrier_account_id' | 'warehouse_id'
   | 'status' | 'tracking_number' | 'tracking_url' | 'label_url'
-  | 'assigned_driver_id' | 'vehicle_ref' | 'shipping_cost' | 'currency'
+  | 'assigned_driver_id' | 'vehicle_id' | 'vehicle_ref' | 'shipping_cost' | 'currency'
   | 'ship_to_name' | 'ship_to_phone' | 'ship_street' | 'ship_number' | 'ship_floor' | 'ship_apartment'
   | 'ship_city' | 'ship_province' | 'ship_postal_code' | 'ship_country'
   | 'promised_date' | 'dispatched_at' | 'delivered_at' | 'delivery_notes' | 'failure_reason'
@@ -65,6 +66,7 @@ class Shipment extends AuditModel<ShipmentAttributes, ShipmentCreationAttributes
   declare tracking_url: string | null
   declare label_url: string | null
   declare assigned_driver_id: UUID | null
+  declare vehicle_id: UUID | null
   declare vehicle_ref: string | null
   declare shipping_cost: string
   declare currency: string
@@ -99,6 +101,7 @@ Shipment.init(
     tracking_url:       { type: DataTypes.TEXT },
     label_url:          { type: DataTypes.TEXT },
     assigned_driver_id: { type: DataTypes.UUID },
+    vehicle_id:         { type: DataTypes.UUID },
     vehicle_ref:        { type: DataTypes.STRING(60) },
     shipping_cost:      { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
     currency:           { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'ARS' },

@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withPermission } from '@/lib/api-handler'
 import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
-import { listProductsForSale } from '@/modules/catalog/products.service'
+import { listProductsForSale, listSaleVariantsByIds, resolveSaleLineCatalogRefs } from '@/modules/catalog/products.service'
 
 const querySchema = z.object({
   search:        z.string().min(1).max(100).optional(),
   price_list_id: z.string().uuid().optional(),
   manage_stock:  z.enum(['true', 'false']).optional(),
   limit:         z.coerce.number().int().min(1).max(50).default(20),
+  variant_ids:   z.string().max(4000).optional(),
+  resolve_ids:   z.string().max(4000).optional(),
 })
 
 export const GET = withPermission('sales:read', async (req, _ctx, session) => {
@@ -20,8 +22,21 @@ export const GET = withPermission('sales:read', async (req, _ctx, session) => {
     const ctxResult = await resolveTenantContext(session.user)
     if ('error' in ctxResult) return ctxResult.error
     const ctx = ctxResult.ctx
-    const { search, price_list_id, manage_stock, limit } = parsed.data
+    const { search, price_list_id, manage_stock, limit, variant_ids, resolve_ids } = parsed.data
     const manageStockFilter = manage_stock === 'true' ? true : manage_stock === 'false' ? false : undefined
+
+    if (resolve_ids) {
+      const ids = resolve_ids.split(',').map((id) => id.trim()).filter(Boolean)
+      const data = await resolveSaleLineCatalogRefs(ids, price_list_id, ctx.orgId, { includeInactive: true })
+      return NextResponse.json({ data })
+    }
+
+    if (variant_ids) {
+      const ids = variant_ids.split(',').map((id) => id.trim()).filter(Boolean)
+      const data = await listSaleVariantsByIds(ids, price_list_id, ctx.orgId, { includeInactive: true })
+      return NextResponse.json({ data })
+    }
+
     const data = await listProductsForSale(search, price_list_id, limit, ctx.orgId, manageStockFilter)
     return NextResponse.json({ data })
   } catch (err: unknown) {

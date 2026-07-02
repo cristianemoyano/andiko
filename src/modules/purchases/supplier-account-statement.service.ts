@@ -12,6 +12,7 @@ export type SupplierAccountStatementLine = {
   id: string
   movement_type: 'invoice' | 'payment'
   movement_id: string
+  related_id: string | null
   date: string
   document_number: string
   description: string | null
@@ -35,6 +36,7 @@ type MovementDraft = {
   id: string
   movement_type: 'invoice' | 'payment'
   movement_id: string
+  related_id: string | null
   date: Date
   document_number: string
   description: string | null
@@ -102,12 +104,13 @@ export async function getSupplierAccountStatement(contactId: string, query: Acco
   })
 
   let runningBalance = openingBalance
-  const linesWithBalance: SupplierAccountStatementLine[] = filteredMovements.map(m => {
+  const linesWithBalanceAsc: SupplierAccountStatementLine[] = filteredMovements.map(m => {
     runningBalance = runningBalance.plus(m.debit).minus(m.credit)
     return {
       id: m.id,
       movement_type: m.movement_type,
       movement_id: m.movement_id,
+      related_id: m.related_id,
       date: m.date.toISOString(),
       document_number: m.document_number,
       description: m.description,
@@ -117,6 +120,8 @@ export async function getSupplierAccountStatement(contactId: string, query: Acco
       running_balance: runningBalance.toFixed(2),
     }
   })
+
+  const linesWithBalance = linesWithBalanceAsc.reverse()
 
   const { offset } = paginate(query.page, query.limit)
   const pagedLines = linesWithBalance.slice(offset, offset + query.limit)
@@ -180,6 +185,7 @@ function buildMovements(invoices: SupplierInvoice[], payments: SupplierPayment[]
       id: `invoice:${invoice.id}`,
       movement_type: 'invoice',
       movement_id: String(invoice.id),
+      related_id: null,
       date: invoice.invoice_date ? new Date(invoice.invoice_date) : new Date(invoice.created_at),
       document_number: String(invoice.invoice_number),
       description: invoice.notes ? String(invoice.notes) : null,
@@ -197,6 +203,7 @@ function buildMovements(invoices: SupplierInvoice[], payments: SupplierPayment[]
       id: `payment:${payment.id}`,
       movement_type: 'payment',
       movement_id: String(payment.id),
+      related_id: String(payment.invoice_id),
       date: new Date(payment.payment_date),
       document_number: String(payment.payment_number),
       description: payment.notes ? String(payment.notes) : null,

@@ -1,4 +1,4 @@
-import type { FulfillmentProvider, ProviderCapabilities, DispatchResult, RateQuote, TrackingUpdate } from './fulfillment-provider'
+import type { FulfillmentProvider, ProviderCapabilities, DispatchRequest, DispatchResult, RateQuote, TrackingUpdate } from './fulfillment-provider'
 import { ProviderNotSupportedError } from './fulfillment-provider'
 
 /**
@@ -19,8 +19,9 @@ export class InHouseProvider implements FulfillmentProvider {
     throw new ProviderNotSupportedError(this.kind, 'getRate')
   }
 
-  async dispatch(): Promise<DispatchResult> {
-    return { trackingNumber: null, trackingUrl: null, labelUrl: null, cost: null }
+  async dispatch(req: DispatchRequest): Promise<DispatchResult> {
+    const trackingNumber = req.trackingNumber ?? req.shipmentNumber
+    return { trackingNumber, trackingUrl: null, labelUrl: null, cost: null }
   }
 
   async getTracking(): Promise<TrackingUpdate[]> {

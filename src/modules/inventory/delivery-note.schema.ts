@@ -17,7 +17,7 @@ export const deliveryNoteSchema = z.object({
   contact_id:      z.string().uuid().nullable().optional(),
   warehouse_id:    z.string().uuid().nullable().optional(),
   delivery_date:   z.string().datetime({ offset: true }).transform(s => new Date(s)).nullable().optional(),
-  carrier:         z.string().max(255).nullable().optional(),
+  carrier_account_id: z.string().uuid().nullable().optional(),
   tracking_code:   z.string().max(100).nullable().optional(),
   ship_to_address: z.string().nullable().optional(),
   notes:           z.string().nullable().optional(),

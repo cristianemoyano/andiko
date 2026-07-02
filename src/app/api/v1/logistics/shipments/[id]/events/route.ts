@@ -4,7 +4,7 @@ import { logisticsErrorResponse } from '@/lib/logistics-route-errors'
 import { shipmentEventInputSchema } from '@/modules/logistics/shipment.schema'
 import { recordShipmentEvent } from '@/modules/logistics/shipments.service'
 
-export const POST = withTenantPermission<{ id: string }>('sales:write', async (req, routeCtx, session, ctx) => {
+export const POST = withTenantPermission<{ id: string }>('logistics:write', async (req, routeCtx, session, ctx) => {
   const { id } = await routeCtx.params
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON', code: 'PARSE_ERROR' }, { status: 400 }) }

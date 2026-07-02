@@ -2,8 +2,17 @@ import { QueryTypes } from 'sequelize'
 import type { Transaction } from 'sequelize'
 import sequelize from '@/lib/db'
 
+import type { PaymentCondition } from '@/types'
+
 export { calcLineItem, calcDocumentTotals } from './sales.math'
 export type { LineItemTotals, DocumentTotals } from './sales.math'
+
+export function computeInvoiceDueDate(issueDate: Date, paymentCondition: PaymentCondition | string): Date {
+  const days: Record<string, number> = { cash: 0, net_30: 30, net_60: 60, net_90: 90 }
+  const d = new Date(issueDate)
+  d.setDate(d.getDate() + (days[paymentCondition] ?? 0))
+  return d
+}
 
 type DocumentType = 'quote' | 'order' | 'invoice' | 'payment' | 'credit_note' | 'debit_note' | 'sales_return' | 'sales_refund' | 'shipment'
 

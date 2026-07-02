@@ -41,9 +41,22 @@ describe('fulfillment provider registry', () => {
 })
 
 describe('in-house provider', () => {
-  it('dispatch returns no tracking data (driver-driven flow)', async () => {
+  it('dispatch uses shipment number as internal tracking code', async () => {
     const result = await getFulfillmentProvider('in_house').dispatch(baseRequest)
-    expect(result).toEqual({ trackingNumber: null, trackingUrl: null, labelUrl: null, cost: null })
+    expect(result).toEqual({
+      trackingNumber: 'ENV-01-0001',
+      trackingUrl: null,
+      labelUrl: null,
+      cost: null,
+    })
+  })
+
+  it('dispatch keeps an explicit tracking number when provided', async () => {
+    const result = await getFulfillmentProvider('in_house').dispatch({
+      ...baseRequest,
+      trackingNumber: 'CUSTOM-99',
+    })
+    expect(result.trackingNumber).toBe('CUSTOM-99')
   })
 })
 

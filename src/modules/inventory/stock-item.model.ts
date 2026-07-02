@@ -3,6 +3,7 @@ import sequelize from '@/lib/db'
 import type { UUID } from '@/types'
 import Warehouse from './warehouse.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
+import { ensureAssociation, registeredModel } from '@/lib/sequelize-models'
 
 export interface StockItemAttributes {
   id: UUID
@@ -48,10 +49,21 @@ StockItem.init(
   { sequelize, tableName: 'stock_items', paranoid: false, underscored: true }
 )
 
-Warehouse.hasMany(StockItem, { foreignKey: 'warehouse_id', as: 'stockItems' })
-StockItem.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' })
+const WarehouseModel = registeredModel('Warehouse', Warehouse)
+const StockItemModel = registeredModel('StockItem', StockItem)
+const ProductVariantModel = registeredModel('ProductVariant', ProductVariant)
 
-StockItem.belongsTo(ProductVariant, { foreignKey: 'variant_id', as: 'variant' })
-ProductVariant.hasMany(StockItem, { foreignKey: 'variant_id', as: 'stockItems' })
+ensureAssociation(WarehouseModel, 'stockItems', () => {
+  WarehouseModel.hasMany(StockItemModel, { foreignKey: 'warehouse_id', as: 'stockItems' })
+})
+ensureAssociation(StockItemModel, 'warehouse', () => {
+  StockItemModel.belongsTo(WarehouseModel, { foreignKey: 'warehouse_id', as: 'warehouse' })
+})
+ensureAssociation(StockItemModel, 'variant', () => {
+  StockItemModel.belongsTo(ProductVariantModel, { foreignKey: 'variant_id', as: 'variant' })
+})
+ensureAssociation(ProductVariantModel, 'stockItems', () => {
+  ProductVariantModel.hasMany(StockItemModel, { foreignKey: 'variant_id', as: 'stockItems' })
+})
 
 export default StockItem

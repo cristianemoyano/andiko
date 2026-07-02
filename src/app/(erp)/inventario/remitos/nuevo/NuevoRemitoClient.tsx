@@ -12,6 +12,10 @@ import { DatePicker } from '@/components/primitives/DatePicker'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
+import { useBranchDefaultWarehouse } from '@/components/erp/useBranchDefaultWarehouse'
+import { useBranchCarrierAccounts } from '@/components/erp/useBranchCarrierAccounts'
+import { Select } from '@/components/primitives/Select'
+import { FULFILLMENT_KIND_LABEL } from '@/modules/logistics/logistics.constants'
 import { InventarioSubNav } from '../../InventarioSubNav'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
@@ -49,9 +53,9 @@ export function NuevoRemitoClient() {
   const [branchId,           setBranchId]           = useState<string | null>(null)
   const [contactId,          setContactId]          = useState<string | null>(null)
   const [contactInitialOpts, setContactInitialOpts] = useState<SearchableSelectOption[]>([])
-  const [warehouseId,        setWarehouseId]        = useState<string | null>(null)
+  const { warehouseId, setWarehouseId, warehouseOptions, searchWarehouses } = useBranchDefaultWarehouse(branchId)
+  const { carriers, carrierId, setCarrierId } = useBranchCarrierAccounts(branchId)
   const [deliveryDate,       setDeliveryDate]       = useState<Date | null>(new Date())
-  const [carrier,            setCarrier]            = useState('')
   const [trackingCode,       setTrackingCode]       = useState('')
   const [notes,              setNotes]              = useState('')
   const [items,              setItems]              = useState<RemitoItem[]>([])
@@ -65,17 +69,6 @@ export function NuevoRemitoClient() {
         `/api/v1/contacts?search=${encodeURIComponent(q)}&limit=20&type=customer`,
       )
       return (data.data ?? []).map(c => ({ value: c.id, label: c.legal_name, sublabel: c.trade_name ?? undefined }))
-    } catch {
-      return []
-    }
-  }, [])
-
-  const searchWarehouses = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
-    try {
-      const data = await fetchJson<{ data: Array<{ id: string; name: string }> }>(
-        `/api/v1/inventory/warehouses?search=${encodeURIComponent(q)}&limit=20`,
-      )
-      return (data.data ?? []).map(w => ({ value: w.id, label: w.name }))
     } catch {
       return []
     }
@@ -137,7 +130,7 @@ export function NuevoRemitoClient() {
       contact_id:    contactId,
       warehouse_id:  warehouseId,
       delivery_date: deliveryDate ? deliveryDate.toISOString() : new Date().toISOString(),
-      carrier:       carrier.trim() || null,
+      carrier_account_id: carrierId || null,
       tracking_code: trackingCode.trim() || null,
       notes:         notes.trim() || null,
       items: lineItems.map(i => ({
@@ -207,8 +200,10 @@ export function NuevoRemitoClient() {
                 <SearchableSelect
                   value={warehouseId}
                   onChange={setWarehouseId}
+                  options={warehouseOptions}
                   onSearch={searchWarehouses}
-                  placeholder="Buscar depósito…"
+                  placeholder={branchId ? 'Buscar depósito…' : 'Elegí una sucursal primero'}
+                  disabled={!branchId}
                 />
               </FormField>
 
@@ -227,7 +222,24 @@ export function NuevoRemitoClient() {
               </FormField>
 
               <FormField label="Transportista">
-                <Input value={carrier} onChange={e => setCarrier(e.target.value)} placeholder="Nombre del transportista…" />
+                {!branchId ? (
+                  <p className="text-[13px] text-fg-muted">Elegí una sucursal primero</p>
+                ) : carriers.length === 0 ? (
+                  <p className="rounded-sm border border-warning bg-warning-bg px-3 py-2 text-[13px] text-warning">
+                    No hay transportistas activos. Configurá al menos uno en{' '}
+                    <a href="/logistica/transportistas" className="underline">Logística → Transportistas</a>.
+                  </p>
+                ) : (
+                  <Select
+                    value={carrierId}
+                    onChange={setCarrierId}
+                    options={carriers.map(c => ({
+                      value: c.id,
+                      label: `${c.name} (${FULFILLMENT_KIND_LABEL[c.kind]})`,
+                    }))}
+                    placeholder="Seleccionar transportista…"
+                  />
+                )}
               </FormField>
 
               <FormField label="Código de seguimiento">

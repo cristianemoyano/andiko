@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { withTenantPermission, resolveActorId } from '@/lib/api-handler'
+import { withTenantAnyPermission, withTenantPermission, resolveActorId } from '@/lib/api-handler'
 import { logisticsErrorResponse } from '@/lib/logistics-route-errors'
 import { carrierAccountQuerySchema, carrierAccountSchema } from '@/modules/logistics/carrier-account.schema'
 import { listCarrierAccounts, createCarrierAccount } from '@/modules/logistics/carrier-accounts.service'
 
-export const GET = withTenantPermission('sales:read', async (req, _ctx, _session, ctx) => {
+export const GET = withTenantAnyPermission(['logistics:read', 'inventory:read', 'sales:read'], async (req, _ctx, _session, ctx) => {
   const parsed = carrierAccountQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
@@ -13,7 +13,7 @@ export const GET = withTenantPermission('sales:read', async (req, _ctx, _session
   return NextResponse.json(result)
 })
 
-export const POST = withTenantPermission('sales:write', async (req, _ctx, session, ctx) => {
+export const POST = withTenantPermission('logistics:write', async (req, _ctx, session, ctx) => {
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON', code: 'PARSE_ERROR' }, { status: 400 }) }
 

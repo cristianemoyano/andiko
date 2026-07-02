@@ -7,13 +7,19 @@ import SalesOrder from './sales-order.model'
 import SalesOrderItem from './sales-order-item.model'
 import Invoice from './invoice.model'
 import InvoiceItem from './invoice-item.model'
-import type { SalesOrderInput, SalesOrderUpdateInput, SalesOrderQuery } from './sales-order.schema'
+import Payment from './payment.model'
+import type { SalesOrderInput, SalesOrderUpdateInput, SalesOrderQuery, SalesOrderStatusCountsQuery } from './sales-order.schema'
+import type { OrderBillInput } from './order-bill.schema'
+import { recalcInvoiceBalance } from './invoices.service'
+import Decimal from 'decimal.js'
+import type { Transaction } from 'sequelize'
 import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
 import User from '@/modules/auth/user.model'
 import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { buildBranchRenumberPatch, assertDraftBranchChange, DOCUMENT_BRANCH_NOT_CHANGEABLE } from '@/lib/branch-document-renumber'
-import { nextDocumentNumber, calcLineItem, calcDocumentTotals } from './sales.utils'
+import { nextDocumentNumber, calcLineItem, calcDocumentTotals, computeInvoiceDueDate } from './sales.utils'
+import { isOrderInvoiceable } from './sales-order-workflow'
 import type { IvaRate } from '@/types'
 import type { TenantContext } from '@/lib/tenancy'
 import { whereAllowedBranches, whereBranch } from '@/lib/tenancy'
@@ -26,12 +32,16 @@ import {
 } from '@/modules/integrations/woocommerce/woo-order-channel.utils'
 import { assertSaleLineItemsFromActiveCatalog } from './sales-line-items.validation'
 import { assertSaleLineItemsHaveBranchStock } from './sales-line-stock.service'
+import { loadProductTypesById } from './order-item-product-types'
+import type { OrderStatus } from './sales-order.model'
 
-export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
-  ensureSalesBranchAssociations()
+type OrdersListFilterQuery = Pick<
+  SalesOrderQuery,
+  'search' | 'status' | 'statuses' | 'contact_id' | 'quote_id' | 'source' | 'woo_status' | 'branch_id' | 'from' | 'to'
+>
 
-  const { page, limit, search, status, contact_id, quote_id, source, woo_status, branch_id, from, to } = query
-  const { offset } = paginate(page, limit)
+function buildOrdersListWhere(query: OrdersListFilterQuery, ctx: TenantContext) {
+  const { search, status, statuses, contact_id, quote_id, source, woo_status, branch_id, from, to } = query
 
   const createdAtWhere =
     from || to
@@ -43,30 +53,44 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
         }
       : {}
 
-  const where = combineListWhere(
+  const statusWhere = statuses?.length
+    ? { status: { [Op.in]: statuses } }
+    : status
+      ? { status }
+      : {}
+
+  return combineListWhere(
     whereAllowedBranches(ctx),
     whereSalesOwnScope(ctx),
     branch_id ? { branch_id } : {},
     createdAtWhere,
-    status ? { status } : {},
+    statusWhere,
     woo_status ? wooOrderStatusListWhere(ctx.orgId, woo_status) : {},
     contact_id ? { contact_id } : {},
     quote_id ? { quote_id } : {},
     source ? { source } : {},
     search ? { [Op.or]: [{ order_number: { [Op.iLike]: `%${search}%` } }] } : {},
   )
+}
+
+export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
+  ensureSalesBranchAssociations()
+
+  const { page, limit } = query
+  const { offset } = paginate(page, limit)
+  const where = buildOrdersListWhere(query, ctx)
 
   const { rows, count } = await SalesOrder.findAndCountAll({
     where,
     limit,
     offset,
-    order: [['created_at', 'DESC']],
+    order: [['updated_at', 'DESC']],
     attributes: [
       'id', 'branch_id', 'order_number', 'status', 'source', 'contact_id', 'quote_id', 'salesperson_id',
       'payment_condition', 'currency', 'promised_date', 'delivered_date',
       'shipping_street', 'shipping_number', 'shipping_floor', 'shipping_apartment', 'shipping_city', 'shipping_province', 'shipping_postal_code', 'shipping_country',
       'billing_street', 'billing_number', 'billing_floor', 'billing_apartment', 'billing_city', 'billing_province', 'billing_postal_code', 'billing_country',
-      'subtotal', 'tax_amount', 'total', 'notes', 'created_at',
+      'subtotal', 'tax_amount', 'total', 'notes', 'created_at', 'updated_at',
     ],
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
@@ -87,6 +111,38 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
   })
 
   return toPaginated(data, count, page, limit)
+}
+
+export async function getOrderStatusCounts(query: SalesOrderStatusCountsQuery, ctx: TenantContext) {
+  ensureSalesBranchAssociations()
+
+  const where = buildOrdersListWhere(query, ctx)
+  const rows = await SalesOrder.findAll({
+    where,
+    attributes: [
+      'status',
+      [sequelize.fn('COUNT', sequelize.col('SalesOrder.id')), 'count'],
+    ],
+    group: ['status'],
+    raw: true,
+  }) as unknown as Array<{ status: OrderStatus; count: string }>
+
+  const byStatus = Object.fromEntries(
+    rows.map(row => [row.status, Number(row.count)]),
+  ) as Partial<Record<OrderStatus, number>>
+
+  const partialReturned = byStatus.partial_returned ?? 0
+  const returned = byStatus.returned ?? 0
+
+  return {
+    '': Object.values(byStatus).reduce((sum, n) => sum + n, 0),
+    draft:            byStatus.draft ?? 0,
+    confirmed:        byStatus.confirmed ?? 0,
+    in_progress:      byStatus.in_progress ?? 0,
+    delivered:        byStatus.delivered ?? 0,
+    returns:          partialReturned + returned,
+    cancelled:        byStatus.cancelled ?? 0,
+  }
 }
 
 export async function getOrder(id: string, ctx: TenantContext) {
@@ -111,6 +167,20 @@ export async function getOrder(id: string, ctx: TenantContext) {
 
 async function serializeSalesOrderDetail(order: SalesOrder, orgId: string) {
   const json = order.get({ plain: true }) as unknown as Record<string, unknown>
+  const items = json.items
+  if (Array.isArray(items)) {
+    const productIds = items
+      .map(item => (item as { product_id?: string | null }).product_id)
+      .filter((id): id is string => Boolean(id))
+    const productTypes = await loadProductTypesById(productIds, orgId)
+    json.items = items.map(item => {
+      const row = item as { product_id?: string | null }
+      return {
+        ...row,
+        product_type: row.product_id ? productTypes.get(row.product_id) ?? null : null,
+      }
+    })
+  }
   if (order.source === 'woocommerce') {
     json.woo_channel = await getWooOrderChannelForSalesOrder(order.id, orgId, order.channel_site_id)
   }
@@ -303,7 +373,7 @@ export async function updateOrder(
       Object.assign(updateData, docTotals)
     }
 
-    const { items: discardedItems, branch_id: nextBranchId, ...rest } = input
+    const { items: discardedItems, branch_id: nextBranchId, delivery_logistics, ...rest } = input
     void discardedItems
 
     if (nextBranchId && nextBranchId !== order.branch_id) {
@@ -320,7 +390,20 @@ export async function updateOrder(
       }))
     }
 
+    let deliveredAt: Date | null = null
+    if (rest.status === 'delivered' && prevStatus !== 'delivered') {
+      deliveredAt = (rest.delivered_date as Date | undefined) ?? order.delivered_date ?? new Date()
+      if (!order.delivered_date && !rest.delivered_date) {
+        updateData.delivered_date = deliveredAt
+      }
+    }
+
     await order.update({ ...rest, ...updateData }, { transaction: t })
+
+    if (deliveredAt && delivery_logistics === 'close_open_shipments') {
+      const { closeOpenShipmentsWhenOrderDelivered } = await import('@/modules/logistics/shipments.service')
+      await closeOpenShipmentsWhenOrderDelivered(id, ctx.orgId, actorId, deliveredAt, t)
+    }
 
     const effectiveBranchId = (input.branch_id ?? order.branch_id) as string
 
@@ -368,80 +451,148 @@ export async function deleteOrder(id: string, ctx: TenantContext, actorId: strin
 }
 
 export async function convertOrderToInvoice(id: string, ctx: TenantContext, actorId: string) {
+  return billOrder(id, { mode: 'draft' }, ctx, actorId)
+}
+
+async function assertOrderReadyToBill(
+  order: SalesOrder & { items?: SalesOrderItem[] },
+  ctx: TenantContext,
+  t: Transaction,
+): Promise<SalesOrder & { items: SalesOrderItem[] }> {
+  if (!order) throw new Error('ORDER_NOT_FOUND')
+  if (order.org_id !== ctx.orgId) throw new Error('ORDER_NOT_FOUND')
+  if (ctx.allowedBranchIds.length > 0 && order.branch_id && !ctx.allowedBranchIds.includes(order.branch_id as string)) {
+    throw new Error('ORDER_NOT_FOUND')
+  }
+  if (!isOrderInvoiceable(order.status)) throw new Error('ORDER_NOT_INVOICEABLE')
+  if (!order.branch_id) throw new Error('ORDER_BRANCH_REQUIRED')
+  if (!order.contact_id) throw new Error('ORDER_CONTACT_REQUIRED')
+
+  const existingInvoice = await Invoice.findOne({
+    where: { order_id: order.id, org_id: ctx.orgId },
+    attributes: ['id'],
+    transaction: t,
+  })
+  if (existingInvoice) {
+    const err = new Error('ORDER_ALREADY_INVOICED') as Error & { invoiceId: string }
+    err.invoiceId = existingInvoice.id as string
+    throw err
+  }
+
+  let items = order.items
+  if (!items) {
+    items = await SalesOrderItem.findAll({ where: { order_id: order.id }, transaction: t })
+  }
+  return Object.assign(order, { items })
+}
+
+async function createInvoiceFromOrderInTx(
+  order: SalesOrder & { items: SalesOrderItem[] },
+  ctx: TenantContext,
+  actorId: string,
+  t: Transaction,
+): Promise<Invoice> {
+  const invoice_number = await nextDocumentNumber(ctx.orgId, order.branch_id as string, 'invoice', t)
+
+  const invoice = await Invoice.create(
+    {
+      org_id:            ctx.orgId,
+      branch_id:         order.branch_id,
+      contact_id:        order.contact_id,
+      order_id:          order.id,
+      price_list_id:     order.price_list_id,
+      invoice_number,
+      salesperson_id:    actorId,
+      payment_condition: order.payment_condition,
+      currency:          order.currency,
+      subtotal:          order.subtotal,
+      discount_amount:   order.discount_amount,
+      tax_amount:        order.tax_amount,
+      total:             order.total,
+      balance:           order.total,
+      notes:             order.notes,
+      created_by:        actorId,
+      updated_by:        actorId,
+    },
+    { transaction: t },
+  )
+
+  await InvoiceItem.bulkCreate(
+    order.items.map(item => ({
+      invoice_id:      invoice.id,
+      org_id:          ctx.orgId,
+      product_id:      item.product_id,
+      variant_id:      item.variant_id,
+      description:     item.description,
+      quantity:        item.quantity,
+      unit_price:      item.unit_price,
+      discount_pct:    item.discount_pct,
+      iva_rate:        item.iva_rate,
+      subtotal:        item.subtotal,
+      discount_amount: item.discount_amount,
+      tax_base:        item.tax_base,
+      tax_amount:      item.tax_amount,
+      total:           item.total,
+      sort_order:      item.sort_order,
+      created_by:      actorId,
+      updated_by:      actorId,
+    })),
+    { transaction: t },
+  )
+
+  return invoice
+}
+
+/**
+ * Factura un pedido con el modo que corresponda al negocio:
+ * borrador, emitida a cuenta, o emitida con cobro (anticipo / contado / contra entrega ya cobrado).
+ * No exige pago previo ni entrega — es independiente de logística.
+ */
+export async function billOrder(id: string, input: OrderBillInput, ctx: TenantContext, actorId: string) {
   return sequelize.transaction(async (t) => {
     const order = await SalesOrder.findByPk(id, {
       include: [{ model: SalesOrderItem, as: 'items' }],
       transaction: t,
     })
-    if (!order) throw new Error('ORDER_NOT_FOUND')
-    if (order.org_id !== ctx.orgId) throw new Error('ORDER_NOT_FOUND')
-    if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(order.branch_id as string)) {
-      throw new Error('ORDER_NOT_FOUND')
+    const ready = await assertOrderReadyToBill(order as SalesOrder & { items?: SalesOrderItem[] }, ctx, t)
+    const invoice = await createInvoiceFromOrderInTx(ready, ctx, actorId, t)
+
+    if (input.mode !== 'draft') {
+      const issue_date = input.payment?.payment_date ?? new Date()
+      const due_date = computeInvoiceDueDate(issue_date, ready.payment_condition)
+      await invoice.update(
+        { status: 'issued', issue_date, due_date, updated_by: actorId },
+        { transaction: t },
+      )
     }
-    if (order.status !== 'delivered') {
-      throw new Error('ORDER_NOT_DELIVERED')
+
+    if (input.mode === 'issue_and_collect') {
+      const payment = input.payment!
+      const amount = payment.amount ?? new Decimal(ready.total).toNumber()
+      const payment_number = await nextDocumentNumber(ctx.orgId, ready.branch_id as string, 'payment', t)
+      await Payment.create(
+        {
+          org_id:         ctx.orgId,
+          branch_id:      ready.branch_id,
+          invoice_id:     invoice.id,
+          contact_id:     ready.contact_id,
+          salesperson_id: actorId,
+          payment_number,
+          payment_date:   payment.payment_date ?? new Date(),
+          amount:         String(amount),
+          payment_method: payment.payment_method,
+          reference:      payment.reference ?? null,
+          notes:          payment.notes ?? null,
+          created_by:     actorId,
+          updated_by:     actorId,
+        },
+        { transaction: t },
+      )
+      await recalcInvoiceBalance(invoice.id, t)
     }
-    if (!order.branch_id) throw new Error('ORDER_BRANCH_REQUIRED')
-    if (!order.contact_id) throw new Error('ORDER_CONTACT_REQUIRED')
 
-    const existingInvoice = await Invoice.findOne({
-      where: { order_id: order.id, org_id: ctx.orgId },
-      attributes: ['id'],
-      transaction: t,
-    })
-    if (existingInvoice) throw new Error('ORDER_ALREADY_INVOICED')
-
-    const invoice_number = await nextDocumentNumber(ctx.orgId, order.branch_id, 'invoice', t)
-    const items = (order as SalesOrder & { items: SalesOrderItem[] }).items
-
-    const invoice = await Invoice.create(
-      {
-        org_id:            ctx.orgId,
-        branch_id:         order.branch_id,
-        contact_id:        order.contact_id,
-        order_id:          order.id,
-        price_list_id:     order.price_list_id,
-        invoice_number,
-        salesperson_id:    actorId,
-        payment_condition: order.payment_condition,
-        currency:          order.currency,
-        subtotal:          order.subtotal,
-        discount_amount:   order.discount_amount,
-        tax_amount:        order.tax_amount,
-        total:             order.total,
-        balance:           order.total,
-        notes:             order.notes,
-        created_by:        actorId,
-        updated_by:        actorId,
-      },
-      { transaction: t },
-    )
-
-    await InvoiceItem.bulkCreate(
-      items.map(item => ({
-        invoice_id:      invoice.id,
-        org_id:          ctx.orgId,
-        product_id:      item.product_id,
-        variant_id:      item.variant_id,
-        description:     item.description,
-        quantity:        item.quantity,
-        unit_price:      item.unit_price,
-        discount_pct:    item.discount_pct,
-        iva_rate:        item.iva_rate,
-        subtotal:        item.subtotal,
-        discount_amount: item.discount_amount,
-        tax_base:        item.tax_base,
-        tax_amount:      item.tax_amount,
-        total:           item.total,
-        sort_order:      item.sort_order,
-        created_by:      actorId,
-        updated_by:      actorId,
-      })),
-      { transaction: t },
-    )
-
-    logger.info({ orderId: id, invoiceId: invoice.id, actorId }, 'order converted to invoice')
-    return invoice
+    logger.info({ orderId: id, invoiceId: invoice.id, mode: input.mode, actorId }, 'order billed')
+    return invoice.reload({ transaction: t })
   })
 }
 

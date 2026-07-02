@@ -18,7 +18,7 @@ interface ProductModalProps {
     vendor: string | null
     category_id: string | null
     description: string | null
-    variants: Array<{ sku: string; base_price: string | null; cost_price: string | null; barcode: string | null; manage_stock?: boolean; stock_quantity?: number; sold_by_weight?: boolean; plu_code?: string | null }>
+    variants: Array<{ sku: string; base_price: string | null; cost_price: string | null; barcode: string | null; manage_stock?: boolean; allow_backorder?: boolean; stock_quantity?: number; sold_by_weight?: boolean; plu_code?: string | null }>
   } | null
   onClose: () => void
   onSaved: () => void
@@ -62,13 +62,14 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
     base_price:      variant?.base_price ?? '',
     cost_price:      variant?.cost_price ?? '',
     manage_stock:    variant?.manage_stock ?? true,
+    allow_backorder: variant?.allow_backorder ?? false,
     stock_quantity:  variant?.stock_quantity ?? 0,
     sold_by_weight:  variant?.sold_by_weight ?? false,
     plu_code:        variant?.plu_code ?? '',
     images_urls:     initialImagesUrls,
   })
 
-  function fieldString(key: Exclude<keyof typeof form, 'manage_stock' | 'stock_quantity' | 'sold_by_weight'>) {
+  function fieldString(key: Exclude<keyof typeof form, 'manage_stock' | 'allow_backorder' | 'stock_quantity' | 'sold_by_weight'>) {
     return {
       value: form[key],
       onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -124,6 +125,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
       base_price:      form.base_price || null,
       cost_price:      form.cost_price || null,
       manage_stock:    form.manage_stock,
+      allow_backorder: form.manage_stock ? form.allow_backorder : false,
       stock_quantity:  form.stock_quantity,
       sold_by_weight:  form.sold_by_weight,
       plu_code:        form.sold_by_weight ? (form.plu_code.trim() || null) : null,
@@ -326,11 +328,27 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
                   <input
                     type="checkbox"
                     checked={form.manage_stock}
-                    onChange={(e) => setForm(f => ({ ...f, manage_stock: e.target.checked }))}
+                    onChange={(e) => setForm(f => ({
+                      ...f,
+                      manage_stock: e.target.checked,
+                      allow_backorder: e.target.checked ? f.allow_backorder : false,
+                    }))}
                     className="accent-brand-600"
                   />
                   Controlar stock
                 </label>
+
+                {form.manage_stock && (
+                  <label className="mt-2 flex items-center gap-2 text-sm text-fg-muted cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.allow_backorder}
+                      onChange={(e) => setForm(f => ({ ...f, allow_backorder: e.target.checked }))}
+                      className="accent-brand-600"
+                    />
+                    Permitir reservas (vender sin stock)
+                  </label>
+                )}
 
                 <div className="mt-3">
                   <FormField label="Stock inicial" htmlFor="product_stock_quantity" error={errors.stock_quantity?.[0]}>

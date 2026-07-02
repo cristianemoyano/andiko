@@ -4,7 +4,7 @@ import { logisticsErrorResponse } from '@/lib/logistics-route-errors'
 import { shipmentQuerySchema, shipmentSchema } from '@/modules/logistics/shipment.schema'
 import { listShipments, createShipmentForOrder } from '@/modules/logistics/shipments.service'
 
-export const GET = withTenantPermission('sales:read', async (req, _ctx, _session, ctx) => {
+export const GET = withTenantPermission('logistics:read', async (req, _ctx, _session, ctx) => {
   const parsed = shipmentQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 400 })
@@ -13,7 +13,7 @@ export const GET = withTenantPermission('sales:read', async (req, _ctx, _session
   return NextResponse.json(result)
 })
 
-export const POST = withTenantPermission('sales:write', async (req, _ctx, session, ctx) => {
+export const POST = withTenantPermission('logistics:write', async (req, _ctx, session, ctx) => {
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON', code: 'PARSE_ERROR' }, { status: 400 }) }
 

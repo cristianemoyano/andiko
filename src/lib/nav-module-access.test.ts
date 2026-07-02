@@ -30,4 +30,10 @@ describe('nav-module-access', () => {
     const basePlan = ['contacts', 'catalog', 'sales'] as const
     expect(isModuleNavVisible('inventario', [...basePlan], depositoPerms)).toBe(false)
   })
+
+  it('shows logística for repartidor with logistics:read only', () => {
+    const repartidorPerms = ['logistics:read', 'logistics:write', 'logistics:scope_assigned']
+    expect(isModuleNavVisible('logistica', [...ALL_ORG_MODULES], repartidorPerms)).toBe(true)
+    expect(isModuleNavVisible('ventas', [...ALL_ORG_MODULES], repartidorPerms)).toBe(false)
+  })
 })

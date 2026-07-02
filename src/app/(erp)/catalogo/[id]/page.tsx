@@ -128,6 +128,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                     cost_price: v.cost_price ?? null,
                     barcode: v.barcode ?? null,
                     manage_stock: v.manage_stock,
+                    allow_backorder: v.allow_backorder,
                     stock_quantity: v.stock_quantity,
                     is_default: v.is_default,
                     weight_kg: v.weight_kg ?? null,

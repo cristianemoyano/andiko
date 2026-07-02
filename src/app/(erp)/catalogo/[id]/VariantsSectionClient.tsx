@@ -17,6 +17,7 @@ type Variant = {
   cost_price: string | null
   barcode: string | null
   manage_stock: boolean
+  allow_backorder: boolean
   stock_quantity: number
   is_default: boolean
   weight_kg: string | null
@@ -209,6 +210,7 @@ function VariantModal({
     base_price: initial?.base_price ?? '',
     cost_price: initial?.cost_price ?? '',
     manage_stock: initial?.manage_stock ?? true,
+    allow_backorder: initial?.allow_backorder ?? false,
     stock_quantity: initial?.stock_quantity ?? 0,
     weight_kg: initial?.weight_kg ?? '',
     length_cm: initial?.length_cm ?? '',
@@ -231,6 +233,7 @@ function VariantModal({
       base_price: form.base_price ? form.base_price : null,
       cost_price: form.cost_price ? form.cost_price : null,
       manage_stock: form.manage_stock,
+      allow_backorder: form.manage_stock ? form.allow_backorder : false,
       stock_quantity: form.stock_quantity,
       weight_kg: form.weight_kg ? form.weight_kg : null,
       length_cm: form.length_cm ? form.length_cm : null,
@@ -327,13 +330,28 @@ function VariantModal({
               <select
                 id="variant_manage_stock"
                 value={form.manage_stock ? '1' : '0'}
-                onChange={(e) => setForm((f) => ({ ...f, manage_stock: e.target.value === '1' }))}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  manage_stock: e.target.value === '1',
+                  allow_backorder: e.target.value === '1' ? f.allow_backorder : false,
+                }))}
                 className="h-8 w-full px-2 text-sm border border-border-strong rounded-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="1">Sí</option>
                 <option value="0">No</option>
               </select>
             </FormField>
+            {form.manage_stock && (
+              <label className="flex items-center gap-2 text-sm text-fg-muted cursor-pointer sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={form.allow_backorder}
+                  onChange={(e) => setForm((f) => ({ ...f, allow_backorder: e.target.checked }))}
+                  className="accent-brand-600"
+                />
+                Permitir reservas (vender sin stock)
+              </label>
+            )}
             <FormField label="Stock" htmlFor="variant_stock" error={errors.stock_quantity?.[0]}>
               <Input
                 id="variant_stock"

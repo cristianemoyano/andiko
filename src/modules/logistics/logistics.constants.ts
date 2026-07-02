@@ -19,6 +19,10 @@ export type ShipmentEventSource = typeof SHIPMENT_EVENT_SOURCES[number]
 
 export const TERMINAL_SHIPMENT_STATUSES: readonly ShipmentStatus[] = ['delivered', 'returned', 'cancelled']
 
+export function canEditShipment(status: ShipmentStatus): boolean {
+  return !TERMINAL_SHIPMENT_STATUSES.includes(status)
+}
+
 export const SHIPMENT_STATUS_LABEL: Record<ShipmentStatus, string> = {
   pending:          'Pendiente',
   ready_to_ship:    'Listo para despachar',
@@ -64,4 +68,13 @@ export function assertShipmentTransition(from: ShipmentStatus, to: ShipmentStatu
   if (!canTransitionShipment(from, to)) {
     throw new Error('SHIPMENT_INVALID_TRANSITION')
   }
+}
+
+/** Código de seguimiento para reparto propio: el número de envío (ENV-XX-NNNN). */
+export function resolveInHouseTrackingNumber(
+  shipmentNumber: string,
+  explicit?: string | null,
+): string {
+  const trimmed = explicit?.trim()
+  return trimmed || shipmentNumber
 }

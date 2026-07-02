@@ -4,6 +4,7 @@ import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
 import { encryptSecret, decryptSecret } from '@/lib/crypto'
 import type { TenantContext } from '@/lib/tenancy'
+import { assertFullLogisticsAccess } from './logistics-scope'
 import CarrierAccount from './carrier-account.model'
 import type { CarrierAccountInput, CarrierAccountUpdateInput, CarrierAccountQuery } from './carrier-account.schema'
 
@@ -42,6 +43,7 @@ export async function getCarrierAccount(id: string, ctx: TenantContext) {
 }
 
 export async function createCarrierAccount(input: CarrierAccountInput, ctx: TenantContext, actorId: string) {
+  assertFullLogisticsAccess(ctx)
   const { credentials, ...fields } = input
   const account = await CarrierAccount.create({
     ...fields,
@@ -55,6 +57,7 @@ export async function createCarrierAccount(input: CarrierAccountInput, ctx: Tena
 }
 
 export async function updateCarrierAccount(id: string, input: CarrierAccountUpdateInput, ctx: TenantContext, actorId: string) {
+  assertFullLogisticsAccess(ctx)
   const account = await CarrierAccount.findOne({ where: { id, org_id: ctx.orgId } })
   if (!account) throw new Error('CARRIER_ACCOUNT_NOT_FOUND')
 
@@ -71,6 +74,7 @@ export async function updateCarrierAccount(id: string, input: CarrierAccountUpda
 }
 
 export async function deleteCarrierAccount(id: string, ctx: TenantContext, actorId: string) {
+  assertFullLogisticsAccess(ctx)
   const account = await CarrierAccount.findOne({ where: { id, org_id: ctx.orgId } })
   if (!account) throw new Error('CARRIER_ACCOUNT_NOT_FOUND')
   await account.update({ is_active: false, deleted_by: actorId })

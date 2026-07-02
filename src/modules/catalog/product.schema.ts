@@ -33,6 +33,7 @@ const productBaseSchema = z.object({
   cost_price:        z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().optional(),
   base_price:        z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().optional(),
   manage_stock:      z.boolean().optional(),
+  allow_backorder:   z.boolean().optional(),
   stock_quantity:    z.coerce.number().int().min(0).optional(),
   // Balanza / venta por peso
   sold_by_weight:    z.boolean().optional(),
@@ -61,6 +62,7 @@ export const productUpdateSchema = productBaseSchema
     sku:            z.string().min(1).max(100).optional(),
     stock_quantity: z.number().int().min(0).optional(),
     manage_stock:   z.boolean().optional(),
+    allow_backorder: z.boolean().optional(),
   })
   .partial()
   .superRefine(requirePluWhenSoldByWeight)

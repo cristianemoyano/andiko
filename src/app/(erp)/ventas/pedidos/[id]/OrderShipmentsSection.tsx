@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/primitives/Button'
 import { ShipmentStatusBadge } from '@/components/erp'
 import { FULFILLMENT_KIND_LABEL, type ShipmentStatus, type FulfillmentKind } from '@/modules/logistics/logistics.constants'
+import { formatShipmentQty } from '@/modules/sales/order-shipment-progress'
 import { fetchJson } from '@/lib/fetch-json'
 
 type OrderShipmentRow = {
@@ -25,9 +26,20 @@ export interface OrderShipmentsSectionProps {
   refresh: number
   canCreate: boolean
   onCreateRequest: () => void
+  shippedQty?: number
+  totalShippableQty?: number
+  hasShippableLines?: boolean
 }
 
-export function OrderShipmentsSection({ orderId, refresh, canCreate, onCreateRequest }: OrderShipmentsSectionProps) {
+export function OrderShipmentsSection({
+  orderId,
+  refresh,
+  canCreate,
+  onCreateRequest,
+  shippedQty = 0,
+  totalShippableQty = 0,
+  hasShippableLines = false,
+}: OrderShipmentsSectionProps) {
   const [shipments, setShipments] = useState<OrderShipmentRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -50,7 +62,7 @@ export function OrderShipmentsSection({ orderId, refresh, canCreate, onCreateReq
 
   return (
     <div className="bg-surface border border-border rounded-sm p-5">
-      <div className="flex items-center justify-between gap-3 mb-3">
+      <div className="flex items-center justify-between gap-3 mb-1">
         <h2 className="text-[13px] font-semibold text-fg">Envíos</h2>
         {canCreate && (
           <Button variant="secondary" size="xs" onClick={onCreateRequest}>
@@ -58,12 +70,20 @@ export function OrderShipmentsSection({ orderId, refresh, canCreate, onCreateReq
           </Button>
         )}
       </div>
+      <p className="text-[12px] text-fg-muted mb-3">
+        Los envíos se registran cuando despachás con courier o reparto propio. Retiro en sucursal no requiere envío.
+      </p>
+      {!loading && shipments.length > 0 && hasShippableLines && (
+        <p className="text-[12px] font-medium text-fg mb-3 tabular-nums">
+          {shipments.length} envío{shipments.length !== 1 ? 's' : ''} · {formatShipmentQty(shippedQty)}/{formatShipmentQty(totalShippableQty)} unidades enviadas
+        </p>
+      )}
       {loading ? (
         <p className="text-[13px] text-fg-muted">Cargando envíos…</p>
       ) : shipments.length === 0 ? (
         <p className="text-[13px] text-fg-muted">
           Sin envíos registrados.
-          {canCreate ? ' Generá uno para despachar por courier o reparto propio.' : ''}
+          {canCreate ? ' Generá uno cuando quieras despachar.' : ''}
         </p>
       ) : (
         <div className="space-y-2">

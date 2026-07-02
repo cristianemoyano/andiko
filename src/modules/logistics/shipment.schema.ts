@@ -29,6 +29,7 @@ export const shipmentSchema = z.object({
   promised_date:      z.coerce.date().nullable().optional(),
   tracking_number:    z.string().max(120).nullable().optional(),
   assigned_driver_id: z.string().uuid().nullable().optional(),
+  vehicle_id:         z.string().uuid().nullable().optional(),
   vehicle_ref:        z.string().max(60).nullable().optional(),
   shipping_cost:      z.coerce.number().min(0).optional(),
   delivery_notes:     z.string().nullable().optional(),
@@ -39,6 +40,7 @@ export const shipmentDispatchSchema = z.object({
   tracking_number:    z.string().max(120).nullable().optional(),
   shipping_cost:      z.coerce.number().min(0).optional(),
   assigned_driver_id: z.string().uuid().nullable().optional(),
+  vehicle_id:         z.string().uuid().nullable().optional(),
   vehicle_ref:        z.string().max(60).nullable().optional(),
 })
 
@@ -59,7 +61,22 @@ export const shipmentFailSchema = z.object({
 
 export const shipmentAssignDriverSchema = z.object({
   assigned_driver_id: z.string().uuid(),
+  vehicle_id:         z.string().uuid().nullable().optional(),
   vehicle_ref:        z.string().max(60).nullable().optional(),
+})
+
+export const shipmentUpdateSchema = z.object({
+  promised_date:      z.coerce.date().nullable().optional(),
+  tracking_number:    z.string().max(120).nullable().optional(),
+  shipping_cost:      z.coerce.number().min(0).optional(),
+  delivery_notes:     z.string().max(2000).nullable().optional(),
+  assigned_driver_id: z.string().uuid().nullable().optional(),
+  vehicle_id:         z.string().uuid().nullable().optional(),
+  vehicle_ref:        z.string().max(60).nullable().optional(),
+  items:              z.array(shipmentItemInputSchema.extend({
+    quantity: z.coerce.number().min(0),
+  })).min(1).optional(),
+  ...shipToFields,
 })
 
 export const shipmentQuerySchema = paginationSchema.extend({
@@ -88,4 +105,5 @@ export type ShipmentEventInput        = z.infer<typeof shipmentEventInputSchema>
 export type ShipmentDeliverInput      = z.infer<typeof shipmentDeliverSchema>
 export type ShipmentFailInput         = z.infer<typeof shipmentFailSchema>
 export type ShipmentAssignDriverInput = z.infer<typeof shipmentAssignDriverSchema>
+export type ShipmentUpdateInput        = z.infer<typeof shipmentUpdateSchema>
 export type ShipmentQuery             = z.infer<typeof shipmentQuerySchema>

@@ -37,6 +37,7 @@ export const PATCH = withPermission('inventory:write', async (req, ctx, session)
     if (err instanceof Error) {
       if (err.message === 'DELIVERY_NOTE_NOT_FOUND') return NextResponse.json({ error: 'Remito no encontrado', code: 'NOT_FOUND' }, { status: 404 })
       if (err.message === 'DELIVERY_NOTE_NOT_DRAFT') return NextResponse.json({ error: 'Solo se pueden editar remitos en borrador', code: 'INVALID_STATUS' }, { status: 409 })
+      if (err.message === 'CARRIER_ACCOUNT_NOT_FOUND') return NextResponse.json({ error: 'Transportista no encontrado', code: 'CARRIER_ACCOUNT_NOT_FOUND' }, { status: 404 })
       if (err.message === 'DOCUMENT_BRANCH_NOT_CHANGEABLE') {
         return NextResponse.json({ error: 'La sucursal solo se puede cambiar en remitos en borrador.', code: 'BRANCH_NOT_CHANGEABLE' }, { status: 409 })
       }

@@ -36,3 +36,8 @@ export const invoiceQuerySchema = paginationSchema.extend({
 export type InvoiceInput       = z.infer<typeof invoiceSchema>
 export type InvoiceUpdateInput = z.infer<typeof invoiceUpdateSchema>
 export type InvoiceQuery       = z.infer<typeof invoiceQuerySchema>
+
+export const invoiceStatusCountsQuerySchema = invoiceQuerySchema
+  .omit({ page: true, limit: true, status: true, overdue: true })
+
+export type InvoiceStatusCountsQuery = z.infer<typeof invoiceStatusCountsQuerySchema>

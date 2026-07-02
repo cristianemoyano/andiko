@@ -61,6 +61,16 @@ export function TransportistasClient() {
     }
   }
 
+  function openEdit(row: CarrierAccountRow) {
+    setEditing(row)
+    setDialogOpen(true)
+  }
+
+  function openCreate() {
+    setEditing(null)
+    setDialogOpen(true)
+  }
+
   const columns: Column<CarrierAccountRow>[] = [
     {
       key: 'name',
@@ -96,14 +106,21 @@ export function TransportistasClient() {
       key: 'actions',
       header: '',
       align: 'right',
+      className: 'w-[140px]',
+      mobileRole: 'actions',
       render: row => (
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={e => { e.stopPropagation(); setDeleting(row) }}
+        <div
+          className="flex items-center justify-end gap-1"
+          data-stop-row-click
+          onClick={e => e.stopPropagation()}
         >
-          Eliminar
-        </Button>
+          <Button variant="secondary" size="xs" onClick={() => openEdit(row)}>
+            Editar
+          </Button>
+          <Button variant="ghost" size="xs" onClick={() => setDeleting(row)}>
+            Eliminar
+          </Button>
+        </div>
       ),
     },
   ]
@@ -113,7 +130,7 @@ export function TransportistasClient() {
       <TopBar
         breadcrumbs={[{ label: 'Logística', href: '/logistica/envios' }, { label: 'Transportistas' }]}
         actions={
-          <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true) }}>
+          <Button size="sm" onClick={openCreate}>
             + Nuevo transportista
           </Button>
         }
@@ -130,7 +147,6 @@ export function TransportistasClient() {
           columns={columns}
           data={rows}
           keyExtractor={r => r.id}
-          onRowClick={row => { setEditing(row); setDialogOpen(true) }}
           emptyMessage="No hay transportistas. Creá al menos uno (p. ej. «Reparto propio») para generar envíos."
           footer={
             total > 0 ? (

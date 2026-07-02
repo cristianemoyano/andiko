@@ -11,6 +11,7 @@ export type ShipmentListRow = {
   tracking_number: string | null
   tracking_url: string | null
   assigned_driver_id: string | null
+  vehicle_id: string | null
   vehicle_ref: string | null
   shipping_cost: string
   currency: string
@@ -68,6 +69,19 @@ export type CarrierAccountRow = {
   created_at: string
   updated_at: string
 }
+
+export type VehicleRow = {
+  id: string
+  branch_id: string | null
+  label: string
+  plate: string | null
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type VehicleOption = { id: string; label: string; plate: string | null }
 
 export type DriverOption = { id: string; name: string }
 
