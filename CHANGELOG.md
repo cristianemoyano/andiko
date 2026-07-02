@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.37.1](https://github.com/cristianemoyano/andiko/compare/v0.37.0...v0.37.1) (2026-07-01)
+
+## [0.37.0](https://github.com/cristianemoyano/andiko/compare/v0.36.0...v0.37.0) (2026-07-01)
+
+### Features
+
+* **auth:** add organization terms and conditions setting ([a5ea877](https://github.com/cristianemoyano/andiko/commit/a5ea8770c706b5ca468232c5af0181d9f9093a6b))
+* **core:** add por-pagar KPI and top-5 debts widget to panel ([5a63e06](https://github.com/cristianemoyano/andiko/commit/5a63e062951aa67c3262c9f87f27901c7088774b))
+* **core:** add public terms of service and privacy policy pages ([0730f43](https://github.com/cristianemoyano/andiko/commit/0730f43e8baf7c1de097ee44b0032e0ea412fdd3))
+* **core:** require terms of service acceptance on login ([ed9df86](https://github.com/cristianemoyano/andiko/commit/ed9df86479d7fe1f6295041d369a2925ddb94a8f))
+* **core:** scaffold self-hosted cookie consent banner (disabled) ([bb2bc6f](https://github.com/cristianemoyano/andiko/commit/bb2bc6fbcd11219560ac7785407305503ce74771))
+* **purchases:** add supplier account statement summaries and payables aging ([6c2cbca](https://github.com/cristianemoyano/andiko/commit/6c2cbcac5d72076ad4cb312db1181e4b1b5daf30))
+* **sales:** add receivables aging report ([0bb0d0e](https://github.com/cristianemoyano/andiko/commit/0bb0d0e1f39772828a579faf5efd347e20c53697))
+* **sales:** auto-expire overdue quotes and list ones expiring soon ([407bf90](https://github.com/cristianemoyano/andiko/commit/407bf907c63b2644767d000748bdc3fe4c458cc1))
+
+### Bug Fixes
+
+* **core:** align aging filters with panel KPIs and same-day overdue bucket ([cd9dcfc](https://github.com/cristianemoyano/andiko/commit/cd9dcfca4b1cdedd44b3c88594fbe7427baf68f2))
+
+## [0.36.0](https://github.com/cristianemoyano/andiko/compare/v0.35.0...v0.36.0) (2026-07-01)
+
+### Features
+
+* **core:** add Gherkin/Playwright integration test suite with tenant `integration` ([237f132](https://github.com/cristianemoyano/andiko/commit/237f132))
+* **core:** expand E2E coverage for catalog, contacts, financials, purchases, and sales list flows ([d7b146a](https://github.com/cristianemoyano/andiko/commit/d7b146a))
+
+### Bug Fixes
+
+* **core:** stabilize integration tests (locators, seed, env) ([ddbbf98](https://github.com/cristianemoyano/andiko/commit/ddbbf98))
+* **core:** resolve typecheck errors on integration seed and test steps ([3bde61f](https://github.com/cristianemoyano/andiko/commit/3bde61f))
+
+### Documentation
+
+* **core:** refresh stale docs, GTM runbooks, and integration test roadmap ([5fcd64a](https://github.com/cristianemoyano/andiko/commit/5fcd64a), [dcbe97c](https://github.com/cristianemoyano/andiko/commit/dcbe97c))
+
 ## [0.35.0](https://github.com/cristianemoyano/andiko/compare/v0.34.0...v0.35.0) (2026-06-30)
 
 ### Features

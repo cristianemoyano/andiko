@@ -56,5 +56,5 @@ export async function syncSubscriptionContractToOrg(
   t: Transaction,
 ): Promise<void> {
   const modules = await deriveModulesFromPlan(planId, addons, t)
-  await updateOrganizationSettings(orgId, { enabled_modules: modules })
+  await updateOrganizationSettings(orgId, { enabled_modules: modules }, t)
 }

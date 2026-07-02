@@ -12,12 +12,13 @@ export interface OrganizationSettingAttributes extends Timestamps {
   print_template: Record<string, unknown> | null
   email_templates: Record<string, unknown> | null
   pos_config: PosConfig | null
+  terms_and_conditions: string | null
 }
 
 type OrganizationSettingCreationAttributes = Optional<
   OrganizationSettingAttributes,
   | 'id' | 'enabled_modules' | 'enabled_features' | 'print_template'
-  | 'email_templates' | 'pos_config'
+  | 'email_templates' | 'pos_config' | 'terms_and_conditions'
   | 'created_at' | 'updated_at' | 'deleted_at'
 >
 
@@ -32,6 +33,7 @@ export class OrganizationSetting extends Model<
   declare print_template: Record<string, unknown> | null
   declare email_templates: Record<string, unknown> | null
   declare pos_config: PosConfig | null
+  declare terms_and_conditions: string | null
   declare created_at: Date
   declare updated_at: Date
   declare deleted_at: Date | null
@@ -46,6 +48,7 @@ OrganizationSetting.init(
     print_template: { type: DataTypes.JSONB, allowNull: true },
     email_templates: { type: DataTypes.JSONB, allowNull: true },
     pos_config: { type: DataTypes.JSONB, allowNull: true },
+    terms_and_conditions: { type: DataTypes.TEXT, allowNull: true },
     created_at: { type: DataTypes.DATE, allowNull: false },
     updated_at: { type: DataTypes.DATE, allowNull: false },
     deleted_at: { type: DataTypes.DATE },

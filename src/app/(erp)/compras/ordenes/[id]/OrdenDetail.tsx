@@ -181,12 +181,19 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
           <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-start justify-between gap-4">
             <div>
               <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">Orden de compra</p>
-              <h1 className="text-[20px] font-bold text-fg tracking-tight">{order.order_number}</h1>
+              <h1
+                className="text-[20px] font-bold text-fg tracking-tight"
+                data-testid="purchase-order-number"
+              >
+                {order.order_number}
+              </h1>
               <p className="text-[13px] text-fg-muted mt-0.5">
                 {order.contact?.legal_name ?? 'Sin proveedor'} · {order.branch?.name ?? 'Sin sucursal'}
               </p>
             </div>
-            <StatusBadge value={PURCHASE_ORDER_STATUS_LABEL[order.status]} />
+            <div data-testid="purchase-order-status">
+              <StatusBadge value={PURCHASE_ORDER_STATUS_LABEL[order.status]} />
+            </div>
           </div>
 
           {/* Metadata card */}
@@ -251,7 +258,7 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
                 )}
               </tbody>
             </table>
-            <div className="border-t border-border">
+            <div className="border-t border-border" data-testid="purchase-order-total">
               <TotalsFooter
                 subtotal={String(subtotal.toFixed(2))}
                 taxAmount={String(taxAmt.toFixed(2))}

@@ -22,11 +22,17 @@ import { fetchJson } from '@/lib/fetch-json'
 const CONTACT_PAGE_SIZE = 20
 const LINE_PAGE_SIZE = 20
 
-type ContactApiRow = {
-  id: string
-  type: 'customer' | 'supplier' | 'both'
+type SupplierStatementSummaryApiRow = {
+  contact_id: string
   legal_name: string
   trade_name: string | null
+  cuit: string | null
+  invoices_count: number
+  total_invoiced: string
+  total_paid: string
+  balance: string
+  overdue_balance: string
+  debt_status: AccountDebtStatus
 }
 
 type ContactStatementRow = {
@@ -34,6 +40,20 @@ type ContactStatementRow = {
   legal_name: string
   trade_name: string | null
   summary: AccountStatementSummary
+}
+
+function toSummary(row: SupplierStatementSummaryApiRow): AccountStatementSummary {
+  const balance = Number(row.balance)
+  const overdue = Number(row.overdue_balance)
+  return {
+    currency: 'ARS',
+    total_invoiced: row.total_invoiced,
+    total_paid: row.total_paid,
+    balance: row.balance,
+    overdue_balance: row.overdue_balance,
+    current_balance: (balance - overdue).toFixed(2),
+    debt_status: row.debt_status,
+  }
 }
 
 const DEFAULT_SUMMARY: AccountStatementSummary = {
@@ -175,12 +195,14 @@ export function CuentaCorrienteProveedorClient() {
       const params = new URLSearchParams({
         page: String(contactsPage),
         limit: String(CONTACT_PAGE_SIZE),
-        type: 'supplier',
+        only_with_balance: 'false',
         ...(contactSearch ? { search: contactSearch } : {}),
       })
-      let payload: { data: ContactApiRow[]; total: number }
+      let payload: { data: SupplierStatementSummaryApiRow[]; total: number }
       try {
-        payload = await fetchJson<{ data: ContactApiRow[]; total: number }>(`/api/v1/contacts?${params}`)
+        payload = await fetchJson<{ data: SupplierStatementSummaryApiRow[]; total: number }>(
+          `/api/v1/purchases/account-statements?${params}`,
+        )
       } catch {
         if (cancelled) return
         setContactRows([])
@@ -191,27 +213,11 @@ export function CuentaCorrienteProveedorClient() {
       if (cancelled) return
 
       const sourceRows = Array.isArray(payload?.data) ? payload.data : []
-
-      const summaries = await Promise.all(
-        sourceRows.map(async (row) => {
-          try {
-            const statement = await fetchJson<AccountStatementResponse>(
-              `/api/v1/purchases/contacts/${row.id}/account-statement?summary_only=true&limit=1&page=1`,
-            )
-            return { contactId: row.id, summary: statement.summary ?? DEFAULT_SUMMARY }
-          } catch {
-            return { contactId: row.id, summary: DEFAULT_SUMMARY }
-          }
-        }),
-      )
-
-      if (cancelled) return
-      const summaryById = new Map(summaries.map(item => [item.contactId, item.summary]))
       const mappedRows: ContactStatementRow[] = sourceRows.map(row => ({
-        id: row.id,
+        id: row.contact_id,
         legal_name: row.legal_name,
         trade_name: row.trade_name,
-        summary: summaryById.get(row.id) ?? DEFAULT_SUMMARY,
+        summary: toSummary(row),
       }))
 
       setContactRows(mappedRows)

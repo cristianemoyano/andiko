@@ -57,6 +57,7 @@ const baseCaps = (overrides: Partial<UiCapabilities['nav']> = {}): UiCapabilitie
       apariencia: true,
       afip: false,
       integraciones: false,
+      terminosCondiciones: false,
     },
   },
   onboarding: {

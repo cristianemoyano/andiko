@@ -58,6 +58,55 @@ Infraestructura base sin lógica de negocio.
 - [x] Formulario de contacto en landing vía Web3Forms (`ContactForm`, sin BD)
 - [x] Landing de producto completa en `/` (desde diseño Claude Design): header sticky + nav con smooth-scroll, hero con mockup denso del panel ERP (`DashboardMockup`), secciones Módulos / Por qué / Métricas + rubros / Beta privada, footer. Lenguaje visual de marketing (botones 4px, tarjetas 12px, badges pill, foco teal) distinto del UI de producto.
 - [ ] Mencionar el módulo POS en la landing (ausente en el diseño actual; pendiente decidir tarjeta/copy)
+- [x] Documentación operativa GTM: packaging, programa beta, runbooks onboarding y soporte (`docs/gtm/`)
+- [x] Documentación dev: getting-started, cross-module checklist, PR template (`.github/`)
+- [x] README del proyecto, MULTITENANCY y production runbook alineados con estado v0.35+
+- [x] Suite de tests de integración E2E (Cucumber + Playwright): tenant `integration`, seed dedicado, 27 escenarios activos — ver [Calidad — Tests E2E](#calidad--tests-de-integración-e2e)
+
+---
+
+## Calidad — Tests de integración (E2E)
+
+Suite Gherkin en `tests/integration/` (Cucumber + Playwright). Complementa ~111 archivos Vitest de servicios; **no reemplaza** tests unitarios de lógica financiera/AFIP.
+
+**Ejecución local:** `pnpm db:seed-dev` → `pnpm dev` → `HEADLESS=true pnpm test:integration --profile headed`  
+**Tenant:** org `integration` (`test-admin@andiko.local` / `Test123456!`)  
+**Estado (PR #64):** 27 escenarios pasando · 22 `@skip` (sin automatizar aún)
+
+### Cubierto hoy (smoke operativo)
+
+| Módulo | Escenarios | Qué valida |
+|--------|------------|------------|
+| Auth | 4 | Login, credenciales inválidas, logout, guard de rutas |
+| Catálogo | 6 | CRUD producto, búsqueda, archivar, lista de precios |
+| Contactos | 7 | CRUD, CUIT, CBU, filtros |
+| Finanzas (CxC) | 5 | Deuda por cliente, abono, listado CxC, estado de cuenta, balance patrimonial (seed) |
+| Compras | 3 | Ciclo OC → recepción → factura proveedor → pago; búsqueda y filtro por estado |
+| Ventas | 2 | Búsqueda y filtro de facturas (listado) |
+
+### Pendiente — prioridad beta (des-skipear)
+
+Orden sugerido por impacto en negocio:
+
+1. [ ] **Ventas — ciclo completo** (`@skip`): Presupuesto → factura → cobro + impacto en stock. *Gap más crítico vs. valor del ERP.*
+2. [ ] **Inventario** (`@skip` en toda la feature): consulta de stock, deducción por venta, alertas, lotes, transferencias, conteo físico. *Sin steps implementados (`inventory.steps.ts`).*
+3. [ ] **Ventas — cobros múltiples y NC por devolución** (`@skip`): operación diaria de cobranzas y devoluciones.
+4. [ ] **Ventas — factura directa y presupuesto vencido** (`@skip`).
+5. [ ] **Finanzas — reporte IVA** (`@skip`): requisito contador/AFIP en UI.
+6. [ ] **Compras — recepción parcial, cancelación de OC, descuento por volumen** (`@skip`).
+7. [ ] **Finanzas — deudas vencidas, diario contable, conciliación bancaria, retenciones** (`@skip`).
+
+### Pendiente — infra y CI
+
+- [ ] Job CI en `develop`: PostgreSQL + seed + dev server + `pnpm test:integration:ci`
+- [ ] Aislar mutaciones entre escenarios (orden de ejecución / reset por feature)
+- [ ] Perfil sin `parallel` en CI hasta tener fixtures independientes por escenario
+- [ ] AFIP / emisión fiscal en E2E (hoy cubierto en unit: `src/modules/afip/*.test.ts`)
+- [ ] POS, multitenancy cross-org, billing SaaS
+
+### Excluido a propósito
+
+- [ ] Sesión expirada tras 30 min (`@skip` en auth): impracticable en E2E; requiere mock de TTL o test de API.
 
 ---
 
@@ -155,6 +204,7 @@ Vista ejecutiva del negocio. Primer pantalla post-login.
 - [x] Queries del panel optimizadas (CTEs en lugar de subqueries correlacionadas; 13→7 round-trips SQL)
 - [x] Cache in-memory 60s en endpoints del panel (`/kpis`, `/recent-invoices`, `/activity`)
 - [x] Migración: índices compuestos para reportes del panel (`issue_date`, `payment_date`, `updated_at`)
+- [x] KPI Cuentas por pagar + widget top 5 cobranzas/deudas (enlaza a reportes de aging)
 
 ---
 
@@ -267,6 +317,7 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 
 ### Frontend
 - [x] Presupuestos con vigencia y estado (listado + detalle + modal)
+- [x] Expiración automática de presupuestos vencidos (cron) + filtro "Por vencer (7d)"
 - [x] Conversión presupuesto → pedido → factura en un flujo (UI en detalle + navegación entre secciones)
 - [x] Descuentos por ítem (modales de líneas; descuento a nivel documento según backend en totales)
 - [x] Registro de cobros parciales y totales (UI en detalle de factura + listado de cobros)
@@ -280,6 +331,7 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] **Devoluciones y cambios de venta** — `sales_returns` (parcial/total, múltiples por pedido); stock IN/OUT; NC con ítems + AFIP; reembolsos (`sales_refunds`) o saldo a favor; estados de pedido `partial_returned` / `returned`; UI `/ventas/devoluciones`; flujo POS post-venta
 - [x] Listado de cuentas corrientes por cliente
 - [x] Reportes: ventas por período, por cliente, por producto
+- [x] Reporte de cobranzas (aging CxC por cliente, buckets de vencimiento, export CSV)
 - [x] **Impresión y exportación de documentos (MVP)** — Módulo `printing` (registro por dominio/recurso), API `GET /api/v1/printing/[domain]/[resource]/[id]`, vistas print bajo `/ventas/...` y `/compras/...` (layout A4, PDF vía `window.print()` + `@media print`). Borradores imprimibles con marca **BORRADOR** (uso interno).
 - [x] Templates configurables por organización: logo, colores, datos fiscales (CUIT, IVA, domicilio), pie de página. *(Editor en `/configuracion`, link en sidebar, validación Zod + merge sobre defaults.)*
 - [x] Editor visual de template (tipografía, paleta, secciones visibles). *(Vista previa en vivo del documento mientras se edita.)*
@@ -355,8 +407,10 @@ Ciclo de compras: orden → recepción → factura proveedor → pago.
 
 ### Pendientes
 - [x] Cuenta corriente proveedor — `/compras/cuenta-corriente` con historial de facturas + pagos, saldo, vencido y filtros por período (mismo patrón que ventas CC)
+- [x] Listado agregado de CC proveedor (endpoint único, sin N+1)
 - [x] Conciliación orden → recepción → factura (alertas de diferencias de precio/cantidad)
 - [x] Reportes: compras por período, por proveedor, por categoría de producto
+- [x] Reporte de deudas con proveedores (aging CxP, export CSV)
 - [x] **Devoluciones y cambios de compra** — `purchase_returns` (devolución/cambio a proveedor, parcial/total); stock OUT para lo devuelto e IN para el cambio; reduce el saldo de la factura proveedor (neto del cambio); estados de orden `partial_returned` / `returned`; asiento contable automático; filas negativas en Libro IVA Compras; UI `/compras/devoluciones`
 
 ---

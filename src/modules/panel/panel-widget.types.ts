@@ -4,6 +4,7 @@ export type PanelWidgetId =
   | 'analytics_orders'
   | 'analytics_products'
   | 'kpi_cards'
+  | 'top_debts'
   | 'counts'
   | 'stock_alerts'
   | 'cash_flow'
@@ -17,6 +18,7 @@ export const PANEL_WIDGETS: Record<PanelWidgetId, { label: string }> = {
   analytics_orders: { label: 'Pedidos' },
   analytics_products: { label: 'Mejores productos' },
   kpi_cards: { label: 'Indicadores principales' },
+  top_debts: { label: 'Cobranzas y deudas (top 5)' },
   counts: { label: 'Resumen de registros' },
   stock_alerts: { label: 'Alertas de stock' },
   cash_flow: { label: 'Flujo de caja' },
@@ -34,6 +36,7 @@ export const DEFAULT_PANEL_WIDGET_ORDER: PanelWidgetId[] = [
   'analytics_orders',
   'analytics_products',
   'kpi_cards',
+  'top_debts',
   'counts',
   'stock_alerts',
   'cash_flow',

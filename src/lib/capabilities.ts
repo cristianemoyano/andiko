@@ -119,6 +119,7 @@ function buildCapabilities(
         apariencia: true,
         afip: canOrgSettingsRead,
         integraciones: canIntegracionesRead,
+        terminosCondiciones: canOrgSettingsRead,
       },
     },
     onboarding: {

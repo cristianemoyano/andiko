@@ -52,7 +52,13 @@ const SUMMARY_COLUMNS: Column<AccountStatementSummaryRow>[] = [
     header: 'Cliente',
     render: row => (
       <div className="min-w-0">
-        <p className="font-medium text-fg truncate">{row.legal_name}</p>
+        <p
+          className="font-medium text-fg truncate"
+          data-testid="account-statement-row"
+          data-customer-name={row.legal_name}
+        >
+          {row.legal_name}
+        </p>
         {row.trade_name ? <p className="text-[12px] text-fg-muted truncate">{row.trade_name}</p> : null}
       </div>
     ),
@@ -114,7 +120,11 @@ const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
   {
     key: 'movement_type',
     header: 'Tipo',
-    render: row => ACCOUNT_MOVEMENT_TYPE_LABEL[row.movement_type],
+    render: row => (
+      <span data-testid="account-movement-row" data-movement-type={row.movement_type}>
+        {ACCOUNT_MOVEMENT_TYPE_LABEL[row.movement_type]}
+      </span>
+    ),
   },
   {
     key: 'document_number',
@@ -124,6 +134,22 @@ const MOVEMENT_COLUMNS: Column<AccountStatementLine>[] = [
         <p className="font-mono text-[12px] text-fg-muted">{row.document_number}</p>
         {row.description ? <p className="text-[12px] text-fg-muted truncate">{row.description}</p> : null}
       </div>
+    ),
+  },
+  {
+    key: 'due_date',
+    header: 'Vencimiento',
+    render: row => (
+      row.due_date ? (
+        <span
+          className="tabular-nums text-[12px] text-fg-muted"
+          {...(row.movement_type === 'invoice' ? { 'data-testid': 'due-date' } : {})}
+        >
+          {new Date(row.due_date).toLocaleDateString('es-AR')}
+        </span>
+      ) : (
+        <span className="text-fg-subtle">—</span>
+      )
     ),
   },
   {
@@ -249,6 +275,7 @@ function SummaryList({ onSelect }: { onSelect: (contactId: string) => void }) {
                 <path d="M10.5 10.5l3 3" />
               </svg>
               <input
+                data-testid="account-statement-search"
                 className="h-[30px] w-full sm:w-56 rounded-sm border border-border-strong bg-surface pl-7 pr-3 text-[13px] focus:border-ring focus:outline-none"
                 placeholder="Buscar por cliente o CUIT…"
                 value={search}
@@ -259,6 +286,7 @@ function SummaryList({ onSelect }: { onSelect: (contactId: string) => void }) {
               />
             </div>
             <select
+              data-testid="account-statement-balance-filter"
               className="h-[30px] rounded-sm border border-border-strong bg-surface px-2 text-[13px] text-fg-muted focus:border-ring focus:outline-none"
               value={balanceFilter}
               onChange={(e) => {
@@ -356,8 +384,8 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryMetric label="Saldo" value={summary.balance} emphasis />
-          <SummaryMetric label="Vencido" value={summary.overdue_balance} />
+          <SummaryMetric label="Saldo" value={summary.balance} emphasis testId="customer-debt" />
+          <SummaryMetric label="Vencido" value={summary.overdue_balance} testId="customer-overdue-balance" />
           <SummaryMetric label="Facturado" value={summary.total_invoiced} />
           <SummaryMetric label="Cobrado" value={summary.total_paid} />
         </div>
@@ -434,11 +462,24 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
   )
 }
 
-function SummaryMetric({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
+function SummaryMetric({
+  label,
+  value,
+  emphasis = false,
+  testId,
+}: {
+  label: string
+  value: string
+  emphasis?: boolean
+  testId?: string
+}) {
   return (
     <div className="rounded border border-border bg-surface-muted p-3">
       <p className="text-[12px] text-fg-muted">{label}</p>
-      <p className={`tabular-nums text-[16px] font-semibold ${emphasis ? 'text-fg' : 'text-fg-muted'}`}>
+      <p
+        data-testid={testId}
+        className={`tabular-nums text-[16px] font-semibold ${emphasis ? 'text-fg' : 'text-fg-muted'}`}
+      >
         {formatARS(value)}
       </p>
     </div>

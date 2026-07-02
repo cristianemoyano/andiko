@@ -1,0 +1,9 @@
+# Cucumber test reports
+*.html
+*.json
+*.xml
+*.png
+*.log
+
+# Keep this file so the directory exists
+!.gitignore

@@ -38,6 +38,8 @@ export const salesQuoteQuerySchema = paginationSchema.extend({
   search:     z.string().optional(),
   status:     z.enum(QUOTE_STATUSES).optional(),
   contact_id: z.string().uuid().optional(),
+  /** When present, returns draft/sent quotes whose valid_until falls within the next N days. */
+  expiring_within_days: z.coerce.number().int().positive().max(90).optional(),
 })
 
 export type SalesQuoteInput       = z.infer<typeof salesQuoteSchema>

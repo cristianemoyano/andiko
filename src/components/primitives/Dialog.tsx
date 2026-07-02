@@ -42,6 +42,8 @@ export interface DialogProps extends VariantProps<typeof panelVariants> {
   padded?: boolean
   /** Acciones fijas al pie del modal, fuera del área con scroll. */
   footer?: React.ReactNode
+  /** Selector estable para tests E2E (data-testid en el panel). */
+  contentTestId?: string
 }
 
 export interface DialogFooterProps {
@@ -71,7 +73,19 @@ function DialogFooter({ children, className, error }: DialogFooterProps) {
   )
 }
 
-function Dialog({ open, onOpenChange, title, description, children, size, className, hideClose, padded = true, footer }: DialogProps) {
+function Dialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  size,
+  className,
+  hideClose,
+  padded = true,
+  footer,
+  contentTestId,
+}: DialogProps) {
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
@@ -84,7 +98,10 @@ function Dialog({ open, onOpenChange, title, description, children, size, classN
             'duration-200',
           )}
         />
-        <RadixDialog.Content className={cn(panelVariants({ size }), className)}>
+        <RadixDialog.Content
+          className={cn(panelVariants({ size }), className)}
+          data-testid={contentTestId}
+        >
           <div className="flex flex-shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div>
               <RadixDialog.Title className="text-[14px] font-semibold text-fg">

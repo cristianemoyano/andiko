@@ -1,25 +1,11 @@
 {
-  "extends": [
-    "@commitlint/config-conventional"
-  ],
+  "extends": ["@commitlint/config-conventional"],
   "rules": {
-    "scope-enum": [
-      2,
-      "always",
-      [
-        "sales",
-        "inventory",
-        "purchases",
-        "contacts",
-        "accounting",
-        "auth",
-        "core",
-        "logistics"
-      ]
-    ],
-    "scope-empty": [
-      2,
-      "never"
-    ]
+    "scope-enum": [2, "always", [
+      "sales", "inventory", "purchases", "contacts", "accounting", "auth", "core",
+      "catalog", "afip", "billing", "pos", "integrations", "communications", "storage",
+      "logistics"
+    ]],
+    "scope-empty": [2, "never"]
   }
 }

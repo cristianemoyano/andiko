@@ -211,7 +211,9 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
                 {invoice.contact?.legal_name ?? 'Sin proveedor'} · {invoice.branch?.name ?? 'Sin sucursal'}
               </p>
             </div>
-            <StatusBadge value={SUPPLIER_INVOICE_STATUS_LABEL[invoice.status]} />
+            <div data-testid="supplier-invoice-status">
+              <StatusBadge value={SUPPLIER_INVOICE_STATUS_LABEL[invoice.status]} />
+            </div>
           </div>
 
           {/* Metadata card */}

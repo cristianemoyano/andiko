@@ -38,7 +38,7 @@ const COLUMNS: Column<PriceList>[] = [
     header: 'Nombre',
     sortable: true,
     render: row => (
-      <span className="font-medium text-fg">
+      <span className="font-medium text-fg" data-testid="price-list-row" data-price-list-name={row.name}>
         {row.name}
         {row.is_default && (
           <Badge status="info" className="ml-2">Predeterminada</Badge>
@@ -270,7 +270,7 @@ export function PriceListsClient() {
           { label: 'Listas de precios' },
         ]}
         actions={
-          <Button size="sm" onClick={() => setModalOpen(true)}>+ Nueva lista</Button>
+          <Button size="sm" data-testid="new-price-list-btn" onClick={() => setModalOpen(true)}>+ Nueva lista</Button>
         }
       />
       <CatalogoSubNav />
@@ -312,6 +312,7 @@ export function PriceListsClient() {
       {modalOpen && (
         <dialog
           open
+          data-testid="price-list-modal"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 w-full h-full p-4"
         >
           <form
@@ -330,6 +331,7 @@ export function PriceListsClient() {
               <FormField label="Nombre *" htmlFor="price_list_name">
                 <Input
                   id="price_list_name"
+                  data-testid="price-list-name-input"
                   placeholder="Ej: Mayorista, Minorista…"
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -357,7 +359,7 @@ export function PriceListsClient() {
             </div>
             <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
               <Button type="button" variant="secondary" size="sm" onClick={() => setModalOpen(false)}>Cancelar</Button>
-              <Button type="submit" size="sm" disabled={saving}>{saving ? 'Guardando…' : 'Crear lista'}</Button>
+              <Button type="submit" size="sm" data-testid="price-list-create-btn" disabled={saving}>{saving ? 'Guardando…' : 'Crear lista'}</Button>
             </div>
           </form>
         </dialog>
