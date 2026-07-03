@@ -34,8 +34,34 @@ async function loadEffectiveSettings(orgId: string, t?: Transaction): Promise<Ef
 /** Deduplicado por request via React cache() — seguro para llamar desde layout y rutas. */
 export const getEffectiveOrganizationSettings = cache(loadEffectiveSettings)
 
+// Process-level cache: this is read on essentially every /api/v1 request (module gate in
+// withPermission) but only written via updateOrganizationSettings, so a small TTL beats
+// hitting the DB per request. `cache()` above only dedupes within a single request.
+const SETTINGS_CACHE_TTL_MS = 30_000
+type SettingsCacheEntry = { value: EffectiveOrganizationSettings; expiresAt: number }
+const settingsCache = new Map<string, SettingsCacheEntry>()
+
+function getCachedSettings(orgId: string): EffectiveOrganizationSettings | null {
+  const entry = settingsCache.get(orgId)
+  if (!entry || entry.expiresAt < Date.now()) return null
+  return entry.value
+}
+
+function setCachedSettings(orgId: string, value: EffectiveOrganizationSettings): void {
+  settingsCache.set(orgId, { value, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS })
+}
+
+/** Test helper — clears the process-level org settings cache. */
+export function clearOrganizationSettingsCache(): void {
+  settingsCache.clear()
+}
+
 export async function isModuleEnabled(orgId: string, module: OrgModuleKey): Promise<boolean> {
+  const cached = getCachedSettings(orgId)
+  if (cached) return cached.enabled_modules.includes(module)
+
   const settings = await getEffectiveOrganizationSettings(orgId)
+  setCachedSettings(orgId, settings)
   return settings.enabled_modules.includes(module)
 }
 
@@ -70,5 +96,7 @@ export async function updateOrganizationSettings(
       enabled_features: input.enabled_features ?? {},
     }, { transaction: t })
   }
-  return loadEffectiveSettings(orgId, t)
+  const settings = await loadEffectiveSettings(orgId, t)
+  settingsCache.delete(orgId)
+  return settings
 }

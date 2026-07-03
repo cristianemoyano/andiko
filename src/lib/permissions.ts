@@ -4,6 +4,7 @@ import { Op } from 'sequelize'
 import RolePermission from '@/modules/auth/role-permission.model'
 import PermissionModel from '@/modules/auth/permission.model'
 import OrgRolePermission from '@/modules/auth/org-role-permission.model'
+import { currentGlobalGeneration, currentOrgGeneration } from '@/lib/capabilities-cache'
 import type { UserRole } from '@/types/roles'
 
 type ModuleResource = 'contacts' | 'products' | 'sales' | 'inventory' | 'purchases' | 'accounting'
@@ -44,6 +45,33 @@ export function isModulePermission(p: string): p is ModulePermission {
   )
 }
 
+// Process-level cache for permission lookups, gated on the same generation counters that
+// `capabilities-cache.ts` bumps at every role_permissions / org_role_permissions mutation
+// site. `cache()` (React) only dedupes within a single request; this survives across
+// requests within the same server instance, cutting the DB round trip most of them would
+// otherwise pay.
+const MAX_PERMISSION_CACHE_ENTRIES = 1000
+
+type RolePermCacheEntry = { value: string[]; globalGen: number; orgGen: number }
+const rolePermCache = new Map<string, RolePermCacheEntry>()
+
+type OrgRolePermCacheEntry = { value: string[]; orgGen: number }
+const orgRolePermCache = new Map<string, OrgRolePermCacheEntry>()
+
+function trimCache(store: Map<string, unknown>): void {
+  while (store.size > MAX_PERMISSION_CACHE_ENTRIES) {
+    const oldest = store.keys().next().value
+    if (oldest === undefined) break
+    store.delete(oldest)
+  }
+}
+
+/** Test helper — clears the process-level permission caches. */
+export function clearPermissionCache(): void {
+  rolePermCache.clear()
+  orgRolePermCache.clear()
+}
+
 async function loadRolePermissionNames(role: UserRole, orgId?: string): Promise<string[]> {
   const where = orgId
     ? { role, [Op.or]: [{ org_id: orgId }, { org_id: null }] }
@@ -66,10 +94,21 @@ export const getPermissionsForRole = cache(async (
   role: UserRole,
   orgId?: string,
 ): Promise<Permission[]> => {
+  const key = `${role}|${orgId ?? '_'}`
+  const globalGen = currentGlobalGeneration()
+  const orgGen = currentOrgGeneration(orgId ?? null)
+  const cached = rolePermCache.get(key)
+  if (cached && cached.globalGen === globalGen && cached.orgGen === orgGen) {
+    return cached.value as Permission[]
+  }
+
   const names = await loadRolePermissionNames(role, orgId)
-  return names.filter((n): n is Permission =>
+  const perms = names.filter((n): n is Permission =>
     isModulePermission(n) || isSettingsPermission(n) || isPanelPermission(n) || isSalesScopePermission(n),
   )
+  rolePermCache.set(key, { value: perms, globalGen, orgGen })
+  trimCache(rolePermCache)
+  return perms
 })
 
 export type UserPermissionIdentity = {
@@ -82,6 +121,14 @@ export const getPermissionsForUser = cache(async (
   orgId?: string,
 ): Promise<Permission[]> => {
   if (identity.orgRoleId) {
+    // Keyed by org_role_id: the permission set assigned to a custom role is org-wide, mutated
+    // only via updateOrgRolesMatrix/deleteOrgRole/etc, all of which bump this org's generation.
+    const orgGen = currentOrgGeneration(orgId ?? null)
+    const cached = orgRolePermCache.get(identity.orgRoleId)
+    if (cached && cached.orgGen === orgGen) {
+      return cached.value as Permission[]
+    }
+
     const rows = await OrgRolePermission.findAll({
       where: { org_role_id: identity.orgRoleId },
       include: [{ model: PermissionModel, as: 'permission', attributes: ['name'] }],
@@ -89,9 +136,12 @@ export const getPermissionsForUser = cache(async (
     const names = rows
       .map(r => (r as unknown as { permission: { name: string } }).permission?.name)
       .filter((n): n is string => typeof n === 'string')
-    return names.filter((n): n is Permission =>
+    const perms = names.filter((n): n is Permission =>
       isModulePermission(n) || isPanelPermission(n) || isSalesScopePermission(n),
     )
+    orgRolePermCache.set(identity.orgRoleId, { value: perms, orgGen })
+    trimCache(orgRolePermCache)
+    return perms
   }
 
   const perms = await getPermissionsForRole(identity.role, orgId)
