@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.38.0](https://github.com/cristianemoyano/andiko/compare/v0.37.1...v0.38.0) (2026-07-02)
+
+### Features
+
+* **logistics:** add shipments module with fulfillment providers ([73ec66e](https://github.com/cristianemoyano/andiko/commit/73ec66e894e140306324b8cbd263112ed0c99052))
+* **logistics:** add shipments UI and sales order integration ([86d5496](https://github.com/cristianemoyano/andiko/commit/86d5496d2796e14d28141f3da74ab5d62a46750f))
+* **logistics:** shipment editing, services exclusion and sales workflow ([f5e5db5](https://github.com/cristianemoyano/andiko/commit/f5e5db54c8821d40f2dfc315001a6c54323de239))
+
 ## [0.37.1](https://github.com/cristianemoyano/andiko/compare/v0.37.0...v0.37.1) (2026-07-01)
 
 ## [0.37.0](https://github.com/cristianemoyano/andiko/compare/v0.36.0...v0.37.0) (2026-07-01)

@@ -3,6 +3,7 @@ import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields } from '@/types'
 import Product from './product.model'
+import { ensureAssociation, registeredModel } from '@/lib/sequelize-models'
 
 interface ProductVariantAttributes extends Timestamps, AuditFields {
   id: UUID
@@ -14,6 +15,8 @@ interface ProductVariantAttributes extends Timestamps, AuditFields {
   cost_price: string | null
   base_price: string | null
   manage_stock: boolean
+  /** Permite vender por encima del stock disponible (reservas / backorder). */
+  allow_backorder: boolean
   stock_quantity: number
   /** ID de fila / variación en el sistema del cliente */
   import_external_id: string | null
@@ -30,7 +33,7 @@ interface ProductVariantAttributes extends Timestamps, AuditFields {
 
 type ProductVariantCreationAttributes = Optional<
   ProductVariantAttributes,
-  'id' | 'barcode' | 'name' | 'is_default' | 'cost_price' | 'base_price' | 'manage_stock' | 'stock_quantity' |
+  'id' | 'barcode' | 'name' | 'is_default' | 'cost_price' | 'base_price' | 'manage_stock' | 'allow_backorder' | 'stock_quantity' |
   'import_external_id' | 'sold_by_weight' | 'plu_code' |
   'weight_kg' | 'length_cm' | 'width_cm' | 'height_cm' | 'units_per_package' |
   'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
@@ -46,6 +49,7 @@ class ProductVariant extends AuditModel<ProductVariantAttributes, ProductVariant
   declare cost_price: string | null  // NUMERIC stored as string by Sequelize
   declare base_price: string | null
   declare manage_stock: boolean
+  declare allow_backorder: boolean
   declare stock_quantity: number
   declare import_external_id: string | null
   declare sold_by_weight: boolean
@@ -68,6 +72,7 @@ ProductVariant.init(
     cost_price:     { type: DataTypes.DECIMAL(15, 2) },
     base_price:     { type: DataTypes.DECIMAL(15, 2) },
     manage_stock:   { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    allow_backorder: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     stock_quantity: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
     import_external_id: { type: DataTypes.STRING(64) },
     sold_by_weight:     { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
@@ -82,7 +87,14 @@ ProductVariant.init(
   { sequelize, tableName: 'product_variants', paranoid: true, underscored: true }
 )
 
-Product.hasMany(ProductVariant, { foreignKey: 'product_id', as: 'variants' })
-ProductVariant.belongsTo(Product, { foreignKey: 'product_id', as: 'product' })
+const ProductModel = registeredModel('Product', Product)
+const ProductVariantModel = registeredModel('ProductVariant', ProductVariant)
+
+ensureAssociation(ProductModel, 'variants', () => {
+  ProductModel.hasMany(ProductVariantModel, { foreignKey: 'product_id', as: 'variants' })
+})
+ensureAssociation(ProductVariantModel, 'product', () => {
+  ProductVariantModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' })
+})
 
 export default ProductVariant

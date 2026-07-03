@@ -7,18 +7,19 @@ import OrgRolePermission from '@/modules/auth/org-role-permission.model'
 import { currentGlobalGeneration, currentOrgGeneration } from '@/lib/capabilities-cache'
 import type { UserRole } from '@/types/roles'
 
-type ModuleResource = 'contacts' | 'products' | 'sales' | 'inventory' | 'purchases' | 'accounting'
+type ModuleResource = 'contacts' | 'products' | 'sales' | 'inventory' | 'purchases' | 'accounting' | 'logistics'
 type Action = 'read' | 'write' | 'delete'
 
 export type ModulePermission = `${ModuleResource}:${Action}`
 export type SettingsPermission = 'settings:read' | 'settings:write'
 export type PanelPermission = 'panel:read'
 export type SalesScopePermission = 'sales:scope_own'
-export type MatrixPermission = ModulePermission | PanelPermission | SalesScopePermission
-export type Permission = ModulePermission | SettingsPermission | PanelPermission | SalesScopePermission
+export type LogisticsScopePermission = 'logistics:scope_assigned'
+export type MatrixPermission = ModulePermission | PanelPermission | SalesScopePermission | LogisticsScopePermission
+export type Permission = ModulePermission | SettingsPermission | PanelPermission | SalesScopePermission | LogisticsScopePermission
 
 const MODULE_RESOURCES: ModuleResource[] = [
-  'contacts', 'products', 'sales', 'inventory', 'purchases', 'accounting',
+  'contacts', 'products', 'sales', 'inventory', 'purchases', 'accounting', 'logistics',
 ]
 
 export function isSettingsPermission(p: string): p is SettingsPermission {
@@ -35,6 +36,14 @@ export function isSalesScopePermission(p: string): p is SalesScopePermission {
 
 export function hasSalesScopeOwn(permissions: readonly string[]): boolean {
   return permissions.includes('sales:scope_own')
+}
+
+export function isLogisticsScopePermission(p: string): p is LogisticsScopePermission {
+  return p === 'logistics:scope_assigned'
+}
+
+export function hasLogisticsScopeAssigned(permissions: readonly string[]): boolean {
+  return permissions.includes('logistics:scope_assigned')
 }
 
 export function isModulePermission(p: string): p is ModulePermission {
@@ -104,7 +113,7 @@ export const getPermissionsForRole = cache(async (
 
   const names = await loadRolePermissionNames(role, orgId)
   const perms = names.filter((n): n is Permission =>
-    isModulePermission(n) || isSettingsPermission(n) || isPanelPermission(n) || isSalesScopePermission(n),
+    isModulePermission(n) || isSettingsPermission(n) || isPanelPermission(n) || isSalesScopePermission(n) || isLogisticsScopePermission(n),
   )
   rolePermCache.set(key, { value: perms, globalGen, orgGen })
   trimCache(rolePermCache)
@@ -137,7 +146,7 @@ export const getPermissionsForUser = cache(async (
       .map(r => (r as unknown as { permission: { name: string } }).permission?.name)
       .filter((n): n is string => typeof n === 'string')
     const perms = names.filter((n): n is Permission =>
-      isModulePermission(n) || isPanelPermission(n) || isSalesScopePermission(n),
+      isModulePermission(n) || isPanelPermission(n) || isSalesScopePermission(n) || isLogisticsScopePermission(n),
     )
     orgRolePermCache.set(identity.orgRoleId, { value: perms, orgGen })
     trimCache(orgRolePermCache)
@@ -217,8 +226,11 @@ export const ASSIGNABLE_PANEL_PERMISSIONS: PanelPermission[] = ['panel:read']
 
 export const ASSIGNABLE_SALES_SCOPE_PERMISSIONS: SalesScopePermission[] = ['sales:scope_own']
 
+export const ASSIGNABLE_LOGISTICS_SCOPE_PERMISSIONS: LogisticsScopePermission[] = ['logistics:scope_assigned']
+
 export const ASSIGNABLE_MATRIX_PERMISSIONS: Permission[] = [
   ...ASSIGNABLE_PANEL_PERMISSIONS,
   ...ASSIGNABLE_SALES_SCOPE_PERMISSIONS,
+  ...ASSIGNABLE_LOGISTICS_SCOPE_PERMISSIONS,
   ...ASSIGNABLE_MODULE_PERMISSIONS,
 ]

@@ -35,6 +35,8 @@ interface ApplyMovementParams {
   defaultMinimum?: string
   /** El caller sincroniza product_variants.stock_quantity al final del lote. */
   skipVariantStockSync?: boolean
+  /** Permite que el agregado quede en negativo (reservas / backorder en ventas). */
+  allowNegativeStock?: boolean
   /** Omite encolar WooCommerce en cargas masivas (miles de ítems). */
   skipWooEnqueue?: boolean
 }
@@ -62,6 +64,7 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
     variantId, warehouseId, orgId, movementType, referenceType, referenceId,
     quantityDelta, notes, actorId, stockItem: existingItem,
     defaultMinimum: defaultMinimumIn, skipVariantStockSync, skipWooEnqueue,
+    allowNegativeStock,
   } = params
   const { allocateInbound, consumeFefo, earliestExpiry, ensureBatchesMatchAggregate } = await import('./stock-batches.service')
   const { resolveDefaultMinimumForWarehouse } = await import('./stock-items.service')
@@ -88,7 +91,7 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
   const before = new Decimal(item.quantity)
   const after  = before.plus(quantityDelta)
 
-  if (after.lt(0)) {
+  if (after.lt(0) && !allowNegativeStock) {
     throw new Error('INSUFFICIENT_STOCK')
   }
 
@@ -131,7 +134,12 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
       { orgId, stockItemId: item.id, aggregateQty: before },
       t,
     )
-    const allocations = await consumeFefo({ stockItemId: item.id, quantity: quantityDelta.abs() }, t)
+    const allocations = await consumeFefo({
+      stockItemId: item.id,
+      quantity: quantityDelta.abs(),
+      allowNegative: allowNegativeStock,
+      orgId,
+    }, t)
     for (const alloc of allocations) {
       await writeMovement(alloc.quantity.negated(), alloc.batchId)
     }
@@ -147,13 +155,18 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
 
   // Sync denormalized stock_quantity on product_variant
   if (!skipVariantStockSync) {
-    const ProductVariant = (await import('@/modules/catalog/product-variant.model')).default
+    const ProductVariantModel = (await import('@/modules/catalog/product-variant.model')).default
     const totalStock = await StockItem.sum('quantity', {
       where: { variant_id: variantId },
       transaction: t,
     }) as number | null
-    await ProductVariant.update(
-      { stock_quantity: Math.max(0, Math.round((totalStock ?? 0) * 10000) / 10000) },
+    const rounded = Math.round((totalStock ?? 0) * 10000) / 10000
+    const variant = await ProductVariantModel.findByPk(variantId, {
+      attributes: ['allow_backorder'],
+      transaction: t,
+    })
+    await ProductVariantModel.update(
+      { stock_quantity: variant?.allow_backorder ? rounded : Math.max(0, rounded) },
       { where: { id: variantId }, transaction: t },
     )
   }
@@ -192,7 +205,10 @@ export async function deductStockForOrder(orderId: string, orgId: string, actorI
     const variantId = await resolveVariantId(item.variant_id, item.product_id, orgId, ProductVariant, t)
     if (!variantId) continue
 
-    const variant = await ProductVariant.findByPk(variantId, { attributes: ['manage_stock'], transaction: t })
+    const variant = await ProductVariant.findByPk(variantId, {
+      attributes: ['manage_stock', 'allow_backorder'],
+      transaction: t,
+    })
     if (!variant?.manage_stock) continue
 
     const product = item.product_id
@@ -210,6 +226,7 @@ export async function deductStockForOrder(orderId: string, orgId: string, actorI
       quantityDelta: new Decimal(item.quantity).negated(),
       notes:         null,
       actorId,
+      allowNegativeStock: variant.allow_backorder,
     }, t)
   }
 }

@@ -1,6 +1,9 @@
 import type { MatrixPermission, ModulePermission } from '@/lib/permissions'
 import type { UserRole } from '@/types/roles'
 
+/** Custom org role name for delivery drivers (repartidores). */
+export const REPARTIDOR_ORG_ROLE_NAME = 'Repartidor' as const
+
 /** Built-in roles that can be assigned when creating users (ERP job functions use custom org roles). */
 export type AssignableBuiltinRole = 'admin' | 'branch-admin'
 
@@ -47,7 +50,7 @@ export type DefaultOrgRoleTemplate = {
   name: string
   description: string
   allows_pos: boolean
-  permissions: (ModulePermission | Extract<MatrixPermission, 'sales:scope_own'>)[]
+  permissions: (ModulePermission | Extract<MatrixPermission, 'sales:scope_own' | 'logistics:scope_assigned'>)[]
 }
 
 /** Seeded as custom org roles when an organization is created. */
@@ -112,6 +115,17 @@ export const DEFAULT_ORG_ROLE_TEMPLATES: DefaultOrgRoleTemplate[] = [
       'inventory:read',
       'inventory:write',
       'products:read',
+    ],
+  },
+  {
+    name: REPARTIDOR_ORG_ROLE_NAME,
+    description: 'Envíos asignados, despacho y entrega en reparto propio',
+    allows_pos: false,
+    permissions: [
+      'logistics:read',
+      'logistics:write',
+      'logistics:scope_assigned',
+      'contacts:read',
     ],
   },
 ]

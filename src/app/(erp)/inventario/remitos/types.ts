@@ -27,6 +27,7 @@ export interface DeliveryNote {
   status: DeliveryNoteStatus
   deducts_stock: boolean
   delivery_date: string | null
+  carrier_account_id: string | null
   carrier: string | null
   tracking_code: string | null
   ship_to_address: string | null
@@ -35,6 +36,7 @@ export interface DeliveryNote {
   branch?: { id: string; name: string; branch_code: number } | null
   contact?: { id: string; legal_name: string; trade_name: string | null } | null
   warehouse?: { id: string; name: string } | null
+  carrierAccount?: { id: string; name: string; kind: string } | null
   issuer?: { id: string; name: string } | null
   items?: DeliveryNoteItem[]
   order?: { id: string; order_number: string; status: string } | null

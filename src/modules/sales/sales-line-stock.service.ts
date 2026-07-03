@@ -10,6 +10,7 @@ export type BranchVariantStock = {
   variant_id: string
   quantity: string
   manage_stock: boolean
+  allow_backorder: boolean
 }
 
 export type SaleLineStockRef = {
@@ -46,7 +47,7 @@ export async function getBranchVariantStock(
 
   const variants = await ProductVariant.findAll({
     where: { id: { [Op.in]: uniqueIds }, org_id: orgId },
-    attributes: ['id', 'manage_stock', 'product_id'],
+    attributes: ['id', 'manage_stock', 'allow_backorder', 'product_id'],
     include: [{
       model: Product,
       as: 'product',
@@ -61,7 +62,10 @@ export async function getBranchVariantStock(
     variants.map((v) => {
       const product = v.get('product') as Product | undefined
       const isService = product?.product_type === 'service'
-      return [v.id, { manage_stock: !isService && Boolean(v.manage_stock) }]
+      return [v.id, {
+        manage_stock: !isService && Boolean(v.manage_stock),
+        allow_backorder: !isService && Boolean(v.manage_stock) && Boolean(v.allow_backorder),
+      }]
     }),
   )
 
@@ -87,6 +91,7 @@ export async function getBranchVariantStock(
       variant_id: variantId,
       quantity: stockByVariant.get(variantId) ?? '0',
       manage_stock: meta?.manage_stock ?? false,
+      allow_backorder: meta?.allow_backorder ?? false,
     }
   })
 }
@@ -109,7 +114,7 @@ export async function assertSaleLineItemsHaveBranchStock(
   for (let i = 0; i < items.length; i++) {
     const item = items[i]!
     const stock = stockByVariant.get(item.variant_id)
-    if (!stock?.manage_stock) continue
+    if (!stock?.manage_stock || stock.allow_backorder) continue
 
     const qty = new Decimal(item.quantity)
     if (qty.lte(0)) continue
@@ -124,6 +129,7 @@ export async function assertSaleLineItemsHaveBranchStock(
 
   for (const [variantId, demand] of demandByVariant) {
     const stock = stockByVariant.get(variantId)!
+    if (stock.allow_backorder) continue
     const available = new Decimal(stock.quantity)
     if (demand.total.gt(available)) {
       throw new SaleLineStockError(

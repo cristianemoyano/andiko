@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
@@ -21,7 +21,7 @@ import { StatusPipeline } from '@/components/erp/StatusPipeline'
 import { WooOrderStatusBadge } from '@/components/erp/WooOrderStatusBadge'
 import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
 import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
-import { catalogProductRequiredMessage, findLineWithoutCatalogProduct, findLineExceedingBranchStock, insufficientBranchStockMessage, type BranchStockMap } from '@/lib/sales-line-items-form'
+import { catalogProductRequiredMessage, findLineWithoutCatalogProduct, findLineExceedingBranchStock, insufficientBranchStockMessage, lineItemsNeedCatalogResolve, resolveLineItemCatalogRefs, type BranchStockMap } from '@/lib/sales-line-items-form'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { VentasBranchField } from '@/components/erp/VentasBranchField'
@@ -30,10 +30,23 @@ import type { Order, PaymentCondition } from '../../types'
 import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
 import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
+import { CreateShipmentDialog } from './CreateShipmentDialog'
+import { OrderShipmentsSection } from './OrderShipmentsSection'
 import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
-import { notifyApiError } from '@/lib/notify'
+import { notifyApiError, notifySuccess } from '@/lib/notify'
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
+import { ORDER_STATUS_TRANSITIONS, ORDER_CANCELLABLE_STATUSES, isOrderInvoiceable, orderAcceptsShipmentCreation } from '@/modules/sales/sales-order-workflow'
+import type { DeliveryLogisticsMode } from '@/modules/sales/sales-order.schema'
+import { suggestedOrderBillMode } from '@/modules/sales/sales-config.schema'
+import { BillOrderDialog } from './BillOrderDialog'
+import { MarkDeliveredDialog } from './MarkDeliveredDialog'
+import { SaleDocumentLineItemsReadOnly } from '@/components/erp/SaleDocumentLineItemsReadOnly'
+import { PartialShipmentBadge } from '@/components/erp/PartialShipmentBadge'
+import {
+  computeOrderShipmentProgress,
+  orderLineRefsFromItems,
+} from '@/modules/sales/order-shipment-progress'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
   value: value as PaymentCondition,
@@ -118,13 +131,6 @@ function displaySnapshot(address: AddressSnapshot): string | null {
   if (parts.length === 0) return null
   return parts.join(', ')
 }
-
-const STATUS_TRANSITIONS: Partial<Record<OrderStatus, { next: OrderStatus; label: string }[]>> = {
-  draft:       [{ next: 'confirmed',   label: 'Confirmar pedido' }],
-  confirmed:   [{ next: 'in_progress', label: 'Iniciar proceso' }],
-  in_progress: [{ next: 'delivered',   label: 'Marcar entregado' }],
-}
-const CAN_CANCEL: OrderStatus[] = ['draft', 'confirmed', 'in_progress']
 
 type RelatedInvoiceSummary = {
   id: string
@@ -211,6 +217,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
   const [editMode, setEditMode] = useState(false)
   const [contactOnlyEdit, setContactOnlyEdit] = useState(false)
   const [saving, setSaving]     = useState(false)
+  const [catalogResolving, setCatalogResolving] = useState(false)
   const [errors, setErrors]     = useState<FieldErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -234,9 +241,12 @@ export function OrderDetail({ id }: OrderDetailProps) {
   const [internalNotes, setInternalNotes]       = useState('')
 
   // Confirm dialogs
-  const [confirmConvert, setConfirmConvert]   = useState(false)
+  const [billDialogOpen, setBillDialogOpen] = useState(false)
+  const [markDeliveredOpen, setMarkDeliveredOpen] = useState(false)
   const [confirmCancel, setConfirmCancel]     = useState(false)
   const [transitioning, setTransitioning]     = useState(false)
+  const [createShipmentOpen, setCreateShipmentOpen] = useState(false)
+  const [activeShipmentCount, setActiveShipmentCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -293,7 +303,22 @@ export function OrderDetail({ id }: OrderDetailProps) {
     return () => { cancelled = true }
   }, [id, refresh])
 
-  function enterEditMode(o: Order, opts?: { contactOnly?: boolean }) {
+  useEffect(() => {
+    if (!order) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const params = new URLSearchParams({ sales_order_id: order.id, page: '1', limit: '1' })
+        const res = await fetchJson<{ total: number }>(`/api/v1/logistics/shipments?${params}`)
+        if (!cancelled) setActiveShipmentCount(typeof res.total === 'number' ? res.total : 0)
+      } catch {
+        if (!cancelled) setActiveShipmentCount(0)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [order, refresh])
+
+  async function enterEditMode(o: Order, opts?: { contactOnly?: boolean }) {
     setContactId(o.contact_id ?? null)
     if (o.contact_id && o.contact) {
       setContactOption({
@@ -312,7 +337,18 @@ export function OrderDetail({ id }: OrderDetailProps) {
     setShippingAddressId('')
     setBillingAddressId('')
     setPaymentCondition(o.payment_condition)
-    setItems(itemsToLineInput(o.items))
+    let lineItems = itemsToLineInput(o.items)
+    if (!opts?.contactOnly && lineItemsNeedCatalogResolve(lineItems)) {
+      setCatalogResolving(true)
+      try {
+        lineItems = await resolveLineItemCatalogRefs(lineItems, o.price_list_id)
+      } catch {
+        // el editor reintenta al montar
+      } finally {
+        setCatalogResolving(false)
+      }
+    }
+    setItems(lineItems)
     setNotes(o.notes ?? '')
     setInternalNotes(o.internal_notes ?? '')
     setErrors({})
@@ -363,6 +399,12 @@ export function OrderDetail({ id }: OrderDetailProps) {
     }
 
     if (!contactOnlyEdit) {
+      if (catalogResolving) {
+        setSaving(false)
+        setServerError('Esperá a que se carguen los productos del catálogo en las líneas.')
+        return
+      }
+
       const lineWithoutProduct = findLineWithoutCatalogProduct(items)
       if (lineWithoutProduct >= 0) {
         setSaving(false)
@@ -417,19 +459,36 @@ export function OrderDetail({ id }: OrderDetailProps) {
     }
   }
 
-  async function handleTransition(nextStatus: OrderStatus) {
+  function requestTransition(nextStatus: OrderStatus) {
+    if (nextStatus === 'delivered') {
+      setMarkDeliveredOpen(true)
+      return
+    }
+    void handleTransition(nextStatus)
+  }
+
+  async function handleTransition(nextStatus: OrderStatus, deliveryLogistics?: DeliveryLogisticsMode) {
     setTransitioning(true)
     try {
       await fetchJson(`/api/v1/sales/orders/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ status: nextStatus }),
+        body: JSON.stringify({
+          status: nextStatus,
+          ...(deliveryLogistics ? { delivery_logistics: deliveryLogistics } : {}),
+        }),
       })
       setRefresh(r => r + 1)
     } catch (e) {
       notifyApiError(e)
+      throw e
     } finally {
       setTransitioning(false)
     }
+  }
+
+  async function confirmMarkDelivered(mode: DeliveryLogisticsMode) {
+    await handleTransition('delivered', mode)
+    notifySuccess('Pedido marcado como entregado')
   }
 
   async function handleCancelOrder() {
@@ -448,15 +507,6 @@ export function OrderDetail({ id }: OrderDetailProps) {
     }
   }
 
-  async function handleConvertToInvoice() {
-    setConfirmConvert(false)
-    try {
-      const invoice = await fetchJson<{ id: string }>(`/api/v1/sales/orders/${id}/convert`, { method: 'POST' })
-      router.push(`/ventas/facturas/${invoice.id}`)
-    } catch (e) {
-      notifyApiError(e)
-    }
-  }
 
   const searchContacts = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
     try {
@@ -515,6 +565,11 @@ export function OrderDetail({ id }: OrderDetailProps) {
     return () => { cancelled = true }
   }, [editMode, contactId, shippingAddress.street, shippingAddress.city, billingAddress.street, billingAddress.city])
 
+  const shipmentProgress = useMemo(
+    () => computeOrderShipmentProgress(orderLineRefsFromItems(order?.items ?? [])),
+    [order],
+  )
+
   if (loading) {
     return (
       <div className="flex flex-col h-full">
@@ -537,24 +592,37 @@ export function OrderDetail({ id }: OrderDetailProps) {
     )
   }
 
-  const transitions = STATUS_TRANSITIONS[order.status] ?? []
-  const canCancel   = CAN_CANCEL.includes(order.status)
-  const canConvert  = order.status === 'delivered' && !hasActiveInvoice(relatedInvoices)
+  const transitions = ORDER_STATUS_TRANSITIONS[order.status] ?? []
+  const canCancel   = (ORDER_CANCELLABLE_STATUSES as readonly string[]).includes(order.status)
+  const canInvoice  = isOrderInvoiceable(order.status) && !hasActiveInvoice(relatedInvoices)
   const canEdit     = !['delivered', 'cancelled', 'partial_returned', 'returned'].includes(order.status)
   const canAssignClient = !order.contact_id && order.status !== 'cancelled' && !canEdit
   const editLockReason = orderEditLockReason(order, relatedInvoices)
   const canReturn = ['delivered', 'partial_returned'].includes(order.status)
   const canDeliver  = order.status === 'confirmed' || order.status === 'in_progress' || order.status === 'delivered'
+  const orderItems = order.items ?? []
+  const canShip = orderAcceptsShipmentCreation(
+    order.status,
+    orderItems.map(item => ({
+      quantity: item.quantity,
+      shipped_qty: item.shipped_qty,
+      product_type: item.product_type ?? null,
+    })),
+  )
 
   const editTotals = editMode ? calcTotals(items) : null
 
-  const orderPrimaryAction: PageAction | null = !editMode && canConvert
-    ? { id: 'convert', label: 'Crear factura', onClick: () => setConfirmConvert(true), disabled: transitioning }
+  const billActionLabel = order && suggestedOrderBillMode(order.payment_condition) === 'issue_and_collect'
+    ? 'Cobrar y facturar'
+    : 'Facturar pedido'
+
+  const orderPrimaryAction: PageAction | null = !editMode && canInvoice
+    ? { id: 'bill', label: billActionLabel, onClick: () => setBillDialogOpen(true), disabled: transitioning }
     : !editMode && transitions[0]
       ? {
           id: transitions[0].next,
           label: transitions[0].label,
-          onClick: () => handleTransition(transitions[0].next),
+          onClick: () => requestTransition(transitions[0].next),
           disabled: transitioning,
         }
       : !editMode && canEdit
@@ -567,13 +635,19 @@ export function OrderDetail({ id }: OrderDetailProps) {
     ? []
     : [
         { id: 'print', label: 'Imprimir', href: `/ventas/pedidos/${id}/print`, openInNewTab: true },
-        ...transitions.slice(orderPrimaryAction && transitions[0] && orderPrimaryAction.id === transitions[0].next ? 1 : 0).map(t => ({
+        ...transitions
+          .slice(orderPrimaryAction && transitions[0] && orderPrimaryAction.id === transitions[0].next ? 1 : 0)
+          .map(t => ({
           id: t.next,
           label: t.label,
-          onClick: () => handleTransition(t.next),
+          onClick: () => requestTransition(t.next),
           disabled: transitioning,
         })),
+        ...(canInvoice && orderPrimaryAction?.id !== 'bill'
+          ? [{ id: 'bill', label: billActionLabel, onClick: () => setBillDialogOpen(true), disabled: transitioning }]
+          : []),
         ...(canDeliver ? [{ id: 'delivery-note', label: 'Crear remito', onClick: () => router.push(`/inventario/remitos/nuevo?order_id=${order.id}`) }] : []),
+        ...(canShip ? [{ id: 'create-shipment', label: 'Generar envío', onClick: () => setCreateShipmentOpen(true) }] : []),
         ...(canReturn ? [
           { id: 'return', label: 'Registrar devolución', onClick: () => router.push(`/ventas/devoluciones/nuevo?order_id=${order.id}`) },
           { id: 'exchange', label: 'Registrar cambio', onClick: () => router.push(`/ventas/devoluciones/nuevo?order_id=${order.id}&type=exchange`) },
@@ -602,9 +676,11 @@ export function OrderDetail({ id }: OrderDetailProps) {
             edit={editMode ? {
               onCancel: cancelEdit,
               onSave: handleSave,
-              saving,
+              saving: saving || catalogResolving,
               saveLabel: contactOnlyEdit ? 'Asignar cliente' : 'Guardar cambios',
-              savingLabel: contactOnlyEdit ? 'Asignando…' : 'Guardando…',
+              savingLabel: catalogResolving
+                ? 'Cargando productos…'
+                : contactOnlyEdit ? 'Asignando…' : 'Guardando…',
             } : undefined}
             primary={orderPrimaryAction}
             secondary={orderSecondaryActions}
@@ -644,6 +720,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                   )}
                 </div>
               )}
+              {shipmentProgress.isPartiallyShipped && <PartialShipmentBadge />}
               <StatusPipeline type="order" status={order.status} />
             </div>
           </div>
@@ -934,6 +1011,18 @@ export function OrderDetail({ id }: OrderDetailProps) {
             </div>
           </div>
 
+          {!editMode && (
+            <OrderShipmentsSection
+              orderId={order.id}
+              refresh={refresh}
+              canCreate={canShip}
+              onCreateRequest={() => setCreateShipmentOpen(true)}
+              shippedQty={shipmentProgress.shippedQty}
+              totalShippableQty={shipmentProgress.totalQty}
+              hasShippableLines={shipmentProgress.hasShippableLines}
+            />
+          )}
+
           {/* Items */}
           {editMode && !contactOnlyEdit ? (
             <div className="bg-surface border border-border rounded-sm p-5">
@@ -943,6 +1032,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                 priceListId={priceListId}
                 branchId={branchId}
                 onStockMapChange={handleStockMapChange}
+                onCatalogResolvingChange={setCatalogResolving}
               />
             </div>
           ) : (
@@ -951,32 +1041,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                 <h2 className="text-[13px] font-semibold text-fg">Ítems</h2>
               </div>
               {order.items && order.items.length > 0 ? (
-                <table className="w-full text-[12px]">
-                  <thead>
-                    <tr className="bg-surface-muted border-b border-border">
-                      <th className="px-4 py-2 text-left font-medium text-fg-muted">Descripción</th>
-                      <th className="px-4 py-2 text-right font-medium text-fg-muted">Cant.</th>
-                      <th className="px-4 py-2 text-right font-medium text-fg-muted">P. unitario</th>
-                      <th className="px-4 py-2 text-right font-medium text-fg-muted">Desc.</th>
-                      <th className="px-4 py-2 text-right font-medium text-fg-muted">IVA</th>
-                      <th className="px-4 py-2 text-right font-medium text-fg-muted">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {order.items.map(item => (
-                      <tr key={item.id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-2.5 text-fg">{item.description}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{item.quantity}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{formatARS(item.unit_price)}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
-                          {parseFloat(item.discount_pct) > 0 ? `${item.discount_pct}%` : '—'}
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{item.iva_rate}%</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums font-medium text-fg">{formatARS(item.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <SaleDocumentLineItemsReadOnly items={order.items} showShipmentColumns />
               ) : (
                 <div className="px-4 py-8 text-center text-[13px] text-fg-subtle">Sin ítems</div>
               )}
@@ -1005,14 +1070,20 @@ export function OrderDetail({ id }: OrderDetailProps) {
         </div>
       </PageBody>
 
-      <ConfirmDialog
-        open={confirmConvert}
-        onOpenChange={setConfirmConvert}
-        title="Crear factura"
-        description={`Se creará una factura a partir del pedido ${order.order_number}. El pedido debe estar entregado.`}
-        confirmLabel="Crear factura"
-        variant="warning"
-        onConfirm={handleConvertToInvoice}
+      <BillOrderDialog
+        open={billDialogOpen}
+        onOpenChange={setBillDialogOpen}
+        order={order}
+        onBilled={() => setRefresh(r => r + 1)}
+      />
+
+      <MarkDeliveredDialog
+        open={markDeliveredOpen}
+        onOpenChange={setMarkDeliveredOpen}
+        orderNumber={order.order_number}
+        activeShipmentCount={activeShipmentCount}
+        onConfirm={confirmMarkDelivered}
+        onCreateShipment={canShip ? () => setCreateShipmentOpen(true) : undefined}
       />
 
       <ConfirmDialog
@@ -1033,6 +1104,13 @@ export function OrderDetail({ id }: OrderDetailProps) {
           setContactOption(option)
           setContactId(option.value)
         }}
+      />
+
+      <CreateShipmentDialog
+        open={createShipmentOpen}
+        onOpenChange={setCreateShipmentOpen}
+        order={order}
+        onCreated={() => setRefresh(r => r + 1)}
       />
     </div>
   )

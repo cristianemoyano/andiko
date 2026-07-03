@@ -8,7 +8,7 @@ import Invoice from './invoice.model'
 import InvoiceItem from './invoice-item.model'
 import Payment from './payment.model'
 import SalesOrder from './sales-order.model'
-import type { InvoiceInput, InvoiceUpdateInput, InvoiceQuery } from './invoice.schema'
+import type { InvoiceInput, InvoiceUpdateInput, InvoiceQuery, InvoiceStatusCountsQuery } from './invoice.schema'
 import Branch from '@/modules/auth/branch.model'
 import Contact from '@/modules/contacts/contact.model'
 import User from '@/modules/auth/user.model'
@@ -19,6 +19,8 @@ import { FISCAL_NUMBER_SOURCE_ATTRS } from '@/lib/fiscal-document-number'
 import type { TenantContext } from '@/lib/tenancy'
 import { whereSalesDocumentScope } from './sales-scope'
 import { assertSaleLineItemsFromActiveCatalog } from './sales-line-items.validation'
+import { isOrderInvoiceable } from './sales-order-workflow'
+import type { InvoiceStatus } from './invoice.model'
 import type { IvaRate } from '@/types'
 
 export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
@@ -72,6 +74,56 @@ export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
   return toPaginated(rows, count, page, limit)
 }
 
+function buildInvoicesListWhere(query: Pick<InvoiceQuery, 'search' | 'contact_id' | 'order_id'>, ctx: TenantContext) {
+  const where: Record<string, unknown> = whereSalesDocumentScope(ctx) as Record<string, unknown>
+  const { search, contact_id, order_id } = query
+  if (contact_id) where.contact_id = contact_id
+  if (order_id)   where.order_id   = order_id
+  if (search) {
+    const term = search.trim()
+    const or: Record<string, unknown>[] = [
+      { invoice_number: { [Op.iLike]: `%${term}%` } },
+    ]
+    const afipMatch = term.match(/^(\d{1,5})-(\d{1,8})$/)
+    if (afipMatch) {
+      or.push({
+        punto_venta: Number.parseInt(afipMatch[1], 10),
+        cbte_numero: Number.parseInt(afipMatch[2], 10),
+      })
+    }
+    where[Op.or as unknown as string] = or
+  }
+  return where
+}
+
+export async function getInvoiceStatusCounts(query: InvoiceStatusCountsQuery, ctx: TenantContext) {
+  ensureSalesBranchAssociations()
+
+  const where = buildInvoicesListWhere(query, ctx)
+  const rows = await Invoice.findAll({
+    where,
+    attributes: [
+      'status',
+      [sequelize.fn('COUNT', sequelize.col('Invoice.id')), 'count'],
+    ],
+    group: ['status'],
+    raw: true,
+  }) as unknown as Array<{ status: InvoiceStatus; count: string }>
+
+  const byStatus = Object.fromEntries(
+    rows.map(row => [row.status, Number(row.count)]),
+  ) as Partial<Record<InvoiceStatus, number>>
+
+  return {
+    '': Object.values(byStatus).reduce((sum, n) => sum + n, 0),
+    draft:           byStatus.draft ?? 0,
+    issued:          byStatus.issued ?? 0,
+    partially_paid:  byStatus.partially_paid ?? 0,
+    paid:            byStatus.paid ?? 0,
+    cancelled:       byStatus.cancelled ?? 0,
+  }
+}
+
 export async function getInvoice(id: string, ctx: TenantContext) {
   ensureSalesBranchAssociations()
 
@@ -114,7 +166,7 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
       transaction: t,
     })
     if (!order) throw new Error('ORDER_NOT_FOUND')
-    if (order.status !== 'delivered') throw new Error('ORDER_NOT_DELIVERED')
+    if (!isOrderInvoiceable(order.status)) throw new Error('ORDER_NOT_INVOICEABLE')
     if (!order.contact_id) throw new Error('ORDER_CONTACT_REQUIRED')
 
     const existingInvoice = await Invoice.findOne({

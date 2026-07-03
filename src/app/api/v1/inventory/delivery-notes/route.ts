@@ -30,8 +30,9 @@ export const POST = withPermission('inventory:write', async (req, _ctx, session)
     return NextResponse.json(note, { status: 201 })
   } catch (err: unknown) {
     if (err instanceof Error) {
-      if (err.message === 'BRANCH_NOT_FOUND')     return NextResponse.json({ error: 'Sucursal no encontrada o inactiva', code: 'BRANCH_NOT_FOUND' }, { status: 404 })
-          }
+      if (err.message === 'BRANCH_NOT_FOUND') return NextResponse.json({ error: 'Sucursal no encontrada o inactiva', code: 'BRANCH_NOT_FOUND' }, { status: 404 })
+      if (err.message === 'CARRIER_ACCOUNT_NOT_FOUND') return NextResponse.json({ error: 'Transportista no encontrado', code: 'CARRIER_ACCOUNT_NOT_FOUND' }, { status: 404 })
+    }
     throw err
   }
 })

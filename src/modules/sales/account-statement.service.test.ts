@@ -137,9 +137,8 @@ describe('getAccountStatement', () => {
       debt_status: 'overdue',
     })
     expect(result.data).toHaveLength(4)
-    expect(result.data[0]).toMatchObject({ movement_type: 'invoice', running_balance: '100.00' })
-    expect(result.data[1]).toMatchObject({ movement_type: 'payment', running_balance: '60.00' })
-    expect(result.data[3]).toMatchObject({ movement_type: 'payment', running_balance: '120.00' })
+    expect(result.data[0]).toMatchObject({ movement_type: 'payment', running_balance: '120.00' })
+    expect(result.data[3]).toMatchObject({ movement_type: 'invoice', running_balance: '100.00' })
   })
 
   it('excludes cancelled documents from statement lines', async () => {
@@ -295,7 +294,7 @@ describe('getAccountStatement', () => {
     expect(result.data.some(row => row.movement_type === 'payment' && row.movement_id === 'pay-9001')).toBe(true)
   })
 
-  it('orders invoice before payment on the same day for running balance readability', async () => {
+  it('shows newest movements first; same-day payment appears above invoice', async () => {
     ;(Invoice.findAll as Mock).mockResolvedValue([
       {
         id: 'inv-day',
@@ -327,12 +326,12 @@ describe('getAccountStatement', () => {
     const result = await getAccountStatement('contact-1', { page: 1, limit: 20, summary_only: false }, tenantCtx)
 
     expect(result.data[0]).toMatchObject({
-      movement_type: 'invoice',
-      running_balance: '406318.00',
-    })
-    expect(result.data[1]).toMatchObject({
       movement_type: 'payment',
       running_balance: '0.00',
+    })
+    expect(result.data[1]).toMatchObject({
+      movement_type: 'invoice',
+      running_balance: '406318.00',
     })
   })
 })

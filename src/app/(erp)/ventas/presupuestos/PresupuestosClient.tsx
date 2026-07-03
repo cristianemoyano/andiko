@@ -8,23 +8,24 @@ import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
-import type { Quote, QuoteStatus } from '../types'
+import type { Quote } from '../types'
 import { QUOTE_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../types'
 import { VentasSubNav } from '../VentasSubNav'
+import { PresupuestosStatusNav, type PresupuestosStatusTab } from './PresupuestosStatusNav'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 const PAGE_SIZE = 20
 
-const STATUS_OPTIONS: { value: QuoteStatus | ''; label: string }[] = [
-  { value: '',         label: 'Todos los estados' },
-  { value: 'draft',    label: 'Borrador' },
-  { value: 'sent',     label: 'Enviado' },
-  { value: 'accepted', label: 'Aceptado' },
-  { value: 'rejected', label: 'Rechazado' },
-  { value: 'expired',  label: 'Vencido' },
-  { value: 'cancelled', label: 'Cancelado' },
-]
+const EMPTY_STATUS_COUNTS: Record<PresupuestosStatusTab, number> = {
+  '': 0,
+  draft: 0,
+  sent: 0,
+  accepted: 0,
+  rejected: 0,
+  expired: 0,
+  cancelled: 0,
+}
 
 const COLUMNS: Column<Quote>[] = [
   {
@@ -103,9 +104,10 @@ export function PresupuestosClient() {
   const router = useRouter()
   const [quotes, setQuotes]   = useState<Quote[]>([])
   const [total, setTotal]     = useState(0)
+  const [statusCounts, setStatusCounts] = useState(EMPTY_STATUS_COUNTS)
   const [page, setPage]       = useState(1)
   const [search, setSearch]   = useState('')
-  const [statusFilter, setStatusFilter] = useState<QuoteStatus | ''>('')
+  const [statusTab, setStatusTab] = useState<PresupuestosStatusTab>('')
   const [expiringSoon, setExpiringSoon] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
 
@@ -140,7 +142,7 @@ export function PresupuestosClient() {
       page:  String(page),
       limit: String(PAGE_SIZE),
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      ...(statusFilter ? { status: statusFilter } : {}),
+      ...(statusTab ? { status: statusTab } : {}),
     })
     ;(async () => {
       setListError(null)
@@ -163,7 +165,28 @@ export function PresupuestosClient() {
       }
     })()
     return () => { controller.abort() }
-  }, [page, debouncedSearch, statusFilter, expiringSoon])
+  }, [page, debouncedSearch, statusTab, expiringSoon])
+
+  useEffect(() => {
+    if (expiringSoon) return
+    const controller = new AbortController()
+    const params = new URLSearchParams({
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    })
+    void (async () => {
+      try {
+        const res = await fetchJson<{ data: Record<PresupuestosStatusTab, number> }>(
+          `/api/v1/sales/quotes/status-counts?${params}`,
+          { signal: controller.signal },
+        )
+        setStatusCounts({ ...EMPTY_STATUS_COUNTS, ...(res.data ?? {}) })
+      } catch {
+        if (controller.signal.aborted) return
+        setStatusCounts(EMPTY_STATUS_COUNTS)
+      }
+    })()
+    return () => { controller.abort() }
+  }, [debouncedSearch, expiringSoon])
 
   return (
     <div className="flex flex-col h-full">
@@ -176,6 +199,13 @@ export function PresupuestosClient() {
         }
       />
       <VentasSubNav />
+      {!expiringSoon && (
+        <PresupuestosStatusNav
+          active={statusTab}
+          counts={statusCounts}
+          onChange={tab => { setStatusTab(tab); setPage(1) }}
+        />
+      )}
 
       <PageBody>
         {listError && (
@@ -202,16 +232,6 @@ export function PresupuestosClient() {
                   onChange={e => { setSearch(e.target.value); setPage(1) }}
                 />
               </div>
-              <select
-                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
-                value={statusFilter}
-                disabled={expiringSoon}
-                onChange={e => { setStatusFilter(e.target.value as QuoteStatus | ''); setPage(1) }}
-              >
-                {STATUS_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
               <Button
                 type="button"
                 size="sm"

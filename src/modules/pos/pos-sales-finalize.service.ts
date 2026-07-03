@@ -10,7 +10,7 @@ import StockMovement from '@/modules/inventory/stock-movement.model'
 import { deductStockForOrder } from '@/modules/inventory/stock-movements.service'
 import { nextDocumentNumber } from '@/modules/sales/sales.utils'
 import { recalcInvoiceBalance } from '@/modules/sales/invoices.service'
-import type { PaymentMethod } from '@/modules/sales/payment.model'
+import type { PaymentMethod } from '@/modules/sales/payment.constants'
 import type { PosSaleAuthorizeInput } from '@/modules/pos/pos-fiscal.schema'
 
 function mapPosPaymentMethod(type: string): PaymentMethod {

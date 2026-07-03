@@ -43,6 +43,16 @@ export const NAV_MODULES: NavItem[] = [
     ),
   },
   {
+    id: 'logistica',
+    label: 'Logística',
+    href: '/logistica',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M1 3h8v8H1zM9 6h3l3 3v2h-3"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="12.5" r="1.5"/>
+      </svg>
+    ),
+  },
+  {
     id: 'inventario',
     label: 'Inventario',
     href: '/inventario',

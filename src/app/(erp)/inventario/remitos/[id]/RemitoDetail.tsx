@@ -190,10 +190,10 @@ export function RemitoDetail({ id }: { id: string }) {
                 <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Creado</p>
                 <p className="text-fg">{new Date(note.created_at).toLocaleDateString('es-AR')}</p>
               </div>
-              {note.carrier && (
+              {(note.carrierAccount?.name ?? note.carrier) && (
                 <div>
                   <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Transportista</p>
-                  <p className="text-fg">{note.carrier}</p>
+                  <p className="text-fg">{note.carrierAccount?.name ?? note.carrier}</p>
                 </div>
               )}
               {note.tracking_code && (

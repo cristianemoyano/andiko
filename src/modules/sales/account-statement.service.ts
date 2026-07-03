@@ -10,11 +10,14 @@ import Payment from './payment.model'
 import CreditNote from './credit-note.model'
 import SalesOrder from './sales-order.model'
 import type { AccountStatementQuery, AccountStatementMovementType } from './account-statement.schema'
+import { OPEN_RECEIVABLE_INVOICE_STATUSES } from './invoice.constants'
 
 export type AccountStatementLine = {
   id: string
   movement_type: AccountStatementMovementType
   movement_id: string
+  /** Invoice id for payments; sales return id for refunds. */
+  related_id: string | null
   date: string
   document_number: string
   description: string | null
@@ -38,6 +41,7 @@ type MovementDraft = {
   id: string
   movement_type: AccountStatementMovementType
   movement_id: string
+  related_id: string | null
   date: Date
   document_number: string
   description: string | null
@@ -56,7 +60,7 @@ export async function getAccountStatement(contactId: string, query: AccountState
   const invoices = await Invoice.findAll({
     where: whereAllowedBranches(ctx, {
       contact_id: contactId,
-      status: { [Op.notIn]: ['cancelled'] },
+      status: { [Op.in]: [...OPEN_RECEIVABLE_INVOICE_STATUSES, 'paid'] },
     }),
     attributes: [
       'id', 'invoice_number', 'status', 'issue_date', 'due_date', 'created_at', 'total', 'paid_amount', 'balance', 'currency', 'notes',
@@ -140,12 +144,13 @@ export async function getAccountStatement(contactId: string, query: AccountState
   })
 
   let runningBalance = openingBalance
-  const linesWithBalance: AccountStatementLine[] = filteredMovements.map(m => {
+  const linesWithBalanceAsc: AccountStatementLine[] = filteredMovements.map(m => {
     runningBalance = runningBalance.plus(m.debit).minus(m.credit)
     return {
       id: m.id,
       movement_type: m.movement_type,
       movement_id: m.movement_id,
+      related_id: m.related_id,
       date: m.date.toISOString(),
       document_number: m.document_number,
       description: m.description,
@@ -155,6 +160,8 @@ export async function getAccountStatement(contactId: string, query: AccountState
       running_balance: runningBalance.toFixed(2),
     }
   })
+
+  const linesWithBalance = linesWithBalanceAsc.reverse()
 
   const { offset } = paginate(query.page, query.limit)
   const pagedLines = linesWithBalance.slice(offset, offset + query.limit)
@@ -215,14 +222,15 @@ function buildMovements(
   invoices: Invoice[],
   payments: Payment[],
   creditNotes: CreditNote[],
-  refunds: Array<{ id: string; refund_number: string; refund_date: Date; amount: string; reference: string | null; notes: string | null }>,
+  refunds: Array<{ id: string; return_id: string; refund_number: string; refund_date: Date; amount: string; reference: string | null; notes: string | null }>,
 ): MovementDraft[] {
   const invoiceMovements: MovementDraft[] = invoices
-    .filter(i => i.status !== 'cancelled')
+    .filter(i => i.status !== 'cancelled' && i.status !== 'draft')
     .map(invoice => ({
       id: `invoice:${invoice.id}`,
       movement_type: 'invoice',
       movement_id: String(invoice.id),
+      related_id: null,
       date: invoice.issue_date ? new Date(invoice.issue_date) : new Date(invoice.created_at),
       document_number: resolveSalesDocumentDisplay({
         internalNumber: String(invoice.invoice_number),
@@ -245,6 +253,7 @@ function buildMovements(
       id: `payment:${payment.id}`,
       movement_type: 'payment',
       movement_id: String(payment.id),
+      related_id: String(payment.invoice_id),
       date: new Date(payment.payment_date),
       document_number: String(payment.payment_number),
       description: payment.reference ? String(payment.reference) : (payment.notes ? String(payment.notes) : null),
@@ -257,6 +266,7 @@ function buildMovements(
     id: `credit_note:${cn.id}`,
     movement_type: 'credit_note' as AccountStatementMovementType,
     movement_id: String(cn.id),
+    related_id: null,
     date: cn.issue_date ? new Date(cn.issue_date) : new Date(cn.created_at),
     document_number: resolveSalesDocumentDisplay({
       internalNumber: String(cn.credit_note_number),
@@ -274,6 +284,7 @@ function buildMovements(
     id: `refund:${r.id}`,
     movement_type: 'refund' as AccountStatementMovementType,
     movement_id: String(r.id),
+    related_id: String(r.return_id),
     date: new Date(r.refund_date),
     document_number: String(r.refund_number),
     description: r.reference ? String(r.reference) : (r.notes ? String(r.notes) : 'Reembolso'),

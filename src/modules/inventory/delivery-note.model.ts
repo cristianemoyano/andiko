@@ -18,6 +18,7 @@ export interface DeliveryNoteAttributes extends Timestamps, AuditFields {
   status: DeliveryNoteStatus
   deducts_stock: boolean
   delivery_date: Date | null
+  carrier_account_id: UUID | null
   carrier: string | null
   tracking_code: string | null
   ship_to_address: string | null
@@ -28,7 +29,7 @@ export interface DeliveryNoteAttributes extends Timestamps, AuditFields {
 type DeliveryNoteCreationAttributes = Optional<
   DeliveryNoteAttributes,
   | 'id' | 'org_id' | 'branch_id' | 'order_id' | 'contact_id' | 'warehouse_id' | 'issued_by'
-  | 'status' | 'deducts_stock' | 'delivery_date' | 'carrier' | 'tracking_code'
+  | 'status' | 'deducts_stock' | 'delivery_date' | 'carrier_account_id' | 'carrier' | 'tracking_code'
   | 'ship_to_address' | 'notes' | 'internal_notes'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
@@ -45,6 +46,7 @@ class DeliveryNote extends AuditModel<DeliveryNoteAttributes, DeliveryNoteCreati
   declare status: DeliveryNoteStatus
   declare deducts_stock: boolean
   declare delivery_date: Date | null
+  declare carrier_account_id: UUID | null
   declare carrier: string | null
   declare tracking_code: string | null
   declare ship_to_address: string | null
@@ -63,8 +65,9 @@ DeliveryNote.init(
     delivery_number: { type: DataTypes.STRING(20), allowNull: false },
     status:          { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'draft' },
     deducts_stock:   { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
-    delivery_date:   { type: DataTypes.DATE },
-    carrier:         { type: DataTypes.STRING(255) },
+    delivery_date:       { type: DataTypes.DATE },
+    carrier_account_id:  { type: DataTypes.UUID },
+    carrier:             { type: DataTypes.STRING(255) },
     tracking_code:   { type: DataTypes.STRING(100) },
     ship_to_address: { type: DataTypes.TEXT },
     notes:           { type: DataTypes.TEXT },

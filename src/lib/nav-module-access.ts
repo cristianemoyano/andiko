@@ -11,6 +11,10 @@ const MODULE_READ_PERMISSION: Record<OrgModuleKey, string> = {
   pos: 'sales',
 }
 
+export function hasLogisticsReadAccess(permissions: readonly string[]): boolean {
+  return permissions.includes('logistics:read') || permissions.includes('sales:read')
+}
+
 export function hasModuleReadAccess(moduleKey: OrgModuleKey, permissions: readonly string[]): boolean {
   const resource = MODULE_READ_PERMISSION[moduleKey]
   return permissions.some(p => {
@@ -33,6 +37,8 @@ export function isModuleNavVisible(
   if (!moduleKey) return true
 
   if (!permissions) return false
+
+  if (navId === 'logistica') return hasLogisticsReadAccess(permissions)
 
   return hasModuleReadAccess(moduleKey, permissions)
 }

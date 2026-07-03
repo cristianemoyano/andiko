@@ -3,6 +3,7 @@ import sequelize from '@/lib/db'
 import type { UUID } from '@/types'
 import Warehouse from './warehouse.model'
 import ProductVariant from '@/modules/catalog/product-variant.model'
+import { ensureAssociation, registeredModel } from '@/lib/sequelize-models'
 
 export type StockMovementType = 'in' | 'out' | 'adjustment' | 'transfer_in' | 'transfer_out'
 export type StockReferenceType = 'order' | 'invoice_cancel' | 'manual' | 'initial' | 'purchase_receipt' | 'delivery_note' | 'sales_return' | 'sales_exchange' | 'purchase_return' | 'purchase_exchange' | 'transfer'
@@ -72,10 +73,21 @@ StockMovement.init(
   { sequelize, tableName: 'stock_movements', paranoid: false, underscored: true }
 )
 
-Warehouse.hasMany(StockMovement, { foreignKey: 'warehouse_id', as: 'movements' })
-StockMovement.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' })
+const WarehouseModel = registeredModel('Warehouse', Warehouse)
+const StockMovementModel = registeredModel('StockMovement', StockMovement)
+const ProductVariantModel = registeredModel('ProductVariant', ProductVariant)
 
-StockMovement.belongsTo(ProductVariant, { foreignKey: 'variant_id', as: 'variant' })
-ProductVariant.hasMany(StockMovement, { foreignKey: 'variant_id', as: 'stockMovements' })
+ensureAssociation(WarehouseModel, 'movements', () => {
+  WarehouseModel.hasMany(StockMovementModel, { foreignKey: 'warehouse_id', as: 'movements' })
+})
+ensureAssociation(StockMovementModel, 'warehouse', () => {
+  StockMovementModel.belongsTo(WarehouseModel, { foreignKey: 'warehouse_id', as: 'warehouse' })
+})
+ensureAssociation(StockMovementModel, 'variant', () => {
+  StockMovementModel.belongsTo(ProductVariantModel, { foreignKey: 'variant_id', as: 'variant' })
+})
+ensureAssociation(ProductVariantModel, 'stockMovements', () => {
+  ProductVariantModel.hasMany(StockMovementModel, { foreignKey: 'variant_id', as: 'stockMovements' })
+})
 
 export default StockMovement

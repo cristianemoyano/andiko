@@ -352,6 +352,16 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                     >
                       {displayContact.legal_name}
                     </Link>
+                    {balanceNum > 0 && (
+                      <p className="mt-1">
+                        <Link
+                          href={`/ventas/cuenta-corriente?contact_id=${displayContact.id}`}
+                          className="text-[12px] text-brand-600 hover:underline"
+                        >
+                          Ver cuenta corriente →
+                        </Link>
+                      </p>
+                    )}
                     {displayContact.trade_name && (
                       <p className="text-[12px] text-fg-muted">{displayContact.trade_name}</p>
                     )}
