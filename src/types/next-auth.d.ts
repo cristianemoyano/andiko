@@ -40,5 +40,7 @@ declare module 'next-auth/jwt' {
     impersonateOrgRoleId?: string | null
     impersonateEmail?: string
     impersonateName?: string
+    /** Unix seconds of the last DB re-check of the signed-in account's is_active flag. */
+    activeCheckedAt?: number
   }
 }

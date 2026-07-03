@@ -4,6 +4,10 @@ vi.mock('server-only', () => ({}))
 vi.mock('@/lib/session-org', () => ({
   resolveOrgIdForMutation: vi.fn(async (user: { orgId: string | null }) => user.orgId),
 }))
+vi.mock('@/lib/capabilities-cache', () => ({
+  currentGlobalGeneration: () => 0,
+  currentOrgGeneration: () => 0,
+}))
 
 vi.mock('@/modules/auth/role-permission.model', () => ({
   default: { findAll: vi.fn() },
@@ -20,6 +24,7 @@ import OrgRolePermission from '@/modules/auth/org-role-permission.model'
 import {
   can,
   canSettings,
+  clearPermissionCache,
   getPermissionsForUser,
   hasSalesScopeOwn,
   requirePermission,
@@ -37,7 +42,10 @@ function makeOrgRoleRow(name: string) {
   return { permission: { name } } as unknown as Awaited<ReturnType<typeof OrgRolePermission.findAll>>[number]
 }
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  clearPermissionCache()
+})
 
 describe('can()', () => {
   it('sys-admin bypasses DB entirely', async () => {

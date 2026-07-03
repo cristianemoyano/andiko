@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Op } from 'sequelize'
 import type { ProductInput } from './product.schema'
 
 vi.mock('server-only', () => ({}))
@@ -12,12 +13,14 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-const productFindAndCountAll = vi.fn()
+const productFindAll = vi.fn()
+const productCount = vi.fn()
 const productFindOne = vi.fn()
 const productCreate = vi.fn()
 vi.mock('./product.model', () => ({
   default: {
-    findAndCountAll: productFindAndCountAll,
+    findAll: productFindAll,
+    count: productCount,
     findOne: productFindOne,
     create: productCreate,
   },
@@ -48,8 +51,9 @@ describe('catalog/products.service', () => {
     vi.clearAllMocks()
   })
 
-  it('listProducts includes variants+category and supports sku search', async () => {
-    productFindAndCountAll.mockResolvedValue({ rows: [], count: 0 })
+  it('listProducts resolves page ids via a grouped query and supports sku search', async () => {
+    productFindAll.mockResolvedValue([])
+    productCount.mockResolvedValue(0)
 
     const { listProducts } = await import('./products.service')
 
@@ -58,16 +62,22 @@ describe('catalog/products.service', () => {
       { orgId: 'o1', userId: 'u1', defaultBranchId: null, allowedBranchIds: [] }
     )
 
-    expect(productFindAndCountAll).toHaveBeenCalledTimes(1)
-    const arg = productFindAndCountAll.mock.calls[0]![0]
+    // First findAll call resolves the page of product ids (subQuery:false + GROUP BY id,
+    // since the search filters on a joined column and LIMIT/OFFSET must apply per-product).
+    expect(productFindAll).toHaveBeenCalledTimes(1)
+    const arg = productFindAll.mock.calls[0]![0]
     expect(arg).toMatchObject({
-      distinct: true,
       subQuery: false,
+      group: ['Product.id'],
     })
     expect(Array.isArray(arg.include)).toBe(true)
     const includes = arg.include as unknown as Array<{ as?: string }>
     expect(includes.some(i => i.as === 'variants')).toBe(true)
-    expect(includes.some(i => i.as === 'category')).toBe(true)
+
+    expect(productCount).toHaveBeenCalledTimes(1)
+    const countArg = productCount.mock.calls[0]![0]
+    expect(countArg).toMatchObject({ distinct: true, col: 'id' })
+
     const andKey = Object.getOwnPropertySymbols(arg.where)[0]
     expect(andKey).toBeDefined()
     const clauses = (arg.where as Record<symbol, unknown>)[andKey!] as Record<string | symbol, unknown>[]
@@ -77,6 +87,30 @@ describe('catalog/products.service', () => {
       return JSON.stringify(clause[orKey]).includes('$variants.sku$')
     })
     expect(hasSkuSearch).toBe(true)
+  })
+
+  it('listProducts loads full rows for the resolved page ids, preserving page order', async () => {
+    const makeRow = (id: string) => ({ id, toJSON: () => ({ id }), get: () => undefined })
+    productFindAll
+      .mockResolvedValueOnce([{ id: 'p1' }, { id: 'p2' }]) // id-resolution query, in page order
+      .mockResolvedValueOnce([makeRow('p2'), makeRow('p1')]) // full-row query, arbitrary DB order
+
+    productCount.mockResolvedValue(2)
+
+    const { listProducts } = await import('./products.service')
+
+    const result = await listProducts(
+      { page: 1, limit: 20 },
+      { orgId: 'o1', userId: 'u1', defaultBranchId: null, allowedBranchIds: [] }
+    )
+
+    expect(productFindAll).toHaveBeenCalledTimes(2)
+    const secondArg = productFindAll.mock.calls[1]![0]
+    expect(secondArg.where).toEqual({ id: { [Op.in]: ['p1', 'p2'] } })
+
+    expect(result.total).toBe(2)
+    // Order follows the id-resolution query (p1, p2), not the full-row query's order (p2, p1).
+    expect(result.data.map(p => p.id)).toEqual(['p1', 'p2'])
   })
 
   it('createProduct sets default stock fields when missing', async () => {

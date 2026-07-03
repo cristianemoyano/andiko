@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.39.0](https://github.com/cristianemoyano/andiko/compare/v0.38.0...v0.39.0) (2026-07-03)
+
+### Features
+
+* **auth:** revoke sessions for deactivated users, rate-limit login ([680cdcd](https://github.com/cristianemoyano/andiko/commit/680cdcda490eda2c2d2e68fab834378dca66cf31))
+* **auth:** show login throttle in UI and add dev unblock script ([ae42fa4](https://github.com/cristianemoyano/andiko/commit/ae42fa4ff5fabbd6357c7f6c190b4374ec970e52))
+
+### Bug Fixes
+
+* **catalog:** correct listProducts pagination, debounce product search ([d4a54bb](https://github.com/cristianemoyano/andiko/commit/d4a54bbc7d4f28f7697c33eb4aec969db386ae49))
+* **core:** close image-proxy SSRF, timing-safe migrate secret check ([a453492](https://github.com/cristianemoyano/andiko/commit/a453492734059255d97cfae44b8453f742b60baf))
+* **pos:** hash device tokens at rest, rate-limit and fix PIN verify ([7b465f5](https://github.com/cristianemoyano/andiko/commit/7b465f5b9e98872ed3af3484742d127e3bd6c4d5))
+
+### Performance Improvements
+
+* **accounting:** debounce chart-of-accounts search ([cdda5a1](https://github.com/cristianemoyano/andiko/commit/cdda5a10179c399e0bece93b2f60e30114d363b1))
+* **contacts:** debounce search and cancel superseded requests ([9a59ef7](https://github.com/cristianemoyano/andiko/commit/9a59ef7a1dd50d74a2b48d4670d9fcc030f203fb))
+* **inventory:** debounce list search and cancel superseded requests ([41ebf52](https://github.com/cristianemoyano/andiko/commit/41ebf52c240e80268bef64ba9c1b49a190b679ad))
+* **purchases:** debounce list search and cancel superseded requests ([cb4b2bc](https://github.com/cristianemoyano/andiko/commit/cb4b2bce07af23063d97954e64960037d64175ad))
+* **sales:** debounce list search and cancel superseded requests ([e6a2590](https://github.com/cristianemoyano/andiko/commit/e6a2590a99284e34a05ee71a08c9da3da09d9d8f))
+
 ## [0.38.0](https://github.com/cristianemoyano/andiko/compare/v0.37.1...v0.38.0) (2026-07-02)
 
 ### Features

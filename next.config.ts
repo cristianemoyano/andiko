@@ -11,13 +11,10 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/admin/migrate': ['./src/db/migrations/**/*'],
   },
-  images: {
-    remotePatterns: [
-      // Allow external product image URLs (CSV/import/manual paste).
-      { protocol: 'https', hostname: '**' },
-      { protocol: 'http', hostname: '**' },
-    ],
-  },
+  // No remotePatterns: the only <Image> consumer (product thumbnails, which point at
+  // arbitrary external URLs from CSV/WooCommerce import or manual paste) renders `unoptimized`,
+  // so the Next.js image optimizer never fetches these URLs server-side. Allowing a wildcard
+  // host here would otherwise make `/_next/image?url=` an open SSRF proxy.
 }
 
 export default nextConfig

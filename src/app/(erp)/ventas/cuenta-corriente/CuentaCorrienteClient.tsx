@@ -22,6 +22,7 @@ import {
 } from '../types'
 import { getAccountMovementHref } from '@/lib/account-statement-navigation'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 const SUMMARY_PAGE_SIZE = 20
 const LINE_PAGE_SIZE = 20
@@ -226,17 +227,13 @@ function SummaryList({ onSelect }: { onSelect: (contactId: string) => void }) {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [balanceFilter, setBalanceFilter] = useState<'with_balance' | 'all'>('with_balance')
   const [listError, setListError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search), 300)
-    return () => clearTimeout(id)
-  }, [search])
+  const debouncedSearch = useDebouncedValue(search, 300)
 
   useEffect(() => {
-    let cancelled = false
+    const controller = new AbortController()
     const params = new URLSearchParams({
       page: String(page),
       limit: String(SUMMARY_PAGE_SIZE),
@@ -248,18 +245,18 @@ function SummaryList({ onSelect }: { onSelect: (contactId: string) => void }) {
       try {
         const payload = await fetchJson<{ data: AccountStatementSummaryRow[]; total: number }>(
           `/api/v1/sales/account-statements?${params}`,
+          { signal: controller.signal },
         )
-        if (cancelled) return
         setRows(Array.isArray(payload?.data) ? payload.data : [])
         setTotal(typeof payload?.total === 'number' ? payload.total : 0)
       } catch (e) {
-        if (cancelled) return
+        if (controller.signal.aborted) return
         setListError(getApiErrorMessage(e))
         setRows([])
         setTotal(0)
       }
     })()
-    return () => { cancelled = true }
+    return () => { controller.abort() }
   }, [page, debouncedSearch, balanceFilter])
 
   return (
@@ -351,12 +348,14 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
     setMovementSheetOpen(true)
   }
 
+  const debouncedLineSearch = useDebouncedValue(lineSearch, 300)
+
   useEffect(() => {
-    let cancelled = false
+    const controller = new AbortController()
     const params = new URLSearchParams({
       page: String(linePage),
       limit: String(LINE_PAGE_SIZE),
-      ...(lineSearch ? { search: lineSearch } : {}),
+      ...(debouncedLineSearch ? { search: debouncedLineSearch } : {}),
       ...(lineTypeFilter ? { movement_type: lineTypeFilter } : {}),
       ...(fromDate ? { from: fromDate } : {}),
       ...(toDate ? { to: toDate } : {}),
@@ -367,23 +366,23 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
       try {
         const payload = await fetchJson<AccountStatementResponse>(
           `/api/v1/sales/contacts/${contactId}/account-statement?${params}`,
+          { signal: controller.signal },
         )
-        if (cancelled) return
         setContact(payload.contact ?? null)
         setSummary(payload.summary ?? DEFAULT_SUMMARY)
         setLineItems(Array.isArray(payload?.data) ? payload.data : [])
         setLineTotal(typeof payload?.total === 'number' ? payload.total : 0)
       } catch (e) {
-        if (cancelled) return
+        if (controller.signal.aborted) return
         setDetailError(getApiErrorMessage(e))
         setLineItems([])
         setLineTotal(0)
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       }
     })()
-    return () => { cancelled = true }
-  }, [contactId, linePage, lineSearch, lineTypeFilter, fromDate, toDate])
+    return () => { controller.abort() }
+  }, [contactId, linePage, debouncedLineSearch, lineTypeFilter, fromDate, toDate])
 
   return (
     <div className="space-y-4">

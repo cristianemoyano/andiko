@@ -12,6 +12,11 @@ export type ImageProps = BaseProps & {
 /**
  * Wrapper del Image de Next con fallback consistente (cuando no hay src o falla la carga).
  * Usar cuando quieras thumbnails/galerías simples en UI ERP.
+ *
+ * `src` puede venir de una URL externa arbitraria (import CSV, WooCommerce, pegado manual),
+ * así que se renderiza `unoptimized`: evita que el optimizador de Next haga un fetch
+ * server-side de esa URL (vector de SSRF) y el navegador la carga directamente, como haría
+ * un `<img>` plano.
  */
 export function Image({
   src,
@@ -36,6 +41,7 @@ export function Image({
     <NextImage
       src={src}
       alt={safeAlt}
+      unoptimized
       className={cn('rounded border border-border bg-surface-muted object-cover', className)}
       {...props}
     />

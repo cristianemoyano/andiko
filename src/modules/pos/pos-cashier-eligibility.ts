@@ -23,6 +23,8 @@ export type ListPosCashierUsersFilters = {
   q?: string
   since?: Date | null
   limit?: number
+  /** Restrict to a single user id (e.g. PIN verification — avoids paging through eligible users). */
+  userId?: string
 }
 
 export type PosCashierUserDto = {
@@ -88,6 +90,10 @@ export async function listPosCashierUsers(
 
   if (filters.since) {
     where.updated_at = { [Op.gt]: filters.since }
+  }
+
+  if (filters.userId) {
+    where.id = filters.userId
   }
 
   const rows = await User.findAll({

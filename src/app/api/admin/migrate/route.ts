@@ -1,5 +1,12 @@
+import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { env } from '@/config/env'
+
+function isValidToken(token: string, secret: string): boolean {
+  const a = Buffer.from(token)
+  const b = Buffer.from(secret)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
 
 // Protected migration endpoint — only for production use after deploys.
 // Requires Authorization: Bearer <MIGRATION_SECRET> header.
@@ -11,7 +18,7 @@ export async function POST(req: Request) {
 
   const authHeader = req.headers.get('authorization') ?? ''
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
-  if (token !== env.MIGRATION_SECRET) {
+  if (!isValidToken(token, env.MIGRATION_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

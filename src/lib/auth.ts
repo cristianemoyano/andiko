@@ -5,8 +5,31 @@ import { z } from 'zod'
 import { authConfig } from './auth.config'
 import { findUserByEmail, validatePassword } from '@/modules/auth/auth.service'
 import { isUuid, loadUserForImpersonation } from '@/modules/auth/impersonation.service'
+import User from '@/modules/auth/user.model'
 import logger from './logger'
+import { clearThrottle, isThrottled, recordFailedAttempt } from './rate-limit'
+import { LoginThrottledError } from './login-throttle-error'
 import type { UserRole } from '@/types/roles'
+
+const LOGIN_THROTTLE = { maxAttempts: 5, windowSeconds: 15 * 60, lockSeconds: 15 * 60 }
+
+async function rejectFailedLogin(throttleKey: string): Promise<null> {
+  const status = await recordFailedAttempt(throttleKey, LOGIN_THROTTLE)
+  if (status.blocked) {
+    throw new LoginThrottledError(status.retryAfterSeconds)
+  }
+  return null
+}
+
+// How often an existing JWT re-checks `users.is_active` against the DB. Bounds how long a
+// deactivated account's session stays usable — bounded staleness in exchange for not hitting
+// the DB on every single request (JWT sessions are otherwise fully stateless).
+const ACTIVE_RECHECK_SECONDS = 5 * 60
+
+async function isUserActive(userId: string): Promise<boolean> {
+  const row = await User.findOne({ where: { id: userId, is_active: true }, attributes: ['id'] })
+  return !!row
+}
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -31,15 +54,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) return null
 
+        const throttleKey = `login:${parsed.data.email.toLowerCase()}`
+        const throttled = await isThrottled(throttleKey)
+        if (throttled.blocked) {
+          logger.warn({ email: parsed.data.email }, 'login blocked: too many failed attempts')
+          throw new LoginThrottledError(throttled.retryAfterSeconds)
+        }
+
         const user = await findUserByEmail(parsed.data.email)
-        if (!user) return null
+        if (!user) {
+          return rejectFailedLogin(throttleKey)
+        }
 
         const valid = await validatePassword(parsed.data.password, user.password_hash)
         if (!valid) {
-          logger.warn({ email: parsed.data.email }, 'failed login attempt')
-          return null
+          logger.warn({ userId: user.id }, 'failed login attempt')
+          return rejectFailedLogin(throttleKey)
         }
 
+        await clearThrottle(throttleKey)
         logger.info({ userId: user.id, email: user.email }, 'user logged in')
         return {
           id: user.id,
@@ -68,7 +101,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.branchId = u.branch_id ?? null
         token.orgRoleId = u.org_role_id ?? null
         token.actingOrgId = null
+        token.activeCheckedAt = Math.floor(Date.now() / 1000)
         clearImpersonation(token)
+      }
+
+      // Re-validate the signed-in account still exists and is active, throttled so we don't
+      // hit the DB on every request. A deactivated account is cut off within ACTIVE_RECHECK_SECONDS
+      // instead of staying valid for the full JWT lifetime.
+      if (!user && token.sub) {
+        const now = Math.floor(Date.now() / 1000)
+        if (now - (token.activeCheckedAt ?? 0) >= ACTIVE_RECHECK_SECONDS) {
+          const active = await isUserActive(token.sub)
+          if (!active) {
+            logger.warn({ userId: token.sub }, 'session revoked: account inactive or deleted')
+            return null
+          }
+          token.activeCheckedAt = now
+
+          if (token.impersonateUserId && !(await isUserActive(token.impersonateUserId))) {
+            logger.warn({ userId: token.impersonateUserId }, 'impersonation target inactive, clearing')
+            clearImpersonation(token)
+          }
+        }
       }
 
       const realRole = token.role as UserRole | undefined
