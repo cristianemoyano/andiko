@@ -6,6 +6,7 @@ import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { WOO_IMPORT_SOURCE } from '@/modules/integrations/woocommerce/woo-address.utils'
 import {
   GroupedDataTable,
@@ -200,30 +201,32 @@ export function CatalogoClient({ showWooColumn = false }: { showWooColumn?: bool
     }
   }, [importOpen])
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   useEffect(() => {
-    let mounted = true
+    const controller = new AbortController()
     ;(async () => {
       setServerError(null)
       const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
-      if (search) params.set('search', search)
+      if (debouncedSearch) params.set('search', debouncedSearch)
       if (status) params.set('status', status)
       if (showWooColumn && sourceFilter) params.set('source', sourceFilter)
       try {
         const data = await fetchJson<{ data?: Product[]; total?: number }>(
           `/api/v1/catalog/products?${params}`,
+          { signal: controller.signal },
         )
-        if (!mounted) return
         setProducts(data?.data ?? [])
         setTotal(data?.total ?? 0)
       } catch (e) {
-        if (!mounted) return
+        if (controller.signal.aborted) return
         setServerError(getApiErrorMessage(e))
         setProducts([])
         setTotal(0)
       }
     })()
-    return () => { mounted = false }
-  }, [page, search, status, sourceFilter, showWooColumn, refresh])
+    return () => { controller.abort() }
+  }, [page, debouncedSearch, status, sourceFilter, showWooColumn, refresh])
 
   async function openEdit(id: string) {
     setLoadingEdit(true)
