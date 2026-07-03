@@ -116,6 +116,30 @@ export function invalidateCapabilitiesGlobal(): void {
   globalGeneration += 1
 }
 
+/**
+ * Read-only generation accessors. Capabilities are derived from the underlying permission
+ * matrix (role_permissions / org_role_permissions / organization_settings), so these
+ * generation counters double as the "permission-relevant data changed" signal for other
+ * in-memory caches (see `permissions.ts`'s process-level permission cache) — invalidating
+ * here via `invalidateCapabilitiesForOrg`/`invalidateCapabilitiesIdentity` at the existing
+ * mutation call sites keeps both caches correct without a second set of invalidation hooks.
+ */
+export function currentGlobalGeneration(): number {
+  return globalGeneration
+}
+
+export function currentOrgGeneration(orgId: string | null): number {
+  return currentOrgGen(orgId)
+}
+
+export function currentIdentityGeneration(
+  orgId: string | null,
+  role: UserRole,
+  orgRoleId: string | null,
+): number {
+  return currentIdentityGen(orgId, role, orgRoleId)
+}
+
 /** Test helper — clears in-memory cache and generation counters. */
 export function clearCapabilitiesCache(): void {
   store.clear()

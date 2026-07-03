@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto'
 import { withPermission } from '@/lib/api-handler'
 import { TenancyError, TENANCY_ERROR_CODES, resolveTenantContext } from '@/lib/tenancy'
 import PosDevice from '@/modules/pos/pos-device.model'
+import { hashPosToken } from '@/lib/pos-token'
 
 const createDeviceSchema = z.object({
   device_id: z.string().min(1).max(128),
@@ -54,7 +55,7 @@ export const POST = withPermission('contacts:write', async (req, _ctx, session) 
       branch_id: parsed.data.branch_id ?? ctx.defaultBranchId ?? null,
       device_id: parsed.data.device_id,
       name: parsed.data.name ?? null,
-      api_token: apiToken,
+      api_token_hash: hashPosToken(apiToken),
       is_active: true,
       license_valid_until: initialLicense,
     })

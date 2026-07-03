@@ -9,6 +9,7 @@ import { Button } from '@/components/primitives/Button'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { ContabilidadSubNav } from '../ContabilidadSubNav'
 import { CuentaModal } from './CuentaModal'
 import { ACCOUNT_TYPE_LABEL, type Account } from '../types'
@@ -27,25 +28,29 @@ export function PlanDeCuentasClient() {
   const [editing, setEditing] = useState<Account | null>(null)
   const [toDelete, setToDelete] = useState<Account | null>(null)
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   useEffect(() => {
-    let mounted = true
+    const controller = new AbortController()
     const params = new URLSearchParams({ all: 'true' })
     if (typeFilter) params.set('type', typeFilter)
-    if (search) params.set('search', search)
+    if (debouncedSearch) params.set('search', debouncedSearch)
     ;(async () => {
       setServerError(null)
       try {
-        const data = await fetchJson<{ data: Account[] }>(`/api/v1/accounting/accounts?${params}`)
-        if (!mounted) return
+        const data = await fetchJson<{ data: Account[] }>(
+          `/api/v1/accounting/accounts?${params}`,
+          { signal: controller.signal },
+        )
         setAccounts(data.data)
       } catch (e) {
-        if (!mounted) return
+        if (controller.signal.aborted) return
         setServerError(getApiErrorMessage(e))
         setAccounts([])
       }
     })()
-    return () => { mounted = false }
-  }, [typeFilter, search, refresh])
+    return () => { controller.abort() }
+  }, [typeFilter, debouncedSearch, refresh])
 
   function openCreate() {
     setEditing(null)

@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { InventoryStockHint } from '@/components/erp/InventoryStockHint'
 import { InventarioSubNav } from '../InventarioSubNav'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 type Warehouse = { id: string; name: string }
 
@@ -104,7 +105,6 @@ export function TransferenciasClient() {
   const [originPage, setOriginPage] = useState(1)
   const [destQtyByVariant, setDestQtyByVariant] = useState<Record<string, string>>({})
   const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [transferItems, setTransferItems] = useState<TransferSelection>({})
 
   const destWarehouses = warehouses.filter(w => w.id !== fromId)
@@ -133,13 +133,11 @@ export function TransferenciasClient() {
     })()
   }, [])
 
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search), 300)
-    return () => clearTimeout(id)
-  }, [search])
+  const debouncedSearch = useDebouncedValue(search, 300)
 
   useEffect(() => {
     if (!fromId) return
+    const controller = new AbortController()
     // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state before fetch
     setOriginRows(null)
     const params = new URLSearchParams({
@@ -150,14 +148,19 @@ export function TransferenciasClient() {
     if (debouncedSearch) params.set('search', debouncedSearch)
     void (async () => {
       try {
-        const data = await fetchJson<{ data: StockRow[]; total: number }>(`/api/v1/inventory/stock?${params}`)
+        const data = await fetchJson<{ data: StockRow[]; total: number }>(
+          `/api/v1/inventory/stock?${params}`,
+          { signal: controller.signal },
+        )
         setOriginRows(data.data ?? [])
         setOriginTotal(data.total ?? 0)
       } catch {
+        if (controller.signal.aborted) return
         setOriginRows([])
         setOriginTotal(0)
       }
     })()
+    return () => { controller.abort() }
   }, [fromId, originPage, debouncedSearch, refresh])
 
   useEffect(() => {

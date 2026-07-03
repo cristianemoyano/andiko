@@ -11,6 +11,7 @@ import { formatARS } from '@/components/primitives/CurrencyInput'
 import { ComprasSubNav } from '../ComprasSubNav'
 import type { SupplierInvoice, SupplierInvoiceStatus } from '../types'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { SUPPLIER_INVOICE_STATUS_LABEL } from '../types'
 
 const PAGE_SIZE = 20
@@ -88,29 +89,31 @@ export function FacturasProvClient() {
   const [status, setStatus]     = useState<SupplierInvoiceStatus | ''>('')
   const [error, setError]       = useState<string | null>(null)
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   useEffect(() => {
-    let mounted = true
+    const controller = new AbortController()
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
-    if (search) params.set('search', search)
+    if (debouncedSearch) params.set('search', debouncedSearch)
     if (status) params.set('status', status)
     ;(async () => {
       try {
         const d = await fetchJson<{ data: SupplierInvoice[]; total: number }>(
           `/api/v1/purchases/supplier-invoices?${params}`,
+          { signal: controller.signal },
         )
-        if (!mounted) return
         setInvoices(d.data ?? [])
         setTotal(d.total ?? 0)
         setError(null)
       } catch (e) {
-        if (!mounted) return
+        if (controller.signal.aborted) return
         setError(getApiErrorMessage(e))
         setInvoices([])
         setTotal(0)
       }
     })()
-    return () => { mounted = false }
-  }, [page, search, status])
+    return () => { controller.abort() }
+  }, [page, debouncedSearch, status])
 
   return (
     <div className="flex flex-col h-full">

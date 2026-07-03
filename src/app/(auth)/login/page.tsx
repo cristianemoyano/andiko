@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { resolvePostAuthRedirect } from '@/lib/post-auth-redirect'
@@ -18,7 +19,9 @@ export default async function LoginPage() {
         </p>
       </div>
 
-      <LoginForm />
+      <Suspense fallback={null}>
+        <LoginForm />
+      </Suspense>
     </div>
   )
 }

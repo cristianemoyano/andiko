@@ -12,6 +12,7 @@ import { ComprasSubNav } from '../ComprasSubNav'
 import type { PurchaseOrder, PurchaseOrderStatus } from '../types'
 import { PURCHASE_ORDER_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../types'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 const PAGE_SIZE = 20
 
@@ -81,27 +82,31 @@ export function OrdenesClient() {
   const [status, setStatus]   = useState<PurchaseOrderStatus | ''>('')
   const [error, setError]     = useState<string | null>(null)
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   useEffect(() => {
-    let mounted = true
+    const controller = new AbortController()
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
-    if (search) params.set('search', search)
+    if (debouncedSearch) params.set('search', debouncedSearch)
     if (status) params.set('status', status)
     ;(async () => {
       try {
-        const d = await fetchJson<{ data: PurchaseOrder[]; total: number }>(`/api/v1/purchases/orders?${params}`)
-        if (!mounted) return
+        const d = await fetchJson<{ data: PurchaseOrder[]; total: number }>(
+          `/api/v1/purchases/orders?${params}`,
+          { signal: controller.signal },
+        )
         setOrders(d.data ?? [])
         setTotal(d.total ?? 0)
         setError(null)
       } catch (e) {
-        if (!mounted) return
+        if (controller.signal.aborted) return
         setError(getApiErrorMessage(e))
         setOrders([])
         setTotal(0)
       }
     })()
-    return () => { mounted = false }
-  }, [page, search, status])
+    return () => { controller.abort() }
+  }, [page, debouncedSearch, status])
 
   return (
     <div className="flex flex-col h-full">

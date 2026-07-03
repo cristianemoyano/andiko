@@ -1,32 +1,57 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { PasswordInput } from '@/components/primitives/PasswordInput'
 import { FormField } from '@/components/primitives/FormField'
 import { fetchLandingPath } from '@/lib/landing-path-client'
+import {
+  fetchLoginThrottleSeconds,
+  formatLoginThrottleMessage,
+  parseLoginThrottledCode,
+} from '@/lib/login-throttle-message'
 
 const ERRORS: Record<string, string> = {
   CredentialsSignin: 'Email o contraseña incorrectos.',
   default: 'Ocurrió un error. Intentá de nuevo.',
 }
 
+function resolveLoginError(error: string, retryAfterSeconds: number | null): string {
+  if (retryAfterSeconds !== null) {
+    return formatLoginThrottleMessage(retryAfterSeconds)
+  }
+  return ERRORS[error] ?? ERRORS.default
+}
+
 export function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlThrottleSeconds = useMemo(
+    () => parseLoginThrottledCode(searchParams.get('code') ?? undefined),
+    [searchParams],
+  )
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitThrottled, setSubmitThrottled] = useState(false)
+
+  const throttled = submitThrottled || urlThrottleSeconds !== null
+  const error = submitError ?? (
+    urlThrottleSeconds !== null ? formatLoginThrottleMessage(urlThrottleSeconds) : null
+  )
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setError(null)
+    setSubmitError(null)
+    setSubmitThrottled(false)
     setLoading(true)
 
     const form = new FormData(e.currentTarget)
+    const email = String(form.get('email') ?? '')
     const result = await signIn('credentials', {
-      email: form.get('email'),
+      email,
       password: form.get('password'),
       redirect: false,
     })
@@ -34,7 +59,12 @@ export function LoginForm() {
     setLoading(false)
 
     if (result?.error) {
-      setError(ERRORS[result.error] ?? ERRORS.default)
+      let retrySeconds = parseLoginThrottledCode(result.code)
+      if (retrySeconds === null) {
+        retrySeconds = await fetchLoginThrottleSeconds(email)
+      }
+      setSubmitThrottled(retrySeconds !== null)
+      setSubmitError(resolveLoginError(result.error, retrySeconds))
       return
     }
 
@@ -72,7 +102,15 @@ export function LoginForm() {
       </FormField>
 
       {error && (
-        <p role="alert" data-testid="login-error" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+        <p
+          role="alert"
+          data-testid="login-error"
+          className={
+            throttled
+              ? 'text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2'
+              : 'text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2'
+          }
+        >
           {error}
         </p>
       )}

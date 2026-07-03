@@ -13,6 +13,7 @@ import { QUOTE_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../types'
 import { VentasSubNav } from '../VentasSubNav'
 import { PresupuestosStatusNav, type PresupuestosStatusTab } from './PresupuestosStatusNav'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 const PAGE_SIZE = 20
 
@@ -110,40 +111,46 @@ export function PresupuestosClient() {
   const [expiringSoon, setExpiringSoon] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   useEffect(() => {
-    let mounted = true
+    const controller = new AbortController()
 
     if (expiringSoon) {
       const params = new URLSearchParams({ expiring_within_days: String(EXPIRING_SOON_DAYS) })
       ;(async () => {
         setListError(null)
         try {
-          const data = await fetchJson<{ data: Quote[] }>(`/api/v1/sales/quotes?${params}`)
-          if (!mounted) return
+          const data = await fetchJson<{ data: Quote[] }>(
+            `/api/v1/sales/quotes?${params}`,
+            { signal: controller.signal },
+          )
           const rows = Array.isArray(data?.data) ? data.data : []
           setQuotes(rows)
           setTotal(rows.length)
         } catch (e) {
-          if (!mounted) return
+          if (controller.signal.aborted) return
           setListError(getApiErrorMessage(e))
           setQuotes([])
           setTotal(0)
         }
       })()
-      return () => { mounted = false }
+      return () => { controller.abort() }
     }
 
     const params = new URLSearchParams({
       page:  String(page),
       limit: String(PAGE_SIZE),
-      ...(search       ? { search }             : {}),
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(statusTab ? { status: statusTab } : {}),
     })
     ;(async () => {
       setListError(null)
       try {
-        const data = await fetchJson<{ data: Quote[]; total: number }>(`/api/v1/sales/quotes?${params}`)
-        if (!mounted) return
+        const data = await fetchJson<{ data: Quote[]; total: number }>(
+          `/api/v1/sales/quotes?${params}`,
+          { signal: controller.signal },
+        )
         const rows = Array.isArray(data?.data) ? data.data : []
         const nextTotal = typeof data?.total === 'number' ? data.total : 0
         setQuotes(rows)
@@ -151,35 +158,35 @@ export function PresupuestosClient() {
         const pages = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE))
         setPage(p => (p > pages ? pages : p))
       } catch (e) {
-        if (!mounted) return
+        if (controller.signal.aborted) return
         setListError(getApiErrorMessage(e))
         setQuotes([])
         setTotal(0)
       }
     })()
-    return () => { mounted = false }
-  }, [page, search, statusTab, expiringSoon])
+    return () => { controller.abort() }
+  }, [page, debouncedSearch, statusTab, expiringSoon])
 
   useEffect(() => {
     if (expiringSoon) return
-    let mounted = true
+    const controller = new AbortController()
     const params = new URLSearchParams({
-      ...(search ? { search } : {}),
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
     })
     void (async () => {
       try {
         const res = await fetchJson<{ data: Record<PresupuestosStatusTab, number> }>(
           `/api/v1/sales/quotes/status-counts?${params}`,
+          { signal: controller.signal },
         )
-        if (!mounted) return
         setStatusCounts({ ...EMPTY_STATUS_COUNTS, ...(res.data ?? {}) })
       } catch {
-        if (!mounted) return
+        if (controller.signal.aborted) return
         setStatusCounts(EMPTY_STATUS_COUNTS)
       }
     })()
-    return () => { mounted = false }
-  }, [search, expiringSoon])
+    return () => { controller.abort() }
+  }, [debouncedSearch, expiringSoon])
 
   return (
     <div className="flex flex-col h-full">

@@ -17,6 +17,7 @@ import { SearchableSelect, type SearchableSelectOption } from '@/components/erp/
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { VentasSubNav } from '../VentasSubNav'
 import { fetchJson } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 type CreditNoteStatus = 'draft' | 'issued' | 'cancelled'
 type CreditNoteRow = {
@@ -176,26 +177,30 @@ export function NotasDeCreditoClient() {
   const taxDec = netDec.mul(new Decimal(ivaRate))
   const totalDec = netDec.plus(taxDec)
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   useEffect(() => {
-    let cancelled = false
+    const controller = new AbortController()
     async function load() {
       const params = new URLSearchParams({
         page: String(page),
         limit: String(PAGE_SIZE),
-        ...(search ? { search } : {}),
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
       })
       try {
-        const payload = await fetchJson<{ data: CreditNoteRow[]; total: number }>(`/api/v1/sales/credit-notes?${params}`)
-        if (cancelled) return
+        const payload = await fetchJson<{ data: CreditNoteRow[]; total: number }>(
+          `/api/v1/sales/credit-notes?${params}`,
+          { signal: controller.signal },
+        )
         setRows(Array.isArray(payload?.data) ? payload.data : [])
         setTotal(typeof payload?.total === 'number' ? payload.total : 0)
       } catch {
-        if (!cancelled) { setRows([]); setTotal(0) }
+        if (!controller.signal.aborted) { setRows([]); setTotal(0) }
       }
     }
     void load()
-    return () => { cancelled = true }
-  }, [page, search, refresh])
+    return () => { controller.abort() }
+  }, [page, debouncedSearch, refresh])
 
   // Load invoices when contact changes
   useEffect(() => {

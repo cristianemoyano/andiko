@@ -90,34 +90,64 @@ export async function listProducts(query: ProductQuery, ctx: TenantContext) {
       : {},
   )
 
-  const { rows, count } = await Product.findAndCountAll({
+  // Filtering by a joined column (variants.sku) forces subQuery:false (Sequelize's default
+  // pagination subquery doesn't include the JOIN, so it can't resolve `$variants.sku$`). But
+  // subQuery:false also means LIMIT/OFFSET apply to the product×variant join output, not to
+  // products — a product with N variants consumes N rows of the page budget, silently
+  // shrinking pages and permanently skipping products at the page boundary. So resolve the
+  // page of product ids first (deduped via GROUP BY on the primary key — Postgres allows
+  // ordering by other columns of the same table via functional dependency), then load the
+  // full rows for exactly those ids.
+  const idRows = await Product.findAll({
     where,
     limit,
     offset,
     order: [['name', 'ASC']],
-    distinct: true,
-    // Needed when filtering by joined columns (e.g. variants.sku).
-    // Otherwise Sequelize places the WHERE in a subquery that doesn't include the JOIN.
     subQuery: false,
-    attributes: [
-      'id', 'name', 'slug', 'product_type', 'status', 'iva_rate', 'unit_of_measure', 'vendor',
-      'category_id', 'images', 'created_at', 'import_source', 'import_external_id',
-    ],
+    attributes: ['id'],
+    group: ['Product.id'],
     include: [
-      {
-        model: ProductVariant,
-        as: 'variants',
-        required: false,
-        attributes: ['id', 'sku', 'barcode', 'name', 'base_price', 'stock_quantity', 'manage_stock', 'is_default'],
-      },
-      {
-        model: ProductCategory,
-        as: 'category',
-        required: false,
-        attributes: ['id', 'name'],
-      },
+      { model: ProductVariant, as: 'variants', required: false, attributes: [] },
     ],
   })
+  const count = await Product.count({
+    where,
+    distinct: true,
+    col: 'id',
+    include: [
+      { model: ProductVariant, as: 'variants', required: false, attributes: [] },
+    ],
+  })
+
+  const pageIds = idRows.map(r => r.id)
+  const unorderedRows = pageIds.length
+    ? await Product.findAll({
+        where: { id: { [Op.in]: pageIds } },
+        attributes: [
+          'id', 'name', 'slug', 'product_type', 'status', 'iva_rate', 'unit_of_measure', 'vendor',
+          'category_id', 'images', 'created_at', 'import_source', 'import_external_id',
+        ],
+        include: [
+          {
+            model: ProductVariant,
+            as: 'variants',
+            required: false,
+            attributes: ['id', 'sku', 'barcode', 'name', 'base_price', 'stock_quantity', 'manage_stock', 'is_default'],
+          },
+          {
+            model: ProductCategory,
+            as: 'category',
+            required: false,
+            attributes: ['id', 'name'],
+          },
+        ],
+      })
+    : []
+  // Re-apply the id query's order rather than re-sorting by name here: `name` isn't unique,
+  // so a second independent ORDER BY name query could break ties differently and shuffle
+  // items within the page relative to the authoritative page split decided above.
+  const rowById = new Map(unorderedRows.map(row => [row.id, row]))
+  const rows = pageIds.map(id => rowById.get(id)).filter((row): row is Product => row !== undefined)
 
   const variantIds = rows.flatMap((row) => {
     const variants = row.get('variants') as ProductVariant[] | undefined

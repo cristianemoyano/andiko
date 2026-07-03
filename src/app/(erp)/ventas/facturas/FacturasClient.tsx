@@ -12,6 +12,7 @@ import { INVOICE_STATUS_LABEL } from '../types'
 import { VentasSubNav } from '../VentasSubNav'
 import { FacturasStatusNav, type FacturasStatusTab } from './FacturasStatusNav'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 const PAGE_SIZE = 20
 
@@ -120,19 +121,23 @@ export function FacturasClient() {
   const [statusTab, setStatusTab] = useState<FacturasStatusTab>('')
   const [listError, setListError] = useState<string | null>(null)
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   useEffect(() => {
-    let mounted = true
+    const controller = new AbortController()
     const params = new URLSearchParams({
       page:  String(page),
       limit: String(PAGE_SIZE),
-      ...(search       ? { search }             : {}),
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(statusTab ? { status: statusTab } : {}),
     })
     ;(async () => {
       setListError(null)
       try {
-        const data = await fetchJson<{ data: Invoice[]; total: number }>(`/api/v1/sales/invoices?${params}`)
-        if (!mounted) return
+        const data = await fetchJson<{ data: Invoice[]; total: number }>(
+          `/api/v1/sales/invoices?${params}`,
+          { signal: controller.signal },
+        )
         const rows = Array.isArray(data?.data) ? data.data : []
         const nextTotal = typeof data?.total === 'number' ? data.total : 0
         setInvoices(rows)
@@ -140,34 +145,34 @@ export function FacturasClient() {
         const pages = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE))
         setPage(p => (p > pages ? pages : p))
       } catch (e) {
-        if (!mounted) return
+        if (controller.signal.aborted) return
         setListError(getApiErrorMessage(e))
         setInvoices([])
         setTotal(0)
       }
     })()
-    return () => { mounted = false }
-  }, [page, search, statusTab])
+    return () => { controller.abort() }
+  }, [page, debouncedSearch, statusTab])
 
   useEffect(() => {
-    let mounted = true
+    const controller = new AbortController()
     const params = new URLSearchParams({
-      ...(search ? { search } : {}),
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
     })
     void (async () => {
       try {
         const res = await fetchJson<{ data: Record<FacturasStatusTab, number> }>(
           `/api/v1/sales/invoices/status-counts?${params}`,
+          { signal: controller.signal },
         )
-        if (!mounted) return
         setStatusCounts({ ...EMPTY_STATUS_COUNTS, ...(res.data ?? {}) })
       } catch {
-        if (!mounted) return
+        if (controller.signal.aborted) return
         setStatusCounts(EMPTY_STATUS_COUNTS)
       }
     })()
-    return () => { mounted = false }
-  }, [search])
+    return () => { controller.abort() }
+  }, [debouncedSearch])
 
   return (
     <div className="flex flex-col h-full">

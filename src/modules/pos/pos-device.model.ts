@@ -9,7 +9,7 @@ export interface PosDeviceAttributes extends Timestamps {
   branch_id: UUID | null
   device_id: string
   name: string | null
-  api_token: string
+  api_token_hash: string
   last_seen_at: Date | null
   license_valid_until: Date | null
   is_active: boolean
@@ -30,7 +30,7 @@ class PosDevice extends Model<PosDeviceAttributes, PosDeviceCreationAttributes> 
   declare branch_id: UUID | null
   declare device_id: string
   declare name: string | null
-  declare api_token: string
+  declare api_token_hash: string
   declare last_seen_at: Date | null
   declare license_valid_until: Date | null
   declare is_active: boolean
@@ -47,7 +47,7 @@ PosDevice.init(
     branch_id:            { type: DataTypes.UUID },
     device_id:            { type: DataTypes.STRING(128), allowNull: false },
     name:                 { type: DataTypes.STRING(128) },
-    api_token:            { type: DataTypes.STRING(256), allowNull: false },
+    api_token_hash:       { type: DataTypes.STRING(64), allowNull: false },
     last_seen_at:         { type: DataTypes.DATE },
     license_valid_until:  { type: DataTypes.DATE },
     is_active:            { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
