@@ -8,9 +8,18 @@ import { isUuid, loadUserForImpersonation } from '@/modules/auth/impersonation.s
 import User from '@/modules/auth/user.model'
 import logger from './logger'
 import { clearThrottle, isThrottled, recordFailedAttempt } from './rate-limit'
+import { LoginThrottledError } from './login-throttle-error'
 import type { UserRole } from '@/types/roles'
 
 const LOGIN_THROTTLE = { maxAttempts: 5, windowSeconds: 15 * 60, lockSeconds: 15 * 60 }
+
+async function rejectFailedLogin(throttleKey: string): Promise<null> {
+  const status = await recordFailedAttempt(throttleKey, LOGIN_THROTTLE)
+  if (status.blocked) {
+    throw new LoginThrottledError(status.retryAfterSeconds)
+  }
+  return null
+}
 
 // How often an existing JWT re-checks `users.is_active` against the DB. Bounds how long a
 // deactivated account's session stays usable — bounded staleness in exchange for not hitting
@@ -49,20 +58,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const throttled = await isThrottled(throttleKey)
         if (throttled.blocked) {
           logger.warn({ email: parsed.data.email }, 'login blocked: too many failed attempts')
-          return null
+          throw new LoginThrottledError(throttled.retryAfterSeconds)
         }
 
         const user = await findUserByEmail(parsed.data.email)
         if (!user) {
-          await recordFailedAttempt(throttleKey, LOGIN_THROTTLE)
-          return null
+          return rejectFailedLogin(throttleKey)
         }
 
         const valid = await validatePassword(parsed.data.password, user.password_hash)
         if (!valid) {
-          await recordFailedAttempt(throttleKey, LOGIN_THROTTLE)
           logger.warn({ userId: user.id }, 'failed login attempt')
-          return null
+          return rejectFailedLogin(throttleKey)
         }
 
         await clearThrottle(throttleKey)

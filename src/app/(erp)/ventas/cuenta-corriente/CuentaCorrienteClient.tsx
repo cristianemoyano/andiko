@@ -378,7 +378,7 @@ function StatementDetail({ contactId, onBack }: { contactId: string; onBack: () 
         setLineItems([])
         setLineTotal(0)
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       }
     })()
     return () => { controller.abort() }
