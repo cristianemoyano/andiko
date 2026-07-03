@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.40.0](https://github.com/cristianemoyano/andiko/compare/v0.39.0...v0.40.0) (2026-07-03)
+
+### Features
+
+* **core:** integrate PostHog analytics, errors, and server logs ([2c449c0](https://github.com/cristianemoyano/andiko/commit/2c449c076cd1240670fe1eb2054e72dddb981920))
+
 ## [0.39.0](https://github.com/cristianemoyano/andiko/compare/v0.38.0...v0.39.0) (2026-07-03)
 
 ### Features

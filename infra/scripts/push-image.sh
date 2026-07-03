@@ -7,6 +7,11 @@ source "$SCRIPT_DIR/_common.sh"
 
 require_tag
 
+# Optional: load PostHog build args from infra/.env.production when pushing from VPS/laptop.
+if [ -f "${REPO_ROOT}/infra/.env.production" ]; then
+  load_env
+fi
+
 IMAGE="${GHCR_IMAGE:-ghcr.io/cristianemoyano/andiko}"
 
 if ! grep -q '"ghcr.io"' "${HOME}/.docker/config.json" 2>/dev/null; then
@@ -17,7 +22,10 @@ if ! grep -q '"ghcr.io"' "${HOME}/.docker/config.json" 2>/dev/null; then
 fi
 
 echo "Building ${IMAGE}:${TAG} ..."
-docker build -f "${REPO_ROOT}/infra/Dockerfile" -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" "${REPO_ROOT}"
+docker build -f "${REPO_ROOT}/infra/Dockerfile" \
+  --build-arg "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=${NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN:-}" \
+  --build-arg "NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}" \
+  -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" "${REPO_ROOT}"
 
 echo "Pushing ${IMAGE}:${TAG} ..."
 if ! docker push "${IMAGE}:${TAG}"; then
