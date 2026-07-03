@@ -10,6 +10,7 @@ import { InventoryStockHint } from '@/components/erp/InventoryStockHint'
 import { InventarioSubNav } from '../InventarioSubNav'
 import type { StockMovementType, StockReferenceType } from '@/modules/inventory/stock-movement.model'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 type Warehouse = { id: string; name: string }
 
@@ -184,7 +185,6 @@ export function MovimientosClient() {
   const [page, setPage]               = useState(1)
   const [error, setError]             = useState<string | null>(null)
   const [search, setSearch]           = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [refType, setRefType]         = useState('')
   const [warehouseId, setWarehouseId] = useState('')
   const [warehouses, setWarehouses]   = useState<Warehouse[]>([])
@@ -200,12 +200,10 @@ export function MovimientosClient() {
     })()
   }, [])
 
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search), 300)
-    return () => clearTimeout(id)
-  }, [search])
+  const debouncedSearch = useDebouncedValue(search, 300)
 
   useEffect(() => {
+    const controller = new AbortController()
     // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state before async fetch
     setRows(null)
     setError(null)
@@ -215,14 +213,19 @@ export function MovimientosClient() {
     if (warehouseId)     params.set('warehouse_id', warehouseId)
     ;(async () => {
       try {
-        const data = await fetchJson<{ data: MovementRow[]; total: number }>(`/api/v1/inventory/movements?${params}`)
+        const data = await fetchJson<{ data: MovementRow[]; total: number }>(
+          `/api/v1/inventory/movements?${params}`,
+          { signal: controller.signal },
+        )
         setRows(data.data ?? [])
         setTotal(data.total ?? 0)
       } catch (e) {
+        if (controller.signal.aborted) return
         setError(getApiErrorMessage(e))
         setRows([])
       }
     })()
+    return () => { controller.abort() }
   }, [page, debouncedSearch, refType, warehouseId])
 
   return (

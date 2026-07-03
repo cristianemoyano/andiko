@@ -18,6 +18,7 @@ import { InventarioSubNav } from '../InventarioSubNav'
 import { InventoryStockHint } from '@/components/erp/InventoryStockHint'
 import { STOCK_EXPIRY_WARNING_DAYS } from '@/modules/inventory/inventory.constants'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { BulkStockMinimumModal } from './BulkStockMinimumModal'
 import { BulkStockExpiryModal } from './BulkStockExpiryModal'
 import { useSearchParams } from 'next/navigation'
@@ -190,7 +191,6 @@ export function StockClient() {
   const [page, setPage]                 = useState(1)
   const [error, setError]               = useState<string | null>(null)
   const [search, setSearch]             = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [belowMin, setBelowMin]         = useState(() => searchParams.get('below_minimum') === 'true')
   const [expired, setExpired]           = useState(() => searchParams.get('expired') === 'true')
   const [expiring30, setExpiring30]     = useState(() => searchParams.get('expiring_within_days') != null)
@@ -278,12 +278,10 @@ export function StockClient() {
     [warehouseId],
   )
 
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search), 300)
-    return () => clearTimeout(id)
-  }, [search])
+  const debouncedSearch = useDebouncedValue(search, 300)
 
   useEffect(() => {
+    const controller = new AbortController()
     // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state before async fetch
     setRows(null)
     setError(null)
@@ -295,14 +293,19 @@ export function StockClient() {
     if (warehouseId)   params.set('warehouse_id', warehouseId)
     ;(async () => {
       try {
-        const data = await fetchJson<{ data: StockRow[]; total: number }>(`/api/v1/inventory/stock?${params}`)
+        const data = await fetchJson<{ data: StockRow[]; total: number }>(
+          `/api/v1/inventory/stock?${params}`,
+          { signal: controller.signal },
+        )
         setRows(data.data ?? [])
         setTotal(data.total ?? 0)
       } catch (e) {
+        if (controller.signal.aborted) return
         setError(getApiErrorMessage(e))
         setRows([])
       }
     })()
+    return () => { controller.abort() }
   }, [page, debouncedSearch, belowMin, expired, expiring30, warehouseId, refresh])
 
   function handleWarehouseChange(nextId: string) {
