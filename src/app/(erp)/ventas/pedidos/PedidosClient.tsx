@@ -20,6 +20,7 @@ import type { Order, OrderStatus } from '../types'
 import { PAYMENT_CONDITION_LABEL } from '../types'
 import { VentasSubNav } from '../VentasSubNav'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { SALES_ORDER_CHANNEL_LABEL } from '@/modules/sales/sales-order-channel.utils'
 import type { SalesOrderSource } from '@/modules/sales/sales-order.model'
 import {
@@ -213,12 +214,14 @@ export function PedidosClient() {
     return () => { mounted = false }
   }, [])
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   useEffect(() => {
-    let mounted = true
+    const controller = new AbortController()
     const params = new URLSearchParams({
       page:  String(page),
       limit: String(PAGE_SIZE),
-      ...(search ? { search } : {}),
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(statusQuery.status ? { status: statusQuery.status } : {}),
       ...(statusQuery.woo_status ? { woo_status: statusQuery.woo_status } : {}),
       ...(sourceFilter ? { source: sourceFilter } : {}),
@@ -229,8 +232,10 @@ export function PedidosClient() {
     ;(async () => {
       setListError(null)
       try {
-        const data = await fetchJson<{ data: Order[]; total: number }>(`/api/v1/sales/orders?${params}`)
-        if (!mounted) return
+        const data = await fetchJson<{ data: Order[]; total: number }>(
+          `/api/v1/sales/orders?${params}`,
+          { signal: controller.signal },
+        )
         const rows = Array.isArray(data?.data) ? data.data : []
         const nextTotal = typeof data?.total === 'number' ? data.total : 0
         setOrders(rows)
@@ -238,14 +243,14 @@ export function PedidosClient() {
         const pages = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE))
         setPage(p => (p > pages ? pages : p))
       } catch (e) {
-        if (!mounted) return
+        if (controller.signal.aborted) return
         setListError(getApiErrorMessage(e))
         setOrders([])
         setTotal(0)
       }
     })()
-    return () => { mounted = false }
-  }, [page, search, statusQuery, sourceFilter, branchFilter, fromDate, toDate])
+    return () => { controller.abort() }
+  }, [page, debouncedSearch, statusQuery, sourceFilter, branchFilter, fromDate, toDate])
 
   return (
     <div className="flex flex-col h-full">

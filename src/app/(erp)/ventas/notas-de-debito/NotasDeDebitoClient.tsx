@@ -17,6 +17,7 @@ import { SearchableSelect, type SearchableSelectOption } from '@/components/erp/
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { VentasSubNav } from '../VentasSubNav'
 import { fetchJson } from '@/lib/fetch-json'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 type DebitNoteStatus = 'draft' | 'issued' | 'cancelled'
 type DebitNoteRow = {
@@ -167,26 +168,30 @@ export function NotasDeDebitoClient() {
   const taxDec = netDec.mul(new Decimal(ivaRate))
   const totalDec = netDec.plus(taxDec)
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   useEffect(() => {
-    let cancelled = false
+    const controller = new AbortController()
     async function load() {
       const params = new URLSearchParams({
         page: String(page),
         limit: String(PAGE_SIZE),
-        ...(search ? { search } : {}),
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
       })
       try {
-        const payload = await fetchJson<{ data: DebitNoteRow[]; total: number }>(`/api/v1/sales/debit-notes?${params}`)
-        if (cancelled) return
+        const payload = await fetchJson<{ data: DebitNoteRow[]; total: number }>(
+          `/api/v1/sales/debit-notes?${params}`,
+          { signal: controller.signal },
+        )
         setRows(Array.isArray(payload?.data) ? payload.data : [])
         setTotal(typeof payload?.total === 'number' ? payload.total : 0)
       } catch {
-        if (!cancelled) { setRows([]); setTotal(0) }
+        if (!controller.signal.aborted) { setRows([]); setTotal(0) }
       }
     }
     void load()
-    return () => { cancelled = true }
-  }, [page, search, refresh])
+    return () => { controller.abort() }
+  }, [page, debouncedSearch, refresh])
 
   useEffect(() => {
     queueMicrotask(() => { setInvoiceId(''); setInvoiceOptions([]) })
