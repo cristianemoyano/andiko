@@ -1,6 +1,7 @@
 import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import PosDevice from '@/modules/pos/pos-device.model'
+import { hashPosToken } from '@/lib/pos-token'
 
 export type PosDeviceContext = {
   deviceId: string
@@ -25,7 +26,7 @@ export function withPosDevice(handler: PosRouteHandler) {
     }
 
     const device = await PosDevice.findOne({
-      where: { api_token: token, is_active: true, deleted_at: null },
+      where: { api_token_hash: hashPosToken(token), is_active: true, deleted_at: null },
     })
 
     if (!device) {
