@@ -14,6 +14,7 @@ import { ImportModal } from '@/components/erp/ImportModal'
 import { formatContactPersonLabel } from '@/modules/contacts/contact.utils'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { CONTACT_CSV_HEADERS } from '@/modules/contacts/contacts-csv-adapter'
 import { WOO_IMPORT_SOURCE } from '@/modules/integrations/woocommerce/woo-address.utils'
 
@@ -145,33 +146,37 @@ export function ContactosClient({ showWooColumn = false }: { showWooColumn?: boo
   const [importSession, setImportSession] = useState(0)
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const debouncedSearch = useDebouncedValue(search, 300)
+
   useEffect(() => {
-    let mounted = true
+    const controller = new AbortController()
     const params = new URLSearchParams({
       page: String(page),
       limit: String(PAGE_SIZE),
-      ...(search     ? { search }     : {}),
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(typeFilter ? { type: typeFilter } : {}),
       ...(showWooColumn && sourceFilter ? { source: sourceFilter } : {}),
     })
     ;(async () => {
       setServerError(null)
       try {
-        const data = await fetchJson<{ data: Contact[]; total: number }>(`/api/v1/contacts?${params}`)
-        if (!mounted) return
+        const data = await fetchJson<{ data: Contact[]; total: number }>(
+          `/api/v1/contacts?${params}`,
+          { signal: controller.signal },
+        )
         setContacts(data.data)
         setTotal(data.total)
         const pages = Math.max(1, Math.ceil(data.total / PAGE_SIZE))
         setPage(p => (p > pages ? pages : p))
       } catch (e) {
-        if (!mounted) return
+        if (controller.signal.aborted) return
         setServerError(getApiErrorMessage(e))
         setContacts([])
         setTotal(0)
       }
     })()
-    return () => { mounted = false }
-  }, [page, search, typeFilter, sourceFilter, showWooColumn, refresh])
+    return () => { controller.abort() }
+  }, [page, debouncedSearch, typeFilter, sourceFilter, showWooColumn, refresh])
 
   function openCreate() {
     setEditing(null)
