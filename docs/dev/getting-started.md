@@ -105,7 +105,7 @@ Nunca modificar migraciones ya aplicadas en prod. Una migración = un cambio ló
 |------|-----|
 | Tenancy | [docs/MULTITENANCY.md](../MULTITENANCY.md) |
 | Cross-módulo | [docs/dev/cross-module-checklist.md](cross-module-checklist.md) |
-| Producción | [docs/deployment/production.md](../deployment/production.md) |
+| Producción | [docs/deployment/production.md](../deployment/production.md) — **producción** en VPS Hostinger; **staging** en Vercel |
 | WooCommerce dev | [docs/dev/woocommerce-local.md](woocommerce-local.md) |
 | Roadmap producto | [docs/ROADMAP.md](../ROADMAP.md) |
 

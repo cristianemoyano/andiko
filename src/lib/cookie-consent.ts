@@ -1,12 +1,10 @@
 /**
  * Feature flag for the self-hosted cookie consent banner.
  *
- * The Platform currently only sets strictly necessary cookies (session), which
- * do not require consent under applicable law. This stays `false` until
- * analytics (non-essential) cookies are introduced — flip it to `true` at
- * that point, and mount `CookieConsentBanner` in the root layout.
+ * Enabled now that PostHog analytics cookies are in use. PostHog stays
+ * opted-out until the user accepts analytics in `CookieConsentBanner`.
  */
-export const COOKIE_CONSENT_ENABLED = false
+export const COOKIE_CONSENT_ENABLED = true
 
 const STORAGE_KEY = 'andiko_cookie_consent'
 

@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import { AppToaster } from '@/components/layout/AppToaster'
+import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner'
 import { ThemeInitScript } from '@/components/layout/ThemeInitScript'
 import { ServiceWorkerRegister } from '@/components/layout/ServiceWorkerRegister'
 import { siteConfig, siteUrl } from '@/lib/site'
@@ -96,6 +97,7 @@ export default function RootLayout({
         <ThemeInitScript />
         <style dangerouslySetInnerHTML={{ __html: 'body{background:#FAFAFA}@media(prefers-color-scheme:dark){body{background:#18181B}}' }} />
         {children}
+        <CookieConsentBanner />
         <AppToaster />
         <ServiceWorkerRegister />
         <Analytics />

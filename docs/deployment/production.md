@@ -6,7 +6,16 @@ Andiko production runs on a single VPS at **https://andiko.cloud** using Docker 
 
 The **production VPS is already configured** (Swarm, secrets, TLS, nginx, Portainer, backups). Day-to-day work is **deploying releases** — not re-running bootstrap.
 
-Vercel configuration is unchanged and operates independently of this stack.
+Vercel staging and Hostinger production operate **independently**. Staging validates integrations on every merge to `develop`; production is promoted manually via GHCR images (see [Deploy a release](#deploy-a-release)).
+
+## Environments
+
+| Environment | Platform | URL / acceso | Uso |
+|-------------|----------|--------------|-----|
+| **Staging** | Vercel | Preview / proyecto Vercel ligado al repo | CI visual, QA pre-release, demos internas |
+| **Production** | Hostinger VPS (Debian) | **https://andiko.cloud** | Clientes beta y operación real |
+
+Production stack details below. Vercel env vars and VPS `infra/.env.production` are **not** shared — configure each environment separately.
 
 ## Architecture
 
@@ -145,6 +154,7 @@ Set `POSTGRES_PASSWORD` in `.env.production`; scripts build `DATABASE_URL` autom
 | `AFIP_MODE` | `produccion` on VPS |
 | `CERTBOT_EMAIL` | Let's Encrypt notifications |
 | `BACKUP_GDRIVE_*` | rclone remote for off-site backups |
+| `NEXT_PUBLIC_POSTHOG_*` | PostHog analytics (build + runtime); see `infra/.env.production.example` |
 
 Values with spaces must be quoted in `infra/.env.production`, e.g. `BACKUP_GDRIVE_FOLDER="my folder"`.
 

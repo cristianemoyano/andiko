@@ -16,6 +16,9 @@ Infraestructura base sin lógica de negocio.
 - [x] Docker Compose con PostgreSQL 16 + pgAdmin (Colima como engine)
 - [x] Makefile con comandos de entorno local (up, down, reset, shell, dev)
 - [x] Despliegue producción VPS: Docker Swarm + nginx + Certbot — ver [docs/deployment/production.md](deployment/production.md)
+- [x] **Ambientes de despliegue** (staging vs producción):
+  - **Staging:** [Vercel](https://vercel.com) — rama `develop`, previews por PR, validación pre-release; sin datos reales de clientes
+  - **Producción:** VPS **Hostinger** (Debian) en **https://andiko.cloud** — Docker Swarm, PostgreSQL persistente, releases vía imagen GHCR (`make prod-deploy`)
 - [x] PostgreSQL + Sequelize setup (`src/lib/db.ts`, pool, paranoid, underscored)
 - [x] Estructura de módulos (`src/modules/` con contacts, sales, inventory, purchases, accounting, auth)
 - [x] Variables de entorno y configuración por ambiente (`src/config/env.ts` con Zod)
@@ -374,6 +377,8 @@ Gestión de stock integrada con ventas y compras.
 - [x] Carga masiva de stock desde catálogo por depósito (filtros, progreso NDJSON, cancelación)
 - [x] Importación CSV de catálogo: depósito obligatorio en confirmación; stock según `manage_stock`
 - [ ] Métodos de valuación de stock (FIFO / promedio ponderado) para costeo
+- [ ] **Ubicaciones en depósito (WMS lite)** — zonas opcionales (picking, reserva, cuarentena) y posiciones con código (`A-12-03`); stock por variante × ubicación (además de depósito); transferencias internas entre ubicaciones; lista de picking para armado de pedidos; conteo cíclico por ubicación. *Priorizar clientes con depósito grande o varios operarios de picking.*
+- [ ] Conteo físico / inventario cíclico — comparar stock teórico vs contado por depósito (y por ubicación cuando exista WMS), ajuste masivo auditado
 
 ---
 
@@ -520,7 +525,17 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 
 > Dimensión de sucursal (centro de costo) opcional a nivel de línea de asiento: los libros se mantienen a nivel empresa (CUIT).
 
----
+### Finanzas vs Contabilidad (alcance en Andiko)
+
+| | **Finanzas / Tesorería** | **Contabilidad** |
+|---|---|---|
+| **Pregunta que responde** | ¿Quién me debe, a quién debo, cuándo cobro/pago, con qué medio? | ¿Cómo queda registrado en los libros (debe/haber, cuentas, períodos)? |
+| **Enfoque** | Operativo del día a día — flujo de caja y gestión de cobranzas/pagos | Normativo y de cierre — plan de cuentas, asientos, balances, exportación al estudio |
+| **Dónde está hoy** | Cuenta corriente clientes en **Ventas** (`/ventas/cuenta-corriente`), proveedores en **Compras**; pagos y saldos en documentos; gaps en sección [Tesorería](#tesorería-impuestos-y-cumplimiento-ar-gaps-identificados--sin-fecha) (cheques, banco, cobranzas) | Módulo **Contabilidad** (`/contabilidad`): plan de cuentas, asientos manuales/automáticos, balance; Libro IVA en UI contable |
+| **Usuario típico** | Administración, cobranzas, tesorería | Contador / responsable de cierre |
+| **Relación** | Un cobro en finanzas debería generar (o vincularse a) un asiento contable cuando el auto-posting esté completo | Los asientos reflejan hechos ya ocurridos en ventas, compras, tesorería e inventario |
+
+No hay módulo separado llamado "Finanzas": la operación financiera vive repartida entre Ventas, Compras y (a futuro) Tesorería; Contabilidad consolida el impacto en cuentas.
 
 ---
 
@@ -546,7 +561,7 @@ Envío de documentos e notificaciones por email desde el ERP.
 - [x] Persistencia de contenido en `email_logs` (`body_text`, `body_html`, `transport`, `message_id`) para envíos nuevos
 
 ### Pendiente
-- [ ] Notificaciones internas: alertas de stock mínimo, vencimiento de presupuestos *(requiere scheduler/cron — fase posterior)*
+- [ ] Ver **Fase 10 — Colaboración interna** (notificaciones in-app, comentarios en documentos, chat de equipo). Las alertas proactivas (stock mínimo, presupuestos por vencer) viven ahí, no en email.
 
 ---
 
@@ -680,6 +695,96 @@ Hardware especializado para casos de uso específicos (retail, almacenes).
 
 ---
 
+## Fase 9 — Producción
+
+Fabricación / ensamble para PyMEs que transforman insumos en productos terminados (alimentos, cosmética, muebles, repuestos ensamblados, etc.).
+
+**Depende de:** Inventario (movimientos, lotes, depósitos), Catálogo (variantes y tipos de producto). **Se integra con:** Compras (insumos), Ventas (producto terminado), Contabilidad (costeo y asientos al cerrar OP — posterior).
+
+**Entidades previstas:** `bills_of_materials`, `bom_items`, `production_orders`, `production_order_lines` (consumos planificados/reales)
+
+### MVP
+- [ ] Tipos de producto en catálogo: insumo, semielaborado, producto terminado (fabricado)
+- [ ] Lista de materiales (BOM) por producto terminado: componentes, cantidades por unidad, merma opcional
+- [ ] Orden de producción: estados borrador → liberada → en proceso → terminada / cancelada
+- [ ] Al liberar/iniciar: reserva o consumo de insumos vía `stock_movements` (OUT), con lotes FEFO cuando aplique
+- [ ] Al cerrar: ingreso de producto terminado vía `stock_movements` (IN); cantidad real producida vs planificada
+- [ ] UI `/produccion`: listado de órdenes, detalle, alta/edición de BOM por variante
+- [ ] Permisos y scope `production` (commitlint) al implementar
+
+### Posterior
+- [ ] Producción parcial y backflush
+- [ ] Costo estándar vs real por orden (requiere valuación FIFO/PMP de Fase 4)
+- [ ] Asiento contable automático al cerrar orden de producción (Fase 7)
+- [ ] Subcontratación / tercerización de etapas
+- [ ] Planificación ligera (MRP): explosión de BOM según pedidos de venta pendientes
+
+> **No confundir con Logística** (`/logistica`, envíos al cliente): producción es transformación interna en planta; logística es salida física hacia el comprador.
+
+---
+
+## Fase 10 — Colaboración interna
+
+Notificaciones, comentarios en documentos y chat entre usuarios de la misma organización. Complementa **Comunicaciones / Email** (salida al cliente) con colaboración **dentro** del ERP.
+
+**Depende de:** Auth, permisos por módulo, detalle de documentos en ventas/compras/logística. **Scope commitlint:** `communications`.
+
+**Entidades previstas:** `notifications`, `entity_comments` (polimórfico), `conversations`, `conversation_messages`, `notification_preferences`
+
+### Comentarios y observaciones en documentos
+- [ ] Hilo de comentarios en detalle de entidades operativas: presupuestos, pedidos, facturas, notas de crédito, órdenes de compra, recepciones, facturas de proveedor, devoluciones (venta/compra), remitos, envíos (logística)
+- [ ] Texto libre + `@mención` a usuarios de la org → dispara notificación
+- [ ] Visibilidad acotada por `org_id`; lectura/escritura según permiso del documento padre
+- [ ] Auditoría: `created_by`, timestamps; edición limitada o solo soft-delete
+- [ ] UI: timeline / panel "Actividad" en pantallas de detalle (junto a adjuntos e historial de estados)
+
+### Notificaciones in-app
+- [ ] Modelo `notifications` por usuario (`type`, `payload` JSONB, `read_at`, `org_id`)
+- [ ] Centro de notificaciones (campana en header ERP) + marcar una/todas como leídas
+- [ ] Eventos iniciales: mención en comentario, cambio de estado relevante, asignación (cuando exista), stock bajo umbral, presupuesto por vencer
+- [ ] Preferencias por usuario (opt-in/out por tipo de evento)
+- [ ] Digest por email opcional (reutiliza SMTP de Comunicaciones)
+
+### Chat interno
+- [ ] Conversaciones 1:1 entre usuarios de la org
+- [ ] Canales por equipo o sucursal (ej. `#ventas`, `#depósito`) — opcional en MVP si 1:1 basta
+- [ ] Mensajes con polling o SSE en v1; WebSocket si hace falta escala
+- [ ] Adjuntar enlace a documento del ERP (`/ventas/pedidos/:id`, etc.) con preview mínimo
+- [ ] **Comentario en documento ≠ chat:** comentario queda atado al registro y en auditoría; chat es conversación libre
+
+### Infra y jobs
+- [ ] Emisión de eventos desde services (cambio de estado, comentario creado) — bus ligero o hooks en capa de servicio
+- [ ] Worker/cron para alertas proactivas (stock mínimo, vencimientos) — mismo scheduler que otras tareas diferidas
+- [ ] Límites de retención y paginación en listados (sin queries sin `LIMIT`)
+
+---
+
+## Fase 11 — Asistente IA
+
+Consultas en lenguaje natural sobre datos del ERP y, más adelante, acciones asistidas. Inspiración competitiva (ej. devy-AI) pero con **integridad de datos** y permisos Andiko como prioridad.
+
+**Depende de:** APIs/servicios estables de ventas, inventario, compras y CxC. **Recomendado después de** Fase 10 para reutilizar notificaciones. **Stack previsto:** Vercel AI SDK + AI Gateway; modelo configurable a nivel plataforma (sys-admin), intercambiable sin cambiar tools.
+
+### MVP — solo lectura
+- [ ] Panel o ruta `/asistente` (chat in-app)
+- [ ] Tools que llaman **services** existentes (nunca SQL ni ORM desde el LLM): ventas del período, stock por depósito, aging CxC, pedidos pendientes, top clientes
+- [ ] Contexto estricto: `org_id` + permisos efectivos del usuario en sesión (mismo `withPermission` / `can()`)
+- [ ] Respuestas en español rioplatense; citar fuente (ej. "según facturas de marzo")
+- [ ] Log de consultas para soporte/auditoría (sin volcar PII innecesaria)
+
+### Posterior
+- [ ] Sugerencias proactivas (complementa notificaciones Fase 10)
+- [ ] Acciones con confirmación humana en UI ("crear presupuesto borrador para…") — siempre vía services + transacción
+- [ ] Resumen diario/semanal por email
+- [ ] Canal WhatsApp Business API (opcional; mismo backend de tools)
+
+### Principios
+- El LLM **no escribe** en base de datos en MVP
+- Acciones que mutan estado requieren confirmación explícita y respetan el mismo flujo que la UI manual
+- No sustituye reportes contables ni libros AFIP — deriva a módulos formales cuando corresponda
+
+---
+
 ## Tesorería, Impuestos y Cumplimiento AR (gaps identificados — sin fecha)
 
 Funcionalidades fiscales y de tesorería específicas de Argentina que hoy están
@@ -698,6 +803,8 @@ adopción B2B en PyMEs argentinas; relevadas en revisión de producto.
 - [ ] Multi-moneda (operaciones en USD) + ajuste por inflación / revaluación
 - [ ] Workflow de cobranzas (recordatorios de pago, gestión de mora) sobre cuenta corriente
 
+> Ver también [Finanzas vs Contabilidad](#finanzas-vs-contabilidad-alcance-en-andiko) en Fase 7. Hoy la cuenta corriente ya opera en Ventas/Compras; esta sección cubre lo que falta para tesorería completa (banco, cheques, cobranzas proactivas).
+
 ---
 
 ## Backlog / Fases futuras
@@ -711,11 +818,11 @@ Ideas validadas pero sin fecha definida.
 - App móvil para vendedores (solo consulta y carga de pedidos)
 - Portal de clientes (consulta de facturas y cuenta corriente)
 - Integración con e-commerce (WooCommerce, Tiendanube)
-- BI / Dashboards ejecutivos
+- BI / Dashboards ejecutivos *(parcialmente cubierto por Fase 11 Asistente en consultas ad-hoc)*
 - CRM básico (leads, oportunidades, pipeline comercial)
 - [x] Adjuntos de documentos (comprobantes / PDFs) en compras — facturas de proveedor y recepciones
 - [ ] Extender adjuntos a ventas, contactos y catálogo
-- Bitácora de auditoría visible para el usuario (historial de cambios; hoy solo campos `created_by/updated_by`)
+- Bitácora de auditoría visible para el usuario (historial de cambios; hoy solo campos `created_by/updated_by`) *(comentarios en Fase 10 cubren parte del caso "quién dijo qué")*
 - Límite de crédito por cliente (bloqueo/alerta al superar saldo en cuenta corriente)
 - Comisiones de vendedores
 - Descuentos comerciales avanzados:
@@ -733,6 +840,7 @@ Ideas validadas pero sin fecha definida.
 
 **Logging de plataforma:**
 
+- [x] PostHog: analytics, error tracking, server logs (OTLP vía pino); cookie consent; deshabilitado en dev local
 - [ ] `LOG_LEVEL`, redacción de secretos en pino, `requestId` (AsyncLocalStorage)
 - [ ] `handleApiError` centralizado en api-handler
 - [ ] HTTP access logging

@@ -5,6 +5,7 @@ import { SessionProvider } from 'next-auth/react'
 import { ThemeProvider } from 'next-themes'
 import { SidebarProvider } from './SidebarContext'
 import { CapabilitiesProvider } from './CapabilitiesContext'
+import { PostHogSession } from './PostHogSession'
 import type { UiCapabilities } from '@/types/capabilities'
 
 export function Providers({
@@ -23,6 +24,7 @@ export function Providers({
 }) {
   return (
     <SessionProvider>
+      <PostHogSession />
       <CapabilitiesProvider key={capabilitiesKey} initial={initialCapabilities}>
         <ThemeProvider
           attribute="class"

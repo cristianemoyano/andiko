@@ -1,24 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/primitives/Button'
 import { COOKIE_CONSENT_ENABLED, getStoredCookieConsent, storeCookieConsent } from '@/lib/cookie-consent'
+import { applyPostHogConsent } from '@/lib/posthog-consent'
 
-// Montar en el layout raíz cuando COOKIE_CONSENT_ENABLED pase a `true`.
+// Cookie consent banner — mounted in the root layout.
 export function CookieConsentBanner() {
   // Lazy initializer: reads localStorage once on mount, no effect/cascading render needed.
   const [visible, setVisible] = useState(() => COOKIE_CONSENT_ENABLED && getStoredCookieConsent() === null)
+
+  useEffect(() => {
+    const consent = getStoredCookieConsent()
+    if (consent) applyPostHogConsent(consent)
+  }, [])
 
   if (!COOKIE_CONSENT_ENABLED) return null
   if (!visible) return null
 
   function acceptAll() {
-    storeCookieConsent({ necessary: true, analytics: true })
+    const choice = { necessary: true, analytics: true } as const
+    storeCookieConsent(choice)
+    applyPostHogConsent(choice)
     setVisible(false)
   }
 
   function acceptNecessaryOnly() {
-    storeCookieConsent({ necessary: true, analytics: false })
+    const choice = { necessary: true, analytics: false } as const
+    storeCookieConsent(choice)
+    applyPostHogConsent(choice)
     setVisible(false)
   }
 
