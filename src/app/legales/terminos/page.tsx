@@ -92,9 +92,10 @@ export default function TerminosPage() {
         y mantenerla actualizada. Las credenciales de acceso son personales e intransferibles.
         El Usuario es responsable de mantener la confidencialidad de sus credenciales y de
         toda actividad realizada bajo su cuenta, y debe notificar a Andiko sin demora ante
-        cualquier uso no autorizado o compromiso de seguridad. La Organización es responsable
-        de las altas, bajas, roles y permisos que asigna a sus propios Usuarios, y de revocar
-        el acceso de quienes dejen de estar autorizados.
+        cualquier uso no autorizado o compromiso de seguridad. Esta responsabilidad no alcanza
+        al uso no autorizado que resulte de una falla de seguridad imputable a Andiko. La
+        Organización es responsable de las altas, bajas, roles y permisos que asigna a sus
+        propios Usuarios, y de revocar el acceso de quienes dejen de estar autorizados.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 text-fg">
@@ -102,13 +103,17 @@ export default function TerminosPage() {
       </h2>
       <p className="text-sm text-fg-muted leading-relaxed">
         El acceso a la Plataforma se contrata por Suscripción, según los planes, precios y
-        límites publicados en el sitio de Andiko o acordados en una propuesta comercial. Salvo
-        indicación expresa en contrario, los precios no incluyen impuestos; los tributos,
+        límites publicados en el sitio de Andiko o acordados en una propuesta comercial. Los
+        precios se expresan en pesos argentinos (ARS). En caso de divergencia, la propuesta
+        comercial suscripta con el Cliente prevalece sobre los precios de lista. Salvo
+        indicación expresa en contrario, los precios se informan sin impuestos; los tributos,
         tasas, percepciones y retenciones aplicables según la condición fiscal del Cliente
-        están a su cargo. La facturación se realiza por adelantado por cada período de
-        Suscripción, con emisión de comprobantes electrónicos conforme a la normativa fiscal
-        vigente. [Completar cuando se incorporen pagos online: medios de pago aceptados,
-        pasarela utilizada y momento de la percepción.]
+        están a su cargo. Cuando el Cliente revista carácter de consumidor, el precio se
+        exhibirá de forma final, en moneda de curso legal y con los impuestos incluidos,
+        conforme a la Ley 24.240 y su reglamentación. La facturación se realiza por adelantado
+        por cada período de Suscripción, con emisión de comprobantes electrónicos conforme a la
+        normativa fiscal vigente. [Completar cuando se incorporen pagos online: medios de pago
+        aceptados, pasarela utilizada y momento de la percepción.]
       </p>
 
       <h2 className="text-lg font-semibold mt-8 text-fg">
@@ -122,8 +127,11 @@ export default function TerminosPage() {
         electrónico o mediante aviso en la Plataforma; el nuevo precio se aplica recién a
         partir de la renovación siguiente. Si el Cliente no está de acuerdo, puede cancelar la
         Suscripción antes de la renovación, sin penalidad. Cuando el Cliente revista carácter
-        de consumidor, la renovación y la cancelación se ajustarán además a las exigencias de
-        la Ley 24.240 y normas complementarias.
+        de consumidor: (i) la cancelación podrá realizarse por el mismo medio y con la misma
+        facilidad con que se contrató la Suscripción, conforme a la Resolución 424/2020 de la
+        Secretaría de Comercio Interior; y (ii) los aumentos de precio no operarán de modo
+        automático sin su aceptación cuando ello resultara abusivo en los términos de los
+        artículos 37 y 38 de la Ley 24.240.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 text-fg">
@@ -149,11 +157,13 @@ export default function TerminosPage() {
       <h2 className="text-lg font-semibold mt-8 text-fg">8. Licencia de uso</h2>
       <p className="text-sm text-fg-muted leading-relaxed">
         Sujeto al cumplimiento de estos Términos y al pago de la Suscripción, Andiko otorga al
-        Cliente una licencia limitada, no exclusiva, intransferible, revocable y sin derecho a
+        Cliente una licencia limitada, no exclusiva, intransferible y sin derecho a
         sublicenciar, para acceder y utilizar la Plataforma durante la vigencia de la
         Suscripción, exclusivamente para la gestión interna de su negocio y dentro de los
-        límites del Plan contratado (incluyendo cantidad de usuarios y límites de uso). No se
-        otorga ningún otro derecho, expreso o implícito, sobre la Plataforma.
+        límites del Plan contratado (incluyendo cantidad de usuarios y límites de uso). La
+        licencia solo podrá suspenderse o revocarse en los supuestos previstos en las cláusulas
+        20 y 21, y no de manera discrecional. No se otorga ningún otro derecho, expreso o
+        implícito, sobre la Plataforma.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 text-fg">
@@ -189,7 +199,12 @@ export default function TerminosPage() {
           tratamiento.
         </li>
         <li>Suplantar la identidad de otra persona u organización.</li>
-        <li>Utilizar la Plataforma para desarrollar un producto o servicio competidor.</li>
+        <li>
+          Utilizar el acceso a la Plataforma, sus funcionalidades no públicas o su
+          documentación para desarrollar, entrenar o comercializar un producto o servicio
+          competidor. Esta restricción no limita la actividad comercial propia del Cliente
+          ajena a la Plataforma.
+        </li>
       </ul>
       <p className="text-sm text-fg-muted leading-relaxed mt-3">
         El incumplimiento de esta cláusula habilita la suspensión o terminación previstas en
@@ -263,7 +278,9 @@ export default function TerminosPage() {
         garantiza que cuenta con los derechos y bases legales necesarios para cargar y tratar
         en la Plataforma los datos —incluidos datos personales de terceros— que incorpora.
         Andiko puede elaborar y utilizar información estadística agregada y anonimizada, que
-        no identifique al Cliente ni a persona alguna, para operar y mejorar el Servicio.
+        no identifique al Cliente ni a persona alguna, para operar y mejorar el Servicio; dicho
+        uso no comprende el empleo de Datos del Cliente identificables para entrenar modelos de
+        inteligencia artificial, que se rige por la cláusula 12.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 text-fg">
@@ -276,7 +293,14 @@ export default function TerminosPage() {
         esos datos únicamente conforme a las instrucciones del Cliente impartidas mediante el
         uso normal de la Plataforma, no los aplica a fines propios, no los cede salvo lo
         previsto en la Política de Privacidad y aplica las medidas de seguridad allí descriptas.
-        Respecto de los datos de los Usuarios y de la relación comercial con el Cliente,
+        En su carácter de encargado, Andiko además: (i) impone a los subencargados que contrata
+        obligaciones de confidencialidad y seguridad no menores a las aquí asumidas; (ii)
+        notifica al Cliente, sin demora indebida, los incidentes de seguridad que afecten sus
+        datos; (iii) asiste razonablemente al Cliente para atender el ejercicio de derechos de
+        los titulares y los requerimientos de la autoridad de control; y (iv) al terminar el
+        contrato, suprime o devuelve los datos personales conforme a la cláusula 22 y a las
+        instrucciones del Cliente, salvo obligación legal de conservación. Respecto de los
+        datos de los Usuarios y de la relación comercial con el Cliente,
         Andiko actúa como responsable del tratamiento conforme a su Política de Privacidad,
         disponible en /legales/privacidad, que forma parte integrante de estos Términos. [Nota:
         se recomienda ofrecer a los Clientes un anexo de tratamiento de datos (DPA) que
@@ -369,9 +393,12 @@ export default function TerminosPage() {
       <p className="text-sm text-fg-muted leading-relaxed">
         Terminado el contrato por cualquier causa, el Cliente dispondrá de un plazo de treinta
         (30) días corridos para exportar sus Datos del Cliente en formatos estándar, mediante
-        la Plataforma o a su solicitud. Vencido ese plazo, Andiko eliminará o anonimizará los
-        Datos del Cliente dentro de plazos técnicos razonables, salvo la información que deba
-        conservarse por obligación legal (incluida la fiscal y contable) o para la defensa de
+        la Plataforma o a su solicitud. Es responsabilidad exclusiva del Cliente exportar
+        dentro de ese plazo la información que deba conservar por obligaciones legales,
+        contables o fiscales. Cuando la terminación no sea imputable al Cliente, Andiko
+        brindará asistencia razonable para la exportación. Vencido el plazo, Andiko eliminará o
+        anonimizará los Datos del Cliente dentro de plazos técnicos razonables, salvo la
+        información que Andiko deba conservar por obligación legal propia o para la defensa de
         reclamos, y sin perjuicio de las copias residuales en respaldos, que se depuran según
         su ciclo de rotación. Subsisten a la terminación las cláusulas que por su naturaleza
         deban subsistir, incluyendo propiedad intelectual, confidencialidad, limitación de
@@ -399,13 +426,13 @@ export default function TerminosPage() {
         uso o imposibilidad de uso de la Plataforma; y (b) la responsabilidad total y
         acumulada de Andiko frente al Cliente por todo concepto queda limitada al monto
         efectivamente abonado por el Cliente por el Servicio durante los doce (12) meses
-        anteriores al hecho generador. Estas limitaciones no se aplican: (i) en casos de dolo
-        de Andiko, cuya dispensa anticipada está prohibida por el artículo 1743 del Código
-        Civil y Comercial; (ii) a los daños que la ley no permita limitar o excluir; ni (iii)
-        frente a consumidores, en cuanto resulten aplicables normas de orden público de la Ley
-        24.240 (en particular su artículo 37). Estos Términos constituyen un contrato de
-        adhesión y se interpretan conforme a los artículos 984 y siguientes del Código Civil y
-        Comercial.
+        anteriores al hecho generador. Estas limitaciones no se aplican: (i) en casos de dolo o
+        culpa grave de Andiko, cuya dispensa anticipada está prohibida por el artículo 1743 del
+        Código Civil y Comercial; (ii) a los daños a la persona; (iii) a los daños que la ley
+        no permita limitar o excluir; ni (iv) frente a consumidores, en cuanto resulten
+        aplicables normas de orden público de la Ley 24.240 (en particular su artículo 37).
+        Estos Términos constituyen un contrato de adhesión y se interpretan conforme a los
+        artículos 984 y siguientes del Código Civil y Comercial.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 text-fg">25. Indemnidad</h2>
@@ -416,7 +443,12 @@ export default function TerminosPage() {
         (c) las relaciones del Cliente con sus propios clientes, proveedores o empleados.
         Andiko notificará al Cliente el reclamo y le permitirá participar de la defensa. Esta
         cláusula no será oponible al Cliente consumidor en cuanto contradiga normas de orden
-        público.
+        público. Recíprocamente, Andiko defenderá al Cliente frente a reclamos de terceros que
+        imputen que la Plataforma, en sí misma, infringe derechos de propiedad intelectual
+        vigentes en la República Argentina, y lo mantendrá indemne por las sumas que resulten
+        de una sentencia firme o transacción aprobada por Andiko, con el límite previsto en la
+        cláusula 24. Esta obligación no alcanza a reclamos originados en los Datos del Cliente,
+        en usos no autorizados o en combinaciones con Servicios de Terceros.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 text-fg">
@@ -440,14 +472,26 @@ export default function TerminosPage() {
         Andiko puede modificar estos Términos. Los cambios materiales serán comunicados con un
         preaviso mínimo de treinta (30) días corridos por correo electrónico o mediante aviso
         destacado en la Plataforma, y requerirán nueva aceptación expresa antes de continuar
-        usando el Servicio. Si el Cliente no acepta los cambios, podrá rescindir la
-        Suscripción antes de su entrada en vigencia, con reintegro proporcional de los
-        períodos abonados y no consumidos. Los cambios no sustanciales, o los exigidos por
-        normativa, rigen desde su publicación. Cada versión de los Términos se identifica con
-        fecha y número de versión.
+        usando el Servicio. Mientras el Usuario no preste esa nueva aceptación, Andiko podrá
+        restringir el acceso al Servicio; el mero uso continuado no suple la aceptación
+        expresa. Si el Cliente no acepta los cambios, podrá rescindir la Suscripción antes de
+        su entrada en vigencia, con reintegro proporcional de los períodos abonados y no
+        consumidos. Los cambios no sustanciales, o los exigidos por normativa, rigen desde su
+        publicación. Cada versión de los Términos se identifica con fecha y número de versión.
       </p>
 
-      <h2 className="text-lg font-semibold mt-8 text-fg">28. Cesión</h2>
+      <h2 className="text-lg font-semibold mt-8 text-fg">
+        28. Funcionalidades en versión preliminar (beta)
+      </h2>
+      <p className="text-sm text-fg-muted leading-relaxed">
+        Andiko puede ofrecer funcionalidades identificadas como preliminares, beta, de prueba
+        o de acceso anticipado. Estas se proveen &quot;en el estado en que se encuentran&quot;,
+        pueden modificarse o discontinuarse en cualquier momento sin responsabilidad, no están
+        cubiertas por acuerdos de nivel de servicio y no deben utilizarse para operaciones
+        críticas del Cliente. El uso de estas funcionalidades es voluntario.
+      </p>
+
+      <h2 className="text-lg font-semibold mt-8 text-fg">29. Cesión</h2>
       <p className="text-sm text-fg-muted leading-relaxed">
         El Cliente no puede ceder este contrato ni sus derechos u obligaciones sin
         consentimiento previo y escrito de Andiko. Andiko puede ceder el contrato a una
@@ -457,7 +501,7 @@ export default function TerminosPage() {
       </p>
 
       <h2 className="text-lg font-semibold mt-8 text-fg">
-        29. Comunicaciones y notificaciones
+        30. Comunicaciones y notificaciones
       </h2>
       <p className="text-sm text-fg-muted leading-relaxed">
         Las comunicaciones entre las partes se cursarán válidamente por correo electrónico a
@@ -466,7 +510,7 @@ export default function TerminosPage() {
         Andiko deben enviarse a [EMAIL DE CONTACTO].
       </p>
 
-      <h2 className="text-lg font-semibold mt-8 text-fg">30. Disposiciones generales</h2>
+      <h2 className="text-lg font-semibold mt-8 text-fg">31. Disposiciones generales</h2>
       <p className="text-sm text-fg-muted leading-relaxed">
         Si alguna cláusula de estos Términos fuera declarada nula o inaplicable, las restantes
         conservarán plena vigencia. La falta de ejercicio de un derecho por cualquiera de las
@@ -478,7 +522,7 @@ export default function TerminosPage() {
       </p>
 
       <h2 className="text-lg font-semibold mt-8 text-fg">
-        31. Ley aplicable, jurisdicción y consumidores
+        32. Ley aplicable, jurisdicción y consumidores
       </h2>
       <p className="text-sm text-fg-muted leading-relaxed">
         Estos Términos se rigen por las leyes de la República Argentina. Ante cualquier
@@ -486,12 +530,14 @@ export default function TerminosPage() {
         treinta (30) días de notificado el reclamo; agotada esa instancia, se someten a los
         tribunales ordinarios competentes de [JURISDICCIÓN]. Cuando el Cliente revista
         carácter de consumidor, quedan a salvo las normas imperativas de la Ley 24.240 y del
-        Código Civil y Comercial, incluidas las relativas a la competencia judicial y a los
-        mecanismos administrativos de reclamo. [Nota: la conveniencia de una cláusula arbitral
-        para clientes empresa requiere análisis específico; no se incluye por defecto.]
+        Código Civil y Comercial; en particular, será competente el juez del domicilio real del
+        consumidor y se tendrá por no convenida toda prórroga de jurisdicción en su perjuicio
+        (artículos 36 de la Ley 24.240 y 1109 del Código Civil y Comercial). [Nota: la
+        conveniencia de una cláusula arbitral para clientes empresa requiere análisis
+        específico; no se incluye por defecto.]
       </p>
 
-      <h2 className="text-lg font-semibold mt-8 text-fg">32. Contacto</h2>
+      <h2 className="text-lg font-semibold mt-8 text-fg">33. Contacto</h2>
       <p className="text-sm text-fg-muted leading-relaxed">
         Consultas sobre estos Términos: [EMAIL DE CONTACTO].
       </p>

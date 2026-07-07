@@ -112,9 +112,16 @@ export default function PrivacidadPage() {
           previo y con opción de baja en cada envío.
         </li>
         <li>
-          <strong>Analítica de producto y registro de errores:</strong> únicamente con su
+          <strong>Analítica de producto en el navegador:</strong> únicamente con su
           consentimiento, otorgado a través del banner de cookies y revocable en cualquier
           momento (artículo 5, inciso 1, Ley 25.326).
+        </li>
+        <li>
+          <strong>Registro de errores y telemetría técnica del lado del servidor:</strong>
+          necesario para la ejecución del contrato y para el deber de seguridad (artículo 9,
+          Ley 25.326). Este registro opera con independencia de las cookies de analítica y se
+          limita a la información técnica y de identificación imprescindible para diagnosticar
+          fallas y proteger el Servicio.
         </li>
       </ul>
 
@@ -122,14 +129,19 @@ export default function PrivacidadPage() {
         5. Analítica de producto (PostHog)
       </h2>
       <p className="text-sm text-fg-muted leading-relaxed">
-        Si usted acepta las cookies de analítica, utilizamos PostHog, un servicio de analítica
-        de producto provisto por PostHog Inc. con infraestructura en los Estados Unidos de
-        América, para comprender el uso de la Plataforma, diagnosticar errores y mejorar el
-        Servicio. Los datos tratados incluyen eventos de uso, reportes de errores y registros
-        técnicos, asociados a su identificador de usuario, correo electrónico, nombre, rol y
-        organización. Mientras usted no otorgue su consentimiento, la analítica permanece
-        desactivada para su navegador. Puede retirar su consentimiento en cualquier momento
-        desde la configuración de cookies, sin que ello afecte el uso de la Plataforma.
+        Utilizamos PostHog, un servicio provisto por PostHog Inc. con infraestructura en los
+        Estados Unidos de América, para comprender el uso de la Plataforma, diagnosticar
+        errores y mejorar el Servicio. Distinguimos dos tratamientos: (a) la{' '}
+        <strong>analítica de producto en su navegador</strong> —eventos de uso y grabación de
+        interacción— se activa únicamente si usted acepta las cookies de analítica y permanece
+        desactivada en su navegador hasta entonces; puede revocar ese consentimiento en
+        cualquier momento desde la configuración de cookies, sin afectar el uso de la
+        Plataforma; y (b) el <strong>registro de errores y la telemetría técnica del lado del
+        servidor</strong> —trazas de error y registros operativos necesarios para diagnosticar
+        fallas y preservar la seguridad— que se realiza sobre la base contractual y el deber de
+        seguridad, con independencia de las cookies, limitado a los datos técnicos y de
+        identificación imprescindibles. En ambos casos los datos pueden asociarse a su
+        identificador de usuario, correo electrónico, nombre, rol y organización.
       </p>
 
       <h2 className="text-lg font-semibold mt-8 text-fg">6. Cookies y tecnologías similares</h2>
@@ -213,13 +225,15 @@ export default function PrivacidadPage() {
           Civil y Comercial (en general, diez años).
         </li>
         <li>
-          <strong>Registros de acceso y seguridad:</strong> por un plazo limitado y
-          proporcional a su finalidad. [Definir plazo operativo, p. ej. 12 a 24 meses.]
+          <strong>Registros de acceso, seguridad y telemetría técnica:</strong> por un plazo
+          proporcional a su finalidad que no excederá los veinticuatro (24) meses, salvo que
+          deban conservarse por más tiempo para investigar un incidente concreto o por
+          obligación legal. [Confirmar plazo operativo definitivo.]
         </li>
         <li>
           <strong>Copias de respaldo:</strong> los datos eliminados pueden subsistir en
-          respaldos hasta completarse su ciclo de rotación, tras lo cual se depuran. [Definir
-          plazo de rotación real.]
+          respaldos hasta completarse su ciclo de rotación, que no supera los [DEFINIR, p. ej.
+          90] días, tras lo cual se depuran.
         </li>
         <li>
           <strong>Defensa de reclamos:</strong> podemos conservar la información estrictamente
