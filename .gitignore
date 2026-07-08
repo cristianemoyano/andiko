@@ -45,6 +45,9 @@ yarn-error.log*
 # WooCommerce local bootstrap output
 infra/docker/woocommerce/dev-output/credentials.env
 
+# Mail server env (generated on VPS from .example — never commit secrets)
+infra/mail/docker-mailserver.env
+
 # vercel
 .vercel
 

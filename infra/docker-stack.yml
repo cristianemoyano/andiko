@@ -139,6 +139,52 @@ services:
           memory: 128M
     logging: *default-logging
 
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:latest
+    hostname: mail.andiko.cloud
+    env_file:
+      - ${MAIL_ENV_FILE}
+    volumes:
+      - ${MAIL_DATA_DIR}:/var/mail
+      - ${MAIL_STATE_DIR}:/var/mail-state
+      - ${MAIL_CONFIG_DIR}:/tmp/docker-mailserver
+      - certbot_certs:/etc/letsencrypt:ro
+    ports:
+      - target: 25
+        published: 25
+        protocol: tcp
+        mode: host
+      - target: 587
+        published: 587
+        protocol: tcp
+        mode: host
+      - target: 465
+        published: 465
+        protocol: tcp
+        mode: host
+      - target: 993
+        published: 993
+        protocol: tcp
+        mode: host
+    networks:
+      - internal
+    cap_add:
+      - NET_ADMIN
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    logging: *default-logging
+    stop_grace_period: 1m
+
 networks:
   web:
     driver: overlay

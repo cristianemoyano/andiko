@@ -22,6 +22,7 @@ Production stack details below. Vercel env vars and VPS `infra/.env.production` 
 ```
 Internet → nginx (:443) → app (:3000) → postgres (:5432, internal)
                 ├→ portainer (:9000, internal, UI at portainer.andiko.cloud)
+                ├→ mailserver (:25/:587/:993, host mode, mail.andiko.cloud)
                 ↑
            Certbot (Let's Encrypt)
 ```
@@ -32,8 +33,11 @@ Internet → nginx (:443) → app (:3000) → postgres (:5432, internal)
 | `app`     | 1        | Next.js standalone (`node server.js`) |
 | `postgres`| 1        | PostgreSQL 16, bind-mounted volume   |
 | `portainer` | 1      | Docker Swarm UI (basic auth + HTTPS) |
+| `mailserver` | 1     | Postfix + Dovecot + DKIM ([mail-server.md](mail-server.md)) |
 
 All orgs (multi-tenant) share one app instance and one database.
+
+**Email:** self-hosted `@andiko.cloud` via docker-mailserver. Full setup: **[mail-server.md](mail-server.md)**.
 
 ## Production VPS (live)
 
@@ -124,7 +128,7 @@ sudo apt install -y make git curl gettext-base
 ```
 
 - DNS: `andiko.cloud`, `www.andiko.cloud`, and `portainer.andiko.cloud` → VPS public IP (Hostinger DNS or external)
-- Firewall: allow TCP 22, 80, 443 — check **both** Hostinger panel firewall and `ufw` on the server if enabled
+- Firewall: allow TCP 22, 80, 443 — and for mail: 25, 587, 465, 993 — check **both** Hostinger panel firewall and `ufw` on the server if enabled
 - GitHub PAT:
   - **Laptop:** `write:packages` (push images to GHCR)
   - **VPS:** `read:packages` (pull images)
@@ -155,6 +159,7 @@ Set `POSTGRES_PASSWORD` in `.env.production`; scripts build `DATABASE_URL` autom
 | `CERTBOT_EMAIL` | Let's Encrypt notifications |
 | `BACKUP_GDRIVE_*` | rclone remote for off-site backups |
 | `NEXT_PUBLIC_POSTHOG_*` | PostHog analytics (build + runtime); see `infra/.env.production.example` |
+| `MAIL_*` | docker-mailserver paths and env file; see [mail-server.md](mail-server.md) |
 
 Values with spaces must be quoted in `infra/.env.production`, e.g. `BACKUP_GDRIVE_FOLDER="my folder"`.
 
@@ -262,7 +267,8 @@ After bootstrap, use [Deploy a release (routine)](#deploy-a-release-routine) for
 | `prod-create-sysadmin TAG=… EMAIL=… PASSWORD=…` | VPS | Once / ops | Create or reset platform sys-admin user |
 | `prod-bootstrap-vps` | VPS | **Once (new VPS)** | Install Docker, git, make, ufw, swarm init |
 | `prod-init` | VPS | **Once (new VPS)** | Swarm secrets, data dirs, nginx bootstrap |
-| `prod-secrets` | VPS | Rare | Rotate Swarm secrets (then redeploy) |
+| `prod-secrets` | VPS | Rare | Rotate Swarm secrets in place (rolling update; no stack rm) |
+| `prod-sync-db-password` | VPS | Incident | Sync Postgres password from `.env` + restart app only |
 | `prod-ssl` | VPS | **Once (new VPS)** | Certbot certificate + enable HTTPS |
 | `prod-portainer-auth` | VPS | **Once (new VPS)** | Generate nginx basic-auth for Portainer |
 
@@ -415,6 +421,27 @@ Point each terminal's `cloud_url` to `https://andiko.cloud`.
 
 ## Troubleshooting
 
+### Incident: 502 / `db: disconnected` (password drift)
+
+**Symptom:** nginx 502, `andiko_app` 0/1, `/api/health` → `503` with `"db":"disconnected"`.
+
+**Cause:** PostgreSQL role password no longer matches `DATABASE_URL` in the Swarm secret (e.g. `.env` edited without syncing DB, or secret rotated without `ALTER USER`).
+
+**Do not** run `docker stack rm andiko` for this — that causes unnecessary downtime.
+
+**Recovery (zero/minimal downtime):**
+
+```bash
+# On VPS — sync DB password from infra/.env.production and restart app only
+make prod-sync-db-password
+
+# If health still fails, secrets may differ from .env (rolling update, no stack rm):
+make prod-secrets
+curl -sf https://andiko.cloud/api/health
+```
+
+**Prevention:** keep `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` in `infra/.env.production` as the single source of truth; scripts build `DATABASE_URL` with URL-encoding. After changing password, run `make prod-sync-db-password` or `make prod-secrets` — never hand-edit only one of DB / secret / `.env`.
+
 | Symptom | Check |
 |---------|-------|
 | **`DATABASE_URL: Invalid URL` on migrate** | Password contains `+`, `/`, `=` from base64 — use `openssl rand -hex 32` for `POSTGRES_PASSWORD`, or `git pull` and re-run `make prod-secrets` + `make prod-deploy` (scripts now URL-encode) |
@@ -427,7 +454,7 @@ Point each terminal's `cloud_url` to `https://andiko.cloud`.
 | Portainer 401/403 | Run `make prod-portainer-auth`; redeploy; expand cert if HTTPS fails |
 | Portainer **500** after basic-auth prompt | `.htpasswd` not readable by nginx — `chmod 644 /var/lib/andiko/portainer/.htpasswd` or re-run `make prod-portainer-auth` |
 | Portainer nginx error | `PORTAINER_HTPASSWD_FILE` must exist before deploy |
-| Secrets changed | `make prod-secrets` then `make prod-deploy TAG=…` |
+| Secrets changed | `make prod-secrets` (rolling); verify health; redeploy only if image changed |
 
 ## Scaling note
 

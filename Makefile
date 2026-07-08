@@ -1,7 +1,8 @@
 .PHONY: up down reset logs db shell dev \
 	woo-up woo-down woo-bootstrap woo-credentials woo-reset \
-	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-deploy prod-ssl prod-sync-nginx-conf prod-migrate prod-migrate-status \
-	prod-create-sysadmin prod-health prod-backup prod-disk-check prod-logs prod-renew-certs prod-portainer-auth
+	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-sync-db-password prod-deploy prod-ssl prod-sync-nginx-conf prod-migrate prod-migrate-status \
+	prod-create-sysadmin prod-health prod-backup prod-backup-mail prod-disk-check prod-logs prod-renew-certs prod-portainer-auth \
+	prod-init-mail prod-mail-add-user prod-mail-dkim prod-mail-logs prod-mail-restart prod-mail-check prod-expand-ssl-mail
 
 # =============================================================================
 # Development — infra local (postgres, pgadmin, Next.js)
@@ -93,6 +94,9 @@ prod-init:
 prod-secrets:
 	bash infra/scripts/rotate-secrets.sh
 
+prod-sync-db-password:
+	bash infra/scripts/sync-db-password.sh
+
 prod-deploy:
 	@test -n "$(TAG)" || (echo "TAG is required: make prod-deploy TAG=v0.26.0" && exit 1)
 	TAG=$(TAG) bash infra/scripts/deploy.sh
@@ -138,3 +142,29 @@ prod-renew-certs:
 prod-portainer-auth:
 	PORTAINER_AUTH_USER=$(PORTAINER_AUTH_USER) PORTAINER_AUTH_PASSWORD=$(PORTAINER_AUTH_PASSWORD) \
 		bash infra/scripts/init-portainer-auth.sh
+
+prod-init-mail:
+	bash infra/scripts/init-mail.sh
+
+prod-expand-ssl-mail:
+	bash infra/scripts/expand-ssl-mail.sh
+
+prod-mail-add-user:
+	@test -n "$(EMAIL)" || (echo "EMAIL is required: make prod-mail-add-user EMAIL=erp@andiko.cloud PASSWORD=..." && exit 1)
+	@test -n "$(PASSWORD)" || (echo "PASSWORD is required" && exit 1)
+	EMAIL=$(EMAIL) PASSWORD=$(PASSWORD) bash infra/scripts/mail-setup.sh add-user
+
+prod-mail-dkim:
+	bash infra/scripts/mail-setup.sh dkim
+
+prod-mail-logs:
+	bash infra/scripts/mail-setup.sh logs
+
+prod-mail-restart:
+	bash infra/scripts/mail-setup.sh restart
+
+prod-mail-check:
+	bash infra/scripts/prereq-mail-check.sh
+
+prod-backup-mail:
+	bash infra/scripts/backup-mail.sh
