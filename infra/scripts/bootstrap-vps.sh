@@ -54,6 +54,10 @@ echo "==> Firewall (UFW)"
 ufw allow OpenSSH
 ufw allow 80/tcp
 ufw allow 443/tcp
+ufw allow 25/tcp
+ufw allow 587/tcp
+ufw allow 465/tcp
+ufw allow 993/tcp
 echo "y" | ufw enable || true
 ufw status
 
@@ -81,5 +85,6 @@ echo "       nano infra/.env.production"
 echo "  6. GHCR login (PAT with read:packages):"
 echo "       echo \"\$GITHUB_TOKEN\" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin"
 echo "  7. After laptop pushed image: make prod-init && make prod-deploy TAG=v0.25.2"
+echo "  8. Optional mail server: docs/deployment/mail-server.md (make prod-init-mail)"
 echo ""
 echo "Full runbook: docs/deployment/production.md"

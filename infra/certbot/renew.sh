@@ -21,4 +21,10 @@ if [ -n "$NGINX_CONTAINER" ]; then
   docker exec "$NGINX_CONTAINER" nginx -s reload
 fi
 
+MAIL_SERVICE="${STACK}_mailserver"
+if docker service ls --format '{{.Name}}' 2>/dev/null | grep -qx "$MAIL_SERVICE"; then
+  docker service update --force "$MAIL_SERVICE" >/dev/null 2>&1 || true
+  echo "Mailserver restart triggered (TLS reload)."
+fi
+
 echo "Certificate renewal check complete."

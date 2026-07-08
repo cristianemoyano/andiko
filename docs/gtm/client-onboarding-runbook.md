@@ -30,7 +30,7 @@ Checklist operativo desde firma verbal hasta **primer día productivo**. Respons
 4. **Suscripción** — asignar plan según [packaging.md](packaging.md)
    - Verificar módulos habilitados (`enabled_modules`)
 5. **Emisor plataforma** — datos Andiko en `/sys-admin/billing/emisor` (para facturas de servicio)
-6. **SMTP** — `/sys-admin/email` probado con email de prueba
+6. **SMTP** — `/sys-admin/email` con preset **Servidor Andiko** (`mailserver:587`, cuenta `erp@andiko.cloud`). Probar email de prueba. Runbook: [mail-server.md](../deployment/mail-server.md)
 
 Registrar en hoja interna: org_id, plan, precio beta, fecha inicio, referente contacto.
 

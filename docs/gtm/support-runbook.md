@@ -30,6 +30,14 @@ Horario beta: Lun–Vie 9–18 ART (Mendoza). Fuera de horario: solo S1 vía Wha
 
 ## Playbooks por síntoma
 
+### Emails no llegan / van a spam
+
+1. Verificar SMTP en `/sys-admin/email` (host `mailserver`, puerto 587, cuenta `erp@andiko.cloud`)
+2. En VPS: `make prod-mail-check` — DNS (MX, SPF, DKIM, DMARC, PTR) y puertos
+3. Score: [mail-tester.com](https://www.mail-tester.com) desde buzón del equipo
+4. Logs: `make prod-mail-logs` o Portainer → `andiko_mailserver`
+5. Runbook completo: [mail-server.md](../deployment/mail-server.md)
+
 ### No puede emitir AFIP / error CAE
 
 1. Verificar `AFIP_MODE` en prod = `produccion` o `homologacion` (no `stub`)
@@ -89,6 +97,7 @@ Antes de tocar prod DB: backup + impersonar en staging si existe.
 | Impersonar usuario | Menú mobile / sidebar sys-admin |
 | Facturación servicio | `/sys-admin/billing` |
 | Email plataforma | `/sys-admin/email` |
+| Mail server (ops) | [mail-server.md](../deployment/mail-server.md), `make prod-mail-check` |
 | Storage | `/sys-admin/storage` |
 | Health | `GET /api/health` |
 

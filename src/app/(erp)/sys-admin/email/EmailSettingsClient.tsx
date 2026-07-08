@@ -88,6 +88,25 @@ export function EmailSettingsClient() {
     setSavedMsg(null)
   }
 
+  /** Prefill SMTP for the self-hosted docker-mailserver on production Swarm. */
+  function applyAndikoMailPreset() {
+    setForm(f =>
+      f
+        ? {
+            ...f,
+            host: 'mailserver',
+            port: 587,
+            secure: false,
+            user: 'erp@andiko.cloud',
+            from_address: 'erp@andiko.cloud',
+            from_name: f.from_name.trim() || 'Andiko',
+          }
+        : f,
+    )
+    setErrors({})
+    setSavedMsg(null)
+  }
+
   function validate(f: PublicEmailSettings): Record<string, string> {
     const next: Record<string, string> = {}
     if (f.enabled) {
@@ -205,13 +224,21 @@ export function EmailSettingsClient() {
             <section className="rounded-sm border border-border bg-surface p-4 space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-sm font-semibold text-fg">Servidor SMTP</h2>
-                <Button type="button" variant="secondary" size="xs" onClick={applyGmailPreset}>
-                  Usar Gmail
-                </Button>
+                <div className="flex flex-wrap gap-2 justify-end">
+                  <Button type="button" variant="secondary" size="xs" onClick={applyAndikoMailPreset}>
+                    Servidor Andiko
+                  </Button>
+                  <Button type="button" variant="secondary" size="xs" onClick={applyGmailPreset}>
+                    Usar Gmail
+                  </Button>
+                </div>
               </div>
               <p className="text-xs text-fg-muted">
-                ¿Cuenta personal de Gmail? Tocá <strong>Usar Gmail</strong> para completar servidor,
-                puerto y seguridad. Necesitás{' '}
+                En producción, <strong>Servidor Andiko</strong> apunta al mailserver interno del VPS
+                (<code className="text-xs">mailserver:587</code>). Guardá la contraseña de{' '}
+                <code className="text-xs">erp@andiko.cloud</code> creada con{' '}
+                <code className="text-xs">make prod-mail-add-user</code>. Para Gmail personal, tocá{' '}
+                <strong>Usar Gmail</strong> y usá{' '}
                 <a
                   href="https://myaccount.google.com/apppasswords"
                   target="_blank"

@@ -22,6 +22,7 @@ Production stack details below. Vercel env vars and VPS `infra/.env.production` 
 ```
 Internet → nginx (:443) → app (:3000) → postgres (:5432, internal)
                 ├→ portainer (:9000, internal, UI at portainer.andiko.cloud)
+                ├→ mailserver (:25/:587/:993, host mode, mail.andiko.cloud)
                 ↑
            Certbot (Let's Encrypt)
 ```
@@ -32,8 +33,11 @@ Internet → nginx (:443) → app (:3000) → postgres (:5432, internal)
 | `app`     | 1        | Next.js standalone (`node server.js`) |
 | `postgres`| 1        | PostgreSQL 16, bind-mounted volume   |
 | `portainer` | 1      | Docker Swarm UI (basic auth + HTTPS) |
+| `mailserver` | 1     | Postfix + Dovecot + DKIM ([mail-server.md](mail-server.md)) |
 
 All orgs (multi-tenant) share one app instance and one database.
+
+**Email:** self-hosted `@andiko.cloud` via docker-mailserver. Full setup: **[mail-server.md](mail-server.md)**.
 
 ## Production VPS (live)
 
@@ -124,7 +128,7 @@ sudo apt install -y make git curl gettext-base
 ```
 
 - DNS: `andiko.cloud`, `www.andiko.cloud`, and `portainer.andiko.cloud` → VPS public IP (Hostinger DNS or external)
-- Firewall: allow TCP 22, 80, 443 — check **both** Hostinger panel firewall and `ufw` on the server if enabled
+- Firewall: allow TCP 22, 80, 443 — and for mail: 25, 587, 465, 993 — check **both** Hostinger panel firewall and `ufw` on the server if enabled
 - GitHub PAT:
   - **Laptop:** `write:packages` (push images to GHCR)
   - **VPS:** `read:packages` (pull images)
@@ -155,6 +159,7 @@ Set `POSTGRES_PASSWORD` in `.env.production`; scripts build `DATABASE_URL` autom
 | `CERTBOT_EMAIL` | Let's Encrypt notifications |
 | `BACKUP_GDRIVE_*` | rclone remote for off-site backups |
 | `NEXT_PUBLIC_POSTHOG_*` | PostHog analytics (build + runtime); see `infra/.env.production.example` |
+| `MAIL_*` | docker-mailserver paths and env file; see [mail-server.md](mail-server.md) |
 
 Values with spaces must be quoted in `infra/.env.production`, e.g. `BACKUP_GDRIVE_FOLDER="my folder"`.
 

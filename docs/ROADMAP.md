@@ -553,12 +553,18 @@ Envío de documentos e notificaciones por email desde el ERP.
 - [x] Configuración SMTP **a nivel sys-admin/plataforma** (no por org) — pantalla `/sys-admin/email` + link en sidebar; contraseña cifrada, nunca devuelta al cliente. La usan todas las organizaciones.
 - [x] Test de email desde `/sys-admin/email` — `POST /api/v1/sys-admin/email-settings/test` + `sendTestEmail` (usa la config guardada; no persiste en `email_logs`); errores SMTP_NOT_CONFIGURED (409) / EMAIL_TEST_FAILED (502)
 - [x] Preset rápido "Usar Gmail" en `/sys-admin/email` (smtp.gmail.com:465 SSL, sincroniza usuario↔remitente) + ayuda de contraseña de aplicación
+- [x] Preset **Servidor Andiko** en `/sys-admin/email` (mailserver:587, erp@andiko.cloud) para SMTP self-hosted
 - [x] Toggle mostrar/ocultar (`PasswordInput`) en campos de contraseña SMTP y de usuario/PIN POS (`OrgUserModal`)
 - [x] Templates de email por tipo de documento (presupuesto, pedido, factura, remito) — editor UI por org en `/configuracion` (tab "Plantillas de email") + defaults con variables `{{contact_name}}`, `{{document_number}}`, `{{total}}`, etc.
 - [x] Envío de documentos al cliente desde el detalle (componente `SendDocumentEmail`: botón "Enviar por email" en facturas/pedidos/presupuestos) + servicio de envío que persiste `email_logs`
 - [x] Historial de envíos por documento — listado en el diálogo de envío
 - [x] Bandeja de auditoría **Emails enviados** por organización — tab en `/configuracion` con listado paginado, filtros y detalle del contenido renderizado guardado
 - [x] Persistencia de contenido en `email_logs` (`body_text`, `body_html`, `transport`, `message_id`) para envíos nuevos
+
+### Infraestructura mail (completado)
+- [x] Servidor `@andiko.cloud` containerizado en Docker Swarm (`docker-mailserver`) — guía [docs/deployment/mail-server.md](deployment/mail-server.md)
+- [x] Scripts: `prod-init-mail`, `prod-mail-add-user`, `prod-mail-dkim`, `prod-mail-check`, `prod-backup-mail`
+- [x] Preset **Servidor Andiko** en `/sys-admin/email` (SMTP interno `mailserver:587`)
 
 ### Pendiente
 - [ ] Ver **Fase 10 — Colaboración interna** (notificaciones in-app, comentarios en documentos, chat de equipo). Las alertas proactivas (stock mínimo, presupuestos por vencer) viven ahí, no en email.
