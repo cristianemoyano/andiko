@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.41.0](https://github.com/cristianemoyano/andiko/compare/v0.40.0...v0.41.0) (2026-07-08)
+
+### Features
+
+* **auth:** harden terms and privacy after adversarial review ([2e95966](https://github.com/cristianemoyano/andiko/commit/2e9596636f9d250e7d86c7bcc9f794432a444240))
+* **auth:** overhaul terms of service and privacy policy legal text ([9e29c89](https://github.com/cristianemoyano/andiko/commit/9e29c89fbfbf2d8650e19a658df0349636fe7f6f))
+* **logistics:** add delivery runs to group shipments into routes ([6a4da4d](https://github.com/cristianemoyano/andiko/commit/6a4da4de21ed7f9fc139dcf41b6413ef3bbc92a9))
+
+### Bug Fixes
+
+* **core:** defer cookie consent banner until client mount ([165d588](https://github.com/cristianemoyano/andiko/commit/165d58855fa849918027e89558ad21a339df660c))
+
 ## [0.40.0](https://github.com/cristianemoyano/andiko/compare/v0.39.0...v0.40.0) (2026-07-03)
 
 ### Features
