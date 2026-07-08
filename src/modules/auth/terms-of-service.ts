@@ -5,4 +5,4 @@
  * /legales/privacidad changes materially. All users will be prompted to
  * re-accept the terms on their next login.
  */
-export const CURRENT_TERMS_VERSION = '2026-07-01'
+export const CURRENT_TERMS_VERSION = '2026-07-07'

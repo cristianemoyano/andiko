@@ -7,6 +7,10 @@ import {
   canTransitionShipment,
   assertShipmentTransition,
   resolveInHouseTrackingNumber,
+  DELIVERY_RUN_TRANSITIONS,
+  TERMINAL_DELIVERY_RUN_STATUSES,
+  canTransitionDeliveryRun,
+  assertDeliveryRunTransition,
 } from './logistics.constants'
 
 describe('shipment status machine', () => {
@@ -78,5 +82,31 @@ describe('canEditShipment', () => {
     expect(canEditShipment('failed')).toBe(true)
     expect(canEditShipment('delivered')).toBe(false)
     expect(canEditShipment('cancelled')).toBe(false)
+  })
+})
+
+describe('delivery run status machine', () => {
+  it('allows the operational happy path', () => {
+    const path = ['draft', 'planned', 'dispatched', 'in_progress', 'completed'] as const
+    for (let i = 0; i < path.length - 1; i++) {
+      expect(canTransitionDeliveryRun(path[i], path[i + 1])).toBe(true)
+    }
+  })
+
+  it('allows cancelling before dispatch only', () => {
+    expect(canTransitionDeliveryRun('draft', 'cancelled')).toBe(true)
+    expect(canTransitionDeliveryRun('planned', 'cancelled')).toBe(true)
+    expect(canTransitionDeliveryRun('dispatched', 'cancelled')).toBe(false)
+  })
+
+  it('terminal run statuses have no exits', () => {
+    for (const status of TERMINAL_DELIVERY_RUN_STATUSES) {
+      expect(DELIVERY_RUN_TRANSITIONS[status]).toHaveLength(0)
+    }
+  })
+
+  it('assertDeliveryRunTransition throws a stable error code', () => {
+    expect(() => assertDeliveryRunTransition('completed', 'planned')).toThrowError('DELIVERY_RUN_INVALID_TRANSITION')
+    expect(() => assertDeliveryRunTransition('planned', 'dispatched')).not.toThrow()
   })
 })

@@ -14,7 +14,7 @@ export function computeInvoiceDueDate(issueDate: Date, paymentCondition: Payment
   return d
 }
 
-type DocumentType = 'quote' | 'order' | 'invoice' | 'payment' | 'credit_note' | 'debit_note' | 'sales_return' | 'sales_refund' | 'shipment'
+type DocumentType = 'quote' | 'order' | 'invoice' | 'payment' | 'credit_note' | 'debit_note' | 'sales_return' | 'sales_refund' | 'shipment' | 'delivery_run'
 
 const DOC_PREFIXES: Record<DocumentType, string> = {
   quote:       'PRES',
@@ -26,6 +26,7 @@ const DOC_PREFIXES: Record<DocumentType, string> = {
   sales_return: 'DEV',
   sales_refund: 'REB',
   shipment:    'ENV',
+  delivery_run: 'SAL',
 }
 
 /**

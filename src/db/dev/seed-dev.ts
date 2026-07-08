@@ -1,5 +1,5 @@
 import sequelize from '@/lib/db'
-import { QueryTypes } from 'sequelize'
+import { Op, QueryTypes } from 'sequelize'
 import Decimal from 'decimal.js'
 import Contact from '@/modules/contacts/contact.model'
 import ContactAddress from '@/modules/contacts/contact-address.model'
@@ -30,6 +30,7 @@ import ProductVariant from '@/modules/catalog/product-variant.model'
 import PriceList from '@/modules/catalog/price-list.model'
 import PriceListItem from '@/modules/catalog/price-list-item.model'
 import { slugifyText } from '@/lib/slug'
+import type { TenantContext } from '@/lib/tenancy'
 import { seedDefaultChartOfAccounts } from '@/modules/accounting/chart-seed'
 import { DEFAULT_BALANZA_CONFIG } from '@/modules/pos/balanza-barcode'
 import Account from '@/modules/accounting/account.model'
@@ -40,6 +41,13 @@ import Warehouse from '@/modules/inventory/warehouse.model'
 import StockItem from '@/modules/inventory/stock-item.model'
 import StockMovement from '@/modules/inventory/stock-movement.model'
 import { applyMovement } from '@/modules/inventory/stock-movements.service'
+import CarrierAccount from '@/modules/logistics/carrier-account.model'
+import Vehicle from '@/modules/logistics/vehicle.model'
+import Shipment from '@/modules/logistics/shipment.model'
+import DeliveryRun from '@/modules/logistics/delivery-run.model'
+import { createShipmentForOrder } from '@/modules/logistics/shipments.service'
+import { createDeliveryRun } from '@/modules/logistics/delivery-runs.service'
+import { createDeliveryNoteForShipment } from '@/modules/inventory/delivery-notes.service'
 import PurchaseOrder from '@/modules/purchases/purchase-order.model'
 import PurchaseOrderItem from '@/modules/purchases/purchase-order-item.model'
 import PurchaseReceipt from '@/modules/purchases/purchase-receipt.model'
@@ -313,7 +321,7 @@ async function hashPassword(plaintext: string) {
 }
 
 async function ensurePermissionsSeeded(t: import('sequelize').Transaction) {
-  const resources = ['contacts', 'products', 'sales', 'inventory', 'purchases', 'accounting'] as const
+  const resources = ['contacts', 'products', 'sales', 'inventory', 'purchases', 'accounting', 'logistics'] as const
   const actions = ['read', 'write', 'delete'] as const
 
   const permissions = resources.flatMap((r) =>
@@ -381,6 +389,12 @@ async function ensurePermissionsSeeded(t: import('sequelize').Transaction) {
         { transaction: t, replacements: { role, name: permName } },
       )
     }
+  }
+}
+
+function logSeedProgress(message: string) {
+  if (process.env.SEED_PROGRESS !== 'no') {
+    console.log(`[seed] ${message}`)
   }
 }
 
@@ -524,15 +538,34 @@ async function seedCatalog(
 
   const categories = new Map<string, ProductCategory>()
   for (const c of categoriesSpec) {
-    const [cat] = await ProductCategory.findOrCreate({
+    let cat = await ProductCategory.findOne({
       where: { org_id: orgId, slug: c.slug },
-      defaults: {
-        org_id: orgId, parent_id: null, name: c.name, slug: c.slug,
-        description: c.description, status: 'active',
-        created_by: actorId, updated_by: actorId,
-      },
+      paranoid: false,
       transaction: t,
     })
+    if (cat) {
+      if (cat.deleted_at) await cat.restore({ transaction: t })
+      await cat.update(
+        {
+          parent_id: null,
+          name: c.name,
+          description: c.description,
+          status: 'active',
+          updated_by: actorId,
+          deleted_by: null,
+        },
+        { transaction: t },
+      )
+    } else {
+      cat = await ProductCategory.create(
+        {
+          org_id: orgId, parent_id: null, name: c.name, slug: c.slug,
+          description: c.description, status: 'active',
+          created_by: actorId, updated_by: actorId,
+        },
+        { transaction: t },
+      )
+    }
     categories.set(c.slug, cat)
   }
 
@@ -758,42 +791,86 @@ async function seedCatalog(
     const slug = slugifyText(p.name)
     const category_id = categories.get(p.categorySlug)?.id ?? null
 
-    const [product] = await Product.findOrCreate({
+    let product = await Product.findOne({
       where: { org_id: orgId, slug },
-      defaults: {
-        org_id: orgId, category_id, name: p.name, slug,
-        description: null, short_description: null,
-        product_type: p.product_type, status: 'active', vendor: null,
-        iva_rate: p.iva_rate, unit_of_measure: p.unit_of_measure,
-        ncm_code: null, tags: [], images: [],
-        created_by: actorId, updated_by: actorId,
-      },
+      paranoid: false,
       transaction: t,
     })
+    if (product) {
+      if (product.deleted_at) await product.restore({ transaction: t })
+      await product.update(
+        {
+          category_id,
+          name: p.name,
+          description: null,
+          short_description: null,
+          product_type: p.product_type,
+          status: 'active',
+          vendor: null,
+          iva_rate: p.iva_rate,
+          unit_of_measure: p.unit_of_measure,
+          ncm_code: null,
+          tags: [],
+          images: [],
+          updated_by: actorId,
+          deleted_by: null,
+        },
+        { transaction: t },
+      )
+    } else {
+      product = await Product.create(
+        {
+          org_id: orgId, category_id, name: p.name, slug,
+          description: null, short_description: null,
+          product_type: p.product_type, status: 'active', vendor: null,
+          iva_rate: p.iva_rate, unit_of_measure: p.unit_of_measure,
+          ncm_code: null, tags: [], images: [],
+          created_by: actorId, updated_by: actorId,
+        },
+        { transaction: t },
+      )
+    }
 
     for (let i = 0; i < p.variants.length; i++) {
       const v = p.variants[i]!
       const isDefault = i === 0
-      const [variant] = await ProductVariant.findOrCreate({
+      let variant = await ProductVariant.findOne({
         where: { org_id: orgId, sku: v.sku },
-        defaults: {
-          org_id: orgId, product_id: product.id, sku: v.sku,
-          barcode: v.barcode ?? null, name: v.variantName,
-          is_default: isDefault,
-          cost_price: null, base_price: v.price,
-          manage_stock: v.manage_stock, stock_quantity: v.stock_quantity,
-          sold_by_weight: v.sold_by_weight ?? false,
-          plu_code: v.plu_code ?? null,
-          created_by: actorId, updated_by: actorId,
-        },
+        paranoid: false,
         transaction: t,
       })
-      if (v.barcode || v.sold_by_weight || v.plu_code) {
-        await variant.update({
-          barcode: v.barcode ?? null,
-          sold_by_weight: v.sold_by_weight ?? false,
-          plu_code: v.plu_code ?? null,
-        }, { transaction: t })
+      if (variant) {
+        if (variant.deleted_at) await variant.restore({ transaction: t })
+        await variant.update(
+          {
+            product_id: product.id,
+            barcode: v.barcode ?? null,
+            name: v.variantName,
+            is_default: isDefault,
+            base_price: v.price,
+            manage_stock: v.manage_stock,
+            stock_quantity: v.stock_quantity,
+            sold_by_weight: v.sold_by_weight ?? false,
+            plu_code: v.plu_code ?? null,
+            updated_by: actorId,
+            deleted_by: null,
+          },
+          { transaction: t },
+        )
+      } else {
+        variant = await ProductVariant.create(
+          {
+            org_id: orgId, product_id: product.id, sku: v.sku,
+            barcode: v.barcode ?? null, name: v.variantName,
+            is_default: isDefault,
+            cost_price: null, base_price: v.price,
+            manage_stock: v.manage_stock, stock_quantity: v.stock_quantity,
+            sold_by_weight: v.sold_by_weight ?? false,
+            plu_code: v.plu_code ?? null,
+            created_by: actorId, updated_by: actorId,
+          },
+          { transaction: t },
+        )
       }
       allVariants.set(v.sku, variant)
       pricesBySku.set(v.sku, v.price)
@@ -875,6 +952,7 @@ async function seedInventory(
     attributes: ['id', 'sku', 'stock_quantity'],
     transaction: t,
   })
+  logSeedProgress(`inventario: ${trackableVariants.length} variantes con stock, ${branches.length} sucursales`)
 
   const warehouses: import('@/modules/inventory/warehouse.model').default[] = []
   for (const branch of branches) {
@@ -919,6 +997,9 @@ async function seedInventory(
           quantityDelta: new Decimal(qty),
           notes:         'Stock inicial (seed)',
           actorId,
+          stockItem:     item,
+          skipVariantStockSync: true,
+          skipWooEnqueue:       true,
         }, t)
       }
 
@@ -1193,6 +1274,320 @@ async function seedPurchases(
   )
 }
 
+type LogisticsOrderSeedSpec = {
+  notes: string
+  sku: string
+  description: string
+  quantity: string
+  unit_price: string
+  ship_to_name: string
+  ship_street: string
+  ship_number: string
+  ship_city: string
+  ship_province: string
+  ship_postal_code: string
+  promisedOffsetDays: number
+}
+
+function dateDaysFromNow(days: number): Date {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  date.setHours(12, 0, 0, 0)
+  return date
+}
+
+async function findOrCreateLogisticsOrder(
+  orgId: string,
+  branch: Branch,
+  actorId: string,
+  contact: Contact,
+  variantsBySku: Map<string, ProductVariant>,
+  spec: LogisticsOrderSeedSpec,
+  t: import('sequelize').Transaction,
+): Promise<SalesOrder> {
+  const existing = await SalesOrder.findOne({
+    where: { org_id: orgId, notes: spec.notes },
+    transaction: t,
+  })
+  if (existing) return existing
+
+  const variant = variantsBySku.get(spec.sku)
+  if (!variant) throw new Error(`Seed logística: variante ${spec.sku} no encontrada`)
+
+  const iva_rate: IvaRate = '21'
+  const line = {
+    product_id:   variant.product_id,
+    variant_id:   variant.id,
+    description:  spec.description,
+    quantity:     spec.quantity,
+    unit_price:   spec.unit_price,
+    discount_pct: '0.00',
+    iva_rate,
+    sort_order:   0,
+  }
+  const lineTotals = calcLineItem(line.quantity, line.unit_price, line.discount_pct, line.iva_rate)
+  const docTotals = calcDocumentTotals([lineTotals])
+  const order_number = await nextDocumentNumber(orgId, branch.id, 'order', t)
+  const promisedDate = dateDaysFromNow(spec.promisedOffsetDays)
+
+  const order = await SalesOrder.create(
+    {
+      org_id:               orgId,
+      branch_id:            branch.id,
+      contact_id:           contact.id,
+      quote_id:             null,
+      order_number,
+      salesperson_id:       actorId,
+      status:               'confirmed',
+      payment_condition:    'cash',
+      currency:             'ARS',
+      promised_date:        promisedDate,
+      delivered_date:       null,
+      shipping_street:      spec.ship_street,
+      shipping_number:      spec.ship_number,
+      shipping_floor:       null,
+      shipping_apartment:   null,
+      shipping_city:        spec.ship_city,
+      shipping_province:    spec.ship_province,
+      shipping_postal_code: spec.ship_postal_code,
+      shipping_country:     'Argentina',
+      billing_street:       spec.ship_street,
+      billing_number:       spec.ship_number,
+      billing_floor:        null,
+      billing_apartment:    null,
+      billing_city:         spec.ship_city,
+      billing_province:     spec.ship_province,
+      billing_postal_code:  spec.ship_postal_code,
+      billing_country:      'Argentina',
+      subtotal:             docTotals.subtotal,
+      discount_amount:      docTotals.discount_amount,
+      tax_amount:           docTotals.tax_amount,
+      total:                docTotals.total,
+      notes:                spec.notes,
+      internal_notes:       'Pedido creado por seed para probar salidas de reparto',
+      created_by:           actorId,
+      updated_by:           actorId,
+    },
+    { transaction: t },
+  )
+
+  await SalesOrderItem.create(
+    {
+      org_id:          orgId,
+      order_id:        order.id,
+      product_id:      line.product_id,
+      variant_id:      line.variant_id,
+      description:     line.description,
+      quantity:        line.quantity,
+      unit_price:      line.unit_price,
+      discount_pct:    line.discount_pct,
+      iva_rate:        line.iva_rate,
+      subtotal:        lineTotals.subtotal,
+      discount_amount: lineTotals.discount_amount,
+      tax_base:        lineTotals.tax_base,
+      tax_amount:      lineTotals.tax_amount,
+      total:           lineTotals.total,
+      sort_order:      line.sort_order,
+      created_by:      actorId,
+      updated_by:      actorId,
+    },
+    { transaction: t },
+  )
+
+  return order
+}
+
+async function seedLogisticsDemo(
+  orgId: string,
+  branch: Branch,
+  actorId: string,
+  variantsBySku: Map<string, ProductVariant>,
+  t: import('sequelize').Transaction,
+) {
+  const existingRuns = await DeliveryRun.count({
+    where: {
+      org_id: orgId,
+      notes: { [Op.in]: ['Salida de reparto de prueba — Zona Norte', 'Salida de reparto de prueba — Zona Oeste'] },
+    },
+    transaction: t,
+  })
+  if (existingRuns >= 2) return
+
+  const customers = await Contact.findAll({
+    where: {
+      org_id: orgId,
+      type: { [Op.in]: ['customer', 'both'] },
+      is_active: true,
+    },
+    order: [['legal_name', 'ASC']],
+    limit: 3,
+    transaction: t,
+  })
+  if (customers.length === 0) return
+
+  const [carrier] = await CarrierAccount.findOrCreate({
+    where: { org_id: orgId, name: 'Reparto propio Demo' },
+    defaults: {
+      org_id: orgId,
+      branch_id: branch.id,
+      kind: 'in_house',
+      name: 'Reparto propio Demo',
+      is_active: true,
+      settings: { flat_rate: 0 },
+      created_by: actorId,
+      updated_by: actorId,
+    },
+    transaction: t,
+  })
+
+  const vehicleRef = 'Camioneta Demo (AND 123)'
+  await Vehicle.findOrCreate({
+    where: { org_id: orgId, label: 'Camioneta Demo' },
+    defaults: {
+      org_id: orgId,
+      branch_id: branch.id,
+      label: 'Camioneta Demo',
+      plate: 'AND123',
+      notes: 'Vehículo creado por seed para salidas de reparto',
+      is_active: true,
+      created_by: actorId,
+      updated_by: actorId,
+    },
+    transaction: t,
+  })
+
+  const orderSpecs: LogisticsOrderSeedSpec[] = [
+    {
+      notes: 'Pedido logística prueba — Palermo',
+      sku: 'GUANTES-NIL-M',
+      description: 'Guantes de nitrilo Talla M',
+      quantity: '4',
+      unit_price: '350.00',
+      ship_to_name: customers[0]?.trade_name ?? customers[0]?.legal_name ?? 'Cliente Palermo',
+      ship_street: 'Av. Santa Fe',
+      ship_number: '3200',
+      ship_city: 'CABA',
+      ship_province: 'Buenos Aires',
+      ship_postal_code: '1425',
+      promisedOffsetDays: 0,
+    },
+    {
+      notes: 'Pedido logística prueba — Belgrano',
+      sku: 'MASCARILLA-SV',
+      description: 'Mascarilla FFP2 sin válvula',
+      quantity: '8',
+      unit_price: '850.00',
+      ship_to_name: customers[1]?.trade_name ?? customers[1]?.legal_name ?? customers[0]!.legal_name,
+      ship_street: 'Av. Cabildo',
+      ship_number: '2100',
+      ship_city: 'CABA',
+      ship_province: 'Buenos Aires',
+      ship_postal_code: '1428',
+      promisedOffsetDays: 0,
+    },
+    {
+      notes: 'Pedido logística prueba — Villa Urquiza',
+      sku: 'ALCOHOL-GEL-500',
+      description: 'Alcohol en gel 500ml',
+      quantity: '6',
+      unit_price: '1200.00',
+      ship_to_name: customers[2]?.trade_name ?? customers[2]?.legal_name ?? customers[0]!.legal_name,
+      ship_street: 'Triunvirato',
+      ship_number: '4300',
+      ship_city: 'CABA',
+      ship_province: 'Buenos Aires',
+      ship_postal_code: '1431',
+      promisedOffsetDays: 1,
+    },
+  ]
+
+  const ctx: TenantContext = {
+    orgId,
+    userId: actorId,
+    defaultBranchId: branch.id,
+    allowedBranchIds: [branch.id],
+    salesScopeOwn: false,
+    logisticsScopeAssigned: false,
+  }
+
+  const shipmentIds: string[] = []
+  for (let i = 0; i < orderSpecs.length; i++) {
+    const spec = orderSpecs[i]!
+    const contact = customers[i] ?? customers[0]!
+    const order = await findOrCreateLogisticsOrder(orgId, branch, actorId, contact, variantsBySku, spec, t)
+    const existingShipment = await Shipment.findOne({
+      where: { org_id: orgId, sales_order_id: order.id },
+      transaction: t,
+    })
+    if (existingShipment) {
+      await createDeliveryNoteForShipment(existingShipment.id, orgId, actorId, t)
+      shipmentIds.push(existingShipment.id)
+      continue
+    }
+
+    const shipment = await createShipmentForOrder(
+      {
+        sales_order_id: order.id,
+        carrier_account_id: carrier.id,
+        promised_date: dateDaysFromNow(spec.promisedOffsetDays),
+        assigned_driver_id: actorId,
+        vehicle_ref: vehicleRef,
+        ship_to_name: spec.ship_to_name,
+        ship_street: spec.ship_street,
+        ship_number: spec.ship_number,
+        ship_city: spec.ship_city,
+        ship_province: spec.ship_province,
+        ship_postal_code: spec.ship_postal_code,
+        ship_country: 'Argentina',
+        delivery_notes: 'Envío creado por seed para probar salidas agrupadas',
+      },
+      ctx,
+      actorId,
+      t,
+    ) as { id: string }
+    await createDeliveryNoteForShipment(shipment.id, orgId, actorId, t)
+    shipmentIds.push(shipment.id)
+  }
+
+  const zonaNorte = await DeliveryRun.findOne({
+    where: { org_id: orgId, notes: 'Salida de reparto de prueba — Zona Norte' },
+    transaction: t,
+  })
+  if (!zonaNorte && shipmentIds.length >= 2) {
+    await createDeliveryRun(
+      {
+        shipment_ids: shipmentIds.slice(0, 2),
+        planned_date: dateDaysFromNow(0),
+        assigned_driver_id: actorId,
+        vehicle_ref: vehicleRef,
+        notes: 'Salida de reparto de prueba — Zona Norte',
+      },
+      ctx,
+      actorId,
+      t,
+    )
+  }
+
+  const zonaOeste = await DeliveryRun.findOne({
+    where: { org_id: orgId, notes: 'Salida de reparto de prueba — Zona Oeste' },
+    transaction: t,
+  })
+  if (!zonaOeste && shipmentIds.length >= 3) {
+    await createDeliveryRun(
+      {
+        shipment_ids: [shipmentIds[2]!],
+        planned_date: dateDaysFromNow(1),
+        assigned_driver_id: actorId,
+        vehicle_ref: vehicleRef,
+        notes: 'Salida de reparto de prueba — Zona Oeste',
+      },
+      ctx,
+      actorId,
+      t,
+    )
+  }
+}
+
 type SeedJournalLine = {
   code: string
   debit?: string
@@ -1328,6 +1723,11 @@ async function seedAccountingEntries(
 }
 
 async function run() {
+  // The seed can touch hundreds of rows; SQL logging makes successful runs look
+  // stuck and slows them down. Set SEED_SQL_LOG=yes when debugging SQL.
+  ;(sequelize as unknown as { options: { logging: false | typeof console.log } }).options.logging =
+    process.env.SEED_SQL_LOG === 'yes' ? console.log : false
+
   const allowProd = process.env.ALLOW_PROD_SEED === 'yes'
   if (process.env.NODE_ENV !== 'development' && !allowProd) {
     throw new Error(
@@ -1348,9 +1748,11 @@ async function run() {
   const seed = buildSeedConfig(allowProd)
 
   await sequelize.transaction(async (t) => {
+    logSeedProgress('permisos base')
     await ensurePermissionsSeeded(t)
 
     // sys-admin (no org)
+    logSeedProgress('sys-admin')
     const sysHash = await hashPassword(seed.sysAdmin.password)
     const sysNameParts = splitLegacyUserName(seed.sysAdmin.name)
     const [sysAdmin, sysAdminCreated] = await User.findOrCreate({
@@ -1377,6 +1779,7 @@ async function run() {
     await seedPlatformBillerSettings(t)
 
     for (const tenant of seed.tenants) {
+      logSeedProgress(`${tenant.slug}: organizacion`)
       const [org] = await Organization.findOrCreate({
         where: { slug: tenant.slug },
         defaults: { name: tenant.name, slug: tenant.slug, is_active: true },
@@ -1449,6 +1852,7 @@ async function run() {
       let defaultCustomerId: string | null = null
       let variantsBySku = new Map<string, ProductVariant>()
       let code = 1
+      logSeedProgress(`${tenant.slug}: sucursales`)
       for (const b of tenant.branches) {
         const [branch] = await Branch.findOrCreate({
           where: { org_id: org.id, branch_code: code },
@@ -1466,6 +1870,7 @@ async function run() {
       }
 
       for (const u of tenant.users) {
+        logSeedProgress(`${tenant.slug}: usuario ${u.email}`)
         const password_hash = await hashPassword(u.password)
         const defaultBranch = branches[u.branchIndex]!
         const { role, org_role_id } = resolveSeedUserRole(u, orgRolesByName)
@@ -1511,29 +1916,41 @@ async function run() {
         }
 
         if (tenant.slug === 'integration' && u.email === INTEGRATION_TEST_USERS.admin.email) {
+          logSeedProgress(`${tenant.slug}: catalogo`)
           variantsBySku = await seedIntegrationCatalog(org.id, user.id, t)
+          logSeedProgress(`${tenant.slug}: contactos`)
           const contacts = await seedIntegrationContacts(org.id, user.id, t)
           const defaultCustomer = contacts.find((c) => c.legal_name === 'Cliente XYZ') ?? null
           defaultCustomerId = defaultCustomer?.id ?? null
           await seedInventory(org.id, branches, user.id, t)
+          logSeedProgress(`${tenant.slug}: plan contable`)
           await seedDefaultChartOfAccounts(org.id, t, user.id)
           const defaultBranch = branches[0]!
+          logSeedProgress(`${tenant.slug}: financieros`)
           await seedIntegrationFinancials(org.id, defaultBranch, user.id, contacts, variantsBySku, t)
+          logSeedProgress(`${tenant.slug}: asientos`)
           await seedIntegrationAccounting(org.id, user.id, t)
+          logSeedProgress(`${tenant.slug}: compras`)
           await seedIntegrationPurchases(org.id, defaultBranch, user.id, contacts, variantsBySku, t)
         } else if (isSeedGerente(u)) {
+          logSeedProgress(`${tenant.slug}: catalogo`)
           variantsBySku = await seedCatalog(org.id, user.id, t)
+          logSeedProgress(`${tenant.slug}: contactos`)
           const contacts = await seedContacts(org.id, user.id, t)
           const defaultCustomer = contacts.find(c => c.type === 'customer' || c.type === 'both') ?? null
           defaultCustomerId = defaultCustomer?.id ?? null
           await seedInventory(org.id, branches, user.id, t)
+          logSeedProgress(`${tenant.slug}: plan contable`)
           await seedDefaultChartOfAccounts(org.id, t, user.id)
 
           // Purchases seed (demo tenant only)
           if (tenant.slug === 'demo') {
             const defaultBranch = branches[0]!
+            logSeedProgress(`${tenant.slug}: POS balanza`)
             await seedPosBalanzaDemo(org.id, t)
+            logSeedProgress(`${tenant.slug}: compras demo`)
             await seedPurchases(org.id, defaultBranch, user.id, variantsBySku, contacts, t)
+            logSeedProgress(`${tenant.slug}: asientos demo`)
             await seedAccountingEntries(org.id, defaultBranch, user.id, t)
           }
         }
@@ -1542,8 +1959,13 @@ async function run() {
         if (tenant.slug === 'demo' && u.email === 'admin@demo.local') {
           // Only create the sample docs if they don't exist yet.
           const existing = await SalesQuote.findOne({ where: { org_id: org.id, notes: 'Presupuesto de prueba' }, transaction: t })
-          if (existing) continue
+          if (existing) {
+            logSeedProgress(`${tenant.slug}: logistica demo`)
+            await seedLogisticsDemo(org.id, defaultBranch, user.id, variantsBySku, t)
+            continue
+          }
 
+          logSeedProgress(`${tenant.slug}: ventas demo`)
           const iva_rate: IvaRate = '21'
 
           // Line 1 — service (no stock impact)
@@ -1742,6 +2164,9 @@ async function run() {
             { paid_amount: paidAmount, balance: '0.00', status: 'paid', updated_by: user.id },
             { transaction: t },
           )
+
+          logSeedProgress(`${tenant.slug}: logistica demo`)
+          await seedLogisticsDemo(org.id, defaultBranch, user.id, variantsBySku, t)
         }
       }
     }

@@ -81,7 +81,19 @@ vi.mock('./warehouse.model', () => ({
 }))
 
 vi.mock('@/modules/sales/sales-order.model', () => ({
-  default: { findByPk: vi.fn() },
+  default: { findByPk: vi.fn(), findOne: vi.fn() },
+}))
+
+vi.mock('@/modules/sales/sales-order-item.model', () => ({
+  default: { findAll: vi.fn() },
+}))
+
+vi.mock('@/modules/logistics/shipment.model', () => ({
+  default: { findOne: vi.fn() },
+}))
+
+vi.mock('@/modules/logistics/shipment-item.model', () => ({
+  default: { findAll: vi.fn() },
 }))
 
 import DeliveryNote from './delivery-note.model'

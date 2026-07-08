@@ -40,6 +40,8 @@ export interface ShipmentAttributes extends Timestamps, AuditFields {
   delivered_at: Date | null
   delivery_notes: string | null
   failure_reason: string | null
+  delivery_result_reason: string | null
+  delivery_result_notes: string | null
 }
 
 type ShipmentCreationAttributes = Optional<
@@ -50,6 +52,7 @@ type ShipmentCreationAttributes = Optional<
   | 'ship_to_name' | 'ship_to_phone' | 'ship_street' | 'ship_number' | 'ship_floor' | 'ship_apartment'
   | 'ship_city' | 'ship_province' | 'ship_postal_code' | 'ship_country'
   | 'promised_date' | 'dispatched_at' | 'delivered_at' | 'delivery_notes' | 'failure_reason'
+  | 'delivery_result_reason' | 'delivery_result_notes'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -85,6 +88,8 @@ class Shipment extends AuditModel<ShipmentAttributes, ShipmentCreationAttributes
   declare delivered_at: Date | null
   declare delivery_notes: string | null
   declare failure_reason: string | null
+  declare delivery_result_reason: string | null
+  declare delivery_result_notes: string | null
 }
 
 Shipment.init(
@@ -120,6 +125,8 @@ Shipment.init(
     delivered_at:       { type: DataTypes.DATE },
     delivery_notes:     { type: DataTypes.TEXT },
     failure_reason:     { type: DataTypes.TEXT },
+    delivery_result_reason: { type: DataTypes.STRING(60) },
+    delivery_result_notes:  { type: DataTypes.TEXT },
     ...auditColumnDefs,
   },
   { sequelize, tableName: 'shipments', paranoid: true, underscored: true }

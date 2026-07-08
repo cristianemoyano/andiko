@@ -6,6 +6,7 @@ import Warehouse from './warehouse.model'
 import DeliveryNote from './delivery-note.model'
 import CarrierAccount from '@/modules/logistics/carrier-account.model'
 import SalesOrder from '@/modules/sales/sales-order.model'
+import Shipment from '@/modules/logistics/shipment.model'
 
 function ensureAssociation(
   alias: keyof typeof DeliveryNote.associations,
@@ -38,4 +39,10 @@ export function ensureDeliveryNoteAssociations(): void {
   ensureAssociation('order', () => {
     DeliveryNote.belongsTo(SalesOrder, { foreignKey: 'order_id', as: 'order' })
   })
+  ensureAssociation('shipment', () => {
+    DeliveryNote.belongsTo(Shipment, { foreignKey: 'shipment_id', as: 'shipment' })
+  })
+  if (!Shipment.associations.deliveryNotes) {
+    Shipment.hasMany(DeliveryNote, { foreignKey: 'shipment_id', as: 'deliveryNotes' })
+  }
 }
