@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.43.0](https://github.com/cristianemoyano/andiko/compare/v0.41.0...v0.43.0) (2026-07-08)
+
+### Features
+
+* **core:** add docker-mailserver to Swarm stack for [@andiko](https://github.com/andiko).cloud ([52cc542](https://github.com/cristianemoyano/andiko/commit/52cc5420931c94bb8fbf129a77c1d6737f058d1c))
+
+### Bug Fixes
+
+* **communications:** tls sni for mailserver and zero-downtime db recovery ([0388f7f](https://github.com/cristianemoyano/andiko/commit/0388f7fe3acafd3cdf137528dc4d3b9c23f0584f))
+
+## [](https://github.com/cristianemoyano/andiko/compare/v0.41.0...vnull) (2026-07-08)
+
+### Features
+
+* **core:** add docker-mailserver to Swarm stack for [@andiko](https://github.com/andiko).cloud ([52cc542](https://github.com/cristianemoyano/andiko/commit/52cc5420931c94bb8fbf129a77c1d6737f058d1c))
+
+### Bug Fixes
+
+* **communications:** tls sni for mailserver and zero-downtime db recovery ([0388f7f](https://github.com/cristianemoyano/andiko/commit/0388f7fe3acafd3cdf137528dc4d3b9c23f0584f))
+
 ## [0.41.0](https://github.com/cristianemoyano/andiko/compare/v0.40.0...v0.41.0) (2026-07-08)
 
 ### Features
