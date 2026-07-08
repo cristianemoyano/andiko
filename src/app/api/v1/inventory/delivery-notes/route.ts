@@ -32,6 +32,10 @@ export const POST = withPermission('inventory:write', async (req, _ctx, session)
     if (err instanceof Error) {
       if (err.message === 'BRANCH_NOT_FOUND') return NextResponse.json({ error: 'Sucursal no encontrada o inactiva', code: 'BRANCH_NOT_FOUND' }, { status: 404 })
       if (err.message === 'CARRIER_ACCOUNT_NOT_FOUND') return NextResponse.json({ error: 'Transportista no encontrado', code: 'CARRIER_ACCOUNT_NOT_FOUND' }, { status: 404 })
+      if (err.message === 'SHIPMENT_NOT_FOUND') return NextResponse.json({ error: 'Envío no encontrado', code: 'SHIPMENT_NOT_FOUND' }, { status: 404 })
+      if (err.message === 'DELIVERY_NOTE_SHIPMENT_ALREADY_LINKED') return NextResponse.json({ error: 'El envío ya tiene un remito asociado', code: 'DELIVERY_NOTE_SHIPMENT_ALREADY_LINKED' }, { status: 409 })
+      if (err.message === 'DELIVERY_NOTE_SHIPMENT_BRANCH_MISMATCH') return NextResponse.json({ error: 'El remito y el envío deben pertenecer a la misma sucursal', code: 'DELIVERY_NOTE_SHIPMENT_BRANCH_MISMATCH' }, { status: 422 })
+      if (err.message === 'DELIVERY_NOTE_SHIPMENT_ORDER_MISMATCH') return NextResponse.json({ error: 'El remito y el envío deben pertenecer al mismo pedido', code: 'DELIVERY_NOTE_SHIPMENT_ORDER_MISMATCH' }, { status: 422 })
     }
     throw err
   }

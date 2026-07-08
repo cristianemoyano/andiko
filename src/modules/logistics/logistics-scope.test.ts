@@ -38,4 +38,12 @@ describe('logistics-scope', () => {
       { assigned_driver_id: 'other' },
     )).toThrow('SHIPMENT_NOT_FOUND')
   })
+
+  it('supports domain-specific not found codes for delivery runs', () => {
+    expect(() => assertLogisticsAssignedScope(
+      { ...baseCtx, logisticsScopeAssigned: true },
+      { assigned_driver_id: 'other' },
+      'DELIVERY_RUN_NOT_FOUND',
+    )).toThrow('DELIVERY_RUN_NOT_FOUND')
+  })
 })

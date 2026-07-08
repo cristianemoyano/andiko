@@ -38,6 +38,10 @@ export const PATCH = withPermission('inventory:write', async (req, ctx, session)
       if (err.message === 'DELIVERY_NOTE_NOT_FOUND') return NextResponse.json({ error: 'Remito no encontrado', code: 'NOT_FOUND' }, { status: 404 })
       if (err.message === 'DELIVERY_NOTE_NOT_DRAFT') return NextResponse.json({ error: 'Solo se pueden editar remitos en borrador', code: 'INVALID_STATUS' }, { status: 409 })
       if (err.message === 'CARRIER_ACCOUNT_NOT_FOUND') return NextResponse.json({ error: 'Transportista no encontrado', code: 'CARRIER_ACCOUNT_NOT_FOUND' }, { status: 404 })
+      if (err.message === 'SHIPMENT_NOT_FOUND') return NextResponse.json({ error: 'Envío no encontrado', code: 'SHIPMENT_NOT_FOUND' }, { status: 404 })
+      if (err.message === 'DELIVERY_NOTE_SHIPMENT_ALREADY_LINKED') return NextResponse.json({ error: 'El envío ya tiene un remito asociado', code: 'DELIVERY_NOTE_SHIPMENT_ALREADY_LINKED' }, { status: 409 })
+      if (err.message === 'DELIVERY_NOTE_SHIPMENT_BRANCH_MISMATCH') return NextResponse.json({ error: 'El remito y el envío deben pertenecer a la misma sucursal', code: 'DELIVERY_NOTE_SHIPMENT_BRANCH_MISMATCH' }, { status: 422 })
+      if (err.message === 'DELIVERY_NOTE_SHIPMENT_ORDER_MISMATCH') return NextResponse.json({ error: 'El remito y el envío deben pertenecer al mismo pedido', code: 'DELIVERY_NOTE_SHIPMENT_ORDER_MISMATCH' }, { status: 422 })
       if (err.message === 'DOCUMENT_BRANCH_NOT_CHANGEABLE') {
         return NextResponse.json({ error: 'La sucursal solo se puede cambiar en remitos en borrador.', code: 'BRANCH_NOT_CHANGEABLE' }, { status: 409 })
       }

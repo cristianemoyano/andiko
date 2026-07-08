@@ -16,6 +16,8 @@ import ShipmentEvent from './shipment-event.model'
 import CarrierAccount from './carrier-account.model'
 import { assertShipmentTransition, canTransitionShipment, TERMINAL_SHIPMENT_STATUSES, resolveInHouseTrackingNumber, type ShipmentEventSource, type ShipmentStatus } from './logistics.constants'
 import { resolveWarehouseForBranch } from '@/modules/inventory/branch-warehouse.resolution'
+import { assertShipmentHasIssuedDeliveryNote } from '@/modules/inventory/delivery-notes.service'
+import DeliveryNote from '@/modules/inventory/delivery-note.model'
 import { orderAcceptsShipmentCreation } from '@/modules/sales/sales-order-workflow'
 import {
   assertOrderItemIsShippable,
@@ -101,7 +103,16 @@ export async function getShipment(id: string, ctx: TenantContext, t?: Transactio
     throw new Error('SHIPMENT_NOT_FOUND')
   }
   assertLogisticsAssignedScope(ctx, shipment)
-  return shipment.get({ plain: true })
+  const deliveryNotes = await DeliveryNote.findAll({
+    where: { shipment_id: id, org_id: ctx.orgId, status: { [Op.ne]: 'annulled' } },
+    attributes: ['id', 'delivery_number', 'status', 'delivery_date', 'created_at'],
+    order: [['created_at', 'DESC']],
+    transaction: t,
+  })
+  return {
+    ...shipment.get({ plain: true }),
+    deliveryNotes: deliveryNotes.map(note => note.get({ plain: true })),
+  }
 }
 
 export async function createShipmentForOrder(
@@ -272,6 +283,7 @@ export async function dispatchShipment(id: string, input: ShipmentDispatchInput,
   return sequelize.transaction(async (t) => {
     const shipment = await loadShipmentForUpdate(id, ctx, t)
     assertShipmentTransition(shipment.status, 'dispatched')
+    await assertShipmentHasIssuedDeliveryNote(shipment.id, ctx.orgId, t)
 
     if (shipment.provider_kind !== 'in_house' && input.assigned_driver_id) {
       throw new Error('DRIVER_ONLY_FOR_IN_HOUSE')
