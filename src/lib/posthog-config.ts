@@ -27,6 +27,10 @@ export function isPostHogEnabled(): boolean {
   if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_POSTHOG_DEV !== 'true') {
     return false
   }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    if (host === 'localhost' || host === '127.0.0.1') return false
+  }
   return true
 }
 

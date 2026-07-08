@@ -7,33 +7,38 @@ import { applyPostHogConsent } from '@/lib/posthog-consent'
 
 // Cookie consent banner — mounted in the root layout.
 export function CookieConsentBanner() {
-  // Lazy initializer: reads localStorage once on mount, no effect/cascading render needed.
-  const [visible, setVisible] = useState(() => COOKIE_CONSENT_ENABLED && getStoredCookieConsent() === null)
+  const [mounted, setMounted] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
+    if (!COOKIE_CONSENT_ENABLED) return
+
     const consent = getStoredCookieConsent()
     if (consent) applyPostHogConsent(consent)
+    // Client-only: read localStorage after mount to avoid SSR/hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-mount flag
+    setMounted(true)
   }, [])
 
-  if (!COOKIE_CONSENT_ENABLED) return null
-  if (!visible) return null
+  if (!COOKIE_CONSENT_ENABLED || !mounted || dismissed) return null
+  if (getStoredCookieConsent() !== null) return null
 
   function acceptAll() {
     const choice = { necessary: true, analytics: true } as const
     storeCookieConsent(choice)
     applyPostHogConsent(choice)
-    setVisible(false)
+    setDismissed(true)
   }
 
   function acceptNecessaryOnly() {
     const choice = { necessary: true, analytics: false } as const
     storeCookieConsent(choice)
     applyPostHogConsent(choice)
-    setVisible(false)
+    setDismissed(true)
   }
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-surface p-4">
+    <div className="fixed bottom-0 inset-x-0 z-[60] border-t border-border bg-surface p-4">
       <div className="mx-auto flex max-w-3xl flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-fg-muted leading-relaxed">
           Usamos cookies necesarias para el funcionamiento de la Plataforma y, si lo aceptás,
