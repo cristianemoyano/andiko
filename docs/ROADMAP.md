@@ -564,7 +564,8 @@ Envío de documentos e notificaciones por email desde el ERP.
 ### Infraestructura mail (completado)
 - [x] Servidor `@andiko.cloud` containerizado en Docker Swarm (`docker-mailserver`) — guía [docs/deployment/mail-server.md](deployment/mail-server.md)
 - [x] Scripts: `prod-init-mail`, `prod-mail-add-user`, `prod-mail-dkim`, `prod-mail-check`, `prod-backup-mail`
-- [x] Preset **Servidor Andiko** en `/sys-admin/email` (SMTP interno `mailserver:587`)
+- [x] Preset **Servidor Andiko** en `/sys-admin/email` (SMTP interno `mailserver:587` + SNI TLS para cert `mail.andiko.cloud`)
+- [x] Runbook incidente 502 / `db: disconnected` — `prod-sync-db-password` y rotación de secrets sin `stack rm`
 
 ### Pendiente
 - [ ] Ver **Fase 10 — Colaboración interna** (notificaciones in-app, comentarios en documentos, chat de equipo). Las alertas proactivas (stock mínimo, presupuestos por vencer) viven ahí, no en email.

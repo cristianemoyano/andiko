@@ -339,7 +339,8 @@ Checklist post go-live:
 | No llega mail entrante | Puerto 25 bloqueado | Solicitar desbloqueo Hostinger |
 | Auth SMTP falla | Contraseña incorrecta / buzón inexistente | `list-users`, reset password |
 | App: connection refused | Mailserver down o red overlay | `docker service ps`; redeploy stack |
-| App: cert error | TLS manual mal configurado | Verificar paths en env + expand SSL |
+| App: cert / altnames error (`Host: mailserver`) | Cert es para `mail.andiko.cloud`, no el DNS interno | Host `mailserver` + app ≥ v0.42 con SNI; o host `mail.andiko.cloud` |
+| App: cert error (paths) | TLS manual mal configurado | Verificar paths en env + expand SSL |
 | IMAP cert inválido | SAN falta `mail.andiko.cloud` | `make prod-expand-ssl-mail` |
 | OOM / container restart | RAM insuficiente | ClamAV off; revisar `docker service logs` |
 | Cola atascada | DNS destino / greylisting | `mail-setup.sh status`; logs |

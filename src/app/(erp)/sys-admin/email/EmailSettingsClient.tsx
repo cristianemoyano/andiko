@@ -234,9 +234,10 @@ export function EmailSettingsClient() {
                 </div>
               </div>
               <p className="text-xs text-fg-muted">
-                En producción, <strong>Servidor Andiko</strong> apunta al mailserver interno del VPS
-                (<code className="text-xs">mailserver:587</code>). Guardá la contraseña de{' '}
-                <code className="text-xs">erp@andiko.cloud</code> creada con{' '}
+                En producción, <strong>Servidor Andiko</strong> usa el host interno{' '}
+                <code className="text-xs">mailserver:587</code> (red Swarm). STARTTLS valida el
+                certificado de <code className="text-xs">mail.andiko.cloud</code> automáticamente.
+                Guardá la contraseña de <code className="text-xs">erp@andiko.cloud</code> creada con{' '}
                 <code className="text-xs">make prod-mail-add-user</code>. Para Gmail personal, tocá{' '}
                 <strong>Usar Gmail</strong> y usá{' '}
                 <a

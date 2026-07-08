@@ -1,6 +1,7 @@
 import 'server-only'
 import nodemailer from 'nodemailer'
 import logger from '@/lib/logger'
+import { buildSmtpTransportOptions } from './smtp-options'
 import type { EmailSettings } from './email-settings.schema'
 
 export interface OutgoingEmail {
@@ -41,14 +42,7 @@ class SmtpTransport implements EmailTransport {
   }
 
   async send(email: OutgoingEmail): Promise<SendResult> {
-    const transporter = nodemailer.createTransport({
-      host: this.settings.host,
-      port: this.settings.port,
-      secure: this.settings.secure,
-      auth: this.settings.user
-        ? { user: this.settings.user, pass: this.settings.password }
-        : undefined,
-    })
+    const transporter = nodemailer.createTransport(buildSmtpTransportOptions(this.settings))
     const info = await transporter.sendMail({
       from: { name: this.settings.from_name, address: this.settings.from_address },
       to: email.to,
