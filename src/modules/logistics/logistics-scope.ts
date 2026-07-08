@@ -22,8 +22,9 @@ export function assertFullLogisticsAccess(ctx: TenantContext): void {
 export function assertLogisticsAssignedScope(
   ctx: TenantContext,
   shipment: { assigned_driver_id: string | null },
+  notFoundCode = 'SHIPMENT_NOT_FOUND',
 ): void {
   if (!isWithinLogisticsAssignedScope(ctx, shipment)) {
-    throw new Error('SHIPMENT_NOT_FOUND')
+    throw new Error(notFoundCode)
   }
 }

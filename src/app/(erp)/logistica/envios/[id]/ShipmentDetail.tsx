@@ -127,6 +127,7 @@ export function ShipmentDetail({ id }: { id: string }) {
   const [confirmDeliver, setConfirmDeliver] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
+  const [creatingDeliveryNote, setCreatingDeliveryNote] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -325,6 +326,22 @@ export function ShipmentDetail({ id }: { id: string }) {
     }
   }
 
+  async function handleCreateDeliveryNote() {
+    if (!shipment) return
+    setCreatingDeliveryNote(true)
+    try {
+      const note = await fetchJson<{ id: string; delivery_number: string }>(`/api/v1/logistics/shipments/${shipment.id}/delivery-note`, {
+        method: 'POST',
+      })
+      notifySuccess(`Remito ${note.delivery_number} generado y emitido`)
+      setRefresh(r => r + 1)
+    } catch (e) {
+      notifyApiError(e)
+    } finally {
+      setCreatingDeliveryNote(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col h-full">
@@ -359,6 +376,8 @@ export function ShipmentDetail({ id }: { id: string }) {
   const address = formatAddress(shipment)
   const events = shipment.events ?? []
   const items = shipment.items ?? []
+  const linkedDeliveryNotes = shipment.deliveryNotes ?? []
+  const activeDeliveryNote = linkedDeliveryNotes[0] ?? null
 
   const primaryAction: PageAction | null = editMode
     ? null
@@ -375,6 +394,12 @@ export function ShipmentDetail({ id }: { id: string }) {
     : [
         ...(canEdit && primaryAction?.id !== 'edit'
           ? [{ id: 'edit', label: 'Editar', onClick: () => enterEditMode(shipment), disabled: transitioning }]
+          : []),
+        ...(!activeDeliveryNote && canEdit
+          ? [{ id: 'delivery-note', label: 'Generar remito', onClick: handleCreateDeliveryNote, disabled: creatingDeliveryNote || transitioning }]
+          : []),
+        ...(activeDeliveryNote
+          ? [{ id: 'print-delivery-note', label: 'Imprimir remito', href: `/ventas/remitos/${activeDeliveryNote.id}/print`, openInNewTab: true }]
           : []),
         ...(hasNextEvent ? [{ id: 'event', label: 'Registrar evento', onClick: () => setEventOpen(true), disabled: transitioning }] : []),
         ...(canCancel ? [{ id: 'cancel', label: 'Cancelar envío', onClick: () => setConfirmCancel(true), disabled: transitioning, variant: 'destructive' as const }] : []),
@@ -422,6 +447,32 @@ export function ShipmentDetail({ id }: { id: string }) {
           {shipment.status === 'failed' && shipment.failure_reason && !editMode && (
             <div role="status" className="rounded-sm border border-danger bg-danger-bg px-4 py-3 text-[13px] text-danger">
               Último intento de entrega fallido: {shipment.failure_reason}
+            </div>
+          )}
+
+          {!editMode && (
+            <div className={`rounded-sm border px-4 py-3 text-[13px] ${
+              activeDeliveryNote
+                ? 'border-success bg-success-bg text-success'
+                : 'border-warning bg-warning-bg text-warning'
+            }`}>
+              {activeDeliveryNote ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    Remito asociado: <strong>{activeDeliveryNote.delivery_number}</strong> ({activeDeliveryNote.status})
+                  </span>
+                  <Link
+                    href={`/ventas/remitos/${activeDeliveryNote.id}/print`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium underline"
+                  >
+                    Imprimir remito
+                  </Link>
+                </div>
+              ) : (
+                <span>Este envío todavía no tiene remito emitido. Generá el remito antes de despacharlo.</span>
+              )}
             </div>
           )}
 

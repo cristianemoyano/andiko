@@ -8,6 +8,7 @@ export interface DeliveryNoteItemAttributes extends Timestamps, AuditFields {
   id: UUID
   delivery_note_id: UUID
   org_id: UUID | null
+  shipment_item_id: UUID | null
   order_item_id: UUID | null
   product_id: UUID | null
   variant_id: UUID | null
@@ -18,13 +19,14 @@ export interface DeliveryNoteItemAttributes extends Timestamps, AuditFields {
 
 type DeliveryNoteItemCreationAttributes = Optional<
   DeliveryNoteItemAttributes,
-  | 'id' | 'org_id' | 'order_item_id' | 'product_id' | 'variant_id' | 'sort_order'
+  | 'id' | 'org_id' | 'shipment_item_id' | 'order_item_id' | 'product_id' | 'variant_id' | 'sort_order'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
 class DeliveryNoteItem extends AuditModel<DeliveryNoteItemAttributes, DeliveryNoteItemCreationAttributes> {
   declare id: UUID
   declare delivery_note_id: UUID
+  declare shipment_item_id: UUID | null
   declare order_item_id: UUID | null
   declare product_id: UUID | null
   declare variant_id: UUID | null
@@ -37,6 +39,7 @@ DeliveryNoteItem.init(
   {
     id:               { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     delivery_note_id: { type: DataTypes.UUID, allowNull: false },
+    shipment_item_id: { type: DataTypes.UUID },
     order_item_id:    { type: DataTypes.UUID },
     product_id:       { type: DataTypes.UUID },
     variant_id:       { type: DataTypes.UUID },

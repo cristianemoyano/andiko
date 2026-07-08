@@ -16,6 +16,7 @@ import {
   buildSupplierInvoicePrintable,
   buildSupplierPaymentPrintable,
 } from './purchases-adapter'
+import { buildDeliveryRunControlPrintable } from './logistics-adapter'
 
 export type RegisteredPrintHandler = {
   permission: Permission
@@ -33,6 +34,7 @@ const handlers: Record<string, RegisteredPrintHandler> = {
   'purchases:receipts': { permission: 'purchases:read', build: buildPurchaseReceiptPrintable },
   'purchases:invoices': { permission: 'purchases:read', build: buildSupplierInvoicePrintable },
   'purchases:payments': { permission: 'purchases:read', build: buildSupplierPaymentPrintable },
+  'logistics:delivery-runs': { permission: 'logistics:read', build: buildDeliveryRunControlPrintable },
 }
 
 export function getPrintHandler(domain: string, resource: string): RegisteredPrintHandler | undefined {

@@ -5,12 +5,21 @@ import { PrintShell } from './PrintShell'
 import { PrintLineItemsTable } from './PrintLineItemsTable'
 import { PrintTotalsBlock } from './PrintTotalsBlock'
 import { PrintPaymentsTable } from './PrintPaymentsTable'
+import { PrintRouteControl } from './PrintRouteControl'
 
 export interface PrintDocumentRendererProps {
   document: PrintableDocument
 }
 
 export function PrintDocumentRenderer({ document: doc }: PrintDocumentRendererProps) {
+  if (doc.kind === 'delivery_run_control' && doc.route_control) {
+    return (
+      <PrintShell document={doc}>
+        <PrintRouteControl control={doc.route_control} />
+      </PrintShell>
+    )
+  }
+
   const showTaxColumns = doc.kind !== 'purchase_receipt'
   const showLines = doc.lines.length > 0
 

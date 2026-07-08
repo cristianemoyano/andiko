@@ -1,7 +1,7 @@
 import type { IvaRate, PaymentCondition } from '@/types'
 
 /** API path segment + registry key (lowercase). */
-export type PrintDomain = 'sales' | 'purchases' | 'billing'
+export type PrintDomain = 'sales' | 'purchases' | 'billing' | 'logistics'
 
 export type PrintableDocumentKind =
   | 'sales_quote'
@@ -15,6 +15,7 @@ export type PrintableDocumentKind =
   | 'supplier_invoice'
   | 'supplier_payment'
   | 'billing_invoice'
+  | 'delivery_run_control'
 
 export type CounterpartyRole = 'customer' | 'supplier'
 
@@ -99,6 +100,40 @@ export interface PrintableAfip {
   qr_data_url: string | null
 }
 
+export interface PrintableRouteControlLine {
+  description: string
+  quantity: string
+}
+
+export interface PrintableRouteControlShipment {
+  shipment_number: string
+  order_number: string | null
+  delivery_note_number: string | null
+  delivery_note_status: string | null
+  status_label: string
+  tracking_number: string | null
+  delivery_notes: string | null
+  result_reason: string | null
+  result_notes: string | null
+  lines: PrintableRouteControlLine[]
+}
+
+export interface PrintableRouteControlStop {
+  sequence: number
+  status_label: string
+  customer_name: string | null
+  phone: string | null
+  address: string | null
+  delivered_at: string | null
+  result_reason: string | null
+  result_notes: string | null
+  shipments: PrintableRouteControlShipment[]
+}
+
+export interface PrintableRouteControl {
+  stops: PrintableRouteControlStop[]
+}
+
 /** Serialized document for print / PDF preview. */
 export interface PrintableDocument {
   domain: PrintDomain
@@ -126,6 +161,7 @@ export interface PrintableDocument {
   payments: PrintablePaymentRow[] | null
   /** AFIP authorization (CAE + QR), present on authorized electronic comprobantes. */
   afip?: PrintableAfip | null
+  route_control?: PrintableRouteControl | null
 }
 
 export const PRINTING_ERROR_CODES = {

@@ -13,6 +13,7 @@ export interface DeliveryNoteAttributes extends Timestamps, AuditFields {
   order_id: UUID | null
   contact_id: UUID | null
   warehouse_id: UUID | null
+  shipment_id: UUID | null
   issued_by: UUID | null
   delivery_number: string
   status: DeliveryNoteStatus
@@ -28,7 +29,7 @@ export interface DeliveryNoteAttributes extends Timestamps, AuditFields {
 
 type DeliveryNoteCreationAttributes = Optional<
   DeliveryNoteAttributes,
-  | 'id' | 'org_id' | 'branch_id' | 'order_id' | 'contact_id' | 'warehouse_id' | 'issued_by'
+  | 'id' | 'org_id' | 'branch_id' | 'order_id' | 'contact_id' | 'warehouse_id' | 'shipment_id' | 'issued_by'
   | 'status' | 'deducts_stock' | 'delivery_date' | 'carrier_account_id' | 'carrier' | 'tracking_code'
   | 'ship_to_address' | 'notes' | 'internal_notes'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
@@ -41,6 +42,7 @@ class DeliveryNote extends AuditModel<DeliveryNoteAttributes, DeliveryNoteCreati
   declare order_id: UUID | null
   declare contact_id: UUID | null
   declare warehouse_id: UUID | null
+  declare shipment_id: UUID | null
   declare issued_by: UUID | null
   declare delivery_number: string
   declare status: DeliveryNoteStatus
@@ -61,6 +63,7 @@ DeliveryNote.init(
     order_id:        { type: DataTypes.UUID },
     contact_id:      { type: DataTypes.UUID },
     warehouse_id:    { type: DataTypes.UUID },
+    shipment_id:     { type: DataTypes.UUID },
     issued_by:       { type: DataTypes.UUID },
     delivery_number: { type: DataTypes.STRING(20), allowNull: false },
     status:          { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'draft' },

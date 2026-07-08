@@ -3,6 +3,7 @@ import { paginationSchema } from '@/lib/pagination'
 import { DELIVERY_NOTE_STATUSES } from './delivery-note.model'
 
 export const deliveryNoteItemSchema = z.object({
+  shipment_item_id: z.string().uuid().nullable().optional(),
   order_item_id: z.string().uuid().nullable().optional(),
   product_id:    z.string().uuid().nullable().optional(),
   variant_id:    z.string().uuid().nullable().optional(),
@@ -14,6 +15,7 @@ export const deliveryNoteItemSchema = z.object({
 export const deliveryNoteSchema = z.object({
   branch_id:       z.string().uuid(),
   order_id:        z.string().uuid().nullable().optional(),
+  shipment_id:     z.string().uuid().nullable().optional(),
   contact_id:      z.string().uuid().nullable().optional(),
   warehouse_id:    z.string().uuid().nullable().optional(),
   delivery_date:   z.string().datetime({ offset: true }).transform(s => new Date(s)).nullable().optional(),
@@ -34,6 +36,7 @@ export const deliveryNoteQuerySchema = paginationSchema.extend({
   status:       z.enum(DELIVERY_NOTE_STATUSES).optional(),
   contact_id:   z.string().uuid().optional(),
   order_id:     z.string().uuid().optional(),
+  shipment_id:  z.string().uuid().optional(),
   warehouse_id: z.string().uuid().optional(),
 })
 
