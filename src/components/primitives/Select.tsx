@@ -86,10 +86,11 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
           className={cn(
             'z-[100] max-h-[280px] overflow-hidden rounded-sm border border-border bg-surface shadow-md',
             'min-w-[var(--radix-select-trigger-width)]',
+            'origin-[var(--radix-select-content-transform-origin)]',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-            'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-            'duration-150',
+            'data-[state=closed]:zoom-out-[0.97] data-[state=open]:zoom-in-[0.97]',
+            'duration-200 ease-out',
           )}
         >
           <RadixSelect.Viewport className="p-1">

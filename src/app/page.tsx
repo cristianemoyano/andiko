@@ -1,8 +1,8 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { resolvePostAuthRedirect } from '@/lib/post-auth-redirect'
 import { AndikoLogo } from '@/components/layout/AndikoLogo'
+import { LandingHeader } from '@/components/layout/LandingHeader'
 import { AppVersion } from '@/components/layout/AppVersion'
 import { createPageMetadata, siteConfig, siteUrl } from '@/lib/site'
 import { ContactForm } from './ContactForm'
@@ -33,6 +33,15 @@ const navLinks = [
   { label: 'Precios', href: '#sec-precios' },
   { label: 'Contacto', href: '#sec-contacto' },
 ] as const
+
+const landingPrimaryCta =
+  'inline-flex items-center gap-2.5 whitespace-nowrap rounded-[4px] bg-brand-600 font-semibold text-white shadow-[0_2px_8px_rgba(12,100,122,0.28)] transition-[color,transform,box-shadow] duration-150 ease-out hover:-translate-y-px hover:bg-brand-700 active:translate-y-0 active:scale-[0.98]'
+
+const landingSecondaryCta =
+  'inline-flex items-center whitespace-nowrap rounded-[4px] border border-zinc-300 bg-white font-semibold text-zinc-900 transition-[color,transform,border-color,background-color] duration-150 ease-out hover:border-zinc-400 hover:bg-zinc-100 active:scale-[0.98]'
+
+const landingInverseCta =
+  'inline-flex items-center gap-2.5 whitespace-nowrap rounded-[4px] bg-white font-semibold text-brand-700 shadow-[0_4px_14px_rgba(0,0,0,0.18)] transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-px hover:shadow-[0_8px_22px_rgba(0,0,0,0.24)] active:translate-y-0 active:scale-[0.98]'
 
 const trustItems = ['Sin tarjeta de crédito', 'Onboarding guiado', 'Instalable en el celular'] as const
 
@@ -172,6 +181,8 @@ const metrics = [
 
 const sectors = ['Retail y comercios', 'Distribución y mayoristas', 'Servicios', 'Industria y manufactura'] as const
 
+const [featuredReason, ...secondaryReasons] = reasons
+
 function LandingJsonLd() {
   const structuredData = {
     '@context': 'https://schema.org',
@@ -234,7 +245,7 @@ export default async function LandingPage() {
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,rgba(12,100,122,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(12,100,122,0.04)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_75%_60%_at_50%_28%,#000_0%,transparent_78%)]"
+          className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,rgba(12,100,122,0.025)_1px,transparent_1px),linear-gradient(to_bottom,rgba(12,100,122,0.025)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_75%_60%_at_50%_28%,#000_0%,transparent_78%)]"
         />
         <div
           aria-hidden
@@ -246,83 +257,42 @@ export default async function LandingPage() {
         />
 
         <div className="relative z-10">
-          {/* ░░ HEADER ░░ */}
-          <header className="sticky top-0 z-50 h-16 border-b border-zinc-200/60 bg-white/70 backdrop-blur-md">
-            <div className="mx-auto flex h-full max-w-[1200px] items-center gap-7 px-[clamp(20px,5vw,56px)]">
-              <AndikoLogo size="sm" />
-              <nav className="ml-3 hidden items-center gap-[26px] md:flex">
-                {navLinks.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    className="text-sm font-medium text-zinc-600 transition-colors hover:text-brand-600"
-                  >
-                    {link.label}
-                  </a>
-                ))}
-              </nav>
-              <div className="ml-auto flex items-center gap-2.5">
-                <Link
-                  href="/login"
-                  className="hidden h-[38px] items-center rounded-[4px] px-3.5 text-sm font-medium text-zinc-900 transition-colors hover:text-brand-600 md:inline-flex"
-                >
-                  Iniciar sesión
-                </Link>
-                <a
-                  href="#sec-contacto"
-                  className="inline-flex h-[38px] items-center rounded-[4px] bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm shadow-brand-600/25 transition-colors hover:bg-brand-700"
-                >
-                  Solicitar demo
-                </a>
-              </div>
-            </div>
-          </header>
+          <LandingHeader navLinks={navLinks} primaryCtaClass={landingPrimaryCta} />
 
           {/* ░░ HERO ░░ */}
           <section className="mx-auto max-w-[1200px] px-[clamp(20px,5vw,56px)] pb-[clamp(28px,4vw,48px)] pt-[clamp(40px,6vw,84px)]">
             <div className="flex flex-wrap items-center gap-[clamp(36px,5vw,64px)]">
               {/* Left copy */}
               <div className="min-w-[320px] flex-1 basis-[440px]">
-                <div className="inline-flex items-center gap-2.5 rounded-full border border-brand-200 bg-white/70 py-1.5 pl-3 pr-3.5 shadow-sm shadow-brand-600/[0.06] backdrop-blur-sm">
-                  <span className="relative inline-flex h-2 w-2">
-                    <span className="absolute inset-0 animate-ping rounded-full bg-brand-400" />
-                    <span className="relative inline-block h-2 w-2 rounded-full bg-brand-500" />
-                  </span>
-                  <span className="landing-badge-shimmer text-[11px] font-semibold uppercase tracking-[0.14em]">
+                <div className="landing-enter inline-flex items-center gap-2.5 rounded-full border border-brand-200 bg-white/70 py-1.5 pl-3 pr-3.5 shadow-sm shadow-brand-600/[0.06] backdrop-blur-sm">
+                  <span className="inline-block h-2 w-2 rounded-full bg-brand-500" aria-hidden />
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-600">
                     {siteConfig.tagline} · Beta privada
                   </span>
                 </div>
 
-                <h1 className="mt-[22px] text-[clamp(34px,4.6vw,55px)] font-semibold leading-[1.04] tracking-[-0.025em] text-zinc-900 text-balance">
+                <h1 className="landing-enter landing-enter-delay-1 mt-[22px] text-[clamp(34px,4.6vw,55px)] font-semibold leading-[1.04] tracking-[-0.025em] text-zinc-900 text-balance">
                   Software de gestión hecho para{' '}
-                  <span className="bg-gradient-to-r from-brand-700 via-brand-500 to-brand-400 bg-clip-text text-transparent">
-                    las pymes argentinas
-                  </span>
+                  <span className="text-brand-700">las pymes argentinas</span>
                 </h1>
 
-                <p className="mt-5 max-w-[30em] text-base leading-relaxed text-zinc-600">
+                <p className="landing-enter landing-enter-delay-2 mt-5 max-w-[30em] text-base leading-relaxed text-zinc-600">
                   Contactos, catálogo, ventas, stock, compras, contabilidad y POS en un solo flujo.
                   Facturación electrónica con ARCA, multisucursal y pensado para cómo trabaja tu
                   pyme — sin planillas ni integraciones frágiles.
                 </p>
 
-                <div className="mt-[30px] flex flex-wrap gap-3">
-                  <a
-                    href="#sec-contacto"
-                    className="inline-flex h-11 items-center gap-2.5 whitespace-nowrap rounded-[4px] bg-brand-600 px-[22px] text-[15px] font-semibold text-white shadow-[0_2px_8px_rgba(12,100,122,0.28)] transition-[background-color,transform] hover:-translate-y-px hover:bg-brand-700"
-                  >
+                <div className="landing-enter landing-enter-delay-3 mt-[30px] flex flex-wrap gap-3">
+                  <a href="#sec-contacto" className={`${landingPrimaryCta} h-11 px-[22px] text-[15px]`}>
                     Quiero probarlo
                     <ArrowRight />
                   </a>
-                  <a
-                    href="#sec-modulos"
-                    className="inline-flex h-11 items-center whitespace-nowrap rounded-[4px] border border-zinc-300 bg-white px-5 text-[15px] font-semibold text-zinc-900 transition-colors hover:border-zinc-400 hover:bg-zinc-100"
-                  >
+                  <a href="#sec-modulos" className={`${landingSecondaryCta} h-11 px-5 text-[15px]`}>
                     Ver módulos
                   </a>
                 </div>
 
-                <div className="mt-[22px] flex flex-wrap gap-[18px]">
+                <div className="landing-enter landing-enter-delay-3 mt-[22px] flex flex-wrap gap-[18px]">
                   {trustItems.map((item) => (
                     <span key={item} className="inline-flex items-center gap-[7px] text-[13px] text-zinc-600">
                       <span className="text-brand-500">
@@ -335,7 +305,7 @@ export default async function LandingPage() {
               </div>
 
               {/* Right: dashboard mockup */}
-              <div className="min-w-[320px] flex-1 basis-[500px]">
+              <div className="landing-enter landing-enter-delay-4 min-w-[320px] flex-1 basis-[500px] transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-0.5">
                 <DashboardMockup />
               </div>
             </div>
@@ -347,8 +317,7 @@ export default async function LandingPage() {
           {/* ░░ MODULES ░░ */}
           <section id="sec-modulos" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] pb-[clamp(32px,4vw,56px)] pt-[clamp(56px,7vw,96px)]">
             <div className="max-w-[640px]">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-500">Módulos</div>
-              <h2 className="mt-3 text-[clamp(26px,3vw,32px)] font-semibold leading-[1.12] tracking-[-0.02em] text-zinc-900">
+              <h2 className="text-[clamp(26px,3vw,32px)] font-semibold leading-[1.12] tracking-[-0.02em] text-zinc-900">
                 Un módulo para cada parte de tu operación
               </h2>
               <p className="mt-3.5 text-base leading-relaxed text-zinc-600">
@@ -375,14 +344,23 @@ export default async function LandingPage() {
           {/* ░░ WHY (Producto) ░░ */}
           <section id="sec-producto" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] py-[clamp(32px,4vw,56px)]">
             <div className="max-w-[640px]">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-500">Por qué Andiko</div>
-              <h2 className="mt-3 text-[clamp(26px,3vw,32px)] font-semibold leading-[1.12] tracking-[-0.02em] text-zinc-900">
+              <h2 className="text-[clamp(26px,3vw,32px)] font-semibold leading-[1.12] tracking-[-0.02em] text-zinc-900">
                 Software de gestión que entiende cómo trabaja una pyme acá
               </h2>
             </div>
-            <div className="mt-[38px] grid grid-cols-[repeat(auto-fit,minmax(268px,1fr))] gap-[18px]">
-              {reasons.map((reason) => (
-                <div key={reason.title} className="rounded-xl border border-zinc-200/70 bg-white/60 p-[26px]">
+            <div className="mt-[38px] grid gap-[18px] lg:grid-cols-2">
+              <div className="rounded-xl border border-zinc-200/70 border-l-4 border-l-brand-500 bg-white/80 p-[clamp(26px,4vw,34px)] lg:row-span-2 lg:flex lg:flex-col lg:justify-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-brand-100 bg-brand-50 text-brand-600">
+                  {featuredReason.icon}
+                </div>
+                <div className="mt-5 text-[clamp(18px,2vw,22px)] font-semibold text-zinc-900">{featuredReason.title}</div>
+                <p className="mt-3 text-[15px] leading-relaxed text-zinc-600">{featuredReason.body}</p>
+              </div>
+              {secondaryReasons.map((reason) => (
+                <div
+                  key={reason.title}
+                  className="rounded-xl border border-zinc-200/70 bg-white/60 p-[22px] transition-[border-color,background-color] duration-150 ease-out hover:border-brand-200/80 hover:bg-white/80"
+                >
                   <div className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-brand-100 bg-brand-50 text-brand-600">
                     {reason.icon}
                   </div>
@@ -394,27 +372,27 @@ export default async function LandingPage() {
           </section>
 
           {/* ░░ METRICS + SECTORS ░░ */}
-          <section className="mx-auto max-w-[1200px] px-[clamp(20px,5vw,56px)] py-[clamp(32px,4vw,48px)]">
-            <div className="rounded-xl border border-zinc-200/70 bg-white/70 p-[clamp(24px,3vw,36px)] shadow-[0_1px_3px_rgba(0,0,0,0.03)] backdrop-blur-md">
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-[22px]">
+          <section className="mx-auto max-w-[1200px] px-[clamp(20px,5vw,56px)] py-[clamp(20px,3vw,32px)]">
+            <div className="rounded-xl border border-zinc-200/70 bg-white/70 px-[clamp(20px,3vw,28px)] py-[clamp(18px,2.5vw,24px)] shadow-[0_1px_3px_rgba(0,0,0,0.03)] backdrop-blur-md">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
                 {metrics.map((metric) => (
                   <div key={metric.label} className="text-center">
-                    <div className="font-mono text-[clamp(26px,3vw,34px)] font-medium tracking-[-0.02em] text-brand-600">
+                    <div className="font-mono text-[clamp(22px,2.5vw,28px)] font-medium tracking-[-0.02em] text-brand-600">
                       {metric.value}
                     </div>
-                    <div className="mt-1.5 text-[13px] text-zinc-600">{metric.label}</div>
+                    <div className="mt-1 text-[12px] text-zinc-600">{metric.label}</div>
                   </div>
                 ))}
               </div>
-              <div className="mt-[30px] border-t border-zinc-200/70 pt-[26px]">
-                <div className="mb-4 text-center text-xs text-zinc-400">
+              <div className="mt-4 flex flex-col items-center gap-3 border-t border-zinc-200/60 pt-4 sm:flex-row sm:flex-wrap sm:justify-center">
+                <span className="text-center text-xs text-zinc-400 sm:text-left">
                   Pensado para pymes de 40 a 200 personas en
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-2.5">
+                </span>
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   {sectors.map((sector) => (
                     <span
                       key={sector}
-                      className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-[13px] font-medium text-zinc-600"
+                      className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-[12px] font-medium text-zinc-600"
                     >
                       {sector}
                     </span>
@@ -433,8 +411,7 @@ export default async function LandingPage() {
               />
               <div className="relative flex flex-wrap items-center justify-between gap-7">
                 <div className="min-w-[280px] flex-1 basis-[380px]">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-300">Precios</div>
-                  <h2 className="mt-3 text-[clamp(24px,2.6vw,30px)] font-semibold leading-[1.15] tracking-[-0.02em] text-white">
+                  <h2 className="text-[clamp(24px,2.6vw,30px)] font-semibold leading-[1.15] tracking-[-0.02em] text-white">
                     Estamos en beta privada
                   </h2>
                   <p className="mt-3 max-w-[40em] text-[15px] leading-relaxed text-brand-100">
@@ -443,10 +420,7 @@ export default async function LandingPage() {
                     resto.
                   </p>
                 </div>
-                <a
-                  href="#sec-contacto"
-                  className="inline-flex h-[46px] flex-shrink-0 items-center gap-2.5 whitespace-nowrap rounded-[4px] bg-white px-6 text-[15px] font-semibold text-brand-700 shadow-[0_4px_14px_rgba(0,0,0,0.18)] transition-[transform,box-shadow] hover:-translate-y-px hover:shadow-[0_8px_22px_rgba(0,0,0,0.24)]"
-                >
+                <a href="#sec-contacto" className={`${landingInverseCta} h-[46px] flex-shrink-0 px-6 text-[15px]`}>
                   Quiero el acceso anticipado
                   <ArrowRight />
                 </a>
@@ -458,8 +432,7 @@ export default async function LandingPage() {
           <section id="sec-contacto" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] pb-[clamp(48px,6vw,88px)] pt-[clamp(40px,5vw,72px)]">
             <div className="mx-auto max-w-[480px]">
               <div className="mb-[26px] text-center">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-500">Contacto</div>
-                <h2 className="mt-3 text-[clamp(24px,2.6vw,30px)] font-semibold leading-[1.15] tracking-[-0.02em] text-zinc-900">
+                <h2 className="text-[clamp(24px,2.6vw,30px)] font-semibold leading-[1.15] tracking-[-0.02em] text-zinc-900">
                   Mantenete al tanto
                 </h2>
                 <p className="mt-2.5 text-[15px] leading-relaxed text-zinc-600">

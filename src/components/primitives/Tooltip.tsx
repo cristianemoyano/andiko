@@ -8,9 +8,16 @@ import { cn } from '@/lib/utils'
  */
 function TooltipProvider({
   delayDuration = 300,
+  skipDelayDuration = 100,
   ...props
 }: React.ComponentProps<typeof RadixTooltip.Provider>) {
-  return <RadixTooltip.Provider delayDuration={delayDuration} {...props} />
+  return (
+    <RadixTooltip.Provider
+      delayDuration={delayDuration}
+      skipDelayDuration={skipDelayDuration}
+      {...props}
+    />
+  )
 }
 
 export interface TooltipProps {
@@ -41,7 +48,7 @@ function Tooltip({
     return <>{children}</>
   }
   return (
-    <RadixTooltip.Provider delayDuration={delayDuration}>
+    <RadixTooltip.Provider delayDuration={delayDuration} skipDelayDuration={100}>
       <RadixTooltip.Root open={open} onOpenChange={onOpenChange}>
         <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
         <RadixTooltip.Portal>
@@ -51,10 +58,11 @@ function Tooltip({
             sideOffset={5}
             className={cn(
               'z-50 max-w-xs rounded-sm bg-zinc-900 px-2 py-1 text-[12px] leading-snug text-zinc-50 shadow-md',
+              'origin-[var(--radix-tooltip-content-transform-origin)]',
               'data-[state=delayed-open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=delayed-open]:fade-in-0',
-              'data-[state=closed]:zoom-out-95 data-[state=delayed-open]:zoom-in-95',
-              'duration-150',
+              'data-[state=closed]:zoom-out-[0.97] data-[state=delayed-open]:zoom-in-[0.97]',
+              'duration-200 ease-out',
               className,
             )}
           >
