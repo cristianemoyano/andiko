@@ -235,6 +235,7 @@ export function StorageSettingsClient() {
         bucket: string
         storage_key: string
         byte_size: number
+        checks: { upload: true; download: true; preview: true }
       }>(`${ENDPOINT}/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -247,7 +248,7 @@ export function StorageSettingsClient() {
         provider: result.provider,
       })
       setTestMsg(
-        `Prueba OK (${result.provider}): se subieron ${result.byte_size} bytes en «${result.bucket}». Podés eliminar el archivo de prueba cuando quieras.`,
+        `Prueba OK (${result.provider}): subida, descarga y vista previa verificadas en «${result.bucket}». Podés eliminar el archivo de prueba cuando quieras.`,
       )
     } catch (e) {
       setTestError(getApiErrorMessage(e))

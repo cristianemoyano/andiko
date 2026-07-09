@@ -17,6 +17,11 @@ export interface RunStorageTestResult {
   bucket: string
   storage_key: string
   byte_size: number
+  checks: {
+    upload: true
+    download: true
+    preview: true
+  }
 }
 
 export function isStorageTestKey(storageKey: string): boolean {
@@ -24,8 +29,9 @@ export function isStorageTestKey(storageKey: string): boolean {
 }
 
 /**
- * Uploads a tiny test object with the saved platform storage settings and verifies it via
- * HeadObject. The object stays in the backend until sys-admin deletes it explicitly.
+ * Uploads a tiny test object with the saved platform storage settings, verifies it via
+ * HeadObject, then exercises presigned download and stream read (preview path). The object
+ * stays in the backend until sys-admin deletes it explicitly.
  */
 export async function runStorageConnectivityTest(): Promise<RunStorageTestResult> {
   const adapter = await resolveStorageAdapter()
@@ -44,9 +50,12 @@ export async function runStorageConnectivityTest(): Promise<RunStorageTestResult
       )
     }
 
+    await verifyDownload(adapter, storageKey, TEST_BODY)
+    await verifyPreview(adapter, storageKey, TEST_BODY)
+
     logger.info(
       { provider: adapter.provider, storageKey, bucket: adapter.bucket },
-      'storage connectivity test upload ok',
+      'storage connectivity test ok',
     )
 
     return {
@@ -54,6 +63,7 @@ export async function runStorageConnectivityTest(): Promise<RunStorageTestResult
       bucket: adapter.bucket,
       storage_key: storageKey,
       byte_size: head.byteSize,
+      checks: { upload: true, download: true, preview: true },
     }
   } catch (err: unknown) {
     try {
@@ -151,11 +161,24 @@ function testError(detail: string): Error & { detail: string } {
 }
 
 async function writeTestObject(adapter: StorageAdapter, key: string, body: Buffer): Promise<void> {
+  if (adapter.provider === 's3') {
+    await uploadViaPresignedUrl(adapter, key, body)
+    return
+  }
+
   if (adapter.putObject) {
     await adapter.putObject(key, { contentType: TEST_CONTENT_TYPE, body })
     return
   }
 
+  await uploadViaPresignedUrl(adapter, key, body)
+}
+
+async function uploadViaPresignedUrl(
+  adapter: StorageAdapter,
+  key: string,
+  body: Buffer,
+): Promise<void> {
   const upload = await adapter.getUploadUrl({
     key,
     contentType: TEST_CONTENT_TYPE,
@@ -169,4 +192,53 @@ async function writeTestObject(adapter: StorageAdapter, key: string, body: Buffe
   if (!res.ok) {
     throw new Error(`HTTP ${res.status} al subir el archivo de prueba`)
   }
+}
+
+async function verifyDownload(
+  adapter: StorageAdapter,
+  key: string,
+  expected: Buffer,
+): Promise<void> {
+  const download = await adapter.getDownloadUrl({ key })
+  const res = await fetch(download.url)
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} al descargar el archivo de prueba`)
+  }
+  const body = Buffer.from(await res.arrayBuffer())
+  if (!body.equals(expected)) {
+    throw new Error('El contenido descargado no coincide con el archivo de prueba.')
+  }
+}
+
+async function verifyPreview(
+  adapter: StorageAdapter,
+  key: string,
+  expected: Buffer,
+): Promise<void> {
+  if (!adapter.getObjectStream) {
+    throw new Error('El backend no soporta lectura por stream (vista previa).')
+  }
+  const object = await adapter.getObjectStream(key)
+  if (!object) {
+    throw new Error('No se pudo leer el archivo de prueba para vista previa.')
+  }
+  const body = await readStreamToBuffer(object.stream)
+  if (!body.equals(expected)) {
+    throw new Error('El contenido de vista previa no coincide con el archivo de prueba.')
+  }
+}
+
+async function readStreamToBuffer(stream: ReadableStream): Promise<Buffer> {
+  const reader = stream.getReader()
+  const chunks: Uint8Array[] = []
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (value) chunks.push(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)))
 }

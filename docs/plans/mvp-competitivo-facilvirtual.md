@@ -1,5 +1,7 @@
 # Plan: MVP Competitivo vs FácilVirtual
 
+> **Última revisión contra código:** 2026-07-09. Los sprints 1–3 de este plan están **implementados**. Usar [docs/ROADMAP.md](../ROADMAP.md) y la tabla "Estado actual" abajo como referencia; el detalle de sprints queda como historial de implementación.
+
 ## Contexto
 
 Para vender Andiko (cloud ERP + POS Electron) a autoservicios y minimercados argentinos hay que cerrar 5 gaps vs FácilVirtual. La buena noticia: la mayoría de los backends **ya existen** — el trabajo es conectarlos al POS y agregar las UIs faltantes.
@@ -10,7 +12,36 @@ Para vender Andiko (cloud ERP + POS Electron) a autoservicios y minimercados arg
 
 ---
 
-## Análisis competitivo
+## Estado actual (2026-07-09)
+
+| Feature | FácilVirtual | Andiko | Estado |
+|---|---|---|---|
+| POS con barcode scanner | ✓ | ✓ | ✅ |
+| Gestión de clientes | ✓ | ✓ | ✅ |
+| Catálogo de productos | ✓ | ✓ | ✅ |
+| Multi-método de pago (config) | ✓ | ✓ | ✅ tipos dinámicos por org/sucursal |
+| Pagos mixtos en un ticket | ✓ | ⚠️ | Backend `payments[]` listo; UI POS un medio por venta |
+| Exportación CSV/Excel | ✓ | ✓ | ✅ |
+| Etiquetas de góndola | ✓ | ✓ | ✅ |
+| Control de stock + lotes FEFO | ✓ | ✓ | ✅ |
+| Compras | ✓ | ✓ | ✅ |
+| AFIP / CAE | ✓ | ✓ | ✅ WSFE + ticket POS |
+| WooCommerce | ✗ | ✓ | ✅ ventaja |
+| ERP cloud multi-sucursal | ✗ | ✓ | ✅ ventaja |
+| Cierre de caja | ✓ | ✓ | ✅ `ClosingReportScreen.tsx` |
+| Listas de precios en POS | ✓ | ✓ | ✅ precio desde lista default |
+| Pantalla completa + teclas rápidas | ✓ | ✓ | ✅ fullscreen + atajos |
+| Turnos de caja (cash sessions) | ✓ | ✓ | ✅ apertura/cierre + sync cloud |
+| Alertas de vencimiento (UI) | ✓ | ✓ | ✅ panel + filtros stock |
+| Lista de reposición | ✓ | ✓ | ✅ `/inventario/reposicion` |
+| Productos pesables (balanza RS-232) | ✓ | ⚠️ | PLU/barcode pesable en POS; drivers nativos en Fase 8 |
+| Firma de código POS | ✓ | ❌ | Pendiente distribución sin fricción |
+
+**Gap restante vs FácilVirtual para autoservicio:** pagos mixtos en checkout POS, integración MP real, firma de código del instalador.
+
+---
+
+## Análisis competitivo (histórico — jun 2026)
 
 | Feature | FácilVirtual | Andiko | Estado |
 |---|---|---|---|
@@ -23,16 +54,18 @@ Para vender Andiko (cloud ERP + POS Electron) a autoservicios y minimercados arg
 | Control de stock | ✓ | ✓ | ✅ |
 | Compras | ✓ | ✓ | ✅ |
 | ERP cloud multi-sucursal | ✗ | ✓ | ✅ ventaja |
-| **Cierre de caja** | ✓ | ❌ | 🔴 Sprint 1 |
-| **Listas de precios múltiples en POS** | ✓ | ❌ | 🔴 Sprint 1 |
-| **Pantalla completa + teclas rápidas** | ✓ | ❌ | 🔴 Sprint 1 |
-| **Alertas de vencimiento (UI)** | ✓ | ❌ | 🟡 Sprint 2 |
-| **Lista de reposición por proveedor** | ✓ | ❌ | 🟡 Sprint 2 |
-| Productos pesables (balanza) | ✓ | ❌ | ⬛ Backlog |
+| **Cierre de caja** | ✓ | ✓ | ✅ implementado |
+| **Listas de precios múltiples en POS** | ✓ | ✓ | ✅ implementado |
+| **Pantalla completa + teclas rápidas** | ✓ | ✓ | ✅ implementado |
+| **Alertas de vencimiento (UI)** | ✓ | ✓ | ✅ implementado |
+| **Lista de reposición por proveedor** | ✓ | ✓ | ✅ implementado |
+| Productos pesables (balanza) | ✓ | ⚠️ | PLU/barcode; sin driver RS-232 |
 
 ---
 
 ## Sprint 1 — Ser vendible ahora
+
+> ✅ **Implementado.** Ver `ClosingReportScreen.tsx`, fullscreen en `apps/pos/src/main/index.ts`, listas de precios en `/api/v1/pos/products`.
 
 ### 1. Cierre de caja POS
 
@@ -83,6 +116,8 @@ Para vender Andiko (cloud ERP + POS Electron) a autoservicios y minimercados arg
 
 ## Sprint 2 — Completar UX
 
+> ✅ **Implementado.** Widgets de vencimiento en panel; `/inventario/reposicion`.
+
 ### 4. UI alertas de vencimiento en ERP
 
 **Qué:** Widgets en el Dashboard con productos vencidos y próximos a vencer. Click lleva al listado filtrado.
@@ -113,6 +148,8 @@ Para vender Andiko (cloud ERP + POS Electron) a autoservicios y minimercados arg
 
 ## Sprint 3 — Gestión de turnos de caja
 
+> ✅ **Implementado.** `cash_sessions` en SQLite, `pos_cash_sessions` en cloud, `/pos/cajas`.
+
 ### 6. Cash sessions (apertura y cierre de turno)
 
 **Flujo:**
@@ -129,8 +166,9 @@ Para vender Andiko (cloud ERP + POS Electron) a autoservicios y minimercados arg
 
 ## Fuera del plan (backlog)
 
-- Productos pesables (balanza) — requiere integración de hardware específico
+- Pagos mixtos en UI POS (backend listo)
+- Integración Mercado Pago real (QR/cobros)
+- Drivers balanza RS-232 (Fase 8) — hoy PLU/barcode pesable
 - Firma de código macOS (Apple Developer ~USD 99/año)
 - Firma de código Windows (Authenticode EV ~USD 300-500/año)
 - `electron-updater` — auto-update (requiere firma en macOS)
-- Lotes/batches — trazabilidad completa por lote

@@ -1,6 +1,6 @@
 # Plan: Cobertura del gap competitivo vs Artics
 
-> **Nota (2026-07):** Este plan es histórico (jun 2026). Muchos ítems marcados como gap ya están implementados (AFIP, NC/ND, remitos, lotes FEFO, cuenta corriente, POS medios de pago). Usar [docs/ROADMAP.md](../ROADMAP.md) como fuente de verdad del estado actual.
+> **Última revisión contra código:** 2026-07-09. Fuente de verdad operativa: [docs/ROADMAP.md](../ROADMAP.md). Este documento resume el gap competitivo vs Artics; la tabla comparativa se valida contra `src/modules/` y `apps/pos/`.
 
 ## Contexto
 
@@ -12,31 +12,32 @@ Andiko es un ERP modular (Next.js, PostgreSQL, Sequelize) con POS offline en Ele
 
 ## Resumen ejecutivo
 
-- **Base sólida:** multi-organización y sucursales, contactos, catálogo con variantes y listas de precios, flujo ventas (presupuesto → pedido → factura → cobro), inventario con depósitos y movimientos, compras (OC → recepción → factura proveedor → pagos), panel ejecutivo, permisos en base de datos, POS offline con sync y sesiones de caja.
-- **Brecha principal vs “retail ARG completo” prometido en landings genéricas:** facturación **electrónica AFIP con CAE**, ampliación del **POS** (medios de pago, pagos mixtos, alineación fiscal), **lotes y trazabilidad** (no solo alertas MVP), **volumen y variedad de reportes**, **integraciones** (pagos / e-commerce), y capacidades **verticales o de hardware fiscal** que suelen quedar fuera de un MVP horizontal.
-- **Dependencias:** la Fase A (AFIP) desbloquea requisitos legales de muchos clientes; lotes (Fase C) conviene antes o en paralelo con POS que deba respetar FIFO/FEFO.
-- **Expectativas:** la landing de Artics lista decenas de rubros e integraciones; este plan prioriza **paridad fiscal y operativa** antes que verticalización (restaurant, farmacia, etc.).
+- **Base sólida (implementada):** multi-org/sucursales, contactos, catálogo, ventas (presupuesto → pedido → factura → cobro), NC/ND, devoluciones, CC clientes/proveedores, reportes analíticos, inventario con lotes FEFO/remitos/transferencias, compras completas, **AFIP WSFE con CAE**, POS offline con turnos/cierre/AFIP en ticket, WooCommerce nativo, billing SaaS.
+- **Brecha principal vs “retail ARG completo” (jul 2026):** pagos mixtos en UI POS, cobro electrónico real (MP/QR), contabilidad auto-posting de ventas/compras, tesorería AR (retenciones, cheques, banco), hardware fiscal nativo, verticales (resto, farmacia pesada), catálogo masivo de reportes tipo “100+”.
+- **Expectativas:** la landing de Artics lista decenas de rubros e integraciones; Andiko ya tiene paridad fiscal y operativa core, pero no verticalización ni suite contable/tesorería completa.
 
 ---
 
 ## Tabla comparativa (Artics vs Andiko)
 
-| Tema | Artics (promesa comercial) | Andiko hoy | Gap | Notas internas |
-|------|---------------------------|------------|-----|----------------|
-| AFIP / CAE / libros IVA | Factura electrónica, WSFE, CAE automático | Documentos de ventas internos; sin WSAA/WSFE | Alto | [docs/ROADMAP.md](../ROADMAP.md) Fase 6–7 |
-| POS offline | Caja 100% offline, sync | Electron + SQLite, cola de sync | Medio | [docs/ROADMAP.md](../ROADMAP.md) sección POS |
-| Medios de pago en POS | Efectivo, tarjetas, transferencias, QR MP, cuenta corriente, mixtos | `payments[]` dinámico por org/sucursal; tipos: cash, card, transfer, qr, current_account, check, other; código de operación; estructura lista para mixtos | Bajo–medio | `pos_payment_methods` + `pos_branch_payment_methods`; falta UI mixta y ejecución real de pagos electrónicos |
-| Inventario multi-depósito | Stock por sucursal / depósito | Depósitos, movimientos, alertas | Bajo–medio | Transferencias entre depósitos vía movimientos |
-| Lotes / vencimiento / IMEI | Lotes, vencimientos, serie | Alertas MVP en `stock_items`; sin modelo de lotes por cantidad | Alto | [docs/plans/gaps-competitivos-vencimientos-etiquetas-barcode.md](./gaps-competitivos-vencimientos-etiquetas-barcode.md) |
-| Remitos | Remitos de entrega | No implementado | Medio | [docs/ROADMAP.md](../ROADMAP.md) Fase 4 pendientes |
-| Notas de crédito | NC desde POS / ERP | Pendiente en roadmap ventas | Medio | [docs/ROADMAP.md](../ROADMAP.md) Fase 3 |
-| Cuenta corriente clientes | CC y límites | UI `/ventas/cuenta-corriente` + API de estado de cuenta; roadmap aún marca listado agregado pendiente | Bajo–medio | Reconciliar checklist en ROADMAP con código |
-| Cuenta corriente proveedores | AP / CC proveedor | Pendiente vista dedicada | Medio | [docs/ROADMAP.md](../ROADMAP.md) Fase 5 |
-| Reportes “100+” | Amplio catálogo | Dashboard + listados; reportes analíticos pendientes | Alto | ROADMAP Fase 3–5 pendientes |
-| Integraciones | Mercado Pago, ML, Tiendanube, etc. | Backlog explícito; onboarding lista integraciones como UI/config futura | Alto | [docs/ROADMAP.md](../ROADMAP.md) Backlog |
-| Contabilidad | Implícita en propuesta integral | No implementada | Alto | ROADMAP Fase 7 |
-| Hardware fiscal / térmica | Hasar, Epson, balanzas | Impresión documentos vía web / PDF; sin drivers fiscales | Alto | Backlog producto |
-| Vertical restaurante | Mesas, comandas, cocina | No | Alto | Backlog |
+*Validada contra código el 2026-07-09.*
+
+| Tema | Artics (promesa comercial) | Andiko hoy (código) | Gap | Notas internas |
+|------|---------------------------|----------------------|-----|----------------|
+| AFIP / CAE / libros IVA | Factura electrónica, WSFE, CAE automático | ✅ WSAA/WSFE (`src/modules/afip/`), CAE en facturas/NC/ND, libros IVA, contingencia, POS authorize | Bajo | Validar en homologación/producción con cert real |
+| POS offline | Caja 100% offline, sync | ✅ Electron + SQLite, sync bidireccional, turnos, cierre, AFIP en ticket | Bajo | Falta firma de código + auto-update |
+| Medios de pago en POS | Efectivo, tarjetas, transferencias, QR MP, cuenta corriente, mixtos | ✅ Métodos dinámicos por org/sucursal; checkout **un medio por ticket** (`SaleScreen.tsx`); backend `payments[]` listo para mixtos | Medio | UI mixta + ejecución real MP/QR/posnet |
+| Inventario multi-depósito | Stock por sucursal / depósito | ✅ Depósitos, movimientos, transferencias, reposición | Bajo | WMS lite / conteo físico pendiente |
+| Lotes / vencimiento / IMEI | Lotes, vencimientos, serie | ✅ `stock_item_batches` + FEFO (`stock-batches.service.ts`); IMEI/serie no | Medio | Serie/IMEI en backlog |
+| Remitos | Remitos de entrega | ✅ `delivery-notes.service.ts`, `/inventario/remitos` | Bajo | — |
+| Notas de crédito | NC desde POS / ERP | ✅ NC/ND ERP + AFIP; devoluciones POS → `sales-returns.service.ts` | Bajo | — |
+| Cuenta corriente clientes | CC y límites | ✅ `/ventas/cuenta-corriente`, aging, export CSV | Medio | Sin límite de crédito ni workflow cobranzas |
+| Cuenta corriente proveedores | AP / CC proveedor | ✅ `/compras/cuenta-corriente`, aging CxP | Bajo | — |
+| Reportes “100+” | Amplio catálogo | ✅ Reportes ventas/compras + panel; no catálogo masivo | Medio | PyG, export estudio, BI avanzado pendientes |
+| Integraciones | Mercado Pago, ML, Tiendanube, etc. | ✅ WooCommerce nativo; MP/ML/Tiendanube en backlog | Medio | E-commerce cubierto; pagos online no |
+| Contabilidad | Implícita en propuesta integral | ⚠️ Plan de cuentas + asientos manuales + auto en devoluciones; sin auto-post ventas/compras | Alto | ROADMAP Fase 7 ~56% |
+| Hardware fiscal / térmica | Hasar, Epson, balanzas | ⚠️ Ticket 80 mm + PDF; PLU/balanza barcode en POS; sin drivers fiscales RS-232 | Alto | Fase 8 pendiente |
+| Vertical restaurante | Mesas, comandas, cocina | ❌ No | Alto | Backlog |
 
 ---
 
@@ -58,25 +59,9 @@ flowchart LR
 
 ### Fase A — Facturación electrónica AFIP
 
-**Objetivo:** cerrar el gap frente a “CAE automático” y cumplimiento fiscal básico de ventas.
+**Estado:** ✅ **Completo en código** (ROADMAP Fase 6 al 100%).
 
-**Entregables (alineados a [docs/ROADMAP.md](../ROADMAP.md) Fase 6):**
-
-- Autenticación WSAA con certificado digital.
-- Emisión vía WSFEv1 (Facturas A/B/C según corresponda).
-- Notas de crédito y débito electrónicas.
-- Persistencia de CAE, números de comprobante AFIP y datos de auditoría.
-- Reimpresión / regeneración de PDF o ticket con datos de autorización.
-- Modo contingencia: cola offline con sincronización posterior (coherente con POS).
-
-**Dependencias:** modelo de documento de venta estable ([`src/modules/sales/`](../../src/modules/sales/)); política de numeración ya existente debe coexistir o migrarse a numeración fiscal.
-
-**Referencias:** ROADMAP “Fase 6 — AFIP / Facturación Electrónica”.
-
-**Criterios de done:**
-
-- Emisión exitosa en ambiente de homologación AFIP con CAE almacenado en base.
-- Flujo documentado de renovación de certificado y manejo de errores WSFE.
+Implementado en `src/modules/afip/` (WSAA, WSFE, CAE, NC/ND, libros IVA, contingencia) y `src/modules/pos/pos-fiscal.service.ts` (authorize desde POS). Pendiente operativo: validación con certificados reales en homologación/producción y cobertura E2E.
 
 ---
 
@@ -95,79 +80,40 @@ flowchart LR
 
 **Referencias:** [packages/shared/src/index.ts](../../packages/shared/src/index.ts); [`docs/plans/mvp-competitivo-facilvirtual.md`](./mvp-competitivo-facilvirtual.md) (contexto retail).
 
-**Estado:** ✅ Parcialmente completo (commit `b580987`)
+**Estado:** ✅ **Casi completo** — gap restante: pagos mixtos en UI + cobro electrónico real.
 
-- ✅ `payments[]` dinámico reemplaza `payment_method` fijo — tipos configurables por org/sucursal
+- ✅ `payments[]` dinámico — tipos configurables por org/sucursal
 - ✅ Código de operación opcional para medios no-efectivo
-- ✅ PIN requerido en apertura y cierre de turno
-- ✅ Cancelación de venta con confirmación
-- ✅ Sync robusto con errores visibles por venta/turno
-- ⬜ UI de selección múltiple de medios en un mismo ticket (estructura lista, falta UX)
+- ✅ PIN en apertura/cierre de turno; cierre de caja; sync pull/push
+- ✅ AFIP authorize desde POS (`/api/v1/pos/sales/authorize`) + ticket con QR
+- ✅ Devoluciones post-venta desde POS
+- ⬜ UI de selección múltiple de medios en un mismo ticket (`SaleScreen.tsx` envía un solo pago)
 - ⬜ Ejecución real de pagos electrónicos (QR MP, MODO, terminal posnet)
-- ⬜ Comprobante fiscal asociado (depende Fase A — AFIP)
-
-**Criterios de done originales:**
-
-- ✅ Venta de prueba con medio de pago dinámico y sync correcto al cloud
-- ⬜ Venta con dos medios de pago en un solo ticket
-- ⬜ Lista de `local_id` sincronizados recuperable desde API para auditoría de caja
+- ⬜ Firma de código macOS/Windows + `electron-updater`
 
 ---
 
 ### Fase C — Inventario: lotes y trazabilidad
 
-**Objetivo:** soportar vencimientos reales, FIFO/FEFO y bases para rubros regulados (alimentos, farmacia) sin mentir con un solo `expires_on` por ítem.
+**Estado:** ✅ **Completo en código** — `stock_item_batches`, `stock-batches.service.ts` (FEFO), vínculo en `stock_movements`.
 
-**Entregables:**
-
-- Implementar modelo de lotes y deducción en ventas según el diseño ya descrito en [docs/plans/gaps-competitivos-vencimientos-etiquetas-barcode.md](./gaps-competitivos-vencimientos-etiquetas-barcode.md).
-- Completar ROADMAP: “Trazabilidad por lotes” y vínculo explícito en movimientos.
-
-**Dependencias:** migraciones nuevas; actualización de [`src/modules/inventory/stock-movements.service.ts`](../../src/modules/inventory/stock-movements.service.ts) y APIs relacionadas.
-
-**Extensión opcional posterior:** números de serie / IMEI por unidad o por movimiento (tabla dedicada).
-
-**Criterios de done:**
-
-- Compra con dos lotes distintos del mismo SKU muestra dos vencimientos; venta descuenta por política FEFO/FIFO acordada.
-- Dashboard de vencimientos alimentado desde lotes, no desde columna única en `stock_items`.
+Pendiente: conteo físico/cíclico, WMS lite (ubicaciones), valuación FIFO/PMP. Extensión futura: IMEI/serie.
 
 ---
 
 ### Fase D — Reportes y cuentas corrientes
 
-**Objetivo:** reducir distancia frente a catálogos grandes de reportes y cerrar vistas financieras operativas.
+**Estado:** ✅ **Completo en código** — reportes ventas/compras, CC clientes (`/ventas/cuenta-corriente`), CC proveedores (`/compras/cuenta-corriente`), aging CxC/CxP con export CSV.
 
-**Entregables:**
-
-- Reportes de ventas por período, cliente y producto (ROADMAP Fase 3 pendientes).
-- Reportes de compras por período, proveedor y categoría (ROADMAP Fase 5).
-- Vista cuenta corriente proveedor (`/compras/proveedores/[id]/cuenta-corriente`) descrita en ROADMAP.
-- Notas de crédito internas si siguen pendientes respecto al roadmap.
-- Revisión explícita del ítem ROADMAP “Listado de cuentas corrientes por cliente” frente a [`src/app/(erp)/ventas/cuenta-corriente/`](../../src/app/(erp)/ventas/cuenta-corriente/) para actualizar el checklist o completar funcionalidad faltante.
-
-**Criterios de done:**
-
-- Export CSV o vista imprimible para al menos dos reportes analíticos priorizados por el negocio.
-- CC proveedor con saldo coincidente con suma de documentos en rango de prueba.
+Pendiente vs competidores “100+ reportes”: PyG, export estudio contable, BI avanzado.
 
 ---
 
 ### Fase E — Integraciones comerciales
 
-**Objetivo:** pagos y canales online sin trabajo manual repetitivo.
+**Estado:** ⚠️ **Parcial** — WooCommerce ✅ (`src/modules/integrations/woocommerce/`); Mercado Pago / Tiendanube / ML ❌ (backlog).
 
-**Entregables (priorización por defecto — ajustar por ICP):**
-
-1. **Mercado Pago** (QR / cobros / conciliación parcial con cobros en ventas).
-2. **Canal e-commerce** (una integración: WooCommerce o Tienda Nube según demanda).
-3. Marketplace (Mercado Libre) si el vertical lo exige.
-
-**Referencias:** ROADMAP Backlog; pantalla de onboarding lista integraciones como configuración futura.
-
-**Criterios de done:**
-
-- Webhook o polling documentado; conciliación de al menos un cobro de prueba contra factura interna.
+Próximo paso competitivo: MP (QR/cobros/conciliación) según demanda de betas.
 
 ---
 
