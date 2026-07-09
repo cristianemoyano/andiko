@@ -1,6 +1,6 @@
 import 'server-only'
 import { randomUUID } from 'node:crypto'
-import { Op } from 'sequelize'
+import { Op, literal } from 'sequelize'
 import type { Transaction } from 'sequelize'
 import sequelize from '@/lib/db'
 import Product from './product.model'
@@ -98,26 +98,37 @@ export async function listProducts(query: ProductQuery, ctx: TenantContext) {
   // page of product ids first (deduped via GROUP BY on the primary key — Postgres allows
   // ordering by other columns of the same table via functional dependency), then load the
   // full rows for exactly those ids.
-  const idRows = await Product.findAll({
-    where,
-    limit,
-    offset,
-    order: [['name', 'ASC']],
-    subQuery: false,
-    attributes: ['id'],
-    group: ['id'],
-    include: [
-      { model: ProductVariant, as: 'variants', required: false, attributes: [] },
-    ],
-  })
-  const count = await Product.count({
-    where,
-    distinct: true,
-    col: 'id',
-    include: [
-      { model: ProductVariant, as: 'variants', required: false, attributes: [] },
-    ],
-  })
+  //
+  // When filtering on variants.sku we must join variants and dedupe rows (subQuery:false).
+  // Sequelize minifies the main-model alias in production builds ("l"), so never GROUP BY
+  // model name ("Product") or bare column ("id" — ambiguous with the join). Qualify by table.
+  const variantInclude = { model: ProductVariant, as: 'variants', required: false, attributes: [] }
+  const idRows = search
+    ? await Product.findAll({
+        where,
+        limit,
+        offset,
+        order: [['name', 'ASC']],
+        subQuery: false,
+        attributes: ['id'],
+        group: [literal('"products"."id"') as unknown as string],
+        include: [variantInclude],
+      })
+    : await Product.findAll({
+        where,
+        limit,
+        offset,
+        order: [['name', 'ASC']],
+        attributes: ['id'],
+      })
+  const count: number = search
+    ? await Product.count({
+        where,
+        distinct: true,
+        col: 'id',
+        include: [variantInclude],
+      })
+    : await Product.count({ where })
 
   const pageIds = idRows.map(r => r.id)
   const unorderedRows = pageIds.length
