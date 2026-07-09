@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.45.0](https://github.com/cristianemoyano/andiko/compare/v0.44.7...v0.45.0) (2026-07-09)
+
+### Features
+
+* **accounting:** add HelpBubble hints explaining auto-posted journal entries ([97f9c64](https://github.com/cristianemoyano/andiko/commit/97f9c64b22e5235991a403c9da2ba57c49545342))
+* **accounting:** auto-post journal entries for sales/purchases invoices and payments ([bb4005e](https://github.com/cristianemoyano/andiko/commit/bb4005ec3d57542a6bdfff391eb42dfb6ed2ceba))
+* **communications:** add notifications and delivery tables ([0cbca63](https://github.com/cristianemoyano/andiko/commit/0cbca637b867f27be40ee9e3b3dd0ca691cd6e5b))
+* **communications:** route document email through notification channels ([1950ff0](https://github.com/cristianemoyano/andiko/commit/1950ff06c6111fac025b95399eaacecc19372557))
+* **communications:** wire document email UI for all sales documents ([3334b9b](https://github.com/cristianemoyano/andiko/commit/3334b9b1e92501f893a1653025b4f9614a900e84))
+
+### Bug Fixes
+
+* **accounting:** address adversarial review findings for auto-post ([09130fa](https://github.com/cristianemoyano/andiko/commit/09130fabf44df83ff08c5b3d0db60f0303a96dba))
+
 ## [0.44.7](https://github.com/cristianemoyano/andiko/compare/v0.44.6...v0.44.7) (2026-07-09)
 
 ### Features
