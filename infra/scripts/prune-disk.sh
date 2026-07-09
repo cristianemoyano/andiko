@@ -28,6 +28,19 @@ run() {
   "$@"
 }
 
+# docker images uses 12-char IDs; image inspect returns sha256:<64 hex> — compare by prefix.
+image_id_prefix() {
+  local id="${1#sha256:}"
+  echo "${id:0:12}"
+}
+
+same_image_id() {
+  local a b
+  a="$(image_id_prefix "$1")"
+  b="$(image_id_prefix "$2")"
+  [ -n "$a" ] && [ -n "$b" ] && [ "$a" = "$b" ]
+}
+
 current_app_image_id() {
   local image
   image="$(docker service inspect "$APP_SERVICE" --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}' 2>/dev/null || true)"
@@ -48,13 +61,16 @@ prune_old_andiko_release_images() {
 
   while read -r tag id; do
     [ -z "$tag" ] && continue
-    [ "$id" = "$current_id" ] && continue
+    if same_image_id "$id" "$current_id"; then
+      echo "  Keeping ${GHCR_IMAGE}:${tag} (in use)"
+      continue
+    fi
     case "$tag" in
       v*) ;;
       latest) ;;
       *) continue ;;
     esac
-    run docker rmi "${GHCR_IMAGE}:${tag}" 2>/dev/null || echo "  (skip ${tag}: still referenced or already removed)"
+    run docker rmi "${GHCR_IMAGE}:${tag}" 2>/dev/null || echo "  (skip ${tag}: still referenced)"
   done < <(docker images "$GHCR_IMAGE" --format '{{.Tag}} {{.ID}}' 2>/dev/null || true)
 }
 
