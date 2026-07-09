@@ -139,7 +139,7 @@ If uploads fail with **HTTP 403** (not CORS):
 
 The `andiko-storage` IAM user can only:
 
-- `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject`, `s3:HeadObject`
+- `s3:PutObject`, `s3:GetObject` (incluye HEAD), `s3:DeleteObject`
 - On `arn:aws:s3:::BUCKET_NAME/*` only
 
 No `ListBucket`, no other AWS services.

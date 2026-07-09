@@ -84,6 +84,23 @@ describe('runStorageConnectivityTest', () => {
     await expect(runStorageConnectivityTest()).rejects.toThrow(STORAGE_TEST_FAILED)
     expect(deleteObject).toHaveBeenCalledOnce()
   })
+
+  it('maps AWS signature errors to a credential hint', async () => {
+    const signatureErr = Object.assign(new Error('The request signature we calculated does not match'), {
+      name: 'SignatureDoesNotMatch',
+    })
+    getStorageAdapter.mockResolvedValue({
+      provider: 's3',
+      bucket: 'test-bucket',
+      putObject: vi.fn().mockRejectedValue(signatureErr),
+      deleteObject: vi.fn().mockResolvedValue(undefined),
+    })
+
+    await expect(runStorageConnectivityTest()).rejects.toMatchObject({
+      message: STORAGE_TEST_FAILED,
+      detail: expect.stringContaining('credenciales AWS no coinciden'),
+    })
+  })
 })
 
 describe('deleteStorageTestObject', () => {
@@ -127,6 +144,24 @@ describe('deleteStorageTestObject', () => {
 
     await expect(
       deleteStorageTestObject('_sys-admin/storage-test/123-andiko-test.txt'),
-    ).rejects.toThrow(STORAGE_TEST_FAILED)
+    ).resolves.toBeUndefined()
+  })
+
+  it('maps delete AWS errors to STORAGE_TEST_FAILED', async () => {
+    getStorageAdapter.mockResolvedValue({
+      provider: 's3',
+      bucket: 'test-bucket',
+      headObject: vi.fn().mockResolvedValue({ byteSize: 33, contentType: 'text/plain' }),
+      deleteObject: vi.fn().mockRejectedValue(
+        Object.assign(new Error('Access Denied'), { name: 'AccessDenied' }),
+      ),
+    })
+
+    await expect(
+      deleteStorageTestObject('_sys-admin/storage-test/123-andiko-test.txt'),
+    ).rejects.toMatchObject({
+      message: STORAGE_TEST_FAILED,
+      detail: expect.stringContaining('Acceso denegado'),
+    })
   })
 })

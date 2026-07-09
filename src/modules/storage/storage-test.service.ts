@@ -73,8 +73,29 @@ export async function runStorageConnectivityTest(): Promise<RunStorageTestResult
     }
     const message = err instanceof Error ? err.message : 'Error desconocido'
     logger.error({ storageKey, err: message }, 'storage connectivity test failed')
-    throw testError(message)
+    throw testError(formatStorageTestError(err))
   }
+}
+
+function formatStorageTestError(err: unknown): string {
+  if (typeof err !== 'object' || err === null) return 'Error desconocido'
+  const e = err as { name?: string; message?: string }
+  const msg = e.message ?? ''
+
+  if (e.name === 'SignatureDoesNotMatch' || msg.includes('signature we calculated does not match')) {
+    return 'Las credenciales AWS no coinciden (access key, secret key o región). Revisá la configuración y guardá de nuevo.'
+  }
+  if (e.name === 'InvalidAccessKeyId' || msg.includes('The AWS Access Key Id you provided does not exist')) {
+    return 'El access key ID no existe en AWS.'
+  }
+  if (e.name === 'NoSuchBucket' || msg.includes('The specified bucket does not exist')) {
+    return 'El bucket no existe en esa región.'
+  }
+  if (e.name === 'AccessDenied' || msg.includes('Access Denied')) {
+    return 'Acceso denegado al bucket. Confirmá permisos de lectura y eliminación sobre los objetos.'
+  }
+
+  return msg || 'Error desconocido'
 }
 
 /** Deletes a previously uploaded sys-admin test object from the active backend. */
@@ -84,19 +105,32 @@ export async function deleteStorageTestObject(storageKey: string): Promise<void>
   }
 
   const adapter = await resolveStorageAdapter()
-  const head = await adapter.headObject(storageKey)
-  if (!head) {
-    throw testError('El archivo de prueba ya no existe en el backend.')
+
+  try {
+    const head = await adapter.headObject(storageKey)
+    if (!head) {
+      logger.info({ storageKey }, 'storage test object already absent')
+      return
+    }
+
+    await adapter.deleteObject(storageKey)
+
+    const stillThere = await adapter.headObject(storageKey)
+    if (stillThere) {
+      throw testError('El backend no confirmó la eliminación del archivo de prueba.')
+    }
+
+    logger.info({ storageKey, provider: adapter.provider }, 'storage test object deleted')
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === STORAGE_TEST_INVALID_KEY) throw err
+    if (err instanceof Error && err.message === STORAGE_TEST_FAILED) throw err
+    if (err instanceof Error && err.message === STORAGE_ERRORS.STORAGE_NOT_CONFIGURED) throw err
+    logger.error(
+      { storageKey, err: err instanceof Error ? err.message : err },
+      'storage test object delete failed',
+    )
+    throw testError(formatStorageTestError(err))
   }
-
-  await adapter.deleteObject(storageKey)
-
-  const stillThere = await adapter.headObject(storageKey)
-  if (stillThere) {
-    throw testError('El backend no confirmó la eliminación del archivo de prueba.')
-  }
-
-  logger.info({ storageKey, provider: adapter.provider }, 'storage test object deleted')
 }
 
 async function resolveStorageAdapter(): Promise<StorageAdapter> {

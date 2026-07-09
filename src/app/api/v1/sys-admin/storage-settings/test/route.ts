@@ -35,7 +35,10 @@ export async function POST(req: Request) {
   } catch (err: unknown) {
     const response = storageTestErrorResponse(err)
     if (response) return response
-    throw err
+    return NextResponse.json(
+      { error: 'No se pudo completar la prueba de almacenamiento.', code: 'INTERNAL_ERROR' },
+      { status: 500 },
+    )
   }
 }
 
@@ -43,20 +46,8 @@ export async function DELETE(req: Request) {
   const gate = await requireSysAdmin()
   if ('response' in gate) return gate.response
 
-  let json: unknown
-  try {
-    json = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON', code: 'VALIDATION_ERROR' }, { status: 400 })
-  }
-
-  const parsed = storageTestDeleteSchema.safeParse(json)
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() },
-      { status: 422 },
-    )
-  }
+  const parsed = parseStorageTestDeleteInput(req)
+  if ('response' in parsed) return parsed.response
 
   try {
     await deleteStorageTestObject(parsed.data.storage_key)
@@ -64,8 +55,49 @@ export async function DELETE(req: Request) {
   } catch (err: unknown) {
     const response = storageTestErrorResponse(err, 'eliminar')
     if (response) return response
-    throw err
+    return NextResponse.json(
+      { error: 'No se pudo eliminar el archivo de prueba.', code: 'INTERNAL_ERROR' },
+      { status: 500 },
+    )
   }
+}
+
+function parseStorageTestDeleteInput(
+  req: Request,
+): { data: { storage_key: string } } | { response: NextResponse } {
+  const fromQuery = new URL(req.url).searchParams.get('storage_key')
+  if (fromQuery) {
+    const parsed = storageTestDeleteSchema.safeParse({ storage_key: fromQuery })
+    if (!parsed.success) {
+      return {
+        response: NextResponse.json(
+          { error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() },
+          { status: 422 },
+        ),
+      }
+    }
+    return { data: parsed.data }
+  }
+
+  let json: unknown
+  try {
+    json = await req.json()
+  } catch {
+    return {
+      response: NextResponse.json({ error: 'Invalid JSON', code: 'VALIDATION_ERROR' }, { status: 400 }),
+    }
+  }
+
+  const parsed = storageTestDeleteSchema.safeParse(json)
+  if (!parsed.success) {
+    return {
+      response: NextResponse.json(
+        { error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() },
+        { status: 422 },
+      ),
+    }
+  }
+  return { data: parsed.data }
 }
 
 function storageTestErrorResponse(err: unknown, action: 'probar' | 'eliminar' = 'probar'): NextResponse | null {
