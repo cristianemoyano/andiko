@@ -52,7 +52,7 @@ Este documento define **cómo segmentamos datos** en Andiko para evitar cruces e
 
 ### Accounting — Org-scoped (líneas con `branch_id` opcional como centro de costo)
 - `accounts`, `journal_entries`, `journal_entry_lines`
-- Asientos automáticos hoy solo en devoluciones de venta/compra
+- Asientos automáticos: devoluciones de venta/compra, factura de venta emitida (con costo de mercadería vendida si hay `cost_price`), cobro a cliente, factura de compra recibida, pago a proveedor
 
 ### AFIP — Org-scoped
 - `afip_credentials`, `afip_emissions`, configuración fiscal por org/sucursal

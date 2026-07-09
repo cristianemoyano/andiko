@@ -22,6 +22,7 @@ import { assertSaleLineItemsFromActiveCatalog } from './sales-line-items.validat
 import { isOrderInvoiceable } from './sales-order-workflow'
 import type { InvoiceStatus } from './invoice.model'
 import type { IvaRate } from '@/types'
+import { postInvoiceIssuedAccounting } from '@/modules/accounting/sales-invoice-accounting.service'
 
 export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
@@ -66,7 +67,7 @@ export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
     ],
     include: [
       { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: User, as: 'salesperson', attributes: ['id', 'name'] },
     ],
   })
@@ -305,6 +306,8 @@ export async function issueInvoice(id: string, ctx: TenantContext, actorId: stri
       { transaction: t },
     )
 
+    await postInvoiceIssuedAccounting(id, ctx, t)
+
     logger.info({ invoiceId: id, actorId }, 'invoice issued')
     return invoice.reload({ transaction: t })
   })
@@ -368,7 +371,7 @@ async function getInvoiceInTransaction(id: string, t: import('sequelize').Transa
   return Invoice.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
     transaction: t,

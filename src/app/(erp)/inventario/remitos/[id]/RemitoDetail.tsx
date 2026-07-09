@@ -8,6 +8,7 @@ import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
+import { SendDocumentEmail } from '@/components/erp/SendDocumentEmail'
 import { EmptyState } from '@/components/erp/EmptyState'
 import { InventarioSubNav } from '../../InventarioSubNav'
 import type { DeliveryNote } from '../types'
@@ -102,6 +103,14 @@ export function RemitoDetail({ id }: { id: string }) {
         ]}
         actions={
           <div className="flex flex-wrap gap-2">
+            <SendDocumentEmail
+              documentType="delivery_note"
+              documentId={id}
+              documentLabel={`Remito ${note.delivery_number}`}
+              defaultEmail={note.contact?.email}
+              buttonVariant="ghost"
+              buttonSize="sm"
+            />
             <Button asChild size="sm" variant="ghost">
               <Link href={`/ventas/remitos/${id}/print`} target="_blank" rel="noopener noreferrer">
                 Imprimir

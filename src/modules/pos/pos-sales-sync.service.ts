@@ -165,7 +165,7 @@ export async function upsertPosSalesOrder(
     await deductStockForOrder(
       order.id,
       ctx.orgId,
-      verifiedCashierId ?? ctx.orgId,
+      verifiedCashierId,
       t,
     )
 

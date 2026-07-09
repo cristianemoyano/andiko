@@ -37,6 +37,10 @@ import Account from '@/modules/accounting/account.model'
 import JournalEntry from '@/modules/accounting/journal-entry.model'
 import JournalEntryLine from '@/modules/accounting/journal-entry-line.model'
 import { nextEntryNumber } from '@/modules/accounting/accounting.utils'
+import { postInvoiceIssuedAccounting } from '@/modules/accounting/sales-invoice-accounting.service'
+import { postSalesPaymentAccounting } from '@/modules/accounting/sales-payment-accounting.service'
+import { postSupplierInvoiceAccounting } from '@/modules/accounting/purchase-invoice-accounting.service'
+import { postSupplierPaymentAccounting } from '@/modules/accounting/purchase-payment-accounting.service'
 import Warehouse from '@/modules/inventory/warehouse.model'
 import StockItem from '@/modules/inventory/stock-item.model'
 import StockMovement from '@/modules/inventory/stock-movement.model'
@@ -1270,7 +1274,7 @@ async function seedPurchases(
 
   // ── 4. Supplier Payment (partial) ─────────────────────────────────────────
   const payment_number = await nextPurchaseDocNumber(orgId, branch.id, 'supplier_payment', t)
-  await SupplierPayment.create(
+  const supplierPayment = await SupplierPayment.create(
     {
       org_id:         orgId,
       branch_id:      branch.id,
@@ -1286,6 +1290,15 @@ async function seedPurchases(
     },
     { transaction: t },
   )
+
+  const purchaseCtx: TenantContext = {
+    orgId,
+    userId: actorId,
+    defaultBranchId: branch.id,
+    allowedBranchIds: [branch.id],
+  }
+  await postSupplierInvoiceAccounting(invoice.id, purchaseCtx, t)
+  await postSupplierPaymentAccounting(supplierPayment.id, purchaseCtx, t)
 }
 
 type LogisticsOrderSeedSpec = {
@@ -2156,7 +2169,7 @@ async function run() {
 
           const payment_number = await nextDocumentNumber(org.id, defaultBranch.id, 'payment', t)
           const paidAmount = docTotals.total
-          await Payment.create(
+          const payment = await Payment.create(
             {
               org_id: org.id,
               branch_id: defaultBranch.id,
@@ -2178,6 +2191,15 @@ async function run() {
             { paid_amount: paidAmount, balance: '0.00', status: 'paid', updated_by: user.id },
             { transaction: t },
           )
+
+          const salesCtx: TenantContext = {
+            orgId: org.id,
+            userId: user.id,
+            defaultBranchId: defaultBranch.id,
+            allowedBranchIds: [defaultBranch.id],
+          }
+          await postInvoiceIssuedAccounting(invoice.id, salesCtx, t, { invoice })
+          await postSalesPaymentAccounting(payment.id, salesCtx, t, { payment })
 
           logSeedProgress(`${tenant.slug}: logistica demo`)
           await seedLogisticsDemo(org.id, defaultBranch, user.id, variantsBySku, t)
