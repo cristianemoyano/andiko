@@ -494,6 +494,7 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [x] Impersonación sys-admin: nombre de org en búsqueda/recientes; panel org con nombre en título
 - [x] **Monetización por sitio (WooCommerce)** — `included_sites` / `per_site_price` en planes, conteo de sitios activos, línea de cargo `site` (espejo de sucursales), snapshot `billed_sites` en factura, campos en `PlanModal` y seed
 - [x] **Servicio de archivos** — backends S3, Google Drive y Dropbox; credenciales en `platform_settings`; ReBAC por registro vinculado + shares explícitos; adjuntos en compras (facturas proveedor, recepciones); preview PDF/imagen; sys-admin `/sys-admin/storage`
+- [x] Test de almacenamiento desde `/sys-admin/storage` — `POST/DELETE /api/v1/sys-admin/storage-settings/test` (sube objeto de prueba, verifica HeadObject, eliminación manual)
 - [x] `/documentos/compartidos` — listado de archivos compartidos explícitamente con el usuario (sin permiso de módulo sobre el registro vinculado)
 - [x] Medición de storage en tiempo real al subir/eliminar archivos (`storage_gb` / `storage_files` en `usage_records`; job diario de reconciliación)
 - [x] Paths estructurados de almacenamiento (`{slug}/suc-{code}/{módulo}/{entidad}/{yyyy}/{mm}/{dd}/…`); slug de org inmutable tras creación
