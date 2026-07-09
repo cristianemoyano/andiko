@@ -324,7 +324,7 @@ async function ensurePermissionsSeeded(t: import('sequelize').Transaction) {
   const resources = ['contacts', 'products', 'sales', 'inventory', 'purchases', 'accounting', 'logistics'] as const
   const actions = ['read', 'write', 'delete'] as const
 
-  const permissions = resources.flatMap((r) =>
+  const modulePermissions = resources.flatMap((r) =>
     actions.map((a) => ({
       name: `${r}:${a}`,
       resource: r,
@@ -332,6 +332,14 @@ async function ensurePermissionsSeeded(t: import('sequelize').Transaction) {
       description: `${a.charAt(0).toUpperCase() + a.slice(1)} ${r}`,
     })),
   )
+
+  const extraPermissions = [
+    { name: 'panel:read', resource: 'panel', action: 'read', description: 'Ver panel ejecutivo' },
+    { name: 'settings:read', resource: 'settings', action: 'read', description: 'Leer configuración de la organización' },
+    { name: 'settings:write', resource: 'settings', action: 'write', description: 'Editar configuración de la organización' },
+  ] as const
+
+  const permissions = [...modulePermissions, ...extraPermissions]
 
   const columnRows = await sequelize.query<{ column_name: string }>(
     `SELECT column_name
@@ -368,17 +376,23 @@ async function ensurePermissionsSeeded(t: import('sequelize').Transaction) {
   }
 
   // 2) Ensure global role defaults exist (org_id = NULL)
-  const defaultsFor = (role: 'admin' | 'operator' | 'readonly') => {
-    return permissions
-      .map((p) => p.name)
-      .filter((name) => {
-        if (role === 'admin') return true
-        if (role === 'readonly') return name.endsWith(':read')
-        return name.endsWith(':read') || (name.endsWith(':write') && name !== 'accounting:write')
-      })
+  const allPermissionNames = permissions.map((p) => p.name)
+
+  const defaultsFor = (role: 'admin' | 'branch-admin' | 'operator' | 'readonly') => {
+    if (role === 'admin') return allPermissionNames
+    if (role === 'branch-admin') {
+      return allPermissionNames.filter(
+        (name) => !name.startsWith('settings:') && name !== 'accounting:write' && name !== 'accounting:delete',
+      )
+    }
+    if (role === 'readonly') return allPermissionNames.filter((name) => name.endsWith(':read'))
+    return allPermissionNames.filter(
+      (name) =>
+        name.endsWith(':read') || (name.endsWith(':write') && name !== 'accounting:write'),
+    )
   }
 
-  for (const role of ['admin', 'operator', 'readonly'] as const) {
+  for (const role of ['admin', 'branch-admin', 'operator', 'readonly'] as const) {
     for (const permName of defaultsFor(role)) {
       await sequelize.query(
         `INSERT INTO role_permissions (id, role, permission_id, org_id)

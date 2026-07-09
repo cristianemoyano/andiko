@@ -12,7 +12,7 @@ const brandHighlights = [
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen overflow-hidden bg-[#F7FBFC]">
+    <div className="auth-shell relative flex min-h-screen overflow-hidden bg-[#F7FBFC]">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#EEF8FA_0%,#FFFFFF_42%,#F7FBFC_100%)]"

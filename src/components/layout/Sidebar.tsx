@@ -71,7 +71,8 @@ export function Sidebar({
       <aside
         data-testid="sidebar"
         className={cn(
-          'flex flex-col w-[220px] flex-shrink-0 bg-surface border-r border-border h-full shadow-[1px_0_0_0_var(--brand-accent-border)]',
+          'flex flex-col w-[220px] flex-shrink-0 bg-surface h-full z-[1]',
+          'shadow-[2px_0_12px_rgba(0,0,0,0.05)] dark:shadow-[2px_0_12px_rgba(0,0,0,0.35)]',
           // Mobile: off-canvas drawer that slides in from the left.
           'fixed inset-y-0 left-0 z-[45] transition-transform duration-200',
           'pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0',
@@ -81,7 +82,7 @@ export function Sidebar({
         )}
       >
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 py-[13px] border-b border-border bg-brand-accent-bg/40">
+      <div className="flex items-center gap-2.5 px-4 py-[13px] bg-brand-accent-bg/40">
         <div className="w-[22px] h-[22px] bg-brand-600 rounded-sm flex items-center justify-center flex-shrink-0">
           <svg viewBox="0 0 12 12" className="w-3 h-3 fill-white">
             <rect x="0" y="1" width="3" height="10"/>
@@ -285,7 +286,7 @@ export function Sidebar({
       </nav>
 
       {/* User area */}
-      <div className="flex items-center gap-2.5 px-3 py-3 border-t border-border">
+      <div className="flex items-center gap-2.5 px-3 py-3 mt-1 bg-surface-muted/40">
         <Link href="/perfil" onClick={() => setOpen(false)} className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity">
           <div className="w-[26px] h-[26px] rounded-full bg-brand-accent-bg text-brand-accent text-[11px] font-semibold flex items-center justify-center flex-shrink-0 ring-1 ring-brand-accent-border/60">
             {initials}

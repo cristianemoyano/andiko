@@ -463,7 +463,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
         breadcrumbs={breadcrumbs}
         actions={
           (ui.sections.deleteOrg || ui.sections.fiscalEdit || ui.sections.orgMetaEdit) ? (
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 w-full sm:flex-row sm:w-auto [&_button]:w-full sm:[&_button]:w-auto">
               {ui.sections.deleteOrg && (
                 <Button variant="secondary" size="sm" onClick={() => setConfirmDeleteOrg(true)}>
                   Eliminar organización
@@ -481,7 +481,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
 
       <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-6">
-          <div className="bg-surface border border-border rounded-sm p-5">
+          <div className="bg-surface rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.18)] p-5">
             <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-2">Organización</p>
             <h1 className="text-[22px] font-bold text-fg">{org.name}</h1>
             <p className="mt-2 text-[13px] text-fg-muted">
@@ -491,7 +491,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
               <StatusBadge value={org.is_active ? 'Activa' : 'Inactiva'} />
             </div>
             {ui.sections.fiscal && (
-            <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+            <div className="mt-4 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
               <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide sm:col-span-2">Datos fiscales</p>
               <div>
                 <p className="text-[12px] text-fg-muted">Razón social legal</p>
@@ -516,7 +516,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
           </div>
 
           {ui.sections.enabledModules && (
-          <div className="bg-surface border border-border rounded-sm p-5">
+          <div className="bg-surface rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.18)] p-5">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide">Módulos habilitados</p>
@@ -557,7 +557,7 @@ export function OrgDetailClient({ id }: OrgDetailClientProps) {
           )}
 
           {ui.sections.rolesMatrix && (
-            <div className="bg-surface border border-border rounded-sm p-5">
+            <div className="bg-surface rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.18)] p-5">
               <RolePermissionMatrix
                 orgId={id}
                 apiNamespace={ui.apiNamespace}

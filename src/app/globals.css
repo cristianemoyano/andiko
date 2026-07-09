@@ -85,6 +85,35 @@
   --brand-chart: #2DA3BC;         /* brand-400 — brighter chart lines */
 }
 
+/*
+  Auth shell (login) and other pre-session marketing surfaces stay light even when
+  the user persisted ERP dark mode on <html class="dark">. Inputs use semantic tokens
+  (bg-surface, text-fg) — without this reset they render dark inside a light card.
+*/
+.dark .auth-shell {
+  color-scheme: light;
+  --bg: #F8FBFC;
+  --surface: #FFFFFF;
+  --surface-muted: #FAFAFA;
+  --surface-hover: #F4F4F5;
+  --fg: #18181B;
+  --fg-muted: #52525B;
+  --fg-subtle: #A1A1AA;
+  --border: #E4E4E7;
+  --border-strong: #D4D4D8;
+  --danger: #DC2626;
+  --danger-bg: #FEF2F2;
+  --success: #15803D;
+  --success-bg: #F0FDF4;
+  --warning: #B45309;
+  --warning-bg: #FEF3C7;
+  --ring: #A2DCE7;
+  --brand-accent: #0C647A;
+  --brand-accent-bg: #EEF8FA;
+  --brand-accent-border: #A2DCE7;
+  --brand-chart: #0C647A;
+}
+
 /* Andiko brand palette */
 @theme {
   --color-brand-50:  #EEF8FA;

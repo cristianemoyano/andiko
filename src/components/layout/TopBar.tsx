@@ -21,7 +21,7 @@ export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
   return (
     <header
       className={cn(
-        'bg-surface border-b border-border flex-shrink-0 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]',
+        'bg-surface flex-shrink-0 z-[1] shadow-[0_1px_4px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_4px_rgba(0,0,0,0.22)]',
         // Desktop: single fixed-height row
         'md:h-[52px] md:flex md:flex-row md:items-center md:px-5 md:gap-3',
         // Mobile: stacked column
@@ -66,7 +66,7 @@ export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
 
       {/* ── Mobile: row 2 — actions (only rendered when actions prop is provided) ── */}
       {actions ? (
-        <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto md:hidden">
+        <div className="flex w-full flex-col gap-2 px-4 pb-3 md:hidden [&_button]:w-full sm:flex-row sm:flex-wrap sm:[&_button]:w-auto">
           {actions}
         </div>
       ) : null}

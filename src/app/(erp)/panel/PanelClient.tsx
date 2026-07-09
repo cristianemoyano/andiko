@@ -769,7 +769,7 @@ function PanelClientContent({
         onToChange={to => updateParams({ to })}
       />
 
-      <PageBody padding="p-4 md:p-6" className="bg-surface-muted print:bg-surface print:p-4">
+      <PageBody padding="p-4 md:p-6" className="print:p-4">
         {orgName && (
           <header className="mb-5 md:mb-6 print:mb-4">
             <h1 className="text-[22px] md:text-[28px] font-semibold text-fg tracking-tight leading-tight">
