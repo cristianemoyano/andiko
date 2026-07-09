@@ -558,7 +558,9 @@ Envío de documentos e notificaciones por email desde el ERP.
 - [x] Preset **Servidor Andiko** en `/sys-admin/email` (mailserver:587, erp@andiko.cloud) para SMTP self-hosted
 - [x] Toggle mostrar/ocultar (`PasswordInput`) en campos de contraseña SMTP y de usuario/PIN POS (`OrgUserModal`)
 - [x] Templates de email por tipo de documento (presupuesto, pedido, factura, remito) — editor UI por org en `/configuracion` (tab "Plantillas de email") + defaults con variables `{{contact_name}}`, `{{document_number}}`, `{{total}}`, etc.
-- [x] Envío de documentos al cliente desde el detalle (componente `SendDocumentEmail`: botón "Enviar por email" en facturas/pedidos/presupuestos) + servicio de envío que persiste `email_logs`
+- [x] Envío de documentos al cliente desde el detalle (componente `SendDocumentEmail`: botón "Enviar por email" en presupuestos, pedidos, facturas y remitos) + servicio de envío que persiste `email_logs`
+- [x] Precarga del email del contacto en el diálogo de envío (`contact.email` en APIs de ventas/inventario)
+- [x] **Hub de notificaciones (v1):** tablas `notifications` + `notification_deliveries`; `emitNotification()` con channel adapters; email de documentos ruteado por evento `sales.document.shared` (mantiene compatibilidad con `email_logs` vía `notification_delivery_id`)
 - [x] Historial de envíos por documento — listado en el diálogo de envío
 - [x] Bandeja de auditoría **Emails enviados** por organización — tab en `/configuracion` con listado paginado, filtros y detalle del contenido renderizado guardado
 - [x] Persistencia de contenido en `email_logs` (`body_text`, `body_html`, `transport`, `message_id`) para envíos nuevos
@@ -569,8 +571,14 @@ Envío de documentos e notificaciones por email desde el ERP.
 - [x] Preset **Servidor Andiko** en `/sys-admin/email` (SMTP interno `mailserver:587` + SNI TLS para cert `mail.andiko.cloud`)
 - [x] Runbook incidente 502 / `db: disconnected` — `prod-sync-db-password` y rotación de secrets sin `stack rm`
 
-### Pendiente
-- [ ] Ver **Fase 10 — Colaboración interna** (notificaciones in-app, comentarios en documentos, chat de equipo). Las alertas proactivas (stock mínimo, presupuestos por vencer) viven ahí, no en email.
+### Pendiente (Comunicaciones / notificaciones)
+- [ ] API `/api/v1/notifications` (listar in-app, marcar leídas) y centro de notificaciones (campana en header)
+- [ ] `notification_preferences` por org/usuario/evento/canal
+- [ ] Eventos automáticos post-mutación (ej. pedido confirmado → in-app + email opcional)
+- [ ] Canal **push** (FCM / Web Push)
+- [ ] Migrar bandeja "Emails enviados" a vista unificada por canal (`notification_deliveries` donde `channel = email`)
+- [ ] Templates por `(event_key, channel)` en lugar de solo `documentType` en `email_templates`
+- [ ] Ver **Fase 10 — Colaboración interna** (comentarios en documentos, chat de equipo, alertas proactivas). Las alertas proactivas (stock mínimo, presupuestos por vencer) viven ahí, no en email.
 
 ---
 
@@ -738,7 +746,14 @@ Notificaciones, comentarios en documentos y chat entre usuarios de la misma orga
 
 **Depende de:** Auth, permisos por módulo, detalle de documentos en ventas/compras/logística. **Scope commitlint:** `communications`.
 
-**Entidades previstas:** `notifications`, `entity_comments` (polimórfico), `conversations`, `conversation_messages`, `notification_preferences`
+**Entidades previstas:** `notifications` (parcial — v1 con deliveries), `entity_comments` (polimórfico), `conversations`, `conversation_messages`, `notification_preferences`
+
+### Hub de notificaciones (parcial — v1)
+- [x] Tablas `notifications` + `notification_deliveries` con channels (`email`, `in_app`, `push` stub)
+- [x] `emitNotification()` + adapters de canal; email de documentos vía evento `sales.document.shared`
+- [x] Tests: `document-notification.service.test.ts`, delegación en `send-document.service.test.ts`
+- [ ] API REST in-app + centro de notificaciones en header
+- [ ] Worker/outbox para entregas async en eventos automáticos
 
 ### Comentarios y observaciones en documentos
 - [ ] Hilo de comentarios en detalle de entidades operativas: presupuestos, pedidos, facturas, notas de crédito, órdenes de compra, recepciones, facturas de proveedor, devoluciones (venta/compra), remitos, envíos (logística)
@@ -748,7 +763,7 @@ Notificaciones, comentarios en documentos y chat entre usuarios de la misma orga
 - [ ] UI: timeline / panel "Actividad" en pantallas de detalle (junto a adjuntos e historial de estados)
 
 ### Notificaciones in-app
-- [ ] Modelo `notifications` por usuario (`type`, `payload` JSONB, `read_at`, `org_id`)
+- [x] Modelo `notifications` (`event_key`, `payload` JSONB, `read_at`, `org_id`, destinatario polimórfico)
 - [ ] Centro de notificaciones (campana en header ERP) + marcar una/todas como leídas
 - [ ] Eventos iniciales: mención en comentario, cambio de estado relevante, asignación (cuando exista), stock bajo umbral, presupuesto por vencer
 - [ ] Preferencias por usuario (opt-in/out por tipo de evento)
