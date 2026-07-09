@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { StatusPage } from '@/components/layout/StatusPage'
+import { captureClientException } from '@/lib/posthog-errors-client'
 
 export default function ErpError({
   error,
@@ -14,6 +15,7 @@ export default function ErpError({
 }) {
   useEffect(() => {
     console.error(error)
+    captureClientException(error, { boundary: 'erp' })
   }, [error])
 
   return (

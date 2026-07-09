@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { StatusPage } from '@/components/layout/StatusPage'
+import { captureClientException } from '@/lib/posthog-errors-client'
 
 export default function DocumentPrintError({
   error,
@@ -12,6 +13,7 @@ export default function DocumentPrintError({
 }) {
   useEffect(() => {
     console.error(error)
+    captureClientException(error, { boundary: 'document-print' })
   }, [error])
 
   return (
