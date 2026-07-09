@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.44.5](https://github.com/cristianemoyano/andiko/compare/v0.44.4...v0.44.5) (2026-07-09)
+
+### Bug Fixes
+
+* **catalog:** correct GROUP BY alias in listProducts pagination query ([8449452](https://github.com/cristianemoyano/andiko/commit/844945274f27360bf1b2452519b2f1601ec0118a))
+
 ## [0.44.4](https://github.com/cristianemoyano/andiko/compare/v0.44.3...v0.44.4) (2026-07-09)
 
 ### Features
