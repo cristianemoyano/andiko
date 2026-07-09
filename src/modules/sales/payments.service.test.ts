@@ -27,6 +27,9 @@ vi.mock('@/lib/logger', () => ({ default: { info: vi.fn() } }))
 vi.mock('./sales.utils', () => ({
   nextDocumentNumber: vi.fn().mockResolvedValue('COB-0001'),
 }))
+vi.mock('@/modules/accounting/sales-payment-accounting.service', () => ({
+  postSalesPaymentAccounting: vi.fn().mockResolvedValue(undefined),
+}))
 
 import Payment from './payment.model'
 import Invoice from './invoice.model'

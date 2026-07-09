@@ -11,6 +11,8 @@ import Payment from './payment.model'
 import type { SalesOrderInput, SalesOrderUpdateInput, SalesOrderQuery, SalesOrderStatusCountsQuery } from './sales-order.schema'
 import type { OrderBillInput } from './order-bill.schema'
 import { recalcInvoiceBalance } from './invoices.service'
+import { postInvoiceIssuedAccounting } from '@/modules/accounting/sales-invoice-accounting.service'
+import { postSalesPaymentAccounting } from '@/modules/accounting/sales-payment-accounting.service'
 import Decimal from 'decimal.js'
 import type { Transaction } from 'sequelize'
 import Branch from '@/modules/auth/branch.model'
@@ -564,13 +566,14 @@ export async function billOrder(id: string, input: OrderBillInput, ctx: TenantCo
         { status: 'issued', issue_date, due_date, updated_by: actorId },
         { transaction: t },
       )
+      await postInvoiceIssuedAccounting(invoice.id, ctx, t)
     }
 
     if (input.mode === 'issue_and_collect') {
       const payment = input.payment!
       const amount = payment.amount ?? new Decimal(ready.total).toNumber()
       const payment_number = await nextDocumentNumber(ctx.orgId, ready.branch_id as string, 'payment', t)
-      await Payment.create(
+      const createdPayment = await Payment.create(
         {
           org_id:         ctx.orgId,
           branch_id:      ready.branch_id,
@@ -589,6 +592,7 @@ export async function billOrder(id: string, input: OrderBillInput, ctx: TenantCo
         { transaction: t },
       )
       await recalcInvoiceBalance(invoice.id, t)
+      await postSalesPaymentAccounting(createdPayment.id, ctx, t)
     }
 
     logger.info({ orderId: id, invoiceId: invoice.id, mode: input.mode, actorId }, 'order billed')

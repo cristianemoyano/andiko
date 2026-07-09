@@ -8,6 +8,8 @@ import type { SupplierPaymentInput, SupplierPaymentUpdateInput, SupplierPaymentQ
 import { nextPurchaseDocNumber } from './purchases.utils'
 import { recalcSupplierInvoiceBalance } from './supplier-invoices.service'
 import { ensurePurchasesBranchAssociations } from './purchases-branch-associations'
+import type { TenantContext } from '@/lib/tenancy'
+import { postSupplierPaymentAccounting } from '@/modules/accounting/purchase-payment-accounting.service'
 
 export async function listSupplierPayments(query: SupplierPaymentQuery, orgId: string) {
   ensurePurchasesBranchAssociations()
@@ -96,6 +98,9 @@ export async function createSupplierPayment(input: SupplierPaymentInput, orgId: 
     )
 
     await recalcSupplierInvoiceBalance(input.invoice_id, t)
+
+    const ctx: TenantContext = { orgId, userId: actorId, defaultBranchId: null, allowedBranchIds: [] }
+    await postSupplierPaymentAccounting(payment.id, ctx, t)
 
     logger.info({ paymentId: payment.id, invoiceId: input.invoice_id, orgId }, 'supplier payment created')
     return payment

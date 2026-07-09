@@ -12,6 +12,9 @@ import { nextDocumentNumber } from '@/modules/sales/sales.utils'
 import { recalcInvoiceBalance } from '@/modules/sales/invoices.service'
 import type { PaymentMethod } from '@/modules/sales/payment.constants'
 import type { PosSaleAuthorizeInput } from '@/modules/pos/pos-fiscal.schema'
+import type { TenantContext } from '@/lib/tenancy'
+import { postInvoiceIssuedAccounting } from '@/modules/accounting/sales-invoice-accounting.service'
+import { postSalesPaymentAccounting } from '@/modules/accounting/sales-payment-accounting.service'
 
 function mapPosPaymentMethod(type: string): PaymentMethod {
   const normalized = type.toLowerCase()
@@ -89,6 +92,7 @@ async function registerPosPaymentsOnInvoice(
   payments: PosSaleAuthorizeInput['payments'],
   actorId: string | null,
   issueDate: Date,
+  ctx: TenantContext,
   t: import('sequelize').Transaction,
 ): Promise<void> {
   if (payments.length === 0 || !order.branch_id) return
@@ -98,7 +102,7 @@ async function registerPosPaymentsOnInvoice(
 
   for (const payment of payments) {
     const paymentNumber = await nextDocumentNumber(order.org_id!, order.branch_id, 'payment', t)
-    await Payment.create(
+    const createdPayment = await Payment.create(
       {
         org_id: order.org_id,
         branch_id: order.branch_id,
@@ -116,6 +120,7 @@ async function registerPosPaymentsOnInvoice(
       },
       { transaction: t },
     )
+    await postSalesPaymentAccounting(createdPayment.id, ctx, t)
   }
 
   await recalcInvoiceBalance(invoice.id, t)
@@ -154,6 +159,7 @@ export async function finalizePosSaleInErp(
     })
 
     const actorId = resolveActorId(order)
+    const ctx: TenantContext = { orgId, userId: actorId ?? orgId, defaultBranchId: null, allowedBranchIds: [] }
 
     const existingInvoice = await Invoice.findOne({
       where: { order_id: order.id, org_id: orgId },
@@ -163,7 +169,7 @@ export async function finalizePosSaleInErp(
     if (existingInvoice) {
       const synced = await syncInvoiceAfipFromOrder(existingInvoice, order, actorId, t)
       const issueDate = order.issue_date ? new Date(String(order.issue_date)) : order.created_at
-      await registerPosPaymentsOnInvoice(synced, order, options.payments ?? [], actorId, issueDate, t)
+      await registerPosPaymentsOnInvoice(synced, order, options.payments ?? [], actorId, issueDate, ctx, t)
       return synced.reload({ transaction: t })
     }
 
@@ -240,8 +246,10 @@ export async function finalizePosSaleInErp(
       { transaction: t },
     )
 
+    await postInvoiceIssuedAccounting(invoice.id, ctx, t)
+
     const payments = options.payments ?? []
-    await registerPosPaymentsOnInvoice(invoice, order, payments, actorId, issueDate, t)
+    await registerPosPaymentsOnInvoice(invoice, order, payments, actorId, issueDate, ctx, t)
 
     await invoice.reload({ transaction: t })
     logger.info(

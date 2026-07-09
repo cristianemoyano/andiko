@@ -1,8 +1,18 @@
 import { QueryTypes } from 'sequelize'
 import type { Transaction } from 'sequelize'
 import sequelize from '@/lib/db'
+import type Account from './account.model'
 
 const ENTRY_PREFIX = 'AS'
+
+export const CASH_ACCOUNT_CODE = '1.1.01.01'
+export const BANK_ACCOUNT_CODE = '1.1.01.02'
+
+/** Elige Caja o Banco según el medio de pago — 'cash' es la única variante que va a caja. */
+export function resolveCashOrBankAccountId(byCode: Map<string, Account>, paymentMethod: string): string | undefined {
+  const code = paymentMethod === 'cash' ? CASH_ACCOUNT_CODE : BANK_ACCOUNT_CODE
+  return byCode.get(code)?.id
+}
 
 /**
  * Siguiente número de asiento por organización.

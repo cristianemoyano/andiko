@@ -1,0 +1,105 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { TenantContext } from '@/lib/tenancy'
+
+vi.mock('server-only', () => ({}))
+
+const { accountFindAll, entryCreate, entryFindOne, lineBulkCreate, paymentFindByPk, CASH_ACCOUNT_CODE, BANK_ACCOUNT_CODE } = vi.hoisted(() => ({
+  accountFindAll:  vi.fn(),
+  entryCreate:     vi.fn(),
+  entryFindOne:    vi.fn(),
+  lineBulkCreate:  vi.fn(),
+  paymentFindByPk: vi.fn(),
+  CASH_ACCOUNT_CODE: '1.1.01.01',
+  BANK_ACCOUNT_CODE: '1.1.01.02',
+}))
+
+vi.mock('./account.model', () => ({ default: { findAll: accountFindAll } }))
+vi.mock('./journal-entry.model', () => ({ default: { create: entryCreate, findOne: entryFindOne } }))
+vi.mock('./journal-entry-line.model', () => ({ default: { bulkCreate: lineBulkCreate } }))
+vi.mock('./accounting-associations', () => ({ ensureAccountingAssociations: vi.fn() }))
+vi.mock('./accounting.utils', () => ({
+  nextEntryNumber: vi.fn(async () => 'AS-000001'),
+  CASH_ACCOUNT_CODE,
+  BANK_ACCOUNT_CODE,
+  resolveCashOrBankAccountId: (byCode: Map<string, { id: string }>, paymentMethod: string) =>
+    byCode.get(paymentMethod === 'cash' ? CASH_ACCOUNT_CODE : BANK_ACCOUNT_CODE)?.id,
+}))
+vi.mock('@/modules/purchases/supplier-payment.model', () => ({ default: { findByPk: paymentFindByPk } }))
+
+import { postSupplierPaymentAccounting } from './purchase-payment-accounting.service'
+
+const ctx: TenantContext = { orgId: 'org-1', userId: 'user-1', defaultBranchId: null, allowedBranchIds: [] }
+const t = {} as never
+
+const ALL_ACCOUNTS = [
+  { id: 'acc-payable', code: '2.1.01.01' },
+  { id: 'acc-cash',    code: '1.1.01.01' },
+  { id: 'acc-bank',    code: '1.1.01.02' },
+]
+
+function mockPayment(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'spay-1',
+    payment_number: 'PAG-0001',
+    amount: '100.00',
+    payment_method: 'transfer',
+    branch_id: 'branch-1',
+    payment_date: new Date('2026-07-01'),
+    ...overrides,
+  }
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  entryFindOne.mockResolvedValue(null)
+  entryCreate.mockResolvedValue({ id: 'entry-1' })
+  lineBulkCreate.mockResolvedValue([])
+  accountFindAll.mockResolvedValue(ALL_ACCOUNTS)
+})
+
+describe('postSupplierPaymentAccounting', () => {
+  it('is idempotent — no-ops when an entry already exists', async () => {
+    entryFindOne.mockResolvedValue({ id: 'existing' })
+    paymentFindByPk.mockResolvedValue(mockPayment())
+
+    await postSupplierPaymentAccounting('spay-1', ctx, t)
+
+    expect(entryCreate).not.toHaveBeenCalled()
+  })
+
+  it('no-ops when the payment amount is zero', async () => {
+    paymentFindByPk.mockResolvedValue(mockPayment({ amount: '0.00' }))
+    await postSupplierPaymentAccounting('spay-1', ctx, t)
+    expect(entryCreate).not.toHaveBeenCalled()
+  })
+
+  it('no-ops when required accounts are missing', async () => {
+    paymentFindByPk.mockResolvedValue(mockPayment())
+    accountFindAll.mockResolvedValue([])
+    await postSupplierPaymentAccounting('spay-1', ctx, t)
+    expect(entryCreate).not.toHaveBeenCalled()
+  })
+
+  it('debits proveedores and credits Banco for non-cash payments', async () => {
+    paymentFindByPk.mockResolvedValue(mockPayment({ payment_method: 'transfer' }))
+
+    await postSupplierPaymentAccounting('spay-1', ctx, t)
+
+    expect(entryCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ source_type: 'purchase_payment', source_id: 'spay-1', status: 'posted', total_debit: '100.00', total_credit: '100.00' }),
+      expect.anything(),
+    )
+    const lines = lineBulkCreate.mock.calls[0]![0] as Array<{ account_id: string; debit: string; credit: string }>
+    expect(lines.find(l => l.account_id === 'acc-payable')).toMatchObject({ debit: '100.00', credit: '0.00' })
+    expect(lines.find(l => l.account_id === 'acc-bank')).toMatchObject({ debit: '0.00', credit: '100.00' })
+  })
+
+  it('credits Caja for cash payments', async () => {
+    paymentFindByPk.mockResolvedValue(mockPayment({ payment_method: 'cash' }))
+
+    await postSupplierPaymentAccounting('spay-1', ctx, t)
+
+    const lines = lineBulkCreate.mock.calls[0]![0] as Array<{ account_id: string; debit: string; credit: string }>
+    expect(lines.find(l => l.account_id === 'acc-cash')).toMatchObject({ debit: '0.00', credit: '100.00' })
+  })
+})
