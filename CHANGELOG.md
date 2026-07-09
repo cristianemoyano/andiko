@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.44.6](https://github.com/cristianemoyano/andiko/compare/v0.44.5...v0.44.6) (2026-07-09)
+
+### Bug Fixes
+
+* **catalog:** fix Sequelize alias bugs breaking list queries in production ([e132088](https://github.com/cristianemoyano/andiko/commit/e132088ae3de72226c40b468a83b98b1f4efc7c7))
+
 ## [0.44.5](https://github.com/cristianemoyano/andiko/compare/v0.44.4...v0.44.5) (2026-07-09)
 
 ### Bug Fixes
