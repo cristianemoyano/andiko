@@ -494,7 +494,7 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [x] Impersonación sys-admin: nombre de org en búsqueda/recientes; panel org con nombre en título
 - [x] **Monetización por sitio (WooCommerce)** — `included_sites` / `per_site_price` en planes, conteo de sitios activos, línea de cargo `site` (espejo de sucursales), snapshot `billed_sites` en factura, campos en `PlanModal` y seed
 - [x] **Servicio de archivos** — backends S3, Google Drive y Dropbox; credenciales en `platform_settings`; ReBAC por registro vinculado + shares explícitos; adjuntos en compras (facturas proveedor, recepciones); preview PDF/imagen; sys-admin `/sys-admin/storage`
-- [x] Test de almacenamiento desde `/sys-admin/storage` — `POST/DELETE /api/v1/sys-admin/storage-settings/test` (sube objeto de prueba, verifica HeadObject, eliminación manual)
+- [x] Test de almacenamiento desde `/sys-admin/storage` — `POST/DELETE /api/v1/sys-admin/storage-settings/test` (S3: presigned PUT, descarga presignada, stream preview; HeadObject; eliminación manual)
 - [x] `/documentos/compartidos` — listado de archivos compartidos explícitamente con el usuario (sin permiso de módulo sobre el registro vinculado)
 - [x] Medición de storage en tiempo real al subir/eliminar archivos (`storage_gb` / `storage_files` en `usage_records`; job diario de reconciliación)
 - [x] Paths estructurados de almacenamiento (`{slug}/suc-{code}/{módulo}/{entidad}/{yyyy}/{mm}/{dd}/…`); slug de org inmutable tras creación
@@ -504,7 +504,8 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [ ] Portal self-service de facturación para la org — autogestión (cambiar plan/seats, pagar). El panel de lectura para el Gerente (suscripción, consumo, facturas) ya está implementado
 - [ ] Factura electrónica AFIP (CAE) de la plataforma hacia las orgs *(datos del emisor + snapshot en la factura ya implementados como base)*
 - [ ] Generación automática de facturas recurrentes (cron) *(hoy las facturas se generan manualmente desde sys-admin; `current_period_start/end` no los setea ningún scheduler)*
-- [ ] Dunning / suspensión automática en `past_due`
+- [x] Dunning parcial — `billing-dunning.service.ts` marca `past_due` al vencer facturas impagas; job `POST /api/v1/sys-admin/billing/jobs/dunning`; reactivación al registrar pago
+- [ ] Suspensión / bloqueo de acceso ERP en `past_due` (hoy solo cambia estado de suscripción)
 
 ---
 
@@ -532,7 +533,7 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 |---|---|---|
 | **Pregunta que responde** | ¿Quién me debe, a quién debo, cuándo cobro/pago, con qué medio? | ¿Cómo queda registrado en los libros (debe/haber, cuentas, períodos)? |
 | **Enfoque** | Operativo del día a día — flujo de caja y gestión de cobranzas/pagos | Normativo y de cierre — plan de cuentas, asientos, balances, exportación al estudio |
-| **Dónde está hoy** | Cuenta corriente clientes en **Ventas** (`/ventas/cuenta-corriente`), proveedores en **Compras**; pagos y saldos en documentos; gaps en sección [Tesorería](#tesorería-impuestos-y-cumplimiento-ar-gaps-identificados--sin-fecha) (cheques, banco, cobranzas) | Módulo **Contabilidad** (`/contabilidad`): plan de cuentas, asientos manuales/automáticos, balance; Libro IVA en UI contable |
+| **Dónde está hoy** | Cuenta corriente clientes en **Ventas** (`/ventas/cuenta-corriente`), proveedores en **Compras**; pagos y saldos en documentos; gaps en sección [Tesorería](#tesorería-impuestos-y-cumplimiento-ar-gaps-identificados--sin-fecha) (cheques, banco, cobranzas) | Módulo **Contabilidad** (`/contabilidad`): plan de cuentas, asientos manuales, auto-posting solo en devoluciones ventas/compras, balance; Libro IVA en UI contable |
 | **Usuario típico** | Administración, cobranzas, tesorería | Contador / responsable de cierre |
 | **Relación** | Un cobro en finanzas debería generar (o vincularse a) un asiento contable cuando el auto-posting esté completo | Los asientos reflejan hechos ya ocurridos en ventas, compras, tesorería e inventario |
 
@@ -625,7 +626,7 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] `POST /api/v1/pos/cash-sessions/sync` — batch sync de turnos POS → `pos_cash_sessions`
 - [x] `GET /api/v1/pos/cash-sessions` — historial de turnos con filtros (estado, rango de fechas, sucursal)
 - [x] `/pos/cajas` — vista ERP de turnos de caja con tabla, filtros y paginación
-- [x] Medios de pago dinámicos — `pos_payment_methods` + `pos_branch_payment_methods`; configurables desde ERP por org/sucursal, sincronizados al POS; reemplaza `payment_method` fijo por `payments[]` con soporte mixto a futuro
+- [x] Medios de pago dinámicos — `pos_payment_methods` + `pos_branch_payment_methods`; configurables desde ERP por org/sucursal, sincronizados al POS; `payments[]` en backend (múltiples filas por venta); **checkout POS hoy envía un solo medio** — UI mixta pendiente
 - [x] `GET /api/v1/pos/payment-methods` — endpoint POS-device: métodos activos para la sucursal del dispositivo
 - [x] `GET/POST /api/v1/pos/org-payment-methods` + `PATCH/DELETE /api/v1/pos/org-payment-methods/:id` — CRUD ERP para administrar métodos de pago
 - [x] `/pos/medios-de-pago` — pantalla ERP: gestión de métodos con asignación por sucursal
