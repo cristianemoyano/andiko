@@ -105,7 +105,7 @@ export async function listProducts(query: ProductQuery, ctx: TenantContext) {
     order: [['name', 'ASC']],
     subQuery: false,
     attributes: ['id'],
-    group: ['Product.id'],
+    group: ['id'],
     include: [
       { model: ProductVariant, as: 'variants', required: false, attributes: [] },
     ],
