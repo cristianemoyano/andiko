@@ -70,13 +70,16 @@ function encryptField(plaintext: string, existingEncrypted: string): string {
 /** Resolved S3 credentials for adapter construction. Server-only. */
 export async function getResolvedS3Config(): Promise<S3StorageConfig | null> {
   const row = await getRow()
-  if (!row.s3_bucket || !row.s3_region || !row.s3_access_key_id) return null
-  const secretAccessKey = decryptField(row.s3_secret_access_key_encrypted)
+  const bucket = row.s3_bucket.trim()
+  const region = row.s3_region.trim()
+  const accessKeyId = row.s3_access_key_id.trim()
+  if (!bucket || !region || !accessKeyId) return null
+  const secretAccessKey = decryptField(row.s3_secret_access_key_encrypted).trim()
   if (!secretAccessKey) return null
   return {
-    bucket: row.s3_bucket,
-    region: row.s3_region,
-    accessKeyId: row.s3_access_key_id,
+    bucket,
+    region,
+    accessKeyId,
     secretAccessKey,
     endpoint: row.s3_endpoint.trim() || undefined,
   }
@@ -162,7 +165,7 @@ export async function updateStorageSettings(
   const row = await getRow()
 
   const s3_secret_access_key_encrypted = encryptField(
-    input.s3_secret_access_key ?? '',
+    (input.s3_secret_access_key ?? '').trim(),
     row.s3_secret_access_key_encrypted,
   )
   const gdrive_service_account_json_encrypted = encryptField(
@@ -183,11 +186,11 @@ export async function updateStorageSettings(
   await row.update({
     storage_enabled: input.enabled ?? row.storage_enabled,
     storage_provider: input.provider ?? row.storage_provider,
-    s3_bucket: input.s3_bucket ?? row.s3_bucket,
-    s3_region: input.s3_region ?? row.s3_region,
-    s3_access_key_id: input.s3_access_key_id ?? row.s3_access_key_id,
+    s3_bucket: (input.s3_bucket ?? row.s3_bucket).trim(),
+    s3_region: (input.s3_region ?? row.s3_region).trim(),
+    s3_access_key_id: (input.s3_access_key_id ?? row.s3_access_key_id).trim(),
     s3_secret_access_key_encrypted,
-    s3_endpoint: input.s3_endpoint ?? row.s3_endpoint,
+    s3_endpoint: (input.s3_endpoint ?? row.s3_endpoint).trim(),
     gdrive_service_account_json_encrypted,
     gdrive_folder_id: input.gdrive_folder_id ?? row.gdrive_folder_id,
     dropbox_app_key: (input.dropbox_app_key ?? row.dropbox_app_key).trim(),

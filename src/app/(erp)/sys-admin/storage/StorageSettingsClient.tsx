@@ -262,11 +262,10 @@ export function StorageSettingsClient() {
     setTestMsg(null)
     setDeletingTest(true)
     try {
-      await fetchJson<{ ok: true; storage_key: string }>(`${ENDPOINT}/test`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storage_key: lastTestFile.storage_key }),
-      })
+      await fetchJson<{ ok: true; storage_key: string }>(
+        `${ENDPOINT}/test?storage_key=${encodeURIComponent(lastTestFile.storage_key)}`,
+        { method: 'DELETE' },
+      )
       setLastTestFile(null)
       setTestMsg('Archivo de prueba eliminado del backend.')
     } catch (e) {

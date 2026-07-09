@@ -106,6 +106,19 @@ Routine ERP releases should **only** touch the app container. Infra services (po
 
 **Regla:** si el cambio es solo código del ERP → `prod-release` o `prod-deploy-app`. Si el cambio es infra → `prod-deploy-infra` (y migraciones/scripts específicos si aplica). Nunca usar `docker stack rm` para rotar secrets o publicar una versión nueva de la app.
 
+### Zero-downtime en releases de app
+
+Objetivo: **cada release de ERP no debe cortar tráfico**.
+
+| Mecanismo | Dónde |
+|-----------|--------|
+| `prod-release` → `prod-deploy-app` | Solo actualiza `andiko_app`; postgres/nginx/mail/portainer siguen corriendo |
+| `update_config.order: start-first` | `infra/docker-stack.yml` — Swarm levanta el contenedor nuevo antes de bajar el viejo |
+| `failure_action: rollback` | Si el nuevo contenedor no pasa healthcheck, Swarm revierte solo |
+| Healthcheck en app | `wget` a `/api/health` antes de converger el rolling update |
+
+`prod-deploy-infra` (`docker stack deploy`) puede reiniciar servicios del stack y **no** es el camino para releases rutinarios. Usarlo solo cuando cambia `docker-stack.yml`, puertos, mail o un servicio nuevo.
+
 ### Manual deploy (advanced)
 
 If you need to run steps separately:
