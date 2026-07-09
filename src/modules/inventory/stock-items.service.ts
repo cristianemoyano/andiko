@@ -1,6 +1,6 @@
 import 'server-only'
 import Decimal from 'decimal.js'
-import { Op, literal } from 'sequelize'
+import { Op, col, literal, where as sqlWhere } from 'sequelize'
 import sequelize from '@/lib/db'
 import { paginate, toPaginated } from '@/lib/pagination'
 import type { TenantContext } from '@/lib/tenancy'
@@ -46,26 +46,32 @@ export async function getStockLevels(query: StockLevelQuery, orgId: string) {
     })
   }
   if (below_minimum) {
-    andParts.push(
-      literal(
-        '("StockItem"."minimum_quantity" > 0 AND "StockItem"."quantity" <= "StockItem"."minimum_quantity")',
-      ),
-    )
+    andParts.push({
+      minimum_quantity: { [Op.gt]: 0 },
+      [Op.and]: sqlWhere(col('quantity'), Op.lte, col('minimum_quantity')),
+    })
   }
   if (expired) {
-    andParts.push(
-      literal(
-        '("StockItem"."expires_on" IS NOT NULL AND "StockItem"."expires_on" < CURRENT_DATE)',
-      ),
-    )
+    andParts.push({
+      expires_on: {
+        [Op.and]: [
+          { [Op.ne]: null },
+          { [Op.lt]: literal('CURRENT_DATE') },
+        ],
+      },
+    })
   }
   if (expiring_within_days != null) {
     const days = Number(expiring_within_days)
-    andParts.push(
-      literal(
-        `("StockItem"."expires_on" IS NOT NULL AND "StockItem"."expires_on" >= CURRENT_DATE AND "StockItem"."expires_on" <= CURRENT_DATE + (${days} * INTERVAL '1 day'))`,
-      ),
-    )
+    andParts.push({
+      expires_on: {
+        [Op.and]: [
+          { [Op.ne]: null },
+          { [Op.gte]: literal('CURRENT_DATE') },
+          { [Op.lte]: literal(`CURRENT_DATE + (${days} * INTERVAL '1 day')`) },
+        ],
+      },
+    })
   }
 
   const where = { [Op.and]: andParts }
@@ -227,7 +233,7 @@ export async function applyWarehouseDefaultMinimum(
     ? {
         [Op.and]: [
           { org_id: ctx.orgId, warehouse_id: warehouseId },
-          literal('"StockItem"."minimum_quantity" = 0'),
+          { minimum_quantity: 0 },
         ],
       }
     : { org_id: ctx.orgId, warehouse_id: warehouseId }
@@ -289,10 +295,8 @@ export async function getReplenishmentList(orgId: string): Promise<Replenishment
   const items = await StockItem.findAll({
     where: {
       org_id: orgId,
-      [Op.and]: [
-        literal('"StockItem"."minimum_quantity" > 0'),
-        literal('"StockItem"."quantity" <= "StockItem"."minimum_quantity"'),
-      ],
+      minimum_quantity: { [Op.gt]: 0 },
+      [Op.and]: sqlWhere(col('quantity'), Op.lte, col('minimum_quantity')),
     },
     attributes: ['id', 'variant_id', 'warehouse_id', 'quantity', 'minimum_quantity'],
     include: [

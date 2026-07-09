@@ -49,6 +49,12 @@ vi.mock('@/modules/integrations/woocommerce/woocommerce-product-link.model', () 
 describe('catalog/products.service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    productFindAll.mockReset()
+    productCount.mockReset()
+    productFindOne.mockReset()
+    productCreate.mockReset()
+    variantCreate.mockReset()
+    variantUpdate.mockReset()
   })
 
   it('listProducts resolves page ids via a grouped query and supports sku search', async () => {
@@ -62,14 +68,13 @@ describe('catalog/products.service', () => {
       { orgId: 'o1', userId: 'u1', defaultBranchId: null, allowedBranchIds: [] }
     )
 
-    // First findAll call resolves the page of product ids (subQuery:false + GROUP BY id,
-    // since the search filters on a joined column and LIMIT/OFFSET must apply per-product).
+    // Search path: subQuery:false + GROUP BY products.id (qualified — not bare "id" or "Product.id").
     expect(productFindAll).toHaveBeenCalledTimes(1)
     const arg = productFindAll.mock.calls[0]![0]
     expect(arg).toMatchObject({
       subQuery: false,
-      group: ['id'],
     })
+    expect(arg.group).toEqual([expect.objectContaining({ val: '"products"."id"' })])
     expect(Array.isArray(arg.include)).toBe(true)
     const includes = arg.include as unknown as Array<{ as?: string }>
     expect(includes.some(i => i.as === 'variants')).toBe(true)
@@ -87,6 +92,26 @@ describe('catalog/products.service', () => {
       return JSON.stringify(clause[orKey]).includes('$variants.sku$')
     })
     expect(hasSkuSearch).toBe(true)
+  })
+
+  it('listProducts without search skips variant join and GROUP BY', async () => {
+    productFindAll.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+    productCount.mockResolvedValue(0)
+
+    const { listProducts } = await import('./products.service')
+
+    await listProducts(
+      { page: 1, limit: 20 },
+      { orgId: 'o1', userId: 'u1', defaultBranchId: null, allowedBranchIds: [] },
+    )
+
+    const idArg = productFindAll.mock.calls[0]![0]
+    expect(idArg.subQuery).toBeUndefined()
+    expect(idArg.group).toBeUndefined()
+    expect(idArg.include).toBeUndefined()
+    expect(productCount).toHaveBeenCalledWith(expect.objectContaining({ where: expect.any(Object) }))
+    const countArg = productCount.mock.calls[0]![0]
+    expect(countArg.include).toBeUndefined()
   })
 
   it('listProducts loads full rows for the resolved page ids, preserving page order', async () => {
