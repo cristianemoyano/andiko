@@ -19,6 +19,7 @@ import { DatePicker } from '@/components/primitives/DatePicker'
 import { CurrencyInput, formatARS } from '@/components/primitives/CurrencyInput'
 import { StatusPipeline } from '@/components/erp/StatusPipeline'
 import { AfipDocumentPanel } from '@/components/erp/AfipDocumentPanel'
+import { AccountingAutoPostHint } from '@/components/erp/AccountingAutoPostHint'
 import { SalesDocumentNumber } from '@/components/erp/SalesDocumentNumber'
 import { VentasSubNav } from '../../VentasSubNav'
 import type { Invoice, Payment, PaymentMethod } from '../../types'
@@ -326,7 +327,10 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                 />
               </h1>
             </div>
-            <StatusPipeline type="invoice" status={invoice.status} />
+            <div className="flex items-center gap-3">
+              <AccountingAutoPostHint screen="sales-invoice" showJournalEntriesLink label={null} />
+              <StatusPipeline type="invoice" status={invoice.status} />
+            </div>
           </div>
 
           <div className="bg-surface border border-border rounded-sm p-5">

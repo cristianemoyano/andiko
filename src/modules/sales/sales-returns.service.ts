@@ -49,8 +49,8 @@ function auditUserId(ctx: TenantContext): string | null {
   return ctx.userId || null
 }
 
-function stockActorId(ctx: TenantContext): string {
-  return auditUserId(ctx) ?? ctx.orgId
+function stockActorId(ctx: TenantContext): string | null {
+  return auditUserId(ctx)
 }
 
 export async function listSalesReturns(query: SalesReturnQuery, ctx: TenantContext) {

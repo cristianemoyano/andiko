@@ -123,7 +123,9 @@ export function PlanDeCuentasClient() {
       render: row => (
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="xs" onClick={() => openEdit(row)}>Editar</Button>
-          <Button variant="ghost" size="xs" onClick={() => setToDelete(row)}>Eliminar</Button>
+          {!row.is_system && (
+            <Button variant="ghost" size="xs" onClick={() => setToDelete(row)}>Eliminar</Button>
+          )}
         </div>
       ),
     },

@@ -12,6 +12,8 @@ import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-
 import { nextPurchaseDocNumber, calcLineItem, calcDocumentTotals, calcDueDate } from './purchases.utils'
 import { ensurePurchasesBranchAssociations } from './purchases-branch-associations'
 import type { IvaRate } from '@/types'
+import type { TenantContext } from '@/lib/tenancy'
+import { postSupplierInvoiceAccounting } from '@/modules/accounting/purchase-invoice-accounting.service'
 
 export async function listSupplierInvoices(query: SupplierInvoiceQuery, orgId: string) {
   ensurePurchasesBranchAssociations()
@@ -253,6 +255,10 @@ export async function receiveSupplierInvoice(id: string, orgId: string, actorId:
       },
       { transaction: t },
     )
+
+    const ctx: TenantContext = { orgId, userId: actorId, defaultBranchId: null, allowedBranchIds: [] }
+    await postSupplierInvoiceAccounting(id, ctx, t)
+
     logger.info({ invoiceId: id }, 'supplier invoice received')
     return invoice
   })

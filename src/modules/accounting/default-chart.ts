@@ -89,3 +89,20 @@ export const DEFAULT_CHART_OF_ACCOUNTS: DefaultAccount[] = [
   { code: '5.3.01', name: 'Intereses pagados', type: 'expense', parent_code: '5.3', is_postable: true },
   { code: '5.3.02', name: 'Comisiones bancarias', type: 'expense', parent_code: '5.3', is_postable: true },
 ]
+
+/** Códigos del plan default usados por auto-post de ventas/compras. */
+export const AUTO_POST_ACCOUNT_CODES = {
+  sales:      '4.1.01',
+  ivaDebit:   '2.1.02.01',
+  receivable: '1.1.02.01',
+  ivaCredit:  '1.1.02.02',
+  inventory:  '1.1.03.01',
+  payable:    '2.1.01.01',
+  cogs:       '5.1.01',
+  cash:       '1.1.01.01',
+  bank:       '1.1.01.02',
+} as const
+
+export const REQUIRED_AUTO_POST_CODES = [
+  ...new Set(Object.values(AUTO_POST_ACCOUNT_CODES)),
+] as const

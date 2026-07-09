@@ -11,6 +11,7 @@ import { TotalsFooter } from '@/components/erp/TotalsFooter'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { EmptyState } from '@/components/erp/EmptyState'
 import { OwnerAttachmentsSection } from '@/components/erp/OwnerAttachmentsSection'
+import { AccountingAutoPostHint } from '@/components/erp/AccountingAutoPostHint'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { CurrencyInput, formatARS } from '@/components/primitives/CurrencyInput'
 import { FormField } from '@/components/primitives/FormField'
@@ -211,8 +212,11 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
                 {invoice.contact?.legal_name ?? 'Sin proveedor'} · {invoice.branch?.name ?? 'Sin sucursal'}
               </p>
             </div>
-            <div data-testid="supplier-invoice-status">
-              <StatusBadge value={SUPPLIER_INVOICE_STATUS_LABEL[invoice.status]} />
+            <div className="flex items-center gap-3">
+              <AccountingAutoPostHint screen="purchase-invoice" showJournalEntriesLink label={null} />
+              <div data-testid="supplier-invoice-status">
+                <StatusBadge value={SUPPLIER_INVOICE_STATUS_LABEL[invoice.status]} />
+              </div>
             </div>
           </div>
 

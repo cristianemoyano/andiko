@@ -30,10 +30,10 @@ Usar **antes de merge** cuando un cambio toca más de un módulo o un flujo fina
 - [ ] Numeración fiscal coherente con secuencias internas
 - [ ] Contingencia: cola `afip_emissions` si falla transporte
 
-### Contabilidad (cuando exista auto-post)
+### Contabilidad
 
-- [ ] Factura emitida, cobro, recepción → asiento (hoy solo devoluciones están automatizadas)
-- [ ] Si no hay asiento aún, documentar en PR que el KPI contable no se actualiza
+- [x] Factura emitida, cobro, recepción, pago a proveedor → asiento (además de devoluciones)
+- [ ] Si un flujo nuevo no genera asiento, documentar en PR que el KPI contable no se actualiza
 
 ### API y UI
 
@@ -61,6 +61,7 @@ Usar **antes de merge** cuando un cambio toca más de un módulo o un flujo fina
 | Recepción confirmada → stock IN | Cantidad en `stock_items` / batches |
 | Factura emitida → CAE (homologación) | Panel AFIP en detalle de factura |
 | Devolución completada → stock + NC + asiento | Estados finales coherentes |
+| Factura emitida / cobro / recepción de compra / pago a proveedor → asiento | `journal_entries.source_type` en `sales_invoice` / `sales_payment` / `purchase_invoice` / `purchase_payment`, debe = haber |
 | POS sync → `sales_orders` + stock | Venta visible en ERP y stock actualizado |
 | WooCommerce order → pedido + stock | `source=woocommerce`, sin doble descuento |
 
@@ -73,4 +74,6 @@ Usar **antes de merge** cuando un cambio toca más de un módulo o un flujo fina
 | Compras → stock | `src/modules/purchases/purchase-receipts.service.ts` |
 | AFIP | `src/modules/afip/afip-emission.service.ts` |
 | Contabilidad devoluciones | `src/modules/accounting/sales-return-accounting.service.ts` |
+| Contabilidad factura de venta / cobro | `src/modules/accounting/sales-invoice-accounting.service.ts`, `sales-payment-accounting.service.ts` |
+| Contabilidad factura de compra / pago | `src/modules/accounting/purchase-invoice-accounting.service.ts`, `purchase-payment-accounting.service.ts` |
 | Tenancy | `src/lib/tenancy.ts` |

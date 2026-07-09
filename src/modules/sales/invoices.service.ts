@@ -22,6 +22,7 @@ import { assertSaleLineItemsFromActiveCatalog } from './sales-line-items.validat
 import { isOrderInvoiceable } from './sales-order-workflow'
 import type { InvoiceStatus } from './invoice.model'
 import type { IvaRate } from '@/types'
+import { postInvoiceIssuedAccounting } from '@/modules/accounting/sales-invoice-accounting.service'
 
 export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
@@ -304,6 +305,8 @@ export async function issueInvoice(id: string, ctx: TenantContext, actorId: stri
       { status: 'issued', issue_date, due_date, updated_by: actorId },
       { transaction: t },
     )
+
+    await postInvoiceIssuedAccounting(id, ctx, t)
 
     logger.info({ invoiceId: id, actorId }, 'invoice issued')
     return invoice.reload({ transaction: t })

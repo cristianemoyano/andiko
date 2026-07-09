@@ -46,6 +46,9 @@ vi.mock('./sales-line-items.validation', () => ({
 vi.mock('./sales-line-stock.service', () => ({
   assertSaleLineItemsHaveBranchStock: vi.fn().mockResolvedValue(undefined),
 }))
+vi.mock('@/modules/accounting/sales-invoice-accounting.service', () => ({
+  postInvoiceIssuedAccounting: vi.fn().mockResolvedValue(undefined),
+}))
 
 import Invoice from './invoice.model'
 import { issueInvoice, cancelInvoice, listInvoices, getInvoice } from './invoices.service'

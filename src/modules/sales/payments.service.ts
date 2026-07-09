@@ -10,6 +10,7 @@ import type { PaymentInput, PaymentUpdateInput, PaymentQuery } from './payment.s
 import { nextDocumentNumber } from './sales.utils'
 import { type TenantContext } from '@/lib/tenancy'
 import { whereSalesDocumentScope } from './sales-scope'
+import { postSalesPaymentAccounting } from '@/modules/accounting/sales-payment-accounting.service'
 
 export async function listPayments(query: PaymentQuery, ctx: TenantContext) {
   const { page, limit, invoice_id, contact_id, payment_method } = query
@@ -73,6 +74,7 @@ export async function createPayment(input: PaymentInput, ctx: TenantContext, act
     )
 
     await recalcInvoiceBalance(input.invoice_id, t)
+    await postSalesPaymentAccounting(payment.id, ctx, t)
 
     logger.info({ paymentId: payment.id, invoiceId: input.invoice_id, orgId: ctx.orgId, actorId }, 'payment registered')
     return payment

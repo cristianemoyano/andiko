@@ -142,9 +142,12 @@ export function CuentaModal({ open, account, accounts, onOpenChange, onSaved }: 
                 type="checkbox"
                 name="is_active"
                 defaultChecked={account ? account.is_active : true}
-                className="w-4 h-4 rounded-sm accent-brand-600 cursor-pointer"
+                disabled={account?.is_system === true || saving}
+                className="w-4 h-4 rounded-sm accent-brand-600 cursor-pointer disabled:opacity-50"
               />
-              <span className="text-[13px] text-fg-muted">Activa</span>
+              <span className="text-[13px] text-fg-muted">
+                Activa{account?.is_system ? ' (cuenta del sistema)' : ''}
+              </span>
             </label>
           </div>
 
