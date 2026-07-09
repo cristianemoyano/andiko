@@ -377,7 +377,7 @@ export function DepositoDetail() {
             <div className="flex flex-col gap-1 min-w-0">
               <Link
                 href="/inventario/depositos"
-                className="text-[12px] font-medium text-brand-600 hover:underline w-fit"
+                className="text-[12px] font-medium text-brand-accent hover:underline w-fit"
               >
                 ← Depósitos
               </Link>

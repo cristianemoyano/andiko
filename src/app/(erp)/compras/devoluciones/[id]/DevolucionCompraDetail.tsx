@@ -112,7 +112,7 @@ export function DevolucionCompraDetail() {
               <StatusBadge value={RETURN_STATUS_LABEL[row.status]} />
             </div>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[13px]">
-              <div><dt className="text-fg-subtle">Orden</dt><dd><Link href={`/compras/ordenes/${row.order_id}`} className="text-brand-600 hover:underline">{row.order?.order_number}</Link></dd></div>
+              <div><dt className="text-fg-subtle">Orden</dt><dd><Link href={`/compras/ordenes/${row.order_id}`} className="text-brand-accent hover:underline">{row.order?.order_number}</Link></dd></div>
               <div><dt className="text-fg-subtle">Tipo</dt><dd>{row.operation_type === 'exchange' ? 'Cambio' : 'Devolución'}</dd></div>
               <div><dt className="text-fg-subtle">Total devuelto</dt><dd>{formatARS(row.returned_total)}</dd></div>
               {row.operation_type === 'exchange' && (
@@ -125,7 +125,7 @@ export function DevolucionCompraDetail() {
                 <div className="col-span-2">
                   <dt className="text-fg-subtle">Factura de proveedor</dt>
                   <dd>
-                    <Link href={`/compras/facturas/${row.invoice.id}`} className="text-brand-600 hover:underline">
+                    <Link href={`/compras/facturas/${row.invoice.id}`} className="text-brand-accent hover:underline">
                       {row.invoice.invoice_number}
                     </Link>
                     {` — Saldo ${formatARS(row.invoice.balance)}`}

@@ -576,15 +576,15 @@ function PanelClientContent({
             </Link>
           )}
           {stockAlerts!.below_minimum > 0 && (
-            <Link href="/inventario/stock?below_minimum=true" className="bg-orange-50 border border-orange-200 rounded-[4px] p-4 flex items-center gap-3 hover:bg-orange-100 transition-colors">
-              <div className="w-9 h-9 rounded-[4px] bg-orange-100 flex items-center justify-center shrink-0 text-orange-600">
+            <Link href="/inventario/stock?below_minimum=true" className="bg-warning-bg border border-warning rounded-[4px] p-4 flex items-center gap-3 hover:opacity-90 transition-opacity">
+              <div className="w-9 h-9 rounded-[4px] bg-warning-bg flex items-center justify-center shrink-0 text-warning">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
                 </svg>
               </div>
               <div>
-                <div className="font-mono text-xl font-medium text-orange-700 leading-none">{stockAlerts!.below_minimum}</div>
-                <div className="text-[11px] text-orange-600 mt-0.5">Bajo stock mínimo</div>
+                <div className="font-mono text-xl font-medium text-warning leading-none">{stockAlerts!.below_minimum}</div>
+                <div className="text-[11px] text-warning mt-0.5">Bajo stock mínimo</div>
               </div>
             </Link>
           )}
@@ -769,7 +769,7 @@ function PanelClientContent({
         onToChange={to => updateParams({ to })}
       />
 
-      <PageBody padding="p-4 md:p-6" className="bg-surface-muted print:bg-surface print:p-4">
+      <PageBody padding="p-4 md:p-6" className="print:p-4">
         {orgName && (
           <header className="mb-5 md:mb-6 print:mb-4">
             <h1 className="text-[22px] md:text-[28px] font-semibold text-fg tracking-tight leading-tight">

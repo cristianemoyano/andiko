@@ -430,7 +430,7 @@ function OrgUserForm({ orgId, apiNamespace, branches, user, onClose, onSaved }: 
                     className={cn(
                       'flex w-full items-center gap-2.5 rounded-sm px-2 py-1.5 text-left text-[13px] transition-colors',
                       selected
-                        ? 'bg-brand-50 text-brand-800 ring-1 ring-brand-accent-border'
+                        ? 'bg-brand-accent-bg text-brand-accent ring-1 ring-brand-accent-border'
                         : 'text-fg hover:bg-surface-muted',
                     )}
                   >

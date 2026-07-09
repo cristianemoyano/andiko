@@ -464,7 +464,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                         className={cn(
                           'px-3 py-1 text-[12px] rounded-sm border transition-colors',
                           paymentCondition === pc.value
-                            ? 'border-brand-600 bg-brand-50 text-brand-600 font-medium'
+                            ? 'border-brand-accent bg-brand-accent-bg text-brand-accent font-medium'
                             : 'border-border-strong text-fg-muted hover:border-border-strong'
                         )}
                       >

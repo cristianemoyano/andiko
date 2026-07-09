@@ -77,7 +77,7 @@ export function MenuPanel({
     >
       <div style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         {/* Header */}
-        <div className="flex items-center h-[52px] px-4 border-b border-border flex-shrink-0">
+        <div className="flex items-center h-[52px] px-4 flex-shrink-0">
           <span className="text-[17px] font-semibold text-fg tracking-tight flex-1">Menú</span>
           <button
             type="button"
@@ -95,9 +95,9 @@ export function MenuPanel({
         <Link
           href="/perfil"
           onClick={close}
-          className="flex items-center gap-3 px-4 py-4 border-b border-border hover:bg-surface-muted transition-colors"
+          className="flex items-center gap-3 px-4 py-4 hover:bg-surface-muted transition-colors"
         >
-          <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-800 text-sm font-semibold flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-brand-accent-bg text-brand-accent text-sm font-semibold flex items-center justify-center flex-shrink-0 ring-1 ring-brand-accent-border/60">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
@@ -366,7 +366,7 @@ function MenuSection({ label, children }: { label: string; children: React.React
       <div className="px-4 pt-3 pb-1 text-[11px] font-semibold text-fg-subtle uppercase tracking-widest">
         {label}
       </div>
-      <div className="divide-y divide-border">{children}</div>
+      <div>{children}</div>
     </div>
   )
 }
@@ -378,10 +378,10 @@ function MenuRow({ item, active, onNavigate }: { item: NavItem; active: boolean;
       onClick={onNavigate}
       className={cn(
         'flex items-center gap-3 px-4 h-12 transition-colors',
-        active ? 'text-brand-600 bg-brand-50' : 'text-fg hover:bg-surface-muted',
+        active ? 'text-brand-accent bg-brand-accent-bg' : 'text-fg hover:bg-surface-muted',
       )}
     >
-      <span className={cn('flex-shrink-0', active ? 'text-brand-600' : 'text-fg-subtle')}>
+      <span className={cn('flex-shrink-0', active ? 'text-brand-accent' : 'text-fg-subtle')}>
         {item.icon}
       </span>
       <span className="flex-1 text-[15px]">{item.label}</span>
@@ -390,7 +390,7 @@ function MenuRow({ item, active, onNavigate }: { item: NavItem; active: boolean;
           {item.badge}
         </span>
       )}
-      <ChevronRight className={active ? 'text-brand-200' : undefined} />
+      <ChevronRight className={active ? 'text-brand-accent-border' : undefined} />
     </Link>
   )
 }

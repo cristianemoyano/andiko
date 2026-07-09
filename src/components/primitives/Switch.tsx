@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 const switchVariants = cva(
   [
-    'group inline-flex flex-shrink-0 items-center rounded-full border-2 border-transparent transition-colors cursor-pointer',
+    'group inline-flex flex-shrink-0 items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-out cursor-pointer',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand-600',
     'data-[state=unchecked]:bg-border-strong data-[state=checked]:bg-brand-600',
     'disabled:cursor-not-allowed disabled:data-[state=unchecked]:bg-surface-hover disabled:data-[state=checked]:bg-border-strong',
@@ -23,7 +23,7 @@ const switchVariants = cva(
 )
 
 const thumbVariants = cva(
-  'pointer-events-none block rounded-full bg-surface shadow-sm transition-transform data-[state=unchecked]:translate-x-0',
+  'pointer-events-none block rounded-full bg-surface shadow-sm transition-transform duration-200 ease-out data-[state=unchecked]:translate-x-0',
   {
     variants: {
       size: {

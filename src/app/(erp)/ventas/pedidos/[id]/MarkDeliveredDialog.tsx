@@ -69,7 +69,7 @@ export function MarkDeliveredDialog({
               ¿Cómo se entregó la mercadería al cliente?
             </p>
             <fieldset className="space-y-2">
-              <label className="flex items-start gap-2.5 rounded-sm border border-border px-3 py-2.5 cursor-pointer has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50/50">
+              <label className="flex items-start gap-2.5 rounded-sm border border-border px-3 py-2.5 cursor-pointer has-[:checked]:border-brand-accent has-[:checked]:bg-brand-accent-bg/50">
                 <input
                   type="radio"
                   name="delivery_logistics"

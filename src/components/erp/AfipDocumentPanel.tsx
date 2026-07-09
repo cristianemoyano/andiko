@@ -130,7 +130,7 @@ export function AfipDocumentPanel({ doc, branch, canAuthorize, onAuthorize }: Af
             {branch && (
               <p className="mt-1 text-fg-muted">
                 Configuralo en{' '}
-                <Link href="/configuracion?section=afip" className="font-medium text-brand-600 underline underline-offset-2">
+                <Link href="/configuracion?section=afip" className="font-medium text-brand-accent underline underline-offset-2">
                   Configuración → AFIP
                 </Link>{' '}
                 (sección Puntos de venta) antes de autorizar.

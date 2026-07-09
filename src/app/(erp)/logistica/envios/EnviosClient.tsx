@@ -63,7 +63,7 @@ const COLUMNS: Column<ShipmentListRow>[] = [
             target="_blank"
             rel="noopener noreferrer"
             onClick={e => e.stopPropagation()}
-            className="text-[12px] text-brand-600 hover:underline"
+            className="text-[12px] text-brand-accent hover:underline"
           >
             {row.tracking_number}
           </a>

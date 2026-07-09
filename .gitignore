@@ -59,6 +59,12 @@ next-env.d.ts
 .claude/worktrees/
 .claude/settings.json
 
+# Impeccable — local hook cache, live sessions, per-dev overrides
+.impeccable/
+
+# Duplicate skills install (canonical copy lives in .agents/skills/)
+/agent/
+
 # Cursor — local IDE settings and agent plans (never commit)
 .cursor/*
 !.cursor/skills/

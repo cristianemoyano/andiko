@@ -35,12 +35,12 @@ export function VentasStatusNav<T extends string>({
             className={cn(
               'shrink-0 whitespace-nowrap border-b-2 -mb-px px-3 py-2.5 text-[13px] transition-colors',
               isActive
-                ? 'border-brand-600 font-medium text-brand-700'
+                ? 'border-brand-accent font-medium text-brand-accent'
                 : 'border-transparent text-fg-muted hover:border-border hover:text-fg',
             )}
           >
             {tab.label}
-            <span className={cn('ml-1 tabular-nums', isActive ? 'text-brand-600/80' : 'text-fg-subtle')}>
+            <span className={cn('ml-1 tabular-nums', isActive ? 'text-brand-accent/80' : 'text-fg-subtle')}>
               ({count})
             </span>
           </button>

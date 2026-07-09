@@ -49,7 +49,7 @@ export function PanelFilterBar({
   onToChange,
 }: PanelFilterBarProps) {
   return (
-    <div className="border-b border-border bg-surface px-4 md:px-6 py-3 shrink-0 print:hidden">
+    <div className="bg-surface px-4 md:px-6 py-3 shrink-0 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.18)] print:hidden">
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
           <div className="flex flex-1 flex-col gap-2 min-[480px]:flex-row min-[480px]:items-center min-[480px]:gap-2 min-w-0">

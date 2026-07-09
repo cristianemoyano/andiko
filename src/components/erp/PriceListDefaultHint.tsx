@@ -18,7 +18,7 @@ export function PriceListDefaultHint({ className, compact = false }: PriceListDe
   return (
     <div
       className={cn(
-        'rounded-sm border border-brand-accent-border bg-brand-50 px-3 py-2.5 text-[12px] text-fg-muted leading-relaxed',
+        'rounded-sm border border-brand-accent-border bg-brand-accent-bg px-3 py-2.5 text-[12px] text-fg-muted leading-relaxed',
         className,
       )}
       role="note"

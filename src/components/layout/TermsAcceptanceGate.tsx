@@ -61,7 +61,7 @@ export function TermsAcceptanceGate({ required }: { required: boolean }) {
             href="/legales/terminos"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-brand-600 hover:underline"
+            className="text-brand-accent hover:underline"
           >
             Ver Términos de Servicio
           </a>
@@ -69,7 +69,7 @@ export function TermsAcceptanceGate({ required }: { required: boolean }) {
             href="/legales/privacidad"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-brand-600 hover:underline"
+            className="text-brand-accent hover:underline"
           >
             Ver Política de Privacidad
           </a>

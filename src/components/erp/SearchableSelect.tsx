@@ -151,7 +151,7 @@ function SearchableSelect({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={cn('text-fg-subtle transition-transform duration-150', open && 'rotate-180')}
+              className={cn('text-fg-subtle transition-transform duration-200 ease-out', open && 'rotate-180')}
             >
               <path d="m6 9 6 6 6-6" />
             </svg>
@@ -165,10 +165,11 @@ function SearchableSelect({
           sideOffset={4}
           className={cn(
             'z-50 rounded-sm border border-border bg-surface shadow-md',
+            'origin-[var(--radix-popover-content-transform-origin)]',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-            'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-            'duration-150',
+            'data-[state=closed]:zoom-out-[0.97] data-[state=open]:zoom-in-[0.97]',
+            'duration-200 ease-out',
           )}
           style={{ width: 'var(--radix-popover-trigger-width)', maxHeight: '320px' }}
         >
@@ -227,7 +228,7 @@ function SearchableSelect({
                 className={cn(
                   'flex w-full flex-col gap-0.5 px-3 py-2 text-left text-[13px] transition-colors',
                   'hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none',
-                  option.value === value && 'bg-brand-50 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200',
+                  option.value === value && 'bg-brand-accent-bg text-brand-accent font-medium',
                 )}
               >
                 <span className="font-medium leading-tight">{option.label}</span>

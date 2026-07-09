@@ -12,14 +12,14 @@ const brandHighlights = [
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen overflow-hidden bg-[#F7FBFC]">
+    <div className="auth-shell relative flex min-h-screen overflow-hidden bg-[#F7FBFC]">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#EEF8FA_0%,#FFFFFF_42%,#F7FBFC_100%)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(12,100,122,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(12,100,122,0.035)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_80%_70%_at_50%_30%,black,transparent)]"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(12,100,122,0.025)_1px,transparent_1px),linear-gradient(to_bottom,rgba(12,100,122,0.025)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_80%_70%_at_50%_30%,black,transparent)]"
       />
       <div
         aria-hidden
@@ -47,6 +47,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         <div className="relative landing-enter landing-enter-delay-1">
           <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-100 backdrop-blur-sm">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-200" aria-hidden />
             Software de gestión
           </p>
           <h1 className="max-w-md text-3xl font-semibold leading-tight tracking-tight xl:text-4xl">

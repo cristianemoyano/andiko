@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils'
 const cardVariants = cva('rounded-md bg-surface', {
   variants: {
     variant: {
-      default: 'border border-border',
-      elevated: 'border border-border shadow-sm',
+      default: 'shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.18)]',
+      elevated: 'shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.24)]',
     },
   },
   defaultVariants: { variant: 'default' },
@@ -29,7 +29,7 @@ export interface CardHeaderProps extends Omit<React.HTMLAttributes<HTMLDivElemen
 function CardHeader({ title, description, actions, className, children, ...props }: CardHeaderProps) {
   return (
     <div
-      className={cn('flex items-start justify-between gap-4 border-b border-border px-4 py-3', className)}
+      className={cn('flex items-start justify-between gap-4 px-4 py-3', className)}
       {...props}
     >
       <div className="min-w-0">
@@ -49,7 +49,7 @@ function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('flex items-center justify-end gap-2 border-t border-border px-4 py-3', className)}
+      className={cn('flex items-center justify-end gap-2 px-4 py-3', className)}
       {...props}
     />
   )

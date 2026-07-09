@@ -95,7 +95,7 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
           enabledModules={enabledModules}
           showOnboardingResume={showOnboardingResume}
         />
-        <main className="flex-1 flex flex-col min-h-0 overflow-hidden overscroll-contain pt-[env(safe-area-inset-top)] md:pt-0 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden overscroll-contain bg-bg pt-[env(safe-area-inset-top)] md:pt-0 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
           {showOnboardingResume ? <OnboardingResumeBannerGate enabled /> : null}
           {children}
         </main>

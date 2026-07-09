@@ -75,9 +75,9 @@ function RunStatusBadge({ status }: { status: DeliveryRunStatus }) {
     draft:       'bg-surface-muted text-fg-muted border-border',
     planned:     'bg-blue-50 text-blue-700 border-blue-200',
     dispatched:  'bg-amber-50 text-amber-700 border-amber-200',
-    in_progress: 'bg-brand-50 text-brand-700 border-brand-200',
+    in_progress: 'bg-brand-accent-bg text-brand-accent border-brand-200',
     completed:   'bg-green-50 text-green-700 border-green-200',
-    cancelled:   'bg-red-50 text-red-700 border-red-200',
+    cancelled:   'bg-danger-bg text-danger border-danger',
   }[status]
   return <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone}`}>{DELIVERY_RUN_STATUS_LABEL[status]}</span>
 }
@@ -88,8 +88,8 @@ function StopStatusBadge({ status }: { status: DeliveryStopStatus }) {
     arrived:   'bg-amber-50 text-amber-700 border-amber-200',
     delivered: 'bg-green-50 text-green-700 border-green-200',
     partial:   'bg-warning-bg text-warning border-warning',
-    failed:    'bg-red-50 text-red-700 border-red-200',
-    returned:  'bg-orange-50 text-orange-700 border-orange-200',
+    failed:    'bg-danger-bg text-danger border-danger',
+    returned:  'bg-warning-bg text-warning border-warning',
     skipped:   'bg-slate-50 text-slate-700 border-slate-200',
   }[status]
   return <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone}`}>{DELIVERY_STOP_STATUS_LABEL[status]}</span>

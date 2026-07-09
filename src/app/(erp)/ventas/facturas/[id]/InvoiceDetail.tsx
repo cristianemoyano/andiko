@@ -356,7 +356,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                       <p className="mt-1">
                         <Link
                           href={`/ventas/cuenta-corriente?contact_id=${displayContact.id}`}
-                          className="text-[12px] text-brand-600 hover:underline"
+                          className="text-[12px] text-brand-accent hover:underline"
                         >
                           Ver cuenta corriente →
                         </Link>
