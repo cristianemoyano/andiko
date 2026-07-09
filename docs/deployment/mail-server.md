@@ -216,14 +216,26 @@ Generar contraseñas seguras (`openssl rand -base64 24`):
 ```bash
 make prod-mail-add-user EMAIL=postmaster@andiko.cloud PASSWORD='...'
 make prod-mail-add-user EMAIL=erp@andiko.cloud PASSWORD='...'
-make prod-mail-add-user EMAIL=cristian@andiko.cloud PASSWORD='...'
+make prod-mail-add-user EMAIL=cristian.moyano@andiko.cloud PASSWORD='...'
 ```
 
-Listar buzones:
+### Buzones en producción (Andiko Cloud)
+
+Cuentas creadas en el VPS de producción. Las contraseñas viven solo en el gestor de secretos del equipo — **no** documentarlas acá.
+
+| Buzón | Uso |
+|-------|-----|
+| `postmaster@andiko.cloud` | Administración: reportes DMARC (`rua=`), rebotes del sistema, buzón técnico RFC |
+| `erp@andiko.cloud` | Servicio SMTP del ERP (`/sys-admin/email` → preset **Servidor Andiko**); envío de documentos transaccionales |
+| `cristian.moyano@andiko.cloud` | Buzón personal del equipo (IMAP en Thunderbird, etc.) |
+
+Verificar que existen:
 
 ```bash
 bash infra/scripts/mail-setup.sh list-users
 ```
+
+Alta de buzones adicionales del equipo: mismo comando `make prod-mail-add-user EMAIL=… PASSWORD=…`.
 
 Cambiar contraseña:
 

@@ -93,7 +93,7 @@ fi
 echo ""
 if [ "$ROOT_PCT" -ge "$DISK_CRIT_PCT" ]; then
   echo "CRITICAL: root filesystem at ${ROOT_PCT}% (threshold ${DISK_CRIT_PCT}%)."
-  echo "Consider: make prod-backup, remove old images (docker image prune), clean stopped containers (docker container prune)."
+  echo "Consider: make prod-backup, then make prod-prune (safe Docker cleanup)."
   exit 1
 fi
 if [ "$ROOT_PCT" -ge "$DISK_WARN_PCT" ]; then

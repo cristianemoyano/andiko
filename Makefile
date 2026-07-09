@@ -1,7 +1,7 @@
 .PHONY: up down reset logs db shell dev \
 	woo-up woo-down woo-bootstrap woo-credentials woo-reset \
 	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-sync-db-password prod-deploy-app prod-deploy-infra prod-deploy prod-ssl prod-sync-nginx-conf prod-migrate prod-migrate-status \
-	prod-create-sysadmin prod-health prod-backup prod-backup-mail prod-disk-check prod-logs prod-renew-certs prod-portainer-auth \
+	prod-create-sysadmin prod-health prod-backup prod-backup-mail prod-disk-check prod-prune prod-logs prod-renew-certs prod-portainer-auth \
 	prod-init-mail prod-mail-add-user prod-mail-dkim prod-mail-logs prod-mail-restart prod-mail-check prod-expand-ssl-mail
 
 # =============================================================================
@@ -139,6 +139,9 @@ prod-backup:
 
 prod-disk-check:
 	bash infra/scripts/disk-check.sh
+
+prod-prune:
+	bash infra/scripts/prune-disk.sh
 
 prod-logs:
 	docker service logs -f andiko_app

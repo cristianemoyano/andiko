@@ -2,7 +2,7 @@
 
 Guía para leer y enviar correo con [Thunderbird](https://www.thunderbird.net/) contra el mailserver de Andiko (`mail.andiko.cloud`).
 
-**Prerrequisito:** buzón creado en el VPS:
+Prerrequisito: buzón creado en el VPS (ver [mail-server.md §8 — Buzones en producción](mail-server.md#buzones-en-producción-andiko-cloud)):
 
 ```bash
 make prod-mail-add-user EMAIL=tu@andiko.cloud PASSWORD='contraseña-segura'

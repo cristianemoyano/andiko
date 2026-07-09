@@ -280,6 +280,7 @@ After bootstrap, use [Deploy a release (routine)](#deploy-a-release-routine) for
 | `prod-logs` | VPS | Ops | Follow app service logs |
 | `prod-backup` | VPS | Cron / ops | pg_dump + optional rclone → Google Drive |
 | `prod-disk-check` | VPS | Ops | Host + Docker + Andiko data disk report |
+| `prod-prune` | VPS | Ops | Safe Docker cleanup (cache, stopped containers, old app images) |
 | `prod-renew-certs` | VPS | Cron | Renew TLS certificates |
 | `prod-sync-nginx-conf` | VPS | Rare | Re-apply nginx templates to live dir |
 | `prod-migrate-status TAG=…` | VPS | Debug | List executed vs pending migrations |
@@ -353,7 +354,7 @@ docker service logs andiko_nginx --tail 100
 docker service logs andiko_portainer --tail 100
 ```
 
-Advanced host retention (logrotate for cron files, image prune) is tracked in [`docs/ROADMAP.md`](../ROADMAP.md).
+Advanced host retention (logrotate for cron files) is tracked in [`docs/ROADMAP.md`](../ROADMAP.md). Docker cleanup: `make prod-prune`.
 
 ## Disk diagnostics
 
@@ -367,6 +368,36 @@ Reports root filesystem usage, `/var/lib/andiko/*` sizes, `docker system df`, ol
 
 ```bash
 DISK_WARN_PCT=80 DISK_CRIT_PCT=90 make prod-disk-check
+```
+
+## Safe disk cleanup (`prod-prune`)
+
+Reclaims Docker build cache, stopped task containers, dangling layers, and **old Andiko release images** not used by the running `andiko_app` service.
+
+```bash
+# Preview what would be removed
+make prod-prune PRUNE_DRY_RUN=1
+
+# Apply (safe defaults)
+make prod-prune
+
+# Also wipe all unused build cache (~tens of GB if builds ran on VPS)
+make prod-prune PRUNE_BUILDER_ALL=1
+```
+
+**Never prunes:** Postgres/mail/certs data under `/var/lib/andiko`, Docker volumes, or the image currently deployed on `andiko_app`.
+
+**After prune:**
+
+```bash
+docker stack services andiko
+make prod-health
+```
+
+Optional monthly cron (conservative):
+
+```cron
+0 4 1 * * cd /root/andiko && make prod-prune >> /var/log/andiko-prune.log 2>&1
 ```
 
 ## Portainer (Swarm UI)

@@ -841,7 +841,7 @@ Ideas validadas pero sin fecha definida.
 **Infra VPS (observabilidad y disco):**
 
 - [ ] Logrotate para `/var/log/andiko-*.log` (crons backup/certbot)
-- [ ] `make prod-prune` — limpieza de imágenes Docker viejas
+- [x] `make prod-prune` — limpieza segura Docker (build cache, contenedores stopped, imágenes Andiko viejas)
 - [x] `make prod-disk-check` — diagnóstico de disco
 - [ ] `daemon.json.example` — defaults globales de logging Docker
 
