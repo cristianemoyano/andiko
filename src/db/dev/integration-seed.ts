@@ -15,6 +15,8 @@ import JournalEntryLine from '@/modules/accounting/journal-entry-line.model'
 import PurchaseOrder from '@/modules/purchases/purchase-order.model'
 import PurchaseOrderItem from '@/modules/purchases/purchase-order-item.model'
 import { nextEntryNumber } from '@/modules/accounting/accounting.utils'
+import { postInvoiceIssuedAccounting } from '@/modules/accounting/sales-invoice-accounting.service'
+import type { TenantContext } from '@/lib/tenancy'
 import { calcLineItem, calcDocumentTotals, nextDocumentNumber } from '@/modules/sales/sales.utils'
 import {
   calcLineItem as calcPurchaseLine,
@@ -416,6 +418,14 @@ async function seedPendingInvoiceForCustomer(
     },
     { transaction: t },
   )
+
+  const ctx: TenantContext = {
+    orgId,
+    userId: actorId,
+    defaultBranchId: branch.id,
+    allowedBranchIds: [branch.id],
+  }
+  await postInvoiceIssuedAccounting(invoice.id, ctx, t, { invoice })
 }
 
 export async function seedIntegrationFinancials(

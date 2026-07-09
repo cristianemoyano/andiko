@@ -47,7 +47,7 @@ async function ensureOrderStockDeducted(
     transaction: t,
   })
   if (existing) return
-  await deductStockForOrder(orderId, orgId, actorId ?? orgId, t)
+  await deductStockForOrder(orderId, orgId, actorId, t)
 }
 
 function afipFieldsFromOrder(order: SalesOrder) {
@@ -120,7 +120,7 @@ async function registerPosPaymentsOnInvoice(
       },
       { transaction: t },
     )
-    await postSalesPaymentAccounting(createdPayment.id, ctx, t)
+    await postSalesPaymentAccounting(createdPayment.id, ctx, t, { payment: createdPayment })
   }
 
   await recalcInvoiceBalance(invoice.id, t)
@@ -159,7 +159,12 @@ export async function finalizePosSaleInErp(
     })
 
     const actorId = resolveActorId(order)
-    const ctx: TenantContext = { orgId, userId: actorId ?? orgId, defaultBranchId: null, allowedBranchIds: [] }
+    const ctx: TenantContext = {
+      orgId,
+      userId: actorId ?? '',
+      defaultBranchId: order.branch_id,
+      allowedBranchIds: order.branch_id ? [order.branch_id] : [],
+    }
 
     const existingInvoice = await Invoice.findOne({
       where: { order_id: order.id, org_id: orgId },
@@ -246,7 +251,7 @@ export async function finalizePosSaleInErp(
       { transaction: t },
     )
 
-    await postInvoiceIssuedAccounting(invoice.id, ctx, t)
+    await postInvoiceIssuedAccounting(invoice.id, ctx, t, { invoice })
 
     const payments = options.payments ?? []
     await registerPosPaymentsOnInvoice(invoice, order, payments, actorId, issueDate, ctx, t)

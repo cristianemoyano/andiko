@@ -55,10 +55,15 @@ describe('accounting/accounts.service deleteAccount', () => {
     await expect(deleteAccount('a1', ctx, 'actor-1')).rejects.toThrow('ACCOUNT_HAS_CHILDREN')
   })
 
+  it('blocks deleting a system account', async () => {
+    accountFindOne.mockResolvedValue({ id: 'a1', is_system: true, update: vi.fn(), destroy: vi.fn() })
+    await expect(deleteAccount('a1', ctx, 'actor-1')).rejects.toThrow('SYSTEM_ACCOUNT_NOT_DELETABLE')
+  })
+
   it('soft-deletes a leaf account with no movements', async () => {
     const update = vi.fn().mockResolvedValue(undefined)
     const destroy = vi.fn().mockResolvedValue(undefined)
-    accountFindOne.mockResolvedValue({ id: 'a1', update, destroy })
+    accountFindOne.mockResolvedValue({ id: 'a1', is_system: false, update, destroy })
     lineCount.mockResolvedValue(0)
     accountCount.mockResolvedValue(0)
 

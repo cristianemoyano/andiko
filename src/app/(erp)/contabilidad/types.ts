@@ -14,6 +14,7 @@ export type Account = {
   type: keyof typeof ACCOUNT_TYPE_LABEL | string
   is_postable: boolean
   is_active: boolean
+  is_system: boolean
 }
 
 export type JournalEntryListItem = {

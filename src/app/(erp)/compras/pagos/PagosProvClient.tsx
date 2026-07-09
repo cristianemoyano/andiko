@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { DataTable, TablePagination, AccountingAutoPostHint, type Column } from '@/components/erp'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { ComprasSubNav } from '../ComprasSubNav'
@@ -115,6 +115,7 @@ export function PagosProvClient() {
           emptyMessage="No hay pagos registrados"
           toolbar={
             <>
+              <AccountingAutoPostHint screen="purchase-payment" showDivider={false} label={null} />
               <span className="flex-1" />
               <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>

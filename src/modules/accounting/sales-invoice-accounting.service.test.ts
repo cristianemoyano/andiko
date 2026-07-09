@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { TenantContext } from '@/lib/tenancy'
 
 vi.mock('server-only', () => ({}))
+vi.mock('@/lib/db', () => ({ default: {} }))
+vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 
 const { accountFindAll, entryCreate, entryFindOne, lineBulkCreate, invoiceFindByPk, itemFindAll, variantFindAll } = vi.hoisted(() => ({
   accountFindAll:  vi.fn(),
@@ -17,22 +19,28 @@ vi.mock('./account.model', () => ({ default: { findAll: accountFindAll } }))
 vi.mock('./journal-entry.model', () => ({ default: { create: entryCreate, findOne: entryFindOne } }))
 vi.mock('./journal-entry-line.model', () => ({ default: { bulkCreate: lineBulkCreate } }))
 vi.mock('./accounting-associations', () => ({ ensureAccountingAssociations: vi.fn() }))
-vi.mock('./accounting.utils', () => ({ nextEntryNumber: vi.fn(async () => 'AS-000001') }))
+vi.mock('./accounting.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./accounting.utils')>()
+  return { ...actual, nextEntryNumber: vi.fn(async () => 'AS-000001') }
+})
 vi.mock('@/modules/sales/invoice.model', () => ({ default: { findByPk: invoiceFindByPk } }))
 vi.mock('@/modules/sales/invoice-item.model', () => ({ default: { findAll: itemFindAll } }))
 vi.mock('@/modules/catalog/product-variant.model', () => ({ default: { findAll: variantFindAll } }))
 
 import { postInvoiceIssuedAccounting } from './sales-invoice-accounting.service'
+import logger from '@/lib/logger'
+
+vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 
 const ctx: TenantContext = { orgId: 'org-1', userId: 'user-1', defaultBranchId: null, allowedBranchIds: [] }
 const t = {} as never
 
 const ALL_ACCOUNTS = [
-  { id: 'acc-sales',      code: '4.1.01' },
-  { id: 'acc-iva-debit',  code: '2.1.02.01' },
-  { id: 'acc-receivable', code: '1.1.02.01' },
-  { id: 'acc-cogs',       code: '5.1.01' },
-  { id: 'acc-inventory',  code: '1.1.03.01' },
+  { id: 'acc-sales',      code: '4.1.01',      is_active: true, is_postable: true },
+  { id: 'acc-iva-debit',  code: '2.1.02.01',   is_active: true, is_postable: true },
+  { id: 'acc-receivable', code: '1.1.02.01',   is_active: true, is_postable: true },
+  { id: 'acc-cogs',       code: '5.1.01',      is_active: true, is_postable: true },
+  { id: 'acc-inventory',  code: '1.1.03.01',   is_active: true, is_postable: true },
 ]
 
 function mockInvoice(overrides: Record<string, unknown> = {}) {
@@ -82,11 +90,33 @@ describe('postInvoiceIssuedAccounting', () => {
     expect(entryCreate).not.toHaveBeenCalled()
   })
 
-  it('no-ops when required accounts are missing', async () => {
+  it('no-ops when required accounts are missing and logs a warning', async () => {
     invoiceFindByPk.mockResolvedValue(mockInvoice())
     accountFindAll.mockResolvedValue([])
     await postInvoiceIssuedAccounting('inv-1', ctx, t)
     expect(entryCreate).not.toHaveBeenCalled()
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ orgId: 'org-1', sourceType: 'sales_invoice', sourceId: 'inv-1' }),
+      'accounting auto-post skipped',
+    )
+  })
+
+  it('posts a balanced entry when subtotal/discount/tax/total fields disagree by rounding', async () => {
+    invoiceFindByPk.mockResolvedValue(mockInvoice({
+      subtotal: '1000.00',
+      discount_amount: '100.00',
+      tax_amount: '189.00',
+      total: '1089.00',
+    }))
+
+    await postInvoiceIssuedAccounting('inv-1', ctx, t)
+
+    expect(entryCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ total_debit: '1089.00', total_credit: '1089.00' }),
+      expect.anything(),
+    )
+    const lines = lineBulkCreate.mock.calls[0]![0] as Array<{ account_id: string; debit: string; credit: string }>
+    expect(lines.find(l => l.account_id === 'acc-sales')).toMatchObject({ credit: '900.00' })
   })
 
   it('posts a balanced entry without COGS lines when no variant costs are found', async () => {

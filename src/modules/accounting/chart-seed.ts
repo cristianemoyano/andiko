@@ -29,6 +29,7 @@ export async function seedDefaultChartOfAccounts(
         parent_id:   parentId,
         is_postable: def.is_postable,
         is_active:   true,
+        is_system:   true,
         org_id:      orgId,
         created_by:  actorId,
         updated_by:  actorId,

@@ -2,18 +2,28 @@ import 'server-only'
 import Decimal from 'decimal.js'
 import type { Transaction } from 'sequelize'
 import { whereOrg, type TenantContext } from '@/lib/tenancy'
-import JournalEntry from './journal-entry.model'
-import JournalEntryLine from './journal-entry-line.model'
 import Account from './account.model'
-import { nextEntryNumber, resolveCashOrBankAccountId, CASH_ACCOUNT_CODE, BANK_ACCOUNT_CODE } from './accounting.utils'
+import { resolveCashOrBankAccountId, CASH_ACCOUNT_CODE, BANK_ACCOUNT_CODE } from './accounting.utils'
 import { ensureAccountingAssociations } from './accounting-associations'
+import { AUTO_POST_ACCOUNT_CODES } from './default-chart'
+import {
+  createPostedEntry,
+  findExistingAutoPostEntry,
+  logAutoPostSkipped,
+  resolveRequiredAccounts,
+  toAccountingContext,
+} from './accounting-auto-post.utils'
 import Payment from '@/modules/sales/payment.model'
 
-const ACCOUNT_CODES = {
-  receivable: '1.1.02.01',
-  cash:       CASH_ACCOUNT_CODE,
-  bank:       BANK_ACCOUNT_CODE,
-} as const
+const REQUIRED_CODES = [
+  AUTO_POST_ACCOUNT_CODES.receivable,
+  CASH_ACCOUNT_CODE,
+  BANK_ACCOUNT_CODE,
+] as const
+
+export type PostSalesPaymentAccountingOptions = {
+  payment?: Payment
+}
 
 /**
  * Posts the journal entry for a customer payment: ingresa a caja/banco y
@@ -23,61 +33,57 @@ export async function postSalesPaymentAccounting(
   paymentId: string,
   ctx: TenantContext,
   t: Transaction,
+  options: PostSalesPaymentAccountingOptions = {},
 ): Promise<void> {
   ensureAccountingAssociations()
+  const actx = toAccountingContext(ctx)
 
-  const existing = await JournalEntry.findOne({
-    where: { org_id: ctx.orgId, source_type: 'sales_payment', source_id: paymentId },
-    transaction: t,
-  })
+  const existing = await findExistingAutoPostEntry(actx.orgId, 'sales_payment', paymentId, t)
   if (existing) return
 
-  const payment = await Payment.findByPk(paymentId, { transaction: t })
+  const payment = options.payment ?? await Payment.findByPk(paymentId, { transaction: t })
   if (!payment) return
   const amount = new Decimal(payment.amount)
   if (amount.lte(0)) return
 
   const accounts = await Account.findAll({
-    where: whereOrg(ctx, { code: Object.values(ACCOUNT_CODES) }),
-    attributes: ['id', 'code'],
+    where: whereOrg(ctx, { code: [...REQUIRED_CODES] }),
+    attributes: ['id', 'code', 'is_active', 'is_postable'],
     transaction: t,
   })
-  const byCode = new Map(accounts.map(a => [a.code, a]))
-  const recvAcc = byCode.get(ACCOUNT_CODES.receivable)
-  const cashOrBankId = resolveCashOrBankAccountId(byCode, payment.payment_method)
+  const resolved = resolveRequiredAccounts(accounts, [AUTO_POST_ACCOUNT_CODES.receivable])
+  if (!resolved.ok) {
+    logAutoPostSkipped({
+      orgId: actx.orgId,
+      sourceType: 'sales_payment',
+      sourceId: paymentId,
+      missingCodes: resolved.missingCodes,
+    })
+    return
+  }
 
-  if (!recvAcc || !cashOrBankId) return
+  const recvAcc = resolved.byCode.get(AUTO_POST_ACCOUNT_CODES.receivable)!
+  const cashOrBankId = resolveCashOrBankAccountId(resolved.byCode, payment.payment_method)
+  if (!cashOrBankId) {
+    logAutoPostSkipped({
+      orgId: actx.orgId,
+      sourceType: 'sales_payment',
+      sourceId: paymentId,
+      missingCodes: [payment.payment_method === 'cash' ? CASH_ACCOUNT_CODE : BANK_ACCOUNT_CODE],
+    })
+    return
+  }
 
-  const entry_number = await nextEntryNumber(ctx.orgId!, t)
-  const entry = await JournalEntry.create({
-    org_id:       ctx.orgId,
-    entry_number,
-    entry_date:   payment.payment_date ?? new Date(),
-    description:  `Cobro ${payment.payment_number}`,
-    status:       'posted',
-    source_type:  'sales_payment',
-    source_id:    paymentId,
-    total_debit:  amount.toFixed(2),
-    total_credit: amount.toFixed(2),
-    created_by:   ctx.userId ?? null,
-    updated_by:   ctx.userId ?? null,
-  }, { transaction: t })
-
-  await JournalEntryLine.bulkCreate(
-    [
+  await createPostedEntry({
+    ctx: actx,
+    sourceType: 'sales_payment',
+    sourceId: paymentId,
+    entryDate: payment.payment_date ?? new Date(),
+    description: `Cobro ${payment.payment_number}`,
+    branchId: payment.branch_id,
+    lines: [
       { account_id: cashOrBankId, debit: amount.toFixed(2), credit: '0.00', description: 'Cobro de cliente' },
       { account_id: recvAcc.id,   debit: '0.00', credit: amount.toFixed(2), description: 'Cancelación cuenta por cobrar' },
-    ].map((line, idx) => ({
-      entry_id:    entry.id,
-      account_id:  line.account_id,
-      branch_id:   payment.branch_id,
-      description: line.description,
-      debit:       line.debit,
-      credit:      line.credit,
-      sort_order:  idx,
-      created_by:  ctx.userId ?? null,
-      updated_by:  ctx.userId ?? null,
-    })),
-    { transaction: t },
-  )
+    ],
+  }, t)
 }

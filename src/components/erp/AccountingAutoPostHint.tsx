@@ -2,7 +2,11 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { HelpBubble } from './HelpBubble'
 
-export type AccountingAutoPostScreen = 'sales-invoice' | 'purchase-invoice' | 'journal-entries'
+export type AccountingAutoPostScreen =
+  | 'sales-invoice'
+  | 'purchase-invoice'
+  | 'purchase-payment'
+  | 'journal-entries'
 
 const HINTS: Record<AccountingAutoPostScreen, { label: string; title: string; body: string }> = {
   'sales-invoice': {
@@ -14,6 +18,11 @@ const HINTS: Record<AccountingAutoPostScreen, { label: string; title: string; bo
     label: 'Contabilidad',
     title: 'Asientos automáticos',
     body: 'Al recibir esta factura y al registrar un pago, el sistema genera automáticamente el asiento contable correspondiente (mercaderías, IVA crédito fiscal y cuenta por pagar).',
+  },
+  'purchase-payment': {
+    label: 'Contabilidad',
+    title: 'Asientos automáticos',
+    body: 'Al registrar un pago a proveedor, el sistema genera automáticamente el asiento contable correspondiente (cancelación de deuda y salida de caja o banco).',
   },
   'journal-entries': {
     label: 'Ayuda',
@@ -39,7 +48,7 @@ export function AccountingAutoPostHint({
   className,
   showJournalEntriesLink = false,
   label: labelOverride,
-  showDivider = false,
+  showDivider = true,
 }: AccountingAutoPostHintProps) {
   const { label, title, body } = HINTS[screen]
   const visibleLabel = labelOverride === null ? undefined : (labelOverride ?? label)

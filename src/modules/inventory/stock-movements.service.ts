@@ -184,7 +184,7 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
   }
 }
 
-export async function deductStockForOrder(orderId: string, orgId: string, actorId: string, t: Transaction): Promise<void> {
+export async function deductStockForOrder(orderId: string, orgId: string, actorId: string | null, t: Transaction): Promise<void> {
   const SalesOrderItem  = (await import('@/modules/sales/sales-order-item.model')).default
   const Product         = (await import('@/modules/catalog/product.model')).default
   const ProductVariant  = (await import('@/modules/catalog/product-variant.model')).default
@@ -231,7 +231,7 @@ export async function deductStockForOrder(orderId: string, orgId: string, actorI
   }
 }
 
-export async function restoreStockForOrder(orderId: string, orgId: string, actorId: string, t: Transaction): Promise<void> {
+export async function restoreStockForOrder(orderId: string, orgId: string, actorId: string | null, t: Transaction): Promise<void> {
   const StockMovementModel = StockMovement
 
   const movements = await StockMovementModel.findAll({
@@ -311,7 +311,7 @@ export async function restoreRemainingStockForOrder(
 export async function restoreStockForReturn(
   returnId: string,
   orgId: string,
-  actorId: string,
+  actorId: string | null,
   t: Transaction,
 ): Promise<void> {
   const SalesReturnItem = (await import('@/modules/sales/sales-return-item.model')).default
@@ -362,7 +362,7 @@ export async function restoreStockForReturn(
 export async function deductStockForExchange(
   returnId: string,
   orgId: string,
-  actorId: string,
+  actorId: string | null,
   t: Transaction,
 ): Promise<void> {
   const SalesReturnExchangeItem = (await import('@/modules/sales/sales-return-exchange-item.model')).default
@@ -411,7 +411,7 @@ export async function deductStockForExchange(
 export async function reverseStockForReturn(
   returnId: string,
   orgId: string,
-  actorId: string,
+  actorId: string | null,
   t: Transaction,
 ): Promise<void> {
   const movements = await StockMovement.findAll({

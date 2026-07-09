@@ -10,7 +10,7 @@ import type { AccountInput, AccountUpdateInput, AccountQuery } from './account.s
 
 export { seedDefaultChartOfAccounts }
 
-const LIST_ATTRS = ['id', 'org_id', 'parent_id', 'code', 'name', 'type', 'is_postable', 'is_active'] as const
+const LIST_ATTRS = ['id', 'org_id', 'parent_id', 'code', 'name', 'type', 'is_postable', 'is_active', 'is_system'] as const
 
 export async function listAccounts(query: AccountQuery, ctx: TenantContext) {
   const where: Record<string, unknown> = whereOrg(ctx)
@@ -84,6 +84,9 @@ export async function createAccount(input: AccountInput, ctx: TenantContext, act
 
 export async function updateAccount(id: string, input: AccountUpdateInput, ctx: TenantContext, actorId: string) {
   const account = await getAccount(id, ctx)
+  if (account.is_system && input.is_active === false) {
+    throw new Error('SYSTEM_ACCOUNT_NOT_DEACTIVATABLE')
+  }
   if (input.parent_id !== undefined) {
     if (input.parent_id === id) throw new Error('PARENT_CYCLE')
     await assertParentValid(input.parent_id, ctx)
@@ -109,6 +112,7 @@ export async function updateAccount(id: string, input: AccountUpdateInput, ctx: 
 
 export async function deleteAccount(id: string, ctx: TenantContext, actorId: string) {
   const account = await getAccount(id, ctx)
+  if (account.is_system) throw new Error('SYSTEM_ACCOUNT_NOT_DELETABLE')
 
   const lineCount = await JournalEntryLine.count({ where: { account_id: id } })
   if (lineCount > 0) throw new Error('ACCOUNT_HAS_MOVEMENTS')

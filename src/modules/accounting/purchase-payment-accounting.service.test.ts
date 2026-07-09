@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { TenantContext } from '@/lib/tenancy'
 
 vi.mock('server-only', () => ({}))
+vi.mock('@/lib/db', () => ({ default: {} }))
+vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 
 const { accountFindAll, entryCreate, entryFindOne, lineBulkCreate, paymentFindByPk, CASH_ACCOUNT_CODE, BANK_ACCOUNT_CODE } = vi.hoisted(() => ({
   accountFindAll:  vi.fn(),
@@ -17,13 +19,15 @@ vi.mock('./account.model', () => ({ default: { findAll: accountFindAll } }))
 vi.mock('./journal-entry.model', () => ({ default: { create: entryCreate, findOne: entryFindOne } }))
 vi.mock('./journal-entry-line.model', () => ({ default: { bulkCreate: lineBulkCreate } }))
 vi.mock('./accounting-associations', () => ({ ensureAccountingAssociations: vi.fn() }))
-vi.mock('./accounting.utils', () => ({
-  nextEntryNumber: vi.fn(async () => 'AS-000001'),
-  CASH_ACCOUNT_CODE,
-  BANK_ACCOUNT_CODE,
-  resolveCashOrBankAccountId: (byCode: Map<string, { id: string }>, paymentMethod: string) =>
-    byCode.get(paymentMethod === 'cash' ? CASH_ACCOUNT_CODE : BANK_ACCOUNT_CODE)?.id,
-}))
+vi.mock('./accounting.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./accounting.utils')>()
+  return {
+    ...actual,
+    nextEntryNumber: vi.fn(async () => 'AS-000001'),
+    resolveCashOrBankAccountId: (byCode: Map<string, { id: string }>, paymentMethod: string) =>
+      byCode.get(paymentMethod === 'cash' ? CASH_ACCOUNT_CODE : BANK_ACCOUNT_CODE)?.id,
+  }
+})
 vi.mock('@/modules/purchases/supplier-payment.model', () => ({ default: { findByPk: paymentFindByPk } }))
 
 import { postSupplierPaymentAccounting } from './purchase-payment-accounting.service'
@@ -32,9 +36,9 @@ const ctx: TenantContext = { orgId: 'org-1', userId: 'user-1', defaultBranchId: 
 const t = {} as never
 
 const ALL_ACCOUNTS = [
-  { id: 'acc-payable', code: '2.1.01.01' },
-  { id: 'acc-cash',    code: '1.1.01.01' },
-  { id: 'acc-bank',    code: '1.1.01.02' },
+  { id: 'acc-payable', code: '2.1.01.01', is_active: true, is_postable: true },
+  { id: 'acc-cash',    code: '1.1.01.01', is_active: true, is_postable: true },
+  { id: 'acc-bank',    code: '1.1.01.02', is_active: true, is_postable: true },
 ]
 
 function mockPayment(overrides: Record<string, unknown> = {}) {
