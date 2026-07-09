@@ -1,3 +1,4 @@
+import type { InstrumentationOnRequestError } from 'next/dist/server/instrumentation/types'
 import { logs, SeverityNumber, type Logger } from '@opentelemetry/api-logs'
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 import { resourceFromAttributes } from '@opentelemetry/resources'
@@ -45,3 +46,15 @@ export function getPostHogOtelLogger(name: string = POSTHOG_SERVICE_NAME): Logge
 }
 
 export { SeverityNumber }
+
+/** Forwards unhandled server errors (API routes, RSC, actions) to PostHog Error Tracking. */
+export const onRequestError: InstrumentationOnRequestError = async (error, request, context) => {
+  if (process.env.NEXT_RUNTIME !== 'nodejs') return
+
+  try {
+    const { captureRequestError } = await import('@/lib/posthog-errors')
+    await captureRequestError(error, request, context)
+  } catch (reportErr) {
+    console.error('PostHog onRequestError failed:', reportErr)
+  }
+}

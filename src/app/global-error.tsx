@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { StatusPage } from '@/components/layout/StatusPage'
+import { captureClientException } from '@/lib/posthog-errors-client'
 
 export default function GlobalError({
   error,
@@ -12,6 +13,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error(error)
+    captureClientException(error, { boundary: 'global' })
   }, [error])
 
   return (

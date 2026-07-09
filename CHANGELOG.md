@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.44.7](https://github.com/cristianemoyano/andiko/compare/v0.44.6...v0.44.7) (2026-07-09)
+
+### Features
+
+* **core:** add PostHog error tracking for server and client exceptions ([0aaf721](https://github.com/cristianemoyano/andiko/commit/0aaf7210edd4f8d34b142912757d0e8ed3afc4ef))
+
 ## [0.44.6](https://github.com/cristianemoyano/andiko/compare/v0.44.5...v0.44.6) (2026-07-09)
 
 ### Bug Fixes
