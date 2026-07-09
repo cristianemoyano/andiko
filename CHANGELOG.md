@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.44.3](https://github.com/cristianemoyano/andiko/compare/v0.44.2...v0.44.3) (2026-07-09)
+
+### Bug Fixes
+
+* **core:** bake Docker image tag into NEXT_PUBLIC_APP_VERSION ([9ce0fd4](https://github.com/cristianemoyano/andiko/commit/9ce0fd4bb8ccf063ec46ead007185cee9d871b82))
+
 ## [0.44.2](https://github.com/cristianemoyano/andiko/compare/v0.44.1...v0.44.2) (2026-07-09)
 
 ### Features
