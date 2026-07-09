@@ -162,7 +162,7 @@ export async function listDeliveryNotes(query: DeliveryNoteQuery, orgId: string)
     ],
     include: [
       { model: Branch,    as: 'branch',    attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact,   as: 'contact',   attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact,   as: 'contact',   attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: Warehouse, as: 'warehouse', attributes: ['id', 'name'], required: false },
     ],
   })
@@ -176,7 +176,7 @@ export async function getDeliveryNote(id: string, orgId: string) {
   const note = await DeliveryNote.findByPk(id, {
     include: [
       { model: Branch,           as: 'branch',    attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact,          as: 'contact',   attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact,          as: 'contact',   attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: Warehouse,        as: 'warehouse', attributes: ['id', 'name'], required: false },
       { model: User,             as: 'issuer',    attributes: ['id', 'name'], required: false },
       { model: CarrierAccount,   as: 'carrierAccount', attributes: ['id', 'name', 'kind'], required: false },

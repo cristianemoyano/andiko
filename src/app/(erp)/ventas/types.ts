@@ -79,7 +79,7 @@ export interface Quote {
   created_at: string
   updated_at: string
   branch?: BranchSummary | null
-  contact?: { id: string; legal_name: string; trade_name: string | null } | null
+  contact?: { id: string; legal_name: string; trade_name: string | null; email?: string | null } | null
   salesperson?: { id: string; name: string } | null
   items?: QuoteItem[]
 }
@@ -165,7 +165,7 @@ export interface Order {
   created_at: string
   updated_at: string
   branch?: BranchSummary | null
-  contact?: { id: string; legal_name: string; trade_name: string | null } | null
+  contact?: { id: string; legal_name: string; trade_name: string | null; email?: string | null } | null
   salesperson?: { id: string; name: string } | null
   items?: OrderItem[]
   woo_channel?: WooOrderChannel | null
@@ -260,7 +260,7 @@ export interface Invoice extends AfipDocumentFields {
   created_at: string
   updated_at: string
   branch?: BranchSummary | null
-  contact?: { id?: string; legal_name: string; trade_name: string | null } | null
+  contact?: { id?: string; legal_name: string; trade_name: string | null; email?: string | null } | null
   salesperson?: { id: string; name: string } | null
   items?: InvoiceItem[]
   /** Present on GET `/api/v1/sales/invoices/:id` when backend includes payments */

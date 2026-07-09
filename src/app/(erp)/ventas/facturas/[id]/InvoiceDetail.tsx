@@ -301,6 +301,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                 documentType="invoice"
                 documentId={id}
                 documentLabel={`Factura ${displayNumber.primary}`}
+                defaultEmail={invoice.contact?.email}
               />
             )}
           />

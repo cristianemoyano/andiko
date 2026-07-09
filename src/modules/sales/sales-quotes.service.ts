@@ -48,7 +48,7 @@ export async function listQuotes(query: SalesQuoteQuery, ctx: TenantContext) {
     ],
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: User, as: 'salesperson', attributes: ['id', 'name'] },
     ],
   })
@@ -102,7 +102,7 @@ export async function getQuote(id: string, ctx: TenantContext) {
   const quote = await SalesQuote.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: User, as: 'salesperson', attributes: ['id', 'name'] },
       { model: SalesQuoteItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
@@ -334,7 +334,7 @@ async function getQuoteInTransaction(id: string, ctx: TenantContext, t: import('
     where: whereSalesDocumentScope(ctx, { id }),
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: SalesQuoteItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
     transaction: t,
