@@ -36,6 +36,10 @@ export class S3StorageAdapter implements StorageAdapter {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
       },
+      // Presigned browser PUTs and server-side fetch to presigned URLs fail with 403 when
+      // the SDK signs checksum headers the client does not send (SDK >= 3.729 default).
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     })
   }
 
@@ -87,6 +91,20 @@ export class S3StorageAdapter implements StorageAdapter {
 
   async deleteObject(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }))
+  }
+
+  async putObject(key: string, params: { contentType: string; body: ReadableStream | Buffer }) {
+    const body = Buffer.isBuffer(params.body)
+      ? params.body
+      : Buffer.from(await new Response(params.body).arrayBuffer())
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ContentType: params.contentType,
+        Body: body,
+      }),
+    )
   }
 
   async getObjectStream(key: string) {

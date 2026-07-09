@@ -125,6 +125,16 @@ If uploads fail with a CORS error:
 2. Add missing origin to `cors_allowed_origins` in `terraform.tfvars`.
 3. `terraform apply`.
 
+If uploads fail with **HTTP 403** (not CORS):
+
+1. Confirm bucket name in sys-admin matches Terraform output (`make aws-storage-outputs`) — includes `-{account}-{region}-an` suffix.
+2. Confirm IAM user `andiko-storage` access key + secret (not root credentials).
+3. The app disables SDK default checksum signing on presigned URLs (`requestChecksumCalculation: WHEN_REQUIRED` in `s3.adapter.ts`). If you run an old image without that fix, upgrade the app release.
+
+## Sys-admin storage test
+
+`/sys-admin/storage` → **Ejecutar prueba de almacenamiento** uploads via server-side `PutObject` (not browser CORS). A 403 here usually means wrong bucket/credentials or an outdated app image with broken presigned PUT signing.
+
 ## IAM permissions
 
 The `andiko-storage` IAM user can only:
