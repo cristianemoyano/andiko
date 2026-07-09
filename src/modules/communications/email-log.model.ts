@@ -20,12 +20,14 @@ export interface EmailLogAttributes {
   status: EmailLogStatus
   error: string | null
   sent_by: UUID | null
+  notification_delivery_id: UUID | null
   created_at: Date
 }
 
 type EmailLogCreationAttributes = Optional<
   EmailLogAttributes,
-  'id' | 'body_text' | 'body_html' | 'transport' | 'message_id' | 'error' | 'sent_by' | 'created_at'
+  'id' | 'body_text' | 'body_html' | 'transport' | 'message_id' | 'error' | 'sent_by'
+  | 'notification_delivery_id' | 'created_at'
 >
 
 export class EmailLog extends Model<EmailLogAttributes, EmailLogCreationAttributes> {
@@ -43,6 +45,7 @@ export class EmailLog extends Model<EmailLogAttributes, EmailLogCreationAttribut
   declare status: EmailLogStatus
   declare error: string | null
   declare sent_by: UUID | null
+  declare notification_delivery_id: UUID | null
   declare created_at: Date
 }
 
@@ -62,6 +65,7 @@ EmailLog.init(
     status: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'sent' },
     error: { type: DataTypes.TEXT, allowNull: true },
     sent_by: { type: DataTypes.UUID, allowNull: true },
+    notification_delivery_id: { type: DataTypes.UUID, allowNull: true },
     created_at: { type: DataTypes.DATE, allowNull: false },
   },
   {
