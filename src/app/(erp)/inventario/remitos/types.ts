@@ -34,7 +34,7 @@ export interface DeliveryNote {
   notes: string | null
   created_at: string
   branch?: { id: string; name: string; branch_code: number } | null
-  contact?: { id: string; legal_name: string; trade_name: string | null } | null
+  contact?: { id: string; legal_name: string; trade_name: string | null; email?: string | null } | null
   warehouse?: { id: string; name: string } | null
   carrierAccount?: { id: string; name: string; kind: string } | null
   issuer?: { id: string; name: string } | null

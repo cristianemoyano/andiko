@@ -66,7 +66,7 @@ export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
     ],
     include: [
       { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: User, as: 'salesperson', attributes: ['id', 'name'] },
     ],
   })
@@ -368,7 +368,7 @@ async function getInvoiceInTransaction(id: string, t: import('sequelize').Transa
   return Invoice.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: [...BRANCH_AFIP_ATTRIBUTES] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: InvoiceItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
     transaction: t,

@@ -690,6 +690,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                 documentType="order"
                 documentId={id}
                 documentLabel={`Pedido ${order.order_number}`}
+                defaultEmail={order.contact?.email}
               />
             ) : undefined}
           />

@@ -94,7 +94,7 @@ export async function listOrders(query: SalesOrderQuery, ctx: TenantContext) {
     ],
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: User, as: 'salesperson', attributes: ['id', 'name'] },
     ],
   })
@@ -151,7 +151,7 @@ export async function getOrder(id: string, ctx: TenantContext) {
   const order = await SalesOrder.findByPk(id, {
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: User, as: 'salesperson', attributes: ['id', 'name'] },
       { model: SalesOrderItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
@@ -603,7 +603,7 @@ async function getOrderInTransaction(id: string, ctx: TenantContext, t: import('
     where: whereSalesDocumentScope(ctx, { id }),
     include: [
       { model: Branch, as: 'branch', attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact, as: 'contact', attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: SalesOrderItem, as: 'items', order: [['sort_order', 'ASC']] },
     ],
     transaction: t,

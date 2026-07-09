@@ -393,6 +393,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                 documentType="quote"
                 documentId={id}
                 documentLabel={`Presupuesto ${quote.quote_number}`}
+                defaultEmail={quote.contact?.email}
               />
             ) : undefined}
           />
