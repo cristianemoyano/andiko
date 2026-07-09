@@ -54,7 +54,7 @@ export function TableColumnPicker({ options, visibleKeys, onToggle, onReset }: T
         {onReset ? (
           <button
             type="button"
-            className="mt-2 w-full text-left px-2 py-1 text-[12px] text-brand-600 hover:underline"
+            className="mt-2 w-full text-left px-2 py-1 text-[12px] text-brand-accent hover:underline"
             onClick={onReset}
           >
             Restaurar predeterminadas

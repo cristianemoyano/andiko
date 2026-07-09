@@ -382,7 +382,7 @@ export function StorageSettingsClient() {
                         href="https://www.dropbox.com/developers/apps"
                         target="_blank"
                         rel="noreferrer"
-                        className="text-brand-600 underline underline-offset-2 hover:text-brand-700"
+                        className="text-brand-accent underline underline-offset-2 hover:text-brand-700"
                       >
                         Dropbox App Console
                       </a>
@@ -529,7 +529,7 @@ export function StorageSettingsClient() {
                         href="https://console.cloud.google.com/"
                         target="_blank"
                         rel="noreferrer"
-                        className="text-brand-600 underline underline-offset-2 hover:text-brand-700"
+                        className="text-brand-accent underline underline-offset-2 hover:text-brand-700"
                       >
                         Google Cloud Console
                       </a>
@@ -541,7 +541,7 @@ export function StorageSettingsClient() {
                         href="https://console.cloud.google.com/apis/library/drive.googleapis.com"
                         target="_blank"
                         rel="noreferrer"
-                        className="text-brand-600 underline underline-offset-2 hover:text-brand-700"
+                        className="text-brand-accent underline underline-offset-2 hover:text-brand-700"
                       >
                         Google Drive API
                       </a>
@@ -573,7 +573,7 @@ export function StorageSettingsClient() {
                       Copiá el <strong className="text-fg">ID de carpeta</strong> (ver{' '}
                       <button
                         type="button"
-                        className="text-brand-600 underline underline-offset-2 hover:text-brand-700"
+                        className="text-brand-accent underline underline-offset-2 hover:text-brand-700"
                         onClick={() => setFolderIdHelpOpen(true)}
                       >
                         cómo obtenerlo
@@ -592,7 +592,7 @@ export function StorageSettingsClient() {
                   <p className="text-xs text-fg-muted mb-1">
                     <button
                       type="button"
-                      className="text-brand-600 underline underline-offset-2 hover:text-brand-700"
+                      className="text-brand-accent underline underline-offset-2 hover:text-brand-700"
                       onClick={() => setFolderIdHelpOpen(true)}
                     >
                       ¿Cómo obtengo el ID de carpeta?
@@ -694,7 +694,7 @@ export function StorageSettingsClient() {
 
         <pre className="mt-3 rounded-sm border border-border bg-surface-muted px-3 py-2 text-[11px] font-mono text-fg overflow-x-auto leading-relaxed">
           https://drive.google.com/drive/folders/
-          <span className="rounded-sm bg-brand-100 px-1 text-brand-800">1a2b3c4d5e6f7g8h9i0jKLMNOP</span>
+          <span className="rounded-sm bg-brand-accent-bg px-1 text-brand-accent">1a2b3c4d5e6f7g8h9i0jKLMNOP</span>
         </pre>
 
         <p className="mt-3 text-[13px] text-fg-muted">

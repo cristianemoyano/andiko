@@ -105,7 +105,7 @@ export function OrderShipmentsSection({
                           href={shipment.tracking_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-brand-600 hover:underline"
+                          className="text-brand-accent hover:underline"
                         >
                           {shipment.tracking_number}
                         </a>

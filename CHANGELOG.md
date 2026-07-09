@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.44.4](https://github.com/cristianemoyano/andiko/compare/v0.44.3...v0.44.4) (2026-07-09)
+
+### Features
+
+* **core:** polish landing hierarchy and interaction motion ([7c4cf98](https://github.com/cristianemoyano/andiko/commit/7c4cf9898b5392f6132444b88391c280abd0293b))
+* **core:** unify ERP brand tokens and refine landing motion ([5568cec](https://github.com/cristianemoyano/andiko/commit/5568cec502ccf0ebb697e1081c91d3d659704535))
+
+### Bug Fixes
+
+* **core:** bake Docker image tag into NEXT_PUBLIC_APP_VERSION ([eeaa23d](https://github.com/cristianemoyano/andiko/commit/eeaa23d5b1869c893bd28bbe0e6d35cf37d074fd))
+* **core:** polish ERP shell depth and fix panel access ([6b39f56](https://github.com/cristianemoyano/andiko/commit/6b39f56960712ceb511cb77849cd82d8adff7656))
+
 ## [0.44.3](https://github.com/cristianemoyano/andiko/compare/v0.44.2...v0.44.3) (2026-07-09)
 
 ### Bug Fixes

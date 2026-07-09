@@ -28,7 +28,7 @@ const DAY_PICKER_CLASS_NAMES = {
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600',
   ),
   selected:        '[&_button]:bg-brand-600 [&_button]:text-white [&_button]:hover:bg-brand-700',
-  today:           '[&_button]:font-bold [&_button]:text-brand-700 [&_button]:border [&_button]:border-brand-300 [&_button]:bg-brand-50',
+  today:           '[&_button]:font-bold [&_button]:text-brand-accent [&_button]:border [&_button]:border-brand-accent-border [&_button]:bg-brand-accent-bg',
   outside:         'opacity-40',
   disabled:        'opacity-30 cursor-not-allowed',
   hidden:          'invisible',

@@ -25,6 +25,7 @@ import {
   can,
   canSettings,
   clearPermissionCache,
+  getPermissionsForRole,
   getPermissionsForUser,
   hasSalesScopeOwn,
   requirePermission,
@@ -134,6 +135,33 @@ describe('getPermissionsForUser()', () => {
     const perms = await getPermissionsForUser({ role: 'operator', orgRoleId: null }, 'org-1')
     expect(perms).not.toContain('settings:read')
     expect(perms).toContain('sales:read')
+  })
+
+  it('always grants panel:read to built-in admin even when missing from DB', async () => {
+    mockRoleFindAll.mockResolvedValue([makeRow('contacts:read')])
+    const perms = await getPermissionsForUser({ role: 'admin', orgRoleId: null }, 'org-1')
+    expect(perms).toContain('panel:read')
+    expect(perms).toContain('contacts:read')
+  })
+
+  it('always grants panel:read to branch-admin even when missing from DB', async () => {
+    mockRoleFindAll.mockResolvedValue([makeRow('sales:read')])
+    const perms = await getPermissionsForUser({ role: 'branch-admin', orgRoleId: null }, 'org-1')
+    expect(perms).toContain('panel:read')
+  })
+
+  it('does not inject panel:read for operator without custom org role', async () => {
+    mockRoleFindAll.mockResolvedValue([makeRow('sales:read')])
+    const perms = await getPermissionsForUser({ role: 'operator', orgRoleId: null }, 'org-1')
+    expect(perms).not.toContain('panel:read')
+  })
+})
+
+describe('getPermissionsForRole()', () => {
+  it('injects panel:read for admin in matrix grants', async () => {
+    mockRoleFindAll.mockResolvedValue([makeRow('contacts:read')])
+    const perms = await getPermissionsForRole('admin', 'org-1')
+    expect(perms).toContain('panel:read')
   })
 })
 

@@ -343,15 +343,15 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
 
       <div className="flex flex-col gap-1.5">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">Módulo</p>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {moduleGroups.map(group => (
             <button
               key={group}
               type="button"
               onClick={() => selectModuleGroup(group)}
-              className={`rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
+              className={`shrink-0 snap-start rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
                 !showAllModules && activeModuleFilter === group
-                  ? 'border-brand-600 bg-brand-50 text-brand-800'
+                  ? 'border-brand-accent bg-brand-accent-bg text-brand-accent'
                   : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'
               }`}
             >
@@ -361,9 +361,9 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
           <button
             type="button"
             onClick={clearModuleFilter}
-            className={`rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
+            className={`shrink-0 snap-start rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
               showAllModules
-                ? 'border-brand-600 bg-brand-50 text-brand-800'
+                ? 'border-brand-accent bg-brand-accent-bg text-brand-accent'
                 : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'
             }`}
           >
@@ -373,7 +373,7 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
             <button
               type="button"
               onClick={clearModuleFilter}
-              className="text-[11px] text-fg-muted underline-offset-2 hover:underline"
+              className="shrink-0 snap-start text-[11px] text-fg-muted underline-offset-2 hover:underline"
             >
               Ver todos
             </button>
@@ -388,7 +388,7 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
 
       <div className="flex flex-col gap-1.5">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">Rol</p>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {matrix.columns.map(col => {
             const key = columnKey(col)
             return (
@@ -396,9 +396,9 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
                 key={key}
                 type="button"
                 onClick={() => selectRoleFilter(key)}
-                className={`rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
+                className={`shrink-0 snap-start rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
                   roleFilterKey === key
-                    ? 'border-brand-600 bg-brand-50 text-brand-800'
+                    ? 'border-brand-accent bg-brand-accent-bg text-brand-accent'
                     : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'
                 }`}
               >
@@ -409,9 +409,9 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
           <button
             type="button"
             onClick={() => setRoleFilterKey(null)}
-            className={`rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
+            className={`shrink-0 snap-start rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
               !roleFilterActive
-                ? 'border-brand-600 bg-brand-50 text-brand-800'
+                ? 'border-brand-accent bg-brand-accent-bg text-brand-accent'
                 : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'
             }`}
           >
@@ -442,7 +442,7 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
 
       {error && <p role="alert" className="text-[12px] text-danger">{error}</p>}
 
-      <div className="overflow-x-auto border border-border rounded-sm">
+      <div className="overflow-x-auto rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.18)]">
         <table className="min-w-full text-[12px]" role="grid">
           <thead>
             <tr className="bg-surface-muted border-b border-border">
@@ -519,6 +519,10 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
                       const key = columnKey(col)
                       const checked = roleHasPermission(col, perm.name, matrix.grants, draft)
                       const readonly = col.kind === 'builtin' || !canEdit
+                      const builtinPanelGrant =
+                        col.kind === 'builtin' &&
+                        perm.name === 'panel:read' &&
+                        (col.role === 'admin' || col.role === 'branch-admin')
                       return (
                         <td key={key} className={`px-3 py-2 text-center ${
                           roleFilterActive && !checked ? 'bg-surface-muted/40' : ''
@@ -527,6 +531,11 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
                             type="checkbox"
                             checked={checked}
                             disabled={readonly}
+                            title={
+                              builtinPanelGrant
+                                ? 'Siempre incluido para Gerente y Encargado de sucursal'
+                                : undefined
+                            }
                             aria-label={`${permissionDisplayLabel(perm.name)} — ${columnLabel(col)}`}
                             onChange={() => {
                               if (col.kind === 'custom') toggleGrant(col.id, perm.name)

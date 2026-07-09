@@ -13,7 +13,7 @@ const panelVariants = cva(
     'data-[state=open]:animate-in data-[state=closed]:animate-out',
     'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
     'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
-    'duration-200',
+    'duration-200 ease-out',
   ].join(' '),
   {
     variants: {
@@ -62,7 +62,7 @@ function Sheet({
             'fixed inset-0 z-50 bg-black/50',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-            'duration-200',
+            'duration-200 ease-out',
           )}
         />
         <RadixDialog.Content

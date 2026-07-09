@@ -78,7 +78,7 @@ export function ContactForm() {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200/70 bg-white/80 p-[clamp(22px,3vw,30px)] shadow-[0_1px_3px_rgba(0,0,0,0.04),0_18px_44px_-22px_rgba(12,100,122,0.3)] backdrop-blur-sm">
+    <div className="rounded-2xl border border-zinc-200/70 bg-white/80 p-[clamp(22px,3vw,30px)] shadow-[0_1px_3px_rgba(0,0,0,0.04),0_18px_44px_-22px_rgba(12,100,122,0.3)] backdrop-blur-sm">
       {sentEmail ? (
         <div className="px-2 py-5 text-center">
           <div className="mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-full border border-green-300 bg-green-100">
@@ -162,7 +162,7 @@ export function ContactForm() {
           <button
             type="submit"
             disabled={loading}
-            className="h-11 w-full rounded-[4px] bg-brand-600 text-[15px] font-semibold text-white transition-colors duration-[120ms] hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
+            className="h-11 w-full rounded-[4px] bg-brand-600 text-[15px] font-semibold text-white transition-[color,transform] duration-150 ease-out hover:bg-brand-700 active:scale-[0.98] disabled:scale-100 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
           >
             {loading ? 'Enviando…' : 'Mantenerme al tanto'}
           </button>

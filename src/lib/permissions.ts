@@ -54,6 +54,14 @@ export function isModulePermission(p: string): p is ModulePermission {
   )
 }
 
+/** Built-in roles that always have panel access (not configurable in the roles matrix). */
+export const BUILTIN_PANEL_ROLES = ['admin', 'branch-admin'] as const satisfies readonly UserRole[]
+
+function withBuiltinPanelAccess(role: UserRole, perms: Permission[]): Permission[] {
+  if (!(BUILTIN_PANEL_ROLES as readonly UserRole[]).includes(role)) return perms
+  return perms.includes('panel:read') ? perms : [...perms, 'panel:read']
+}
+
 // Process-level cache for permission lookups, gated on the same generation counters that
 // `capabilities-cache.ts` bumps at every role_permissions / org_role_permissions mutation
 // site. `cache()` (React) only dedupes within a single request; this survives across
@@ -112,8 +120,11 @@ export const getPermissionsForRole = cache(async (
   }
 
   const names = await loadRolePermissionNames(role, orgId)
-  const perms = names.filter((n): n is Permission =>
-    isModulePermission(n) || isSettingsPermission(n) || isPanelPermission(n) || isSalesScopePermission(n) || isLogisticsScopePermission(n),
+  const perms = withBuiltinPanelAccess(
+    role,
+    names.filter((n): n is Permission =>
+      isModulePermission(n) || isSettingsPermission(n) || isPanelPermission(n) || isSalesScopePermission(n) || isLogisticsScopePermission(n),
+    ),
   )
   rolePermCache.set(key, { value: perms, globalGen, orgGen })
   trimCache(rolePermCache)

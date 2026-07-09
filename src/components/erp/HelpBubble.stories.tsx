@@ -41,7 +41,7 @@ export const WithLink: Story = {
     <HelpBubble label="Stock" title="Stock en el catálogo">
       <p>El número del catálogo es la suma de todos los depósitos.</p>
       <p>
-        <Link href="/inventario/stock" className="text-brand-600 hover:underline font-medium">
+        <Link href="/inventario/stock" className="text-brand-accent hover:underline font-medium">
           Ver stock por depósito →
         </Link>
       </p>

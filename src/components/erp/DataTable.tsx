@@ -184,7 +184,7 @@ export function DataTable<T extends object>({
                     'h-9 px-3 text-left text-[11px] font-semibold text-fg-muted uppercase tracking-wide border-b border-border bg-surface-muted whitespace-nowrap select-none',
                     col.align === 'right' && 'text-right',
                     col.sortable && 'cursor-pointer hover:bg-surface-hover hover:text-fg',
-                    sortKey === col.key && 'text-brand-600 bg-brand-50',
+                    sortKey === col.key && 'text-brand-accent bg-brand-accent-bg',
                     stickyFirstColumn && i === 0 && !selection && 'sticky left-0 z-10 bg-surface-muted',
                     col.className,
                   )}
@@ -415,13 +415,13 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
     <span className="inline-flex flex-col gap-px">
       <svg
         width="7" height="4" viewBox="0 0 7 4"
-        className={cn('block', active && dir === 'asc' ? 'text-brand-600' : 'text-fg-subtle')}
+        className={cn('block', active && dir === 'asc' ? 'text-brand-accent' : 'text-fg-subtle')}
       >
         <path d="M3.5 0L7 4H0z" fill="currentColor" />
       </svg>
       <svg
         width="7" height="4" viewBox="0 0 7 4"
-        className={cn('block', active && dir === 'desc' ? 'text-brand-600' : 'text-fg-subtle')}
+        className={cn('block', active && dir === 'desc' ? 'text-brand-accent' : 'text-fg-subtle')}
       >
         <path d="M3.5 4L0 0h7z" fill="currentColor" />
       </svg>

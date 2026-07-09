@@ -527,7 +527,7 @@ export function ShipmentDetail({ id }: { id: string }) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormField label="Pedido">
                       {shipment.salesOrder ? (
-                        <Link href={`/ventas/pedidos/${shipment.salesOrder.id}`} className="text-[13px] text-brand-600 hover:underline">
+                        <Link href={`/ventas/pedidos/${shipment.salesOrder.id}`} className="text-[13px] text-brand-accent hover:underline">
                           {shipment.salesOrder.order_number}
                         </Link>
                       ) : (
@@ -608,7 +608,7 @@ export function ShipmentDetail({ id }: { id: string }) {
                   <div>
                     <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Pedido</p>
                     {shipment.salesOrder ? (
-                      <Link href={`/ventas/pedidos/${shipment.salesOrder.id}`} className="text-brand-600 hover:underline">
+                      <Link href={`/ventas/pedidos/${shipment.salesOrder.id}`} className="text-brand-accent hover:underline">
                         {shipment.salesOrder.order_number}
                       </Link>
                     ) : <span className="text-fg-subtle">—</span>}
@@ -624,7 +624,7 @@ export function ShipmentDetail({ id }: { id: string }) {
                     </p>
                     {shipment.tracking_number ? (
                       shipment.tracking_url ? (
-                        <a href={shipment.tracking_url} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline tabular-nums">
+                        <a href={shipment.tracking_url} target="_blank" rel="noopener noreferrer" className="text-brand-accent hover:underline tabular-nums">
                           {shipment.tracking_number}
                         </a>
                       ) : (

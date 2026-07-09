@@ -330,7 +330,7 @@ export function EmailLogsTab() {
                   <dd>
                     <Link
                       href={DOCUMENT_HREF[detail.document_type](detail.document_id)}
-                      className="text-brand-600 underline underline-offset-2 hover:text-brand-700"
+                      className="text-brand-accent underline underline-offset-2 hover:text-brand-700"
                     >
                       {detail.document_label}
                       {detail.document_number ? ` ${detail.document_number}` : ''}

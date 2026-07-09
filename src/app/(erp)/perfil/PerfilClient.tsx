@@ -141,7 +141,7 @@ export function PerfilClient({ initial, isImpersonating }: Props) {
           )}
 
           <div className="bg-surface border border-border rounded-sm p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-brand-100 text-brand-800 text-lg font-semibold flex items-center justify-center flex-shrink-0 select-none">
+            <div className="w-12 h-12 rounded-full bg-brand-accent-bg text-brand-accent text-lg font-semibold flex items-center justify-center flex-shrink-0 select-none ring-1 ring-brand-accent-border/60">
               {initials}
             </div>
             <div className="min-w-0">

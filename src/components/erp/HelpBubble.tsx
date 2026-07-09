@@ -59,7 +59,7 @@ export function HelpBubble({
             className={cn(
               'inline-flex h-7 w-7 items-center justify-center rounded-full',
               'border border-border-strong bg-surface text-fg-muted',
-              'hover:border-brand-accent-border hover:bg-brand-50 hover:text-brand-700',
+              'hover:border-brand-accent-border hover:bg-brand-accent-bg hover:text-brand-accent',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40',
               'transition-colors',
             )}
