@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.44.2](https://github.com/cristianemoyano/andiko/compare/v0.44.1...v0.44.2) (2026-07-09)
+
+### Features
+
+* **storage:** extend sys-admin test with presigned upload, download and preview ([2fc699d](https://github.com/cristianemoyano/andiko/commit/2fc699d4b3e582a9c7f290f4eb61aa5bc464b824))
+
 ## [0.44.1](https://github.com/cristianemoyano/andiko/compare/v0.44.0...v0.44.1) (2026-07-09)
 
 ### Bug Fixes
