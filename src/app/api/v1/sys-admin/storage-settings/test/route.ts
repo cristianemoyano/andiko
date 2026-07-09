@@ -46,7 +46,7 @@ export async function DELETE(req: Request) {
   const gate = await requireSysAdmin()
   if ('response' in gate) return gate.response
 
-  const parsed = parseStorageTestDeleteInput(req)
+  const parsed = await parseStorageTestDeleteInput(req)
   if ('response' in parsed) return parsed.response
 
   try {
@@ -62,9 +62,9 @@ export async function DELETE(req: Request) {
   }
 }
 
-function parseStorageTestDeleteInput(
+async function parseStorageTestDeleteInput(
   req: Request,
-): { data: { storage_key: string } } | { response: NextResponse } {
+): Promise<{ data: { storage_key: string } } | { response: NextResponse }> {
   const fromQuery = new URL(req.url).searchParams.get('storage_key')
   if (fromQuery) {
     const parsed = storageTestDeleteSchema.safeParse({ storage_key: fromQuery })
