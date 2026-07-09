@@ -60,10 +60,19 @@ next-env.d.ts
 .claude/settings.json
 
 # Cursor — local IDE settings and agent plans (never commit)
-.cursor/
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
 
 # Storybook static build output
 /storybook-static/
 
 # CSV
 *.csv
+
+# Terraform — local provider cache and secrets
+infra/terraform/**/.terraform/
+infra/terraform/**/terraform.tfvars
+infra/terraform/**/tfplan
+infra/terraform/**/*.tfstate
+infra/terraform/**/*.tfstate.*

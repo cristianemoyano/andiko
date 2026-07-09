@@ -2,7 +2,8 @@
 	woo-up woo-down woo-bootstrap woo-credentials woo-reset \
 	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-sync-db-password prod-deploy-app prod-deploy-infra prod-deploy prod-ssl prod-sync-nginx-conf prod-migrate prod-migrate-status \
 	prod-create-sysadmin prod-health prod-backup prod-backup-mail prod-disk-check prod-prune prod-logs prod-renew-certs prod-portainer-auth \
-	prod-init-mail prod-mail-add-user prod-mail-dkim prod-mail-logs prod-mail-restart prod-mail-check prod-expand-ssl-mail
+	prod-init-mail prod-mail-add-user prod-mail-dkim prod-mail-logs prod-mail-restart prod-mail-check prod-expand-ssl-mail \
+	aws-storage-plan aws-storage-apply aws-storage-outputs
 
 # =============================================================================
 # Development — infra local (postgres, pgadmin, Next.js)
@@ -178,3 +179,16 @@ prod-mail-check:
 
 prod-backup-mail:
 	bash infra/scripts/backup-mail.sh
+
+# =============================================================================
+# AWS S3 storage (Terraform — local machine, profile andiko-prod)
+# =============================================================================
+
+aws-storage-plan:
+	AWS_PROFILE=andiko-prod AWS_PAGER= bash infra/terraform/aws-storage/scripts/deploy.sh plan
+
+aws-storage-apply:
+	AWS_PROFILE=andiko-prod AWS_PAGER= bash infra/terraform/aws-storage/scripts/deploy.sh apply
+
+aws-storage-outputs:
+	bash infra/terraform/aws-storage/scripts/deploy.sh outputs

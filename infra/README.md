@@ -14,6 +14,8 @@ make prod-release
 
 **Mail server:** [docs/deployment/mail-server.md](../docs/deployment/mail-server.md) · Thunderbird: [thunderbird.md](../docs/deployment/thunderbird.md)
 
+**File storage (S3):** [docs/deployment/aws-storage.md](../docs/deployment/aws-storage.md) · Terraform: [terraform/aws-storage/](terraform/aws-storage/)
+
 **Deploy:** `prod-release` updates **app only** (`prod-deploy-app`). Full stack: `prod-deploy-infra` when `docker-stack.yml` or mail/nginx changes. Disk: `prod-disk-check`, `prod-prune`.
 
 New VPS bootstrap: see [production.md § New VPS bootstrap](../docs/deployment/production.md#new-vps-bootstrap-first-time-only).
