@@ -23,6 +23,7 @@ fi
 
 echo "Building ${IMAGE}:${TAG} ..."
 docker build -f "${REPO_ROOT}/infra/Dockerfile" \
+  --build-arg "APP_VERSION=${TAG}" \
   --build-arg "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=${NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN:-}" \
   --build-arg "NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}" \
   -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" "${REPO_ROOT}"
