@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { resolvePostAuthRedirect } from '@/lib/post-auth-redirect'
 import { AndikoLogo } from '@/components/layout/AndikoLogo'
 import { LandingHeader } from '@/components/layout/LandingHeader'
+import { LandingReveal } from '@/components/layout/LandingReveal'
 import { AppVersion } from '@/components/layout/AppVersion'
 import { createPageMetadata, siteConfig, siteUrl } from '@/lib/site'
 import { ContactForm } from './ContactForm'
@@ -305,8 +306,8 @@ export default async function LandingPage() {
               </div>
 
               {/* Right: dashboard mockup */}
-              <div className="landing-enter landing-enter-delay-4 min-w-[320px] flex-1 basis-[500px] transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-0.5">
-                <DashboardMockup />
+              <div className="landing-enter landing-enter-delay-4 group min-w-[320px] flex-1 basis-[500px]">
+                <DashboardMockup className="transition-[transform,box-shadow] duration-300 ease-out group-hover:-translate-y-0.5 group-hover:shadow-[0_28px_70px_-20px_rgba(12,100,122,0.34)]" />
               </div>
             </div>
           </section>
@@ -314,35 +315,38 @@ export default async function LandingPage() {
           {/* decorative line */}
           <div className="mx-auto h-px max-w-[1100px] bg-gradient-to-r from-transparent via-brand-300/60 to-transparent" />
 
-          {/* ░░ MODULES ░░ */}
-          <section id="sec-modulos" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] pb-[clamp(32px,4vw,56px)] pt-[clamp(56px,7vw,96px)]">
-            <div className="max-w-[640px]">
-              <h2 className="text-[clamp(26px,3vw,32px)] font-semibold leading-[1.12] tracking-[-0.02em] text-zinc-900">
-                Un módulo para cada parte de tu operación
-              </h2>
-              <p className="mt-3.5 text-base leading-relaxed text-zinc-600">
-                Siete módulos integrados que comparten clientes, productos y comprobantes. Activás
-                lo que necesitás y todo conversa entre sí.
-              </p>
-            </div>
-            <div className="mt-10 grid grid-cols-[repeat(auto-fit,minmax(252px,1fr))] gap-[18px]">
-              {modules.map((mod) => (
-                <div
-                  key={mod.title}
-                  className="rounded-xl border border-zinc-200/70 bg-white/70 p-[22px] shadow-[0_1px_3px_rgba(0,0,0,0.03)] backdrop-blur-md transition-[transform,border-color,box-shadow] duration-[160ms] hover:-translate-y-[3px] hover:border-brand-200 hover:shadow-[0_14px_34px_rgba(208,238,243,0.7)]"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-brand-100 bg-brand-50 text-brand-600">
-                    {mod.icon}
-                  </div>
-                  <div className="mt-4 text-base font-semibold text-zinc-900">{mod.title}</div>
-                  <p className="mt-2 text-[13.5px] leading-relaxed text-zinc-600">{mod.body}</p>
-                </div>
-              ))}
-            </div>
-          </section>
+          <LandingReveal>
+            <section id="sec-modulos" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] pb-[clamp(32px,4vw,56px)] pt-[clamp(56px,7vw,96px)]">
+              <div className="max-w-[640px]">
+                <h2 className="text-[clamp(26px,3vw,32px)] font-semibold leading-[1.12] tracking-[-0.02em] text-zinc-900">
+                  Un módulo para cada parte de tu operación
+                </h2>
+                <p className="mt-3.5 text-base leading-relaxed text-zinc-600">
+                  Siete módulos integrados que comparten clientes, productos y comprobantes. Activás
+                  lo que necesitás y todo conversa entre sí.
+                </p>
+              </div>
+              <div className="mt-10 grid grid-cols-[repeat(auto-fit,minmax(252px,1fr))] gap-[18px]">
+                {modules.map((mod, index) => (
+                  <LandingReveal
+                    key={mod.title}
+                    delay={Math.min(index, 4) as 0 | 1 | 2 | 3 | 4}
+                    className="rounded-xl border border-zinc-200/70 bg-white/70 p-[22px] shadow-[0_1px_3px_rgba(0,0,0,0.03)] backdrop-blur-md transition-[transform,border-color,box-shadow] duration-200 ease-out hover:-translate-y-[3px] hover:border-brand-200 hover:shadow-[0_14px_34px_rgba(208,238,243,0.7)]"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-brand-100 bg-brand-50 text-brand-600">
+                      {mod.icon}
+                    </div>
+                    <div className="mt-4 text-base font-semibold text-zinc-900">{mod.title}</div>
+                    <p className="mt-2 text-[13.5px] leading-relaxed text-zinc-600">{mod.body}</p>
+                  </LandingReveal>
+                ))}
+              </div>
+            </section>
+          </LandingReveal>
 
           {/* ░░ WHY (Producto) ░░ */}
-          <section id="sec-producto" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] py-[clamp(32px,4vw,56px)]">
+          <LandingReveal>
+            <section id="sec-producto" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] py-[clamp(32px,4vw,56px)]">
             <div className="max-w-[640px]">
               <h2 className="text-[clamp(26px,3vw,32px)] font-semibold leading-[1.12] tracking-[-0.02em] text-zinc-900">
                 Software de gestión que entiende cómo trabaja una pyme acá
@@ -369,10 +373,12 @@ export default async function LandingPage() {
                 </div>
               ))}
             </div>
-          </section>
+            </section>
+          </LandingReveal>
 
           {/* ░░ METRICS + SECTORS ░░ */}
-          <section className="mx-auto max-w-[1200px] px-[clamp(20px,5vw,56px)] py-[clamp(20px,3vw,32px)]">
+          <LandingReveal>
+            <section className="mx-auto max-w-[1200px] px-[clamp(20px,5vw,56px)] py-[clamp(20px,3vw,32px)]">
             <div className="rounded-xl border border-zinc-200/70 bg-white/70 px-[clamp(20px,3vw,28px)] py-[clamp(18px,2.5vw,24px)] shadow-[0_1px_3px_rgba(0,0,0,0.03)] backdrop-blur-md">
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
                 {metrics.map((metric) => (
@@ -400,10 +406,12 @@ export default async function LandingPage() {
                 </div>
               </div>
             </div>
-          </section>
+            </section>
+          </LandingReveal>
 
           {/* ░░ EARLY ACCESS (Precios) ░░ */}
-          <section id="sec-precios" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] py-[clamp(32px,4vw,56px)]">
+          <LandingReveal>
+            <section id="sec-precios" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] py-[clamp(32px,4vw,56px)]">
             <div className="relative overflow-hidden rounded-2xl border border-zinc-200/70 bg-[linear-gradient(150deg,#0C647A_0%,#0A5268_55%,#083F52_100%)] p-[clamp(34px,5vw,56px)] shadow-[0_24px_60px_-26px_rgba(8,63,82,0.55)]">
               <div
                 aria-hidden
@@ -426,10 +434,12 @@ export default async function LandingPage() {
                 </a>
               </div>
             </div>
-          </section>
+            </section>
+          </LandingReveal>
 
           {/* ░░ CONTACT ░░ */}
-          <section id="sec-contacto" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] pb-[clamp(48px,6vw,88px)] pt-[clamp(40px,5vw,72px)]">
+          <LandingReveal>
+            <section id="sec-contacto" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] pb-[clamp(48px,6vw,88px)] pt-[clamp(40px,5vw,72px)]">
             <div className="mx-auto max-w-[480px]">
               <div className="mb-[26px] text-center">
                 <h2 className="text-[clamp(24px,2.6vw,30px)] font-semibold leading-[1.15] tracking-[-0.02em] text-zinc-900">
@@ -441,7 +451,8 @@ export default async function LandingPage() {
               </div>
               <ContactForm />
             </div>
-          </section>
+            </section>
+          </LandingReveal>
 
           {/* ░░ FOOTER ░░ */}
           <footer className="border-t border-zinc-200/60 bg-white/40 backdrop-blur-sm">

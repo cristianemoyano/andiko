@@ -71,7 +71,7 @@ export function Sidebar({
       <aside
         data-testid="sidebar"
         className={cn(
-          'flex flex-col w-[220px] flex-shrink-0 bg-surface border-r border-border h-full',
+          'flex flex-col w-[220px] flex-shrink-0 bg-surface border-r border-border h-full shadow-[1px_0_0_0_var(--brand-accent-border)]',
           // Mobile: off-canvas drawer that slides in from the left.
           'fixed inset-y-0 left-0 z-[45] transition-transform duration-200',
           'pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0',
@@ -81,7 +81,7 @@ export function Sidebar({
         )}
       >
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 py-[13px] border-b border-border">
+      <div className="flex items-center gap-2.5 px-4 py-[13px] border-b border-border bg-brand-accent-bg/40">
         <div className="w-[22px] h-[22px] bg-brand-600 rounded-sm flex items-center justify-center flex-shrink-0">
           <svg viewBox="0 0 12 12" className="w-3 h-3 fill-white">
             <rect x="0" y="1" width="3" height="10"/>
@@ -287,7 +287,7 @@ export function Sidebar({
       {/* User area */}
       <div className="flex items-center gap-2.5 px-3 py-3 border-t border-border">
         <Link href="/perfil" onClick={() => setOpen(false)} className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity">
-          <div className="w-[26px] h-[26px] rounded-full bg-brand-100 text-brand-800 text-[11px] font-semibold flex items-center justify-center flex-shrink-0">
+          <div className="w-[26px] h-[26px] rounded-full bg-brand-accent-bg text-brand-accent text-[11px] font-semibold flex items-center justify-center flex-shrink-0 ring-1 ring-brand-accent-border/60">
             {initials}
           </div>
           <div className="min-w-0">
@@ -329,11 +329,11 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       className={cn(
         'flex items-center gap-2.5 h-[34px] px-2 rounded-sm text-[13px] mb-px transition-colors',
         active
-          ? 'bg-brand-50 text-brand-600 font-medium'
+          ? 'bg-brand-accent-bg text-brand-accent font-medium'
           : 'text-fg-muted hover:bg-surface-hover'
       )}
     >
-      <span className={cn('flex-shrink-0', active ? 'text-brand-600' : 'text-fg-subtle')}>
+      <span className={cn('flex-shrink-0', active ? 'text-brand-accent' : 'text-fg-subtle')}>
         {item.icon}
       </span>
       {item.label}

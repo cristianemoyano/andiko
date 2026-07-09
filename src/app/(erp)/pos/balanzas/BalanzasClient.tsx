@@ -80,7 +80,7 @@ function BalanzaTutorialPanel() {
       <ol className="p-5 space-y-4">
         {TUTORIAL_STEPS.map((step, i) => (
           <li key={step.title} className="flex gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700 text-[11px] font-semibold">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-accent-bg text-brand-accent text-[11px] font-semibold">
               {i + 1}
             </span>
             <div className="min-w-0 pt-0.5">
@@ -259,7 +259,7 @@ export function BalanzasClient() {
                       className={[
                         'inline-flex flex-col items-start rounded-sm border px-2.5 py-1.5 text-left transition-colors',
                         activeExample === key && !testCode.trim()
-                          ? 'border-brand-600 bg-brand-50 text-fg'
+                          ? 'border-brand-600 bg-brand-accent-bg text-fg'
                           : 'border-border bg-surface text-fg-muted hover:border-border-strong hover:bg-surface-hover',
                       ].join(' ')}
                     >

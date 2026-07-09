@@ -202,7 +202,7 @@ export function ConciliacionDetail({ id }: ConciliacionDetailProps) {
             <p className="mt-1 font-medium text-fg">{supplierName}</p>
             <p className="mt-2 text-[12px] text-fg-muted">
               OC{' '}
-              <Link href={`/compras/ordenes/${order.id}`} className="font-mono text-brand-600 hover:underline">
+              <Link href={`/compras/ordenes/${order.id}`} className="font-mono text-brand-accent hover:underline">
                 {order.order_number}
               </Link>
             </p>
@@ -239,7 +239,7 @@ export function ConciliacionDetail({ id }: ConciliacionDetailProps) {
               <ul className="space-y-1">
                 {receipts.map(r => (
                   <li key={r.id}>
-                    <Link href={`/compras/recepciones/${r.id}`} className="text-[13px] text-brand-600 hover:underline">
+                    <Link href={`/compras/recepciones/${r.id}`} className="text-[13px] text-brand-accent hover:underline">
                       {r.receipt_number}
                     </Link>
                   </li>
@@ -255,7 +255,7 @@ export function ConciliacionDetail({ id }: ConciliacionDetailProps) {
               <ul className="space-y-1">
                 {invoices.map(inv => (
                   <li key={inv.id} className="flex items-center justify-between gap-2 text-[13px]">
-                    <Link href={`/compras/facturas/${inv.id}`} className="text-brand-600 hover:underline">
+                    <Link href={`/compras/facturas/${inv.id}`} className="text-brand-accent hover:underline">
                       {inv.invoice_number}
                       {inv.supplier_invoice_number ? ` (${inv.supplier_invoice_number})` : ''}
                     </Link>

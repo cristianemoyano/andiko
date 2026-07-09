@@ -155,7 +155,7 @@ export function DispatchDialog({ open, onOpenChange, shipment, onDispatched }: D
             {vehicles.length === 0 && (
               <p className="text-[12px] text-fg-muted">
                 Cargá vehículos en{' '}
-                <a href="/logistica/vehiculos" className="text-brand-600 hover:underline">Logística → Vehículos</a>.
+                <a href="/logistica/vehiculos" className="text-brand-accent hover:underline">Logística → Vehículos</a>.
               </p>
             )}
           </>

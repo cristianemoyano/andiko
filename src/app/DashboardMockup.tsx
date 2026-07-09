@@ -3,6 +3,8 @@
  * Decorative only (aria-hidden); recreated from the marketing landing design.
  */
 
+import { cn } from '@/lib/utils'
+
 const navItems = [
   { label: 'Panel', active: true, icon: (
     <svg viewBox="0 0 24 24" className="h-[14px] w-[14px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -75,11 +77,14 @@ const invoices = [
   { number: 'FC-B 0001-00000089', customer: 'Mercado del Sur', amount: '$ 7.018,00', status: 'En proceso', statusClass: 'bg-brand-100 text-brand-800' },
 ] as const
 
-export function DashboardMockup() {
+export function DashboardMockup({ className }: { className?: string }) {
   return (
     <div
       aria-hidden
-      className="relative overflow-hidden rounded-[14px] border border-zinc-200/85 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_24px_60px_-18px_rgba(12,100,122,0.28)]"
+      className={cn(
+        'relative overflow-hidden rounded-[14px] border border-zinc-200/85 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_24px_60px_-18px_rgba(12,100,122,0.28)]',
+        className,
+      )}
     >
       {/* window chrome */}
       <div className="flex items-center gap-[7px] border-b border-zinc-100 bg-[#FBFCFD] px-3.5 py-[11px]">

@@ -247,7 +247,7 @@ export function EmailSettingsClient() {
                   href="https://myaccount.google.com/apppasswords"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-brand-600 underline underline-offset-2 hover:text-brand-700"
+                  className="text-brand-accent underline underline-offset-2 hover:text-brand-700"
                 >
                   una contraseña de aplicación
                 </a>{' '}

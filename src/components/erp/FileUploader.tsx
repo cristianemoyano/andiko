@@ -111,10 +111,10 @@ export function FileUploader({
           disabled
             ? 'cursor-not-allowed border-border bg-surface-hover text-fg-subtle'
             : 'cursor-pointer border-border-strong bg-surface hover:bg-surface-hover',
-          dragOver && !disabled && 'border-ring bg-brand-50',
+          dragOver && !disabled && 'border-ring bg-brand-accent-bg',
         )}
       >
-        <UploadIcon className={cn('text-fg-subtle', dragOver && !disabled && 'text-brand-600')} />
+        <UploadIcon className={cn('text-fg-subtle', dragOver && !disabled && 'text-brand-accent')} />
         <div className="text-[13px] text-fg-muted">
           Arrastrá un archivo o{' '}
           <span className="font-medium text-brand-700">hacé clic para elegir</span>

@@ -124,7 +124,7 @@ export function VariantsSectionClient({
                   <td className="py-2 pr-0 text-right">
                     <div className="inline-flex items-center gap-2">
                       <button
-                        className="text-brand-700 hover:text-brand-800 text-[12px] font-medium"
+                        className="text-brand-accent hover:text-brand-accent/80 text-[12px] font-medium"
                         onClick={() => setEditing(v)}
                         type="button"
                       >

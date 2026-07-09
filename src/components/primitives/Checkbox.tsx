@@ -30,7 +30,7 @@ const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(
         id={checkboxId}
         disabled={disabled}
         className={cn(
-          'group flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border bg-surface transition-colors cursor-pointer',
+          'group flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border bg-surface transition-[color,transform] duration-150 ease-out active:scale-[0.97] cursor-pointer',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
           'data-[state=checked]:bg-brand-600 data-[state=checked]:border-brand-600',
           'data-[state=indeterminate]:bg-brand-600 data-[state=indeterminate]:border-brand-600',

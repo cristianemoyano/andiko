@@ -51,3 +51,12 @@ export const Disabled: Story = {
 }
 
 export const LongText: Story = { args: { children: 'Confirmar y emitir factura electrónica AFIP' } }
+
+export const PressFeedback: Story = {
+  render: () => (
+    <p className="text-[13px] text-fg-muted">
+      Hacé click y mantené presionado para ver el feedback de escala en{' '}
+      <Button variant="primary" className="align-middle">Crear factura</Button>.
+    </p>
+  ),
+}

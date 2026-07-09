@@ -21,7 +21,7 @@ export function TopBar({ breadcrumbs, actions, className }: TopBarProps) {
   return (
     <header
       className={cn(
-        'bg-surface border-b border-border flex-shrink-0',
+        'bg-surface border-b border-border flex-shrink-0 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]',
         // Desktop: single fixed-height row
         'md:h-[52px] md:flex md:flex-row md:items-center md:px-5 md:gap-3',
         // Mobile: stacked column

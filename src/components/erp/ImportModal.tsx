@@ -424,7 +424,7 @@ export function ImportModal({
             <span
               key={s}
               className={`text-[11px] px-3 py-1 rounded-sm font-medium ${
-                active ? 'text-brand-700 bg-brand-50' : done ? 'text-fg-muted' : 'text-fg-subtle'
+                active ? 'text-brand-accent bg-brand-accent-bg' : done ? 'text-fg-muted' : 'text-fg-subtle'
               }`}
             >
               {labels[s]}

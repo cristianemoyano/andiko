@@ -78,7 +78,7 @@ export function StatusPipeline({ type, status, className }: StatusPipelineProps)
               <div className={cn(
                 'flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-semibold border-2 transition-colors flex-shrink-0',
                 isDone   && 'bg-brand-600 border-brand-600 text-white',
-                isActive && 'bg-surface border-brand-600 text-brand-600',
+                isActive && 'bg-surface border-brand-accent text-brand-accent',
                 !isDone && !isActive && 'bg-surface border-border-strong text-fg-subtle',
               )}>
                 {isDone ? (
@@ -91,7 +91,7 @@ export function StatusPipeline({ type, status, className }: StatusPipelineProps)
               </div>
               <span className={cn(
                 'text-[10px] whitespace-nowrap leading-tight',
-                isActive ? 'text-brand-600 font-semibold' : '',
+                isActive ? 'text-brand-accent font-semibold' : '',
                 isDone   ? 'text-fg-muted' : '',
                 !isDone && !isActive ? 'text-fg-subtle' : '',
               )}>

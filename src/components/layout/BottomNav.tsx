@@ -54,11 +54,12 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
             href={item.href}
             onClick={() => { setOpen(false) }}
             className={cn(
-              'flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium leading-tight transition-colors',
-              active ? 'text-brand-600' : 'text-fg-muted hover:text-fg',
+              'relative flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium leading-tight transition-colors',
+              active ? 'text-brand-accent' : 'text-fg-muted hover:text-fg',
+              active && 'before:absolute before:top-0 before:left-1/2 before:-translate-x-1/2 before:h-0.5 before:w-8 before:rounded-full before:bg-brand-accent',
             )}
           >
-            <span className={cn('flex shrink-0 [&_svg]:size-5', active ? 'text-brand-600' : 'text-fg-subtle')}>
+            <span className={cn('flex shrink-0 [&_svg]:size-5', active ? 'text-brand-accent' : 'text-fg-subtle')}>
               {item.icon}
             </span>
             <span className="truncate max-w-full">{label}</span>
@@ -72,11 +73,12 @@ export function BottomNav({ enabledModules }: BottomNavProps) {
         aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
         aria-expanded={menuOpen}
         className={cn(
-          'flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium leading-tight transition-colors',
-          menuOpen ? 'text-brand-600' : 'text-fg-muted hover:text-fg',
+          'relative flex flex-1 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium leading-tight transition-colors',
+          menuOpen ? 'text-brand-accent' : 'text-fg-muted hover:text-fg',
+          menuOpen && 'before:absolute before:top-0 before:left-1/2 before:-translate-x-1/2 before:h-0.5 before:w-8 before:rounded-full before:bg-brand-accent',
         )}
       >
-        <span className={cn('flex shrink-0', menuOpen ? 'text-brand-600' : 'text-fg-subtle')}>
+        <span className={cn('flex shrink-0', menuOpen ? 'text-brand-accent' : 'text-fg-subtle')}>
           <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="3" cy="3" r="1.6" /><circle cx="8" cy="3" r="1.6" /><circle cx="13" cy="3" r="1.6" />
             <circle cx="3" cy="8" r="1.6" /><circle cx="8" cy="8" r="1.6" /><circle cx="13" cy="8" r="1.6" />

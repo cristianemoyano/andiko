@@ -10,7 +10,7 @@ const badgeVariants = cva(
         pending:  'bg-warning-bg text-warning border-warning',
         error:    'bg-danger-bg   text-danger   border-danger',
         draft:    'bg-surface-hover  text-fg-muted  border-border-strong',
-        info:     'bg-brand-100 text-brand-800 border-brand-200',
+        info:     'bg-brand-accent-bg text-brand-accent border-brand-accent-border',
         neutral:  'bg-surface-hover  text-fg-muted  border-border',
       },
     },
@@ -23,7 +23,7 @@ const dotColor: Record<string, string> = {
   pending: 'bg-amber-600',
   error:   'bg-red-600',
   draft:   'bg-fg-subtle',
-  info:    'bg-brand-600',
+  info:    'bg-brand-accent',
   neutral: 'bg-fg-subtle',
 }
 

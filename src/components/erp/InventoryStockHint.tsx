@@ -82,7 +82,7 @@ export function InventoryStockHint({
       <p>{body}</p>
       {showStockLink && (
         <p>
-          <Link href="/inventario/stock" className="text-brand-600 hover:underline font-medium">
+          <Link href="/inventario/stock" className="text-brand-accent hover:underline font-medium">
             Ver stock por depósito →
           </Link>
         </p>

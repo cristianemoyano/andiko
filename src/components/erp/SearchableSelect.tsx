@@ -228,7 +228,7 @@ function SearchableSelect({
                 className={cn(
                   'flex w-full flex-col gap-0.5 px-3 py-2 text-left text-[13px] transition-colors',
                   'hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none',
-                  option.value === value && 'bg-brand-50 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200',
+                  option.value === value && 'bg-brand-accent-bg text-brand-accent font-medium',
                 )}
               >
                 <span className="font-medium leading-tight">{option.label}</span>

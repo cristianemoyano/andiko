@@ -351,7 +351,7 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
               onClick={() => selectModuleGroup(group)}
               className={`rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
                 !showAllModules && activeModuleFilter === group
-                  ? 'border-brand-600 bg-brand-50 text-brand-800'
+                  ? 'border-brand-accent bg-brand-accent-bg text-brand-accent'
                   : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'
               }`}
             >
@@ -363,7 +363,7 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
             onClick={clearModuleFilter}
             className={`rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
               showAllModules
-                ? 'border-brand-600 bg-brand-50 text-brand-800'
+                ? 'border-brand-accent bg-brand-accent-bg text-brand-accent'
                 : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'
             }`}
           >
@@ -398,7 +398,7 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
                 onClick={() => selectRoleFilter(key)}
                 className={`rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
                   roleFilterKey === key
-                    ? 'border-brand-600 bg-brand-50 text-brand-800'
+                    ? 'border-brand-accent bg-brand-accent-bg text-brand-accent'
                     : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'
                 }`}
               >
@@ -411,7 +411,7 @@ export function RolePermissionMatrix({ orgId, apiNamespace, canEdit }: RolePermi
             onClick={() => setRoleFilterKey(null)}
             className={`rounded-sm border px-2 py-0.5 text-[11px] transition-colors ${
               !roleFilterActive
-                ? 'border-brand-600 bg-brand-50 text-brand-800'
+                ? 'border-brand-accent bg-brand-accent-bg text-brand-accent'
                 : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'
             }`}
           >
