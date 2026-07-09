@@ -216,14 +216,26 @@ Generar contraseñas seguras (`openssl rand -base64 24`):
 ```bash
 make prod-mail-add-user EMAIL=postmaster@andiko.cloud PASSWORD='...'
 make prod-mail-add-user EMAIL=erp@andiko.cloud PASSWORD='...'
-make prod-mail-add-user EMAIL=cristian@andiko.cloud PASSWORD='...'
+make prod-mail-add-user EMAIL=cristian.moyano@andiko.cloud PASSWORD='...'
 ```
 
-Listar buzones:
+### Buzones en producción (Andiko Cloud)
+
+Cuentas creadas en el VPS de producción. Las contraseñas viven solo en el gestor de secretos del equipo — **no** documentarlas acá.
+
+| Buzón | Uso |
+|-------|-----|
+| `postmaster@andiko.cloud` | Administración: reportes DMARC (`rua=`), rebotes del sistema, buzón técnico RFC |
+| `erp@andiko.cloud` | Servicio SMTP del ERP (`/sys-admin/email` → preset **Servidor Andiko**); envío de documentos transaccionales |
+| `cristian.moyano@andiko.cloud` | Buzón personal del equipo (IMAP en Thunderbird, etc.) |
+
+Verificar que existen:
 
 ```bash
 bash infra/scripts/mail-setup.sh list-users
 ```
+
+Alta de buzones adicionales del equipo: mismo comando `make prod-mail-add-user EMAIL=… PASSWORD=…`.
 
 Cambiar contraseña:
 
@@ -285,7 +297,9 @@ dig +short TXT mail._domainkey.andiko.cloud
 
 ## 10. Cliente de email (equipo)
 
-Configuración para Thunderbird / Apple Mail / Outlook:
+Guía detallada de Thunderbird: **[thunderbird.md](thunderbird.md)**.
+
+Resumen para Thunderbird / Apple Mail / Outlook:
 
 | | Entrante (IMAP) | Saliente (SMTP) |
 |--|-----------------|-----------------|
@@ -294,6 +308,8 @@ Configuración para Thunderbird / Apple Mail / Outlook:
 | Seguridad | SSL/TLS | STARTTLS |
 | Usuario | `user@andiko.cloud` | `user@andiko.cloud` |
 | Contraseña | la del buzón | la del buzón |
+
+**Gmail:** no soporta IMAP de terceros en la bandeja principal; usar Thunderbird, reenvío a Gmail, o habilitar POP3 (ver [thunderbird.md](thunderbird.md) y troubleshooting abajo).
 
 ---
 

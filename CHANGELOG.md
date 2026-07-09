@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.44.0](https://github.com/cristianemoyano/andiko/compare/v0.43.0...v0.44.0) (2026-07-09)
+
+### Features
+
+* **core:** add make prod-prune for safe VPS disk cleanup ([e2357fa](https://github.com/cristianemoyano/andiko/commit/e2357fa831bb702be0a76bd54d73adc3b458913b))
+* **core:** add Terraform module for AWS S3 file storage ([65c5171](https://github.com/cristianemoyano/andiko/commit/65c51717fe367ef4a5dae595717653aa819a16f5))
+* **core:** deploy-app for routine releases and Thunderbird mail guide ([5a5c185](https://github.com/cristianemoyano/andiko/commit/5a5c185dbbf2cd663135358df15f4f99e863a305))
+* **storage:** add sys-admin storage connectivity test ([aa65ddf](https://github.com/cristianemoyano/andiko/commit/aa65ddface7d09f158f8053b8484253473e1f28f))
+
+### Bug Fixes
+
+* **core:** compare docker image IDs by prefix in prod-prune ([2d56f9c](https://github.com/cristianemoyano/andiko/commit/2d56f9c685bdefed7cac511c79252995835d0497))
+
 ## [0.43.0](https://github.com/cristianemoyano/andiko/compare/v0.41.0...v0.43.0) (2026-07-08)
 
 ### Features

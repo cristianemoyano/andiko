@@ -1,6 +1,7 @@
 import 'server-only'
 import logger from '@/lib/logger'
 import { getResolvedEmailSettings } from './email-settings.service'
+import { andikoMailSenderMismatchMessage } from './smtp-options'
 import { buildTransport } from './transport'
 
 export interface SendTestEmailResult {
@@ -54,6 +55,17 @@ function buildTestEmail(now: Date) {
 export async function sendTestEmail(to: string): Promise<SendTestEmailResult> {
   const settings = await getResolvedEmailSettings()
   if (!settings) throw new Error(SMTP_NOT_CONFIGURED)
+
+  const senderError = andikoMailSenderMismatchMessage(
+    settings.host,
+    settings.user,
+    settings.from_address,
+  )
+  if (senderError) {
+    const wrapped = new Error(EMAIL_TEST_FAILED) as Error & { detail?: string }
+    wrapped.detail = senderError
+    throw wrapped
+  }
 
   const transport = buildTransport(settings)
   const { subject, text, html } = buildTestEmail(new Date())

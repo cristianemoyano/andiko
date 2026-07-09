@@ -1,8 +1,9 @@
 .PHONY: up down reset logs db shell dev \
 	woo-up woo-down woo-bootstrap woo-credentials woo-reset \
-	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-sync-db-password prod-deploy prod-ssl prod-sync-nginx-conf prod-migrate prod-migrate-status \
-	prod-create-sysadmin prod-health prod-backup prod-backup-mail prod-disk-check prod-logs prod-renew-certs prod-portainer-auth \
-	prod-init-mail prod-mail-add-user prod-mail-dkim prod-mail-logs prod-mail-restart prod-mail-check prod-expand-ssl-mail
+	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-sync-db-password prod-deploy-app prod-deploy-infra prod-deploy prod-ssl prod-sync-nginx-conf prod-migrate prod-migrate-status \
+	prod-create-sysadmin prod-health prod-backup prod-backup-mail prod-disk-check prod-prune prod-logs prod-renew-certs prod-portainer-auth \
+	prod-init-mail prod-mail-add-user prod-mail-dkim prod-mail-logs prod-mail-restart prod-mail-check prod-expand-ssl-mail \
+	aws-storage-plan aws-storage-apply aws-storage-outputs
 
 # =============================================================================
 # Development — infra local (postgres, pgadmin, Next.js)
@@ -97,6 +98,13 @@ prod-secrets:
 prod-sync-db-password:
 	bash infra/scripts/sync-db-password.sh
 
+prod-deploy-app:
+	@test -n "$(TAG)" || (echo "TAG is required: make prod-deploy-app TAG=v0.26.0" && exit 1)
+	TAG=$(TAG) bash infra/scripts/deploy-app.sh
+
+# Full stack deploy — postgres, nginx, mail, app (use when infra/docker-stack.yml changes).
+prod-deploy-infra: prod-deploy
+
 prod-deploy:
 	@test -n "$(TAG)" || (echo "TAG is required: make prod-deploy TAG=v0.26.0" && exit 1)
 	TAG=$(TAG) bash infra/scripts/deploy.sh
@@ -133,6 +141,9 @@ prod-backup:
 prod-disk-check:
 	bash infra/scripts/disk-check.sh
 
+prod-prune:
+	bash infra/scripts/prune-disk.sh
+
 prod-logs:
 	docker service logs -f andiko_app
 
@@ -168,3 +179,16 @@ prod-mail-check:
 
 prod-backup-mail:
 	bash infra/scripts/backup-mail.sh
+
+# =============================================================================
+# AWS S3 storage (Terraform — local machine, profile andiko-prod)
+# =============================================================================
+
+aws-storage-plan:
+	AWS_PROFILE=andiko-prod AWS_PAGER= bash infra/terraform/aws-storage/scripts/deploy.sh plan
+
+aws-storage-apply:
+	AWS_PROFILE=andiko-prod AWS_PAGER= bash infra/terraform/aws-storage/scripts/deploy.sh apply
+
+aws-storage-outputs:
+	bash infra/terraform/aws-storage/scripts/deploy.sh outputs

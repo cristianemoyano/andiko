@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireSysAdmin } from '@/lib/sys-admin-guard'
 import { emailSettingsUpdateSchema } from '@/modules/communications/email-settings.schema'
-import { getPublicEmailSettings, updateEmailSettings } from '@/modules/communications/email-settings.service'
+import { getPublicEmailSettings, updateEmailSettings, EmailSettingsValidationError } from '@/modules/communications/email-settings.service'
 
 export async function GET() {
   const gate = await requireSysAdmin()
@@ -29,6 +29,13 @@ export async function PUT(req: Request) {
     )
   }
 
-  const result = await updateEmailSettings(parsed.data)
-  return NextResponse.json(result)
+  try {
+    const result = await updateEmailSettings(parsed.data)
+    return NextResponse.json(result)
+  } catch (err) {
+    if (err instanceof EmailSettingsValidationError) {
+      return NextResponse.json({ error: err.message, code: err.code }, { status: 422 })
+    }
+    throw err
+  }
 }

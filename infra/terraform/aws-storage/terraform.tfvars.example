@@ -1,0 +1,20 @@
+# Copy to terraform.tfvars and edit before terraform apply.
+# terraform.tfvars is gitignored — do not commit your email or bucket name if you prefer.
+
+aws_region = "sa-east-1"
+aws_profile = "andiko-prod"
+
+# Prefix only — suffix -{account_id}-{region}-an is added by Terraform (account-regional namespace)
+bucket_name = "andiko-erp-cloud-files-prod"
+
+alert_email = "cristianmoyano.mza@gmail.com"
+
+budget_limit_usd = "5"
+
+cors_allowed_origins = [
+  "https://andiko.cloud",
+]
+
+# environment = "prod"
+# enable_versioning = false
+# iam_user_name = "andiko-storage"

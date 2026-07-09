@@ -34,6 +34,16 @@ export function StorageSettingsClient() {
   const [savedMsg, setSavedMsg] = useState<string | null>(null)
   const [refresh, setRefresh] = useState(0)
   const [folderIdHelpOpen, setFolderIdHelpOpen] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [deletingTest, setDeletingTest] = useState(false)
+  const [testError, setTestError] = useState<string | null>(null)
+  const [testMsg, setTestMsg] = useState<string | null>(null)
+  const [lastTestFile, setLastTestFile] = useState<{
+    storage_key: string
+    bucket: string
+    byte_size: number
+    provider: string
+  } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -212,6 +222,57 @@ export function StorageSettingsClient() {
       setServerError(getApiErrorMessage(e))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleStorageTest() {
+    setTestError(null)
+    setTestMsg(null)
+    setTesting(true)
+    try {
+      const result = await fetchJson<{
+        provider: string
+        bucket: string
+        storage_key: string
+        byte_size: number
+      }>(`${ENDPOINT}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      })
+      setLastTestFile({
+        storage_key: result.storage_key,
+        bucket: result.bucket,
+        byte_size: result.byte_size,
+        provider: result.provider,
+      })
+      setTestMsg(
+        `Prueba OK (${result.provider}): se subieron ${result.byte_size} bytes en «${result.bucket}». Podés eliminar el archivo de prueba cuando quieras.`,
+      )
+    } catch (e) {
+      setTestError(getApiErrorMessage(e))
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  async function handleDeleteTestFile() {
+    if (!lastTestFile) return
+    setTestError(null)
+    setTestMsg(null)
+    setDeletingTest(true)
+    try {
+      await fetchJson<{ ok: true; storage_key: string }>(`${ENDPOINT}/test`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storage_key: lastTestFile.storage_key }),
+      })
+      setLastTestFile(null)
+      setTestMsg('Archivo de prueba eliminado del backend.')
+    } catch (e) {
+      setTestError(getApiErrorMessage(e))
+    } finally {
+      setDeletingTest(false)
     }
   }
 
@@ -561,6 +622,52 @@ export function StorageSettingsClient() {
                 </FormField>
               </section>
             )}
+
+            <section className="rounded-sm border border-border bg-surface p-4 space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold text-fg">Probar configuración</h2>
+                <p className="mt-1 text-xs text-fg-muted">
+                  Sube un archivo de prueba con la configuración <strong>guardada</strong>, verifica
+                  que el backend responde y dejalo en el bucket hasta que lo elimines. No crea adjuntos en el ERP.
+                  Guardá los cambios antes de probar.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void handleStorageTest()}
+                  disabled={testing || deletingTest || saving || !form.enabled}
+                >
+                  {testing ? 'Probando…' : 'Ejecutar prueba de almacenamiento'}
+                </Button>
+
+                {lastTestFile ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => void handleDeleteTestFile()}
+                    disabled={testing || deletingTest || saving}
+                  >
+                    {deletingTest ? 'Eliminando…' : 'Eliminar archivo de prueba'}
+                  </Button>
+                ) : null}
+              </div>
+
+              {lastTestFile ? (
+                <p className="text-xs text-fg-muted font-mono break-all">
+                  Archivo: {lastTestFile.storage_key} ({lastTestFile.byte_size} bytes)
+                </p>
+              ) : null}
+
+              {!form.enabled ? (
+                <p className="text-xs text-fg-subtle">Activá el almacenamiento para habilitar la prueba.</p>
+              ) : null}
+
+              {testError ? <p className="text-sm text-danger">{testError}</p> : null}
+              {testMsg ? <p className="text-sm text-success">{testMsg}</p> : null}
+            </section>
           </div>
         )}
       </PageBody>

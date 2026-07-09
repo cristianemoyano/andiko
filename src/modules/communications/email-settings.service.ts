@@ -7,6 +7,15 @@ import {
   type EmailSettingsUpdateInput,
   type PublicEmailSettings,
 } from './email-settings.schema'
+import { andikoMailSenderMismatchMessage } from './smtp-options'
+
+export class EmailSettingsValidationError extends Error {
+  readonly code = 'VALIDATION_ERROR' as const
+  constructor(message: string) {
+    super(message)
+    this.name = 'EmailSettingsValidationError'
+  }
+}
 
 /**
  * Global (platform-wide) SMTP configuration, managed by sys-admin and stored in
@@ -78,6 +87,12 @@ export async function updateEmailSettings(
       ? input.password
       : encryptSecret(input.password)
   }
+
+  const mergedHost = input.host ?? row.smtp_host
+  const mergedUser = input.user ?? row.smtp_user
+  const mergedFrom = input.from_address ?? row.from_address
+  const senderError = andikoMailSenderMismatchMessage(mergedHost, mergedUser, mergedFrom)
+  if (senderError) throw new EmailSettingsValidationError(senderError)
 
   await row.update({
     smtp_enabled: input.enabled ?? row.smtp_enabled,

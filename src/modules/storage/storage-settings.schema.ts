@@ -42,6 +42,18 @@ export const storageSettingsUpdateSchema = z
 
 export type StorageSettingsUpdateInput = z.infer<typeof storageSettingsUpdateSchema>
 
+/** Empty body — uses saved platform storage settings. */
+export const storageTestSchema = z.object({}).strict()
+export type StorageTestInput = z.infer<typeof storageTestSchema>
+
+/** Deletes a sys-admin test upload by storage key. */
+export const storageTestDeleteSchema = z
+  .object({
+    storage_key: z.string().min(1).max(512),
+  })
+  .strict()
+export type StorageTestDeleteInput = z.infer<typeof storageTestDeleteSchema>
+
 /** Shape returned to the client — secrets redacted to boolean flags. */
 export interface PublicStorageSettings {
   enabled: boolean

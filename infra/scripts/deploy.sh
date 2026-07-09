@@ -35,7 +35,7 @@ bash "$SCRIPT_DIR/sync-nginx-conf.sh"
 echo "Pulling ${GHCR_IMAGE}:${TAG} ..."
 docker pull "${GHCR_IMAGE}:${TAG}"
 
-echo "Deploying stack ${STACK} ..."
+echo "Deploying stack ${STACK} (full — app + infra) ..."
 envsubst '${GHCR_IMAGE} ${IMAGE_TAG} ${AFIP_MODE} ${POSTGRES_USER} ${POSTGRES_DB} ${REPO_ROOT} ${POSTGRES_DATA_DIR} ${CERTBOT_CERTS_DIR} ${CERTBOT_WWW_DIR} ${PORTAINER_DATA_DIR} ${PORTAINER_HTPASSWD_FILE} ${NGINX_CONF_DIR} ${NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN} ${NEXT_PUBLIC_POSTHOG_HOST} ${MAIL_DATA_DIR} ${MAIL_STATE_DIR} ${MAIL_CONFIG_DIR} ${MAIL_ENV_FILE}' \
   < "${REPO_ROOT}/infra/docker-stack.yml" \
   | docker stack deploy -c - "$STACK"
