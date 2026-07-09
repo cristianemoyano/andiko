@@ -285,7 +285,9 @@ dig +short TXT mail._domainkey.andiko.cloud
 
 ## 10. Cliente de email (equipo)
 
-Configuración para Thunderbird / Apple Mail / Outlook:
+Guía detallada de Thunderbird: **[thunderbird.md](thunderbird.md)**.
+
+Resumen para Thunderbird / Apple Mail / Outlook:
 
 | | Entrante (IMAP) | Saliente (SMTP) |
 |--|-----------------|-----------------|
@@ -294,6 +296,8 @@ Configuración para Thunderbird / Apple Mail / Outlook:
 | Seguridad | SSL/TLS | STARTTLS |
 | Usuario | `user@andiko.cloud` | `user@andiko.cloud` |
 | Contraseña | la del buzón | la del buzón |
+
+**Gmail:** no soporta IMAP de terceros en la bandeja principal; usar Thunderbird, reenvío a Gmail, o habilitar POP3 (ver [thunderbird.md](thunderbird.md) y troubleshooting abajo).
 
 ---
 

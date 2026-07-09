@@ -69,7 +69,7 @@ else
   echo "Skipping migrations (SKIP_MIGRATE=1)."
 fi
 
-TAG="$TAG" bash "$SCRIPT_DIR/deploy.sh"
+TAG="$TAG" bash "$SCRIPT_DIR/deploy-app.sh"
 wait_for_app
 run_health
 

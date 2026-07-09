@@ -9,6 +9,7 @@ import { PasswordInput } from '@/components/primitives/PasswordInput'
 import { FormField } from '@/components/primitives/FormField'
 import { Switch } from '@/components/primitives/Switch'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { andikoMailSenderMismatchMessage } from '@/modules/communications/smtp-options'
 
 interface PublicEmailSettings {
   enabled: boolean
@@ -116,6 +117,8 @@ export function EmailSettingsClient() {
       if (!f.has_password && !password) next.password = 'La contraseña es obligatoria para enviar'
     }
     if (f.from_address && !EMAIL.test(f.from_address)) next.from_address = 'Dirección de correo inválida'
+    const senderError = andikoMailSenderMismatchMessage(f.host, f.user, f.from_address)
+    if (senderError) next.from_address = senderError
     if (f.port < 1 || f.port > 65535) next.port = 'Puerto inválido (1–65535)'
     return next
   }

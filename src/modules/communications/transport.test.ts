@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ANDIKO_MAIL_TLS_SERVERNAME,
+  andikoMailSenderMismatchMessage,
   buildSmtpTransportOptions,
   resolveSmtpTlsServername,
 } from './smtp-options'
@@ -26,6 +27,23 @@ describe('resolveSmtpTlsServername', () => {
   it('returns undefined for external SMTP hosts', () => {
     expect(resolveSmtpTlsServername('mail.andiko.cloud')).toBeUndefined()
     expect(resolveSmtpTlsServername('smtp.gmail.com')).toBeUndefined()
+  })
+})
+
+describe('andikoMailSenderMismatchMessage', () => {
+  it('requires from_address to match SMTP user on Andiko mail hosts', () => {
+    expect(
+      andikoMailSenderMismatchMessage('mailserver', 'erp@andiko.cloud', 'gmail@gmail.com'),
+    ).toContain('erp@andiko.cloud')
+    expect(
+      andikoMailSenderMismatchMessage('mail.andiko.cloud', 'erp@andiko.cloud', 'erp@andiko.cloud'),
+    ).toBeNull()
+  })
+
+  it('does not apply to external SMTP hosts', () => {
+    expect(
+      andikoMailSenderMismatchMessage('smtp.gmail.com', 'a@gmail.com', 'b@gmail.com'),
+    ).toBeNull()
   })
 })
 

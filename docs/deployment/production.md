@@ -71,7 +71,7 @@ make prod-release
 1. `git pull origin develop` (+ sync nginx configs if needed)
 2. Build and push image to GHCR (`prod-push`)
 3. **Migrations** (`prod-migrate`) — before deploy so the DB matches the new app
-4. `docker stack deploy` (`prod-deploy`)
+4. **App-only rolling update** (`prod-deploy-app`) — updates `andiko_app` image only; does **not** redeploy postgres, nginx, or mailserver
 5. Health check (`https://andiko.cloud/api/health`)
 
 Prompts for the tag interactively (default from `package.json`). Override when needed:
@@ -92,6 +92,20 @@ docker stack services andiko
 
 Monitor services and logs in Portainer: [https://portainer.andiko.cloud](https://portainer.andiko.cloud)
 
+### App deploy vs infra deploy
+
+Routine ERP releases should **only** touch the app container. Infra services (postgres, nginx, mailserver, portainer) change rarely and carry more blast radius if redeployed together with the app.
+
+| Command | Scope | Cuándo usarlo |
+|---------|--------|----------------|
+| `make prod-deploy-app TAG=…` | Solo `andiko_app` (rolling `docker service update`) | **Releases de ERP** (default en `prod-release`) |
+| `make prod-deploy-infra TAG=…` | Stack completo (`docker stack deploy`) | Cambios en `docker-stack.yml`, mail, nginx, nuevos servicios |
+| `make prod-mail-restart` | Solo mailserver | Cambios en `docker-mailserver.env` |
+| `make prod-secrets` | Secrets + rolling restart de servicios afectados | Rotación de credenciales (sin `stack rm`) |
+| `make prod-sync-db-password` | Postgres `ALTER USER` + restart app | Incidente `db: disconnected` |
+
+**Regla:** si el cambio es solo código del ERP → `prod-release` o `prod-deploy-app`. Si el cambio es infra → `prod-deploy-infra` (y migraciones/scripts específicos si aplica). Nunca usar `docker stack rm` para rotar secrets o publicar una versión nueva de la app.
+
 ### Manual deploy (advanced)
 
 If you need to run steps separately:
@@ -100,14 +114,17 @@ If you need to run steps separately:
 # Laptop (optional — prod-release can build/push from VPS)
 make prod-push TAG=v0.35.0
 
-# VPS
+# VPS — routine app release
 cd /root/andiko && git pull origin develop
 make prod-migrate TAG=v0.35.0
-make prod-deploy TAG=v0.35.0
+make prod-deploy-app TAG=v0.35.0
 make prod-health
+
+# VPS — infra change (stack yaml, mail ports, new service)
+make prod-deploy-infra TAG=v0.35.0
 ```
 
-`make prod-deploy` alone does **not** run migrations. Never skip `prod-migrate` when migration files changed.
+`make prod-deploy-app` does **not** run migrations. Never skip `prod-migrate` when migration files changed.
 
 ---
 
@@ -217,7 +234,7 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u cristianemoyano --password-stdin
 ```bash
 make prod-init
 make prod-portainer-auth          # Portainer nginx basic auth
-make prod-deploy TAG=vX.Y.Z       # first image — build/push from laptop or VPS
+make prod-deploy-infra TAG=vX.Y.Z  # first image — build/push from laptop or VPS
 make prod-migrate TAG=vX.Y.Z
 make prod-health                  # HTTP (before certificate)
 make prod-ssl                     # HTTPS + portainer.andiko.cloud in cert
@@ -253,9 +270,11 @@ After bootstrap, use [Deploy a release (routine)](#deploy-a-release-routine) for
 
 | Target | Where | When | Description |
 |--------|-------|------|-------------|
-| **`prod-release`** | **VPS** | **Routine** | Pull, push image, migrate, deploy, health |
+| **`prod-release`** | **VPS** | **Routine** | Pull, push image, migrate, **app deploy**, health |
 | `prod-push TAG=…` | Laptop / VPS | Release | Build + push Docker image to GHCR |
-| `prod-deploy TAG=…` | VPS | Advanced | Pull image + `docker stack deploy` only |
+| `prod-deploy-app TAG=…` | VPS | **Routine** | Rolling update of `andiko_app` only |
+| `prod-deploy-infra TAG=…` | VPS | Infra changes | Full `docker stack deploy` |
+| `prod-deploy TAG=…` | VPS | Infra (alias) | Same as `prod-deploy-infra` |
 | `prod-migrate TAG=…` | VPS | Advanced | Run pending Umzug migrations |
 | `prod-health` | VPS | After deploy | `curl https://andiko.cloud/api/health` |
 | `prod-logs` | VPS | Ops | Follow app service logs |
