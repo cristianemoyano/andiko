@@ -68,7 +68,7 @@ describe('catalog/products.service', () => {
     const arg = productFindAll.mock.calls[0]![0]
     expect(arg).toMatchObject({
       subQuery: false,
-      group: ['Product.id'],
+      group: ['id'],
     })
     expect(Array.isArray(arg.include)).toBe(true)
     const includes = arg.include as unknown as Array<{ as?: string }>
