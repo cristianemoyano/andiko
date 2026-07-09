@@ -18,8 +18,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # PostHog client bundle (NEXT_PUBLIC_* inlined at build time)
 ARG NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
 ARG NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+ARG APP_VERSION
 ENV NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=$NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
 ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
+ENV APP_VERSION=$APP_VERSION
 # Placeholders for Zod validation during `next build` — runtime uses Swarm secrets.
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 ENV AUTH_SECRET=build-time-placeholder-not-used-at-runtime
