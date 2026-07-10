@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { fetchLandingPath } from '@/lib/landing-path-client'
+import { AndikoLogo } from '@/components/layout/AndikoLogo'
+import { AndikoMark } from '@/components/layout/AndikoMark'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 import { formatCuit } from '@/modules/contacts/contact.utils'
@@ -396,24 +398,6 @@ function IcoLink({ size = 16, color = 'currentColor' }: { size?: number; color?:
   )
 }
 
-// ─── ANDIKO LOGO ─────────────────────────────────────────────────────────────
-
-function AndikoLogo({ size = 24 }: { size?: number }) {
-  return (
-    <div
-      className="flex items-center justify-center rounded flex-shrink-0"
-      style={{ width: size, height: size, background: '#0C647A' }}
-    >
-      <svg viewBox="0 0 12 12" style={{ width: size * 0.5, height: size * 0.5, fill: '#fff' }}>
-        <rect x="0" y="1" width="3" height="10" />
-        <rect x="0" y="1" width="12" height="3" />
-        <rect x="9" y="1" width="3" height="10" />
-        <rect x="2" y="5" width="8" height="2.5" />
-      </svg>
-    </div>
-  )
-}
-
 // ─── SHARED PRIMITIVES ────────────────────────────────────────────────────────
 
 function SectionTitle({ children, sub }: { children: React.ReactNode; sub?: string }) {
@@ -595,9 +579,8 @@ function ProgressRail({
   return (
     <div className="hidden md:flex w-[220px] flex-shrink-0 bg-surface border-r border-border flex-col h-full">
       {/* Logo */}
-      <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
-        <AndikoLogo size={24} />
-        <span className="text-[15px] font-semibold text-fg tracking-tight">andiko</span>
+      <div className="px-5 py-4 border-b border-border flex items-center">
+        <AndikoLogo href="/" size="xs" />
       </div>
 
       {/* Progress summary */}
@@ -734,7 +717,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
     <StepWrapper onNext={onNext} isFirst nextLabel="Comenzar configuración">
       <div className="text-center pt-5">
         <div className="flex justify-center mb-6">
-          <AndikoLogo size={52} />
+          <AndikoMark size="2xl" />
         </div>
         <h1 className="text-[22px] font-semibold text-fg tracking-tight mb-2.5">
           Bienvenido a Andiko
