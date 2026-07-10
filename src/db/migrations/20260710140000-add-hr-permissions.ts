@@ -17,6 +17,12 @@ const BUILTIN_GRANTS: Record<string, string[]> = {
   readonly: ['employees:read', 'attendance:read'],
 }
 
+// Unlike logistics/sales-scope-own, HR permissions are intentionally NOT auto-mirrored into
+// org_role_permissions for custom roles — there is no safe analogous existing permission to
+// mirror from (employees:*/attendance:* expose employee PII, so silently granting it to any
+// custom role via a heuristic would be worse than requiring an explicit grant). Orgs using
+// custom roles must grant employees:*/attendance:* explicitly via the roles-matrix UI.
+
 export const up: Migration = async ({ context: queryInterface }) => {
   for (const perm of HR_PERMISSIONS) {
     await queryInterface.sequelize.query(
@@ -41,11 +47,6 @@ export const up: Migration = async ({ context: queryInterface }) => {
 
 export const down: Migration = async ({ context: queryInterface }) => {
   for (const perm of HR_PERMISSIONS) {
-    await queryInterface.sequelize.query(
-      `DELETE FROM org_role_permissions
-       WHERE permission_id = (SELECT id FROM permissions WHERE name = :name)`,
-      { replacements: { name: perm.name } },
-    )
     await queryInterface.sequelize.query(
       `DELETE FROM role_permissions
        WHERE permission_id = (SELECT id FROM permissions WHERE name = :name)`,

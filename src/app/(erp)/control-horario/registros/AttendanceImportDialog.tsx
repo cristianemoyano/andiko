@@ -133,7 +133,9 @@ export function AttendanceImportDialog({ open, onOpenChange, branches, onImporte
         <div className="flex flex-col gap-4">
           <p className="text-[13px] text-fg-muted">
             Subí el archivo CSV exportado por el reloj biométrico. Las fichadas se cargan como origen «Reloj físico»
-            y las que ya estén importadas no se duplican.
+            y las que ya estén importadas no se duplican. Si alguna fila tiene un error (código de empleado o
+            tipo de evento no reconocido), <strong>no se importa ninguna fila del archivo</strong> — corregí la
+            fila indicada en el archivo original y volvé a intentar.
           </p>
 
           <FormField label="Archivo CSV" htmlFor="import_file" required>

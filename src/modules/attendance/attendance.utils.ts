@@ -37,6 +37,12 @@ function toWorkDateKey(value: Date | string): string {
 /**
  * Pairs chronological clock_in/clock_out events per employee/day into worked minutes.
  * Never persisted — computed fresh on every read to avoid storing a lossy hours float.
+ *
+ * Known Fase 1 limitation: events are grouped strictly by their own `work_date` (the
+ * Argentina calendar day of `occurred_at`), computed independently per event. A shift that
+ * crosses midnight (e.g. clock_in 23:00 day X, clock_out 07:00 day X+1) lands in two
+ * different groups — day X gets an `UNCLOSED_SESSION`/wrongly-open anomaly and day X+1 gets
+ * an `ORPHAN_CLOCK_OUT`, instead of one correct total. See docs/ROADMAP.md Fase 12.
  */
 export function computeDailyTotals(events: AttendanceEventForPairing[]): DailyTotal[] {
   const groups = new Map<string, AttendanceEventForPairing[]>()

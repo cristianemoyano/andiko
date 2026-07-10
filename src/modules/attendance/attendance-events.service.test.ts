@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Op } from 'sequelize'
 import type { TenantContext } from '@/lib/tenancy'
 
 vi.mock('server-only', () => ({}))
@@ -11,11 +12,13 @@ vi.mock('@/lib/db', () => ({
 
 const eventFindOne = vi.fn()
 const eventFindAll = vi.fn()
+const eventFindAndCountAll = vi.fn()
 const eventCreate = vi.fn()
 vi.mock('./attendance-event.model', () => ({
   default: {
     findOne: eventFindOne,
     findAll: eventFindAll,
+    findAndCountAll: eventFindAndCountAll,
     create: eventCreate,
   },
 }))
@@ -88,13 +91,13 @@ describe('attendance/attendance-events.service', () => {
       [{ employee_code: '123', occurred_at: '2026-01-05T09:00:00-03:00', event_type: 'IN' }],
       ctx,
       'actor1',
-      'branch1',
+      'b1',
       { clockIn: 'IN', clockOut: 'OUT' },
     )
 
     expect(result).toEqual({ created: 1, skipped: 0, errors: [] })
     expect(eventCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ source: 'device_import', employee_id: 'emp1', event_type: 'clock_in', branch_id: 'branch1' }),
+      expect.objectContaining({ source: 'device_import', employee_id: 'emp1', event_type: 'clock_in', branch_id: 'b1' }),
       expect.anything(),
     )
   })
@@ -108,7 +111,7 @@ describe('attendance/attendance-events.service', () => {
       [{ employee_code: '123', occurred_at: '2026-01-05T09:00:00-03:00', event_type: 'IN' }],
       ctx,
       'actor1',
-      'branch1',
+      'b1',
       { clockIn: 'IN', clockOut: 'OUT' },
     )
 
@@ -124,9 +127,65 @@ describe('attendance/attendance-events.service', () => {
       [{ employee_code: '999', occurred_at: '2026-01-05T09:00:00-03:00', event_type: 'IN' }],
       ctx,
       'actor1',
-      'branch1',
+      'b1',
       { clockIn: 'IN', clockOut: 'OUT' },
     )).rejects.toThrow('ATTENDANCE_IMPORT_ROW_ERRORS')
     expect(eventCreate).not.toHaveBeenCalled()
+  })
+
+  it('importAttendanceEvents rejects a target branch outside the caller\'s allowed branches', async () => {
+    const { importAttendanceEvents } = await import('./attendance-events.service')
+    await expect(importAttendanceEvents(
+      [{ employee_code: '123', occurred_at: '2026-01-05T09:00:00-03:00', event_type: 'IN' }],
+      ctx, // allowedBranchIds: ['b1']
+      'actor1',
+      'other-branch',
+      { clockIn: 'IN', clockOut: 'OUT' },
+    )).rejects.toThrow('BRANCH_NOT_ALLOWED')
+  })
+
+  it('listAttendanceEvents scopes the query to the caller\'s allowed branches', async () => {
+    eventFindAndCountAll.mockResolvedValue({ rows: [], count: 0 })
+
+    const { listAttendanceEvents } = await import('./attendance-events.service')
+    await listAttendanceEvents({ page: 1, limit: 20 }, ctx) // allowedBranchIds: ['b1']
+
+    const arg = eventFindAndCountAll.mock.calls[0]![0]
+    expect(arg.where).toMatchObject({ org_id: 'org1', branch_id: { [Op.in]: ['b1'] } })
+  })
+
+  it('listAttendanceEvents forces employee_id to the caller\'s own employee for scope_own users, ignoring the query filter', async () => {
+    eventFindAndCountAll.mockResolvedValue({ rows: [], count: 0 })
+    getMyEmployeeMock.mockResolvedValue({ id: 'emp-own' })
+    const scopedCtx: TenantContext = { ...ctx, attendanceScopeOwn: true }
+
+    const { listAttendanceEvents } = await import('./attendance-events.service')
+    await listAttendanceEvents({ page: 1, limit: 20, employee_id: 'someone-else' }, scopedCtx)
+
+    const arg = eventFindAndCountAll.mock.calls[0]![0]
+    expect(arg.where.employee_id).toBe('emp-own')
+  })
+
+  it('listAttendanceEvents filters by work_date (not occurred_at) so "today" is not excluded by a UTC/ART mismatch', async () => {
+    eventFindAndCountAll.mockResolvedValue({ rows: [], count: 0 })
+
+    const { listAttendanceEvents } = await import('./attendance-events.service')
+    // A DatePicker-style UTC-midnight Date for "today" in Argentina — this is the exact input
+    // that used to make listAttendanceEvents's old occurred_at-based filter exclude everything.
+    const utcMidnight = new Date('2026-07-10T00:00:00.000Z')
+    await listAttendanceEvents({ page: 1, limit: 20, date_from: utcMidnight, date_to: utcMidnight }, ctx)
+
+    const arg = eventFindAndCountAll.mock.calls[0]![0]
+    expect(arg.where.occurred_at).toBeUndefined()
+    expect(arg.where.work_date).toEqual({ [Op.gte]: '2026-07-09', [Op.lte]: '2026-07-09' })
+  })
+
+  it('getAttendanceEvent returns not-found for a record outside the caller\'s allowed branches', async () => {
+    eventFindOne.mockResolvedValue(null) // whereAllowedBranches excludes it at the query level
+
+    const { getAttendanceEvent } = await import('./attendance-events.service')
+    await expect(getAttendanceEvent('ev1', ctx)).rejects.toThrow('ATTENDANCE_EVENT_NOT_FOUND')
+    const arg = eventFindOne.mock.calls[0]![0]
+    expect(arg.where).toMatchObject({ branch_id: { [Op.in]: ['b1'] } })
   })
 })

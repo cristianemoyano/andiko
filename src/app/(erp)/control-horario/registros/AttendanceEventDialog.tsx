@@ -11,6 +11,7 @@ import { TimeInput } from '@/components/primitives/TimeInput'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifySuccess } from '@/lib/notify'
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
+import { resolveWorkDate } from '@/modules/attendance/attendance.utils'
 import type { EmployeeRow } from '../types'
 
 export interface AttendanceEventDialogProps {
@@ -31,8 +32,7 @@ const MODE_LABEL: Record<Mode, string> = {
 
 /** Argentina no tiene horario de verano — el offset -03:00 es siempre correcto. */
 function toArgentinaIso(date: Date, time: string): string {
-  const dateStr = date.toISOString().slice(0, 10)
-  return `${dateStr}T${time}:00-03:00`
+  return `${resolveWorkDate(date)}T${time}:00-03:00`
 }
 
 export function AttendanceEventDialog({ open, onOpenChange, employees, branches, onSaved }: AttendanceEventDialogProps) {

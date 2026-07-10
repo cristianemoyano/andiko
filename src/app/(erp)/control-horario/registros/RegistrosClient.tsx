@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
 import { formatLocalDateTime } from '@/lib/date-only'
+import { resolveWorkDate } from '@/modules/attendance/attendance.utils'
 import { ControlHorarioSubNav } from '../ControlHorarioSubNav'
 import { AttendanceEventDialog } from './AttendanceEventDialog'
 import { AttendanceImportDialog } from './AttendanceImportDialog'
@@ -33,8 +34,9 @@ const SOURCE_LABEL: Record<string, string> = {
 
 type BranchOption = { id: string; name: string; branch_code: number }
 
+/** Argentina calendar day for the date range filters — must match the server's resolveWorkDate exactly. */
 function toDateOnlyParam(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  return resolveWorkDate(d)
 }
 
 function formatMinutes(mins: number): string {

@@ -823,7 +823,7 @@ Control de horario / fichaje como base para una futura liquidación de sueldos. 
 - [x] Carga y corrección manual por admin/RRHH (sesión, evento único, ausencia) desde `/control-horario/registros`
 - [x] Importación CSV de fichadas desde relojes físicos (biométricos/fichadores), con dedup contra reimportaciones del mismo archivo
 - [x] Totales de horas trabajadas por día, calculados al leer (pareo cronológico de eventos, sin guardar floats)
-- [x] Permisos `employees:*` / `attendance:*` + `attendance:scope_own`, módulo `hr` (premium, deshabilitado por defecto)
+- [x] Permisos `employees:*` / `attendance:*` + `attendance:scope_own`, módulo `hr` (tier premium — habilitado salvo que el admin lo restrinja explícitamente en Configuración, igual que inventory/purchases/accounting/pos)
 
 ### Posterior
 - [ ] Horarios pactados (`work_schedules`) para detectar llegadas tarde / horas extra
@@ -831,6 +831,10 @@ Control de horario / fichaje como base para una futura liquidación de sueldos. 
 - [ ] Flujo de aprobación de correcciones (`attendance_events.corrects_event_id` ya está en el esquema)
 - [ ] Liquidación de sueldos: tarifas/sueldo (`NUMERIC(15,2)` + Decimal.js), cálculo de períodos, asientos contables (Fase 7)
 - [ ] Import CSV multi-marca de reloj (adaptadores por dispositivo), columnas Fecha+Hora separadas, polling automático
+
+### Limitaciones conocidas (Fase 1)
+- Turnos que cruzan medianoche (ej. 23:00 a 07:00 del día siguiente) no se calculan correctamente en `computeDailyTotals` — cada fichada se agrupa por su propio `work_date`, sin pareo entre días. Ver comentario en `src/modules/attendance/attendance.utils.ts`.
+- El import CSV es todo-o-nada: si una fila del archivo falla, se revierte la transacción completa (mismo comportamiento que el import de contactos). Para archivos grandes de reloj físico, una sola fila corrupta obliga a reimportar todo.
 
 ---
 

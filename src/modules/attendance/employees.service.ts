@@ -6,7 +6,7 @@ import type { EmployeeInput, EmployeeUpdateInput, EmployeeQuery } from './employ
 import { paginate, toPaginated } from '@/lib/pagination'
 import logger from '@/lib/logger'
 import type { TenantContext } from '@/lib/tenancy'
-import { whereOrg } from '@/lib/tenancy'
+import { whereOrg, whereAllowedBranches, whereBranch } from '@/lib/tenancy'
 
 async function assertNoConflicts(
   input: Partial<EmployeeInput>,
@@ -40,7 +40,7 @@ export async function listEmployees(query: EmployeeQuery, ctx: TenantContext) {
   const { page, limit, search, branch_id, is_active } = query
   const { offset } = paginate(page, limit)
 
-  const where = whereOrg(ctx, {
+  const where = whereAllowedBranches(ctx, {
     ...(branch_id ? { branch_id } : {}),
     ...(is_active !== undefined ? { is_active } : {}),
     ...(search
@@ -66,7 +66,7 @@ export async function listEmployees(query: EmployeeQuery, ctx: TenantContext) {
 }
 
 export async function getEmployee(id: string, ctx: TenantContext) {
-  const employee = await Employee.findOne({ where: whereOrg(ctx, { id }) })
+  const employee = await Employee.findOne({ where: whereAllowedBranches(ctx, { id }) })
   if (!employee) throw new Error('EMPLOYEE_NOT_FOUND')
   return employee
 }
@@ -79,6 +79,7 @@ export async function getMyEmployee(ctx: TenantContext) {
 
 export async function createEmployee(input: EmployeeInput, ctx: TenantContext, actorId: string) {
   await assertNoConflicts(input, ctx)
+  void whereBranch(ctx, input.branch_id)
   const employee = await Employee.create({
     ...input,
     org_id: ctx.orgId,
@@ -92,6 +93,7 @@ export async function createEmployee(input: EmployeeInput, ctx: TenantContext, a
 export async function updateEmployee(id: string, input: EmployeeUpdateInput, ctx: TenantContext, actorId: string) {
   const employee = await getEmployee(id, ctx)
   await assertNoConflicts(input, ctx, id)
+  if (input.branch_id) void whereBranch(ctx, input.branch_id)
   await employee.update({
     ...input,
     updated_by: actorId,

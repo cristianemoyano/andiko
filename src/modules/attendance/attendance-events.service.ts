@@ -3,7 +3,7 @@ import { Op, type WhereOptions } from 'sequelize'
 import AttendanceEvent from './attendance-event.model'
 import Employee from './employee.model'
 import { getMyEmployee } from './employees.service'
-import { assertFullAttendanceAccess } from './attendance-scope'
+import { assertFullAttendanceAccess, whereAttendanceOwnScope } from './attendance-scope'
 import { resolveWorkDate, computeDailyTotals } from './attendance.utils'
 import { normalizeEventTypeValue, type AttendanceEventTypeAliases } from './attendance-events-csv-adapter'
 import type {
@@ -17,7 +17,7 @@ import type {
 import { paginate, toPaginated, type PaginationQuery } from '@/lib/pagination'
 import logger from '@/lib/logger'
 import type { TenantContext } from '@/lib/tenancy'
-import { whereOrg } from '@/lib/tenancy'
+import { whereOrg, whereAllowedBranches, whereBranch } from '@/lib/tenancy'
 import sequelize from '@/lib/db'
 
 async function assertEmployeeInOrg(employeeId: string, ctx: TenantContext) {
@@ -26,14 +26,13 @@ async function assertEmployeeInOrg(employeeId: string, ctx: TenantContext) {
   return employee
 }
 
-/** Argentina has no DST — a fixed UTC-3 offset is always correct. */
-function combineDateAndTime(workDate: Date | string, time: string): Date {
-  const dateStr = typeof workDate === 'string' ? workDate.slice(0, 10) : workDate.toISOString().slice(0, 10)
-  return new Date(`${dateStr}T${time}:00-03:00`)
-}
-
 function toWorkDateStr(value: Date | string): string {
   return typeof value === 'string' ? value.slice(0, 10) : resolveWorkDate(value)
+}
+
+/** Argentina has no DST — a fixed UTC-3 offset is always correct. */
+function combineDateAndTime(workDate: Date | string, time: string): Date {
+  return new Date(`${toWorkDateStr(workDate)}T${time}:00-03:00`)
 }
 
 async function findLastOpenClockIn(employeeId: string, ctx: TenantContext) {
@@ -42,6 +41,13 @@ async function findLastOpenClockIn(employeeId: string, ctx: TenantContext) {
     order: [['occurred_at', 'DESC']],
   })
   return last && last.event_type === 'clock_in' ? last : null
+}
+
+/** For attendance:scope_own users, resolves a where-clause fragment forcing employee_id to their own employee. No-op otherwise. */
+async function resolveOwnScopeWhere(ctx: TenantContext): Promise<WhereOptions> {
+  if (!ctx.attendanceScopeOwn) return {}
+  const employee = await getMyEmployee(ctx)
+  return whereAttendanceOwnScope(ctx, employee.id)
 }
 
 // --- Self-service (fichaje) ---
@@ -119,23 +125,26 @@ export async function listMyEvents(query: PaginationQuery, ctx: TenantContext) {
 // --- Admin (planilla / correcciones) ---
 
 export async function listAttendanceEvents(query: AttendanceEventQuery, ctx: TenantContext) {
-  assertFullAttendanceAccess(ctx)
   const { page, limit, employee_id, branch_id, event_type, source, date_from, date_to } = query
   const { offset } = paginate(page, limit)
+  const ownScopeWhere = await resolveOwnScopeWhere(ctx)
 
-  const where: WhereOptions = whereOrg(ctx, {
+  const where: WhereOptions = whereAllowedBranches(ctx, {
     ...(employee_id ? { employee_id } : {}),
     ...(branch_id ? { branch_id } : {}),
     ...(event_type ? { event_type } : {}),
     ...(source ? { source } : {}),
+    // Compare on the DATE column (work_date), not the TIMESTAMPTZ occurred_at — avoids
+    // UTC-vs-Argentina-local boundary mismatches on the requested day range.
     ...(date_from || date_to
       ? {
-          occurred_at: {
-            ...(date_from ? { [Op.gte]: date_from } : {}),
-            ...(date_to ? { [Op.lte]: date_to } : {}),
+          work_date: {
+            ...(date_from ? { [Op.gte]: toWorkDateStr(date_from) } : {}),
+            ...(date_to ? { [Op.lte]: toWorkDateStr(date_to) } : {}),
           },
         }
       : {}),
+    ...ownScopeWhere,
   })
 
   const { rows, count } = await AttendanceEvent.findAndCountAll({
@@ -148,8 +157,8 @@ export async function listAttendanceEvents(query: AttendanceEventQuery, ctx: Ten
 }
 
 export async function getAttendanceEvent(id: string, ctx: TenantContext) {
-  assertFullAttendanceAccess(ctx)
-  const event = await AttendanceEvent.findOne({ where: whereOrg(ctx, { id }) })
+  const ownScopeWhere = await resolveOwnScopeWhere(ctx)
+  const event = await AttendanceEvent.findOne({ where: whereAllowedBranches(ctx, { id, ...ownScopeWhere }) })
   if (!event) throw new Error('ATTENDANCE_EVENT_NOT_FOUND')
   return event
 }
@@ -157,6 +166,7 @@ export async function getAttendanceEvent(id: string, ctx: TenantContext) {
 export async function createAttendanceEvent(input: AttendanceEventInput, ctx: TenantContext, actorId: string) {
   assertFullAttendanceAccess(ctx)
   await assertEmployeeInOrg(input.employee_id, ctx)
+  void whereBranch(ctx, input.branch_id)
 
   const event = await AttendanceEvent.create({
     org_id: ctx.orgId,
@@ -177,6 +187,7 @@ export async function createAttendanceEvent(input: AttendanceEventInput, ctx: Te
 export async function createManualSession(input: ManualSessionInput, ctx: TenantContext, actorId: string) {
   assertFullAttendanceAccess(ctx)
   await assertEmployeeInOrg(input.employee_id, ctx)
+  void whereBranch(ctx, input.branch_id)
 
   const workDateStr = toWorkDateStr(input.work_date)
   const clockInAt = combineDateAndTime(input.work_date, input.clock_in_time)
@@ -220,6 +231,7 @@ export async function createManualSession(input: ManualSessionInput, ctx: Tenant
 export async function createAbsence(input: AbsenceInput, ctx: TenantContext, actorId: string) {
   assertFullAttendanceAccess(ctx)
   await assertEmployeeInOrg(input.employee_id, ctx)
+  void whereBranch(ctx, input.branch_id)
 
   const workDateStr = toWorkDateStr(input.work_date)
   const event = await AttendanceEvent.create({
@@ -245,7 +257,7 @@ export async function updateAttendanceEvent(
   actorId: string,
 ) {
   assertFullAttendanceAccess(ctx)
-  const event = await AttendanceEvent.findOne({ where: whereOrg(ctx, { id }) })
+  const event = await AttendanceEvent.findOne({ where: whereAllowedBranches(ctx, { id }) })
   if (!event) throw new Error('ATTENDANCE_EVENT_NOT_FOUND')
 
   const patch: Record<string, unknown> = { updated_by: actorId }
@@ -253,7 +265,10 @@ export async function updateAttendanceEvent(
     patch.occurred_at = input.occurred_at
     patch.work_date = resolveWorkDate(input.occurred_at)
   }
-  if (input.branch_id) patch.branch_id = input.branch_id
+  if (input.branch_id) {
+    void whereBranch(ctx, input.branch_id)
+    patch.branch_id = input.branch_id
+  }
   if (input.note !== undefined) patch.note = input.note
 
   await event.update(patch)
@@ -263,7 +278,7 @@ export async function updateAttendanceEvent(
 
 export async function deleteAttendanceEvent(id: string, ctx: TenantContext, actorId: string) {
   assertFullAttendanceAccess(ctx)
-  const event = await AttendanceEvent.findOne({ where: whereOrg(ctx, { id }) })
+  const event = await AttendanceEvent.findOne({ where: whereAllowedBranches(ctx, { id }) })
   if (!event) throw new Error('ATTENDANCE_EVENT_NOT_FOUND')
   await event.update({ deleted_by: actorId })
   await event.destroy()
@@ -271,14 +286,15 @@ export async function deleteAttendanceEvent(id: string, ctx: TenantContext, acto
 }
 
 export async function getDailyTotals(query: DailyTotalsQuery, ctx: TenantContext) {
-  assertFullAttendanceAccess(ctx)
   const { employee_id, branch_id, date_from, date_to } = query
+  const ownScopeWhere = await resolveOwnScopeWhere(ctx)
 
   const events = await AttendanceEvent.findAll({
-    where: whereOrg(ctx, {
+    where: whereAllowedBranches(ctx, {
       ...(employee_id ? { employee_id } : {}),
       ...(branch_id ? { branch_id } : {}),
       work_date: { [Op.gte]: toWorkDateStr(date_from), [Op.lte]: toWorkDateStr(date_to) },
+      ...ownScopeWhere,
     }),
     order: [['occurred_at', 'ASC']],
   })
@@ -309,6 +325,7 @@ export async function importAttendanceEvents(
   eventTypeAliases: AttendanceEventTypeAliases,
 ): Promise<AttendanceImportResult> {
   assertFullAttendanceAccess(ctx)
+  void whereBranch(ctx, targetBranchId)
 
   const errors: AttendanceImportResult['errors'] = []
   let created = 0
