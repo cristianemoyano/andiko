@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.46.0](https://github.com/cristianemoyano/andiko/compare/v0.45.0...v0.46.0) (2026-07-10)
+
+### Features
+
+* **core:** add self-hosted Umami analytics and Cap invisible captcha ([3c168b1](https://github.com/cristianemoyano/andiko/commit/3c168b1c2fa4165df422645959c706ae299b65a7))
+* **core:** refresh brand assets and A-mark logo ([8e68436](https://github.com/cristianemoyano/andiko/commit/8e68436f4b0b6bcdb61eab6f5cb6d950685de1cc))
+* **core:** unify A-mark branding across web and POS ([d1c5b80](https://github.com/cristianemoyano/andiko/commit/d1c5b8056f1d268a1c3ec09c30b89effe01fb380))
+
+### Bug Fixes
+
+* **core:** auto-create cap_secret placeholder for infra deploy ([5024a23](https://github.com/cristianemoyano/andiko/commit/5024a23ef75c6e4193b55e06105a396fb2c88e16))
+* **core:** correct Cap healthcheck YAML for Swarm ([54a51f4](https://github.com/cristianemoyano/andiko/commit/54a51f407b581e1141c03a47a3e5489d07142d48))
+* **core:** use bun-based healthcheck for Cap Swarm service ([b652e18](https://github.com/cristianemoyano/andiko/commit/b652e18f829c9fbbe7d30dd95b30f21b0317992f))
+* **core:** validate Umami/Cap env and ensure umami-db data dir on deploy ([fcc87bb](https://github.com/cristianemoyano/andiko/commit/fcc87bb52c9f7ae181d29872d85bb651d2ac5147))
+
 ## [0.45.0](https://github.com/cristianemoyano/andiko/compare/v0.44.7...v0.45.0) (2026-07-09)
 
 ### Features
