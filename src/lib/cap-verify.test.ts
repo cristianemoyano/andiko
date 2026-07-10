@@ -15,6 +15,11 @@ describe('verifyCapToken', () => {
     await expect(verifyCapToken('any')).resolves.toBe(true)
   })
 
+  it('returns true when Cap placeholder secret is set (verification disabled)', async () => {
+    vi.stubEnv('CAP_SECRET_KEY', 'cap-secret-not-configured')
+    await expect(verifyCapToken('any')).resolves.toBe(true)
+  })
+
   it('returns false for empty token when Cap is configured', async () => {
     vi.stubEnv('CAP_SECRET_KEY', 'test-secret')
     await expect(verifyCapToken('')).resolves.toBe(false)

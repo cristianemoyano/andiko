@@ -66,6 +66,10 @@ if [ -z "${CRON_SECRET:-}" ]; then
   CRON_SECRET="cron-secret-not-configured"
 fi
 
+if [ -z "${CAP_SECRET_KEY:-}" ]; then
+  CAP_SECRET_KEY="cap-secret-not-configured"
+fi
+
 DATABASE_URL="$(resolve_database_url)"
 
 echo "Rotating Swarm secrets with rolling service updates (no stack rm) ..."
@@ -100,9 +104,7 @@ rotate_secret_rolling database_url "${DATABASE_URL}"
 rotate_secret_rolling auth_secret "${AUTH_SECRET}"
 rotate_secret_rolling auth_url "${AUTH_URL:-https://andiko.cloud}"
 rotate_secret_rolling cron_secret "${CRON_SECRET}"
-if [ -n "${CAP_SECRET_KEY:-}" ]; then
-  rotate_secret_rolling cap_secret "${CAP_SECRET_KEY}"
-fi
+rotate_secret_rolling cap_secret "${CAP_SECRET_KEY}"
 
 echo ""
 echo "Secrets rotated. App/postgres services were updated in place."

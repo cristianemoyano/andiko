@@ -76,9 +76,12 @@ create_or_update_secret database_url "${DATABASE_URL}"
 create_or_update_secret auth_secret "${AUTH_SECRET}"
 create_or_update_secret auth_url "${AUTH_URL:-https://andiko.cloud}"
 create_or_update_secret cron_secret "${CRON_SECRET}"
-if [ -n "${CAP_SECRET_KEY:-}" ]; then
-  create_or_update_secret cap_secret "${CAP_SECRET_KEY}"
+
+if [ -z "${CAP_SECRET_KEY:-}" ]; then
+  echo "Warning: CAP_SECRET_KEY is empty — using placeholder; set a real value and rotate the secret later."
+  CAP_SECRET_KEY="$CAP_SECRET_PLACEHOLDER"
 fi
+create_or_update_secret cap_secret "${CAP_SECRET_KEY}"
 
 bash "$SCRIPT_DIR/sync-nginx-conf.sh"
 

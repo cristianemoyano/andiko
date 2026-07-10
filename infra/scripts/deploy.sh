@@ -33,6 +33,8 @@ if [ ! -f "$PORTAINER_HTPASSWD_FILE" ]; then
   echo "Warning: ${PORTAINER_HTPASSWD_FILE} not found — nginx will fail until you run: make prod-portainer-auth" >&2
 fi
 
+ensure_cap_secret
+
 bash "$SCRIPT_DIR/sync-nginx-conf.sh"
 
 echo "Pulling ${GHCR_IMAGE}:${TAG} ..."

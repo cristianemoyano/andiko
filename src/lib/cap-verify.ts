@@ -4,6 +4,8 @@ type SiteVerifyResponse = {
   success?: boolean
 }
 
+export const CAP_SECRET_PLACEHOLDER = 'cap-secret-not-configured'
+
 function capSecretKey(): string {
   return process.env.CAP_SECRET_KEY ?? ''
 }
@@ -13,7 +15,8 @@ function capVerifyUrl(): string {
 }
 
 export function isCapServerConfigured(): boolean {
-  return capSecretKey().length > 0
+  const key = capSecretKey()
+  return key.length > 0 && key !== CAP_SECRET_PLACEHOLDER
 }
 
 /** Verifies a Cap token server-side via the siteverify endpoint. */

@@ -170,3 +170,19 @@ resolve_database_url() {
     exit 1
   fi
 }
+
+CAP_SECRET_PLACEHOLDER='cap-secret-not-configured'
+
+# Swarm stack requires external secret cap_secret — create placeholder until Cap dashboard is configured.
+ensure_cap_secret() {
+  if docker secret inspect cap_secret >/dev/null 2>&1; then
+    return 0
+  fi
+  local value="${CAP_SECRET_KEY:-}"
+  if [ -z "$value" ]; then
+    echo "Warning: CAP_SECRET_KEY unset — creating placeholder cap_secret (Cap disabled until you run make prod-secrets)." >&2
+    value="$CAP_SECRET_PLACEHOLDER"
+  fi
+  echo -n "$value" | docker secret create cap_secret -
+  echo "Created secret cap_secret"
+}
