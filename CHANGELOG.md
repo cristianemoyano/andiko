@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.46.1](https://github.com/cristianemoyano/andiko/compare/v0.46.0...v0.46.1) (2026-07-10)
+
+### Bug Fixes
+
+* **core:** disable Cap on Vercel staging and fix prod-disk-check ([98f0c2c](https://github.com/cristianemoyano/andiko/commit/98f0c2c6e28ea2ca82f2e91db3617d454c2c52dc))
+
 ## [0.46.0](https://github.com/cristianemoyano/andiko/compare/v0.45.0...v0.46.0) (2026-07-10)
 
 ### Features
