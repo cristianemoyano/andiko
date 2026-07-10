@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
+import { AndikoLogo } from './AndikoLogo'
 import { AppVersion } from './AppVersion'
 import { SysAdminImpersonation } from './SysAdminImpersonation'
 import { useSidebar } from './SidebarContext'
@@ -82,17 +83,9 @@ export function Sidebar({
         )}
       >
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 py-[13px] bg-brand-accent-bg/40">
-        <div className="w-[22px] h-[22px] bg-brand-600 rounded-sm flex items-center justify-center flex-shrink-0">
-          <svg viewBox="0 0 12 12" className="w-3 h-3 fill-white">
-            <rect x="0" y="1" width="3" height="10"/>
-            <rect x="0" y="1" width="12" height="3"/>
-            <rect x="9" y="1" width="3" height="10"/>
-            <rect x="2" y="5" width="8" height="2.5"/>
-          </svg>
-        </div>
-        <span className="text-[15px] font-semibold text-fg tracking-tight">andiko</span>
-        <AppVersion className="ml-auto" />
+      <div className="flex items-center px-4 py-[13px] bg-brand-accent-bg/40">
+        <AndikoLogo href="/" size="xs" className="min-w-0" />
+        <AppVersion className="ml-auto shrink-0" />
       </div>
 
       {/* Navigation */}

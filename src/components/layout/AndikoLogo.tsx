@@ -1,49 +1,39 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { AndikoMark, type AndikoMarkSize } from './AndikoMark'
 
 interface AndikoLogoProps {
   href?: string
   className?: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: AndikoMarkSize
   wordmarkClass?: string
 }
 
-const sizeStyles = {
-  sm: {
-    mark: 'h-8 w-8 rounded-[7px]',
-    icon: 'h-4 w-4',
-    text: 'text-base',
-    gap: 'gap-2.5',
-  },
-  md: {
-    mark: 'h-10 w-10 rounded-[9px]',
-    icon: 'h-5 w-5',
-    text: 'text-xl',
-    gap: 'gap-3',
-  },
-  lg: {
-    mark: 'h-12 w-12 rounded-[11px]',
-    icon: 'h-6 w-6',
-    text: 'text-2xl',
-    gap: 'gap-3.5',
-  },
+const wordmarkStyles = {
+  '2xs': { text: 'text-xs', gap: 'gap-2' },
+  xs: { text: 'text-[15px]', gap: 'gap-2.5' },
+  sm: { text: 'text-base', gap: 'gap-2.5' },
+  md: { text: 'text-xl', gap: 'gap-3' },
+  lg: { text: 'text-2xl', gap: 'gap-3.5' },
+  xl: { text: 'text-2xl', gap: 'gap-3.5' },
+  '2xl': { text: 'text-3xl', gap: 'gap-4' },
 } as const
 
-export function AndikoLogo({ href = '/', className, size = 'md', wordmarkClass = 'text-fg' }: AndikoLogoProps) {
-  const styles = sizeStyles[size]
+export function AndikoLogo({
+  href = '/',
+  className,
+  size = 'md',
+  wordmarkClass = 'text-fg',
+}: AndikoLogoProps) {
+  const styles = wordmarkStyles[size]
 
   const content = (
     <>
-      <div
-        className={cn(
-          'flex flex-shrink-0 items-center justify-center bg-brand-600 shadow-md shadow-brand-600/25 transition-transform duration-300 group-hover:scale-105',
-          styles.mark,
-        )}
-      >
-        <svg viewBox="0 0 64 64" className={cn(styles.icon)} fill="none" aria-hidden>
-          <path d="M13 55 L28 11 L36 11 L51 55" stroke="white" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
+      <AndikoMark
+        size={size}
+        tone="brand"
+        className="transition-transform duration-300 group-hover:scale-105"
+      />
       <span className={cn('font-semibold tracking-tight', wordmarkClass, styles.text)}>andiko</span>
     </>
   )

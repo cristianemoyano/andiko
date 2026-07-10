@@ -42,7 +42,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         />
 
         <div className="relative landing-enter">
-          <AndikoLogo href="/" size="lg" className="[&_span]:text-white [&_div]:shadow-brand-900/30" />
+          <AndikoLogo href="/" size="xl" className="[&_span]:text-white [&_div]:shadow-brand-900/30" />
         </div>
 
         <div className="relative landing-enter landing-enter-delay-1">
