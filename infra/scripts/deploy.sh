@@ -34,6 +34,8 @@ if [ ! -f "$PORTAINER_HTPASSWD_FILE" ]; then
 fi
 
 ensure_cap_secret
+ensure_umami_data_dir
+validate_umami_cap_env
 
 bash "$SCRIPT_DIR/sync-nginx-conf.sh"
 

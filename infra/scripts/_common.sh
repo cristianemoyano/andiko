@@ -186,3 +186,32 @@ ensure_cap_secret() {
   echo -n "$value" | docker secret create cap_secret -
   echo "Created secret cap_secret"
 }
+
+ensure_umami_data_dir() {
+  local dir="${UMAMI_DATA_DIR:-/var/lib/andiko/umami-db}"
+  if [ ! -d "$dir" ]; then
+    echo "Creating ${dir} for umami_db bind mount ..."
+    sudo mkdir -p "$dir"
+    sudo chmod 755 "$dir"
+  fi
+}
+
+validate_umami_cap_env() {
+  local missing=0
+  if [ -z "${UMAMI_POSTGRES_PASSWORD:-}" ]; then
+    echo "Error: UMAMI_POSTGRES_PASSWORD is empty in infra/.env.production" >&2
+    missing=1
+  fi
+  if [ -z "${UMAMI_APP_SECRET:-}" ]; then
+    echo "Error: UMAMI_APP_SECRET is empty in infra/.env.production" >&2
+    missing=1
+  fi
+  if [ -z "${CAP_ADMIN_KEY:-}" ]; then
+    echo "Error: CAP_ADMIN_KEY is empty in infra/.env.production" >&2
+    missing=1
+  fi
+  if [ "$missing" -ne 0 ]; then
+    echo "Generate values: openssl rand -hex 32" >&2
+    exit 1
+  fi
+}

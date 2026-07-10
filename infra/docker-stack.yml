@@ -250,7 +250,16 @@ services:
 
   cap_valkey:
     image: valkey/valkey:9-alpine
-    command: valkey-server --save "" --loglevel warning --maxmemory 128mb --maxmemory-policy allkeys-lru
+    command:
+      - valkey-server
+      - --save
+      - ''
+      - --loglevel
+      - warning
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - allkeys-lru
     networks:
       - internal
     deploy:
