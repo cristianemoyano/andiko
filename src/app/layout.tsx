@@ -36,8 +36,13 @@ export const metadata: Metadata = {
     title: siteConfig.name,
   },
   icons: {
-    icon: '/icons/icon-192.png',
+    icon: [
+      { url: '/brand/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/brand/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/brand/favicon-48.png', sizes: '48x48', type: 'image/png' },
+    ],
     apple: '/icons/apple-touch-icon.png',
+    shortcut: '/brand/favicon-32.png',
   },
   keywords: [
     'ERP',
