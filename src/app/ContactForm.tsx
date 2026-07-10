@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 
-const ACCESS_KEY = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY
+import { isCapEnabled } from '@/lib/cap-config'
+import { solveCapChallenge } from '@/lib/cap-solve'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -14,6 +15,7 @@ const inputBase =
 export function ContactForm() {
   const [formKey, setFormKey] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
   const [sentEmail, setSentEmail] = useState<string | null>(null)
@@ -23,8 +25,6 @@ export function ContactForm() {
     setServerError(null)
 
     const form = new FormData(e.currentTarget)
-    if (form.get('botcheck')) return
-
     const name = String(form.get('name') ?? '').trim()
     const email = String(form.get('email') ?? '').trim()
     const message = String(form.get('message') ?? '').trim()
@@ -40,31 +40,30 @@ export function ContactForm() {
     }
     setErrors({})
 
-    if (!ACCESS_KEY) {
-      setServerError('El formulario no está configurado.')
-      return
-    }
-
     setLoading(true)
     try {
-      const response = await fetch('https://api.web3forms.com/submit', {
+      let capToken: string | undefined
+      if (isCapEnabled()) {
+        setVerifying(true)
+        const token = await solveCapChallenge()
+        setVerifying(false)
+        if (!token) {
+          setServerError('No pudimos verificar el envío. Intentá de nuevo.')
+          return
+        }
+        capToken = token
+      }
+
+      const response = await fetch('/api/v1/public/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          access_key: ACCESS_KEY,
-          subject: 'Acceso anticipado — Andiko (Beta privada)',
-          from_name: 'Andiko Landing',
-          name,
-          email,
-          message,
-          botcheck: '',
-        }),
+        body: JSON.stringify({ name, email, message, capToken }),
       })
 
-      const data = (await response.json()) as { success?: boolean; message?: string }
+      const data = (await response.json()) as { success?: boolean; error?: string }
 
       if (!response.ok || !data.success) {
-        setServerError(data.message ?? 'No pudimos enviarlo. Intentá de nuevo.')
+        setServerError(data.error ?? 'No pudimos enviarlo. Intentá de nuevo.')
         return
       }
 
@@ -73,6 +72,7 @@ export function ContactForm() {
     } catch {
       setServerError('Error de conexión. Intentá de nuevo.')
     } finally {
+      setVerifying(false)
       setLoading(false)
     }
   }
@@ -95,8 +95,6 @@ export function ContactForm() {
         </div>
       ) : (
         <form key={formKey} onSubmit={handleSubmit} noValidate>
-          <input type="checkbox" name="botcheck" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
-
           <div className="mb-4">
             <label htmlFor="contact-name" className="mb-1.5 block text-[13px] font-medium text-zinc-600">
               Nombre
@@ -164,7 +162,7 @@ export function ContactForm() {
             disabled={loading}
             className="h-11 w-full rounded-[4px] bg-brand-600 text-[15px] font-semibold text-white transition-[color,transform] duration-150 ease-out hover:bg-brand-700 active:scale-[0.98] disabled:scale-100 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
           >
-            {loading ? 'Enviando…' : 'Mantenerme al tanto'}
+            {verifying ? 'Verificando…' : loading ? 'Enviando…' : 'Mantenerme al tanto'}
           </button>
           <p className="mt-3.5 text-center text-xs text-zinc-400">
             Al enviar aceptás que te contactemos sobre el lanzamiento de Andiko.

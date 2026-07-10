@@ -10,6 +10,8 @@ load_env
 
 DOMAIN="${DOMAIN:-andiko.cloud}"
 PORTAINER_DOMAIN="${PORTAINER_DOMAIN:-portainer.${DOMAIN}}"
+UMAMI_DOMAIN="${UMAMI_DOMAIN:-analytics.${DOMAIN}}"
+CAP_DOMAIN="${CAP_DOMAIN:-cap.${DOMAIN}}"
 CERTBOT_CERTS_DIR="${CERTBOT_CERTS_DIR:-/var/lib/andiko/certs}"
 NGINX_CONF_DIR="${NGINX_CONF_DIR:-/var/lib/andiko/nginx/conf.d}"
 CERT_PATH="${CERTBOT_CERTS_DIR}/live/${DOMAIN}/fullchain.pem"
@@ -17,6 +19,10 @@ REPO_CONF_DIR="${REPO_ROOT}/infra/nginx/conf.d"
 TEMPLATES="${REPO_ROOT}/infra/nginx/templates"
 
 sudo mkdir -p "$NGINX_CONF_DIR"
+
+cert_has_san() {
+  openssl x509 -in "$CERT_PATH" -noout -text 2>/dev/null | grep -q "DNS:$1"
+}
 
 install_http_bootstrap() {
   if [ ! -f "${NGINX_CONF_DIR}/default.conf" ]; then
@@ -27,17 +33,39 @@ install_http_bootstrap() {
     echo "Installing Portainer HTTP bootstrap → ${NGINX_CONF_DIR}/portainer.conf"
     sudo cp "${REPO_CONF_DIR}/portainer.conf" "${NGINX_CONF_DIR}/portainer.conf"
   fi
+  if [ ! -f "${NGINX_CONF_DIR}/analytics.conf" ]; then
+    echo "Installing Umami HTTP bootstrap → ${NGINX_CONF_DIR}/analytics.conf"
+    sudo cp "${REPO_CONF_DIR}/analytics.conf" "${NGINX_CONF_DIR}/analytics.conf"
+  fi
+  if [ ! -f "${NGINX_CONF_DIR}/cap.conf" ]; then
+    echo "Installing Cap HTTP bootstrap → ${NGINX_CONF_DIR}/cap.conf"
+    sudo cp "${REPO_CONF_DIR}/cap.conf" "${NGINX_CONF_DIR}/cap.conf"
+  fi
 }
 
 install_ssl_configs() {
   echo "Installing HTTPS nginx configs in ${NGINX_CONF_DIR} ..."
   sudo cp "${TEMPLATES}/andiko.ssl.conf" "${NGINX_CONF_DIR}/default.conf"
 
-  if openssl x509 -in "$CERT_PATH" -noout -text 2>/dev/null | grep -q "DNS:${PORTAINER_DOMAIN}"; then
+  if cert_has_san "${PORTAINER_DOMAIN}"; then
     sudo cp "${TEMPLATES}/portainer.ssl.conf" "${NGINX_CONF_DIR}/portainer.conf"
-    echo "Installed default.conf (andiko SSL) and portainer.conf (portainer SSL)."
+    echo "Installed portainer.conf (portainer SSL)."
   else
-    echo "Installed default.conf (andiko SSL). Portainer SAN not in cert — run expand-ssl-portainer.sh if needed."
+    echo "Portainer SAN not in cert — run expand-ssl-portainer.sh if needed."
+  fi
+
+  if cert_has_san "${UMAMI_DOMAIN}"; then
+    sudo cp "${TEMPLATES}/analytics.ssl.conf" "${NGINX_CONF_DIR}/analytics.conf"
+    echo "Installed analytics.conf (umami SSL)."
+  else
+    echo "Umami SAN not in cert — run expand-ssl-services.sh if needed."
+  fi
+
+  if cert_has_san "${CAP_DOMAIN}"; then
+    sudo cp "${TEMPLATES}/cap.ssl.conf" "${NGINX_CONF_DIR}/cap.conf"
+    echo "Installed cap.conf (cap SSL)."
+  else
+    echo "Cap SAN not in cert — run expand-ssl-services.sh if needed."
   fi
 }
 

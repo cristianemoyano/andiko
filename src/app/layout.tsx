@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import { AppToaster } from '@/components/layout/AppToaster'
 import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner'
+import { UmamiAnalytics } from '@/components/layout/UmamiAnalytics'
 import { ThemeInitScript } from '@/components/layout/ThemeInitScript'
 import { ServiceWorkerRegister } from '@/components/layout/ServiceWorkerRegister'
 import { siteConfig, siteUrl } from '@/lib/site'
@@ -36,8 +37,13 @@ export const metadata: Metadata = {
     title: siteConfig.name,
   },
   icons: {
-    icon: '/icons/icon-192.png',
+    icon: [
+      { url: '/brand/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/brand/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/brand/favicon-48.png', sizes: '48x48', type: 'image/png' },
+    ],
     apple: '/icons/apple-touch-icon.png',
+    shortcut: '/brand/favicon-32.png',
   },
   keywords: [
     'ERP',
@@ -98,6 +104,7 @@ export default function RootLayout({
         <style dangerouslySetInnerHTML={{ __html: 'body{background:#FAFAFA}@media(prefers-color-scheme:dark){body{background:#18181B}}' }} />
         {children}
         <CookieConsentBanner />
+        <UmamiAnalytics />
         <AppToaster />
         <ServiceWorkerRegister />
         <Analytics />

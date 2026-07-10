@@ -99,11 +99,14 @@ export function DashboardMockup({ className }: { className?: string }) {
         <div className="flex w-[152px] flex-shrink-0 flex-col gap-0.5 border-r border-zinc-100 bg-white px-2.5 py-2.5">
           <div className="flex items-center gap-2 px-1.5 pb-2 pt-0.5">
             <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-[5px] bg-brand-600">
-              <svg viewBox="0 0 12 12" className="h-[11px] w-[11px] fill-white">
-                <rect x="0" y="1" width="2.4" height="10" />
-                <rect x="9.6" y="1" width="2.4" height="10" />
-                <rect x="0" y="1" width="12" height="2.4" />
-                <rect x="2" y="6" width="8" height="1.9" />
+              <svg viewBox="0 0 64 64" className="h-[11px] w-[11px]" fill="none" aria-hidden>
+                <path
+                  d="M13 55 L28 11 L36 11 L51 55"
+                  stroke="white"
+                  strokeWidth="9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </span>
             <span className="text-sm font-semibold tracking-tight text-zinc-900">andiko</span>

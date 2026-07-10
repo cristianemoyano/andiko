@@ -32,8 +32,9 @@ CERTBOT_WWW_DIR="${CERTBOT_WWW_DIR:-/var/lib/andiko/certbot-www}"
 BACKUP_LOCAL_DIR="${BACKUP_LOCAL_DIR:-/var/lib/andiko/backups}"
 PORTAINER_DATA_DIR="${PORTAINER_DATA_DIR:-/var/lib/andiko/portainer}"
 NGINX_CONF_DIR="${NGINX_CONF_DIR:-/var/lib/andiko/nginx/conf.d}"
+UMAMI_DATA_DIR="${UMAMI_DATA_DIR:-/var/lib/andiko/umami-db}"
 
-for dir in "$POSTGRES_DATA_DIR" "$CERTBOT_CERTS_DIR" "$CERTBOT_WWW_DIR" "$BACKUP_LOCAL_DIR" "$PORTAINER_DATA_DIR" "$NGINX_CONF_DIR"; do
+for dir in "$POSTGRES_DATA_DIR" "$CERTBOT_CERTS_DIR" "$CERTBOT_WWW_DIR" "$BACKUP_LOCAL_DIR" "$PORTAINER_DATA_DIR" "$NGINX_CONF_DIR" "$UMAMI_DATA_DIR"; do
   if [ ! -d "$dir" ]; then
     echo "Creating $dir"
     sudo mkdir -p "$dir"
@@ -75,6 +76,12 @@ create_or_update_secret database_url "${DATABASE_URL}"
 create_or_update_secret auth_secret "${AUTH_SECRET}"
 create_or_update_secret auth_url "${AUTH_URL:-https://andiko.cloud}"
 create_or_update_secret cron_secret "${CRON_SECRET}"
+
+if [ -z "${CAP_SECRET_KEY:-}" ]; then
+  echo "Warning: CAP_SECRET_KEY is empty — using placeholder; set a real value and rotate the secret later."
+  CAP_SECRET_KEY="$CAP_SECRET_PLACEHOLDER"
+fi
+create_or_update_secret cap_secret "${CAP_SECRET_KEY}"
 
 bash "$SCRIPT_DIR/sync-nginx-conf.sh"
 

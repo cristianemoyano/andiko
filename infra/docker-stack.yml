@@ -52,6 +52,11 @@ services:
       AFIP_MODE: ${AFIP_MODE}
       NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: ${NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN}
       NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}
+      NEXT_PUBLIC_UMAMI_HOST: ${NEXT_PUBLIC_UMAMI_HOST:-}
+      NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID:-}
+      NEXT_PUBLIC_CAP_SITE_KEY: ${NEXT_PUBLIC_CAP_SITE_KEY:-}
+      NEXT_PUBLIC_CAP_HOST: ${NEXT_PUBLIC_CAP_HOST:-}
+      CAP_VERIFY_URL: ${CAP_VERIFY_URL:-}
       PORT: '3000'
       HOSTNAME: 0.0.0.0
     secrets:
@@ -59,6 +64,7 @@ services:
       - auth_secret
       - auth_url
       - cron_secret
+      - cap_secret
     networks:
       - web
       - internal
@@ -185,6 +191,118 @@ services:
     logging: *default-logging
     stop_grace_period: 1m
 
+  umami_db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${UMAMI_POSTGRES_USER}
+      POSTGRES_DB: ${UMAMI_POSTGRES_DB}
+      POSTGRES_PASSWORD: ${UMAMI_POSTGRES_PASSWORD}
+    volumes:
+      - umami_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${UMAMI_POSTGRES_USER} -d ${UMAMI_POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    environment:
+      DATABASE_URL: postgresql://${UMAMI_POSTGRES_USER}:${UMAMI_POSTGRES_PASSWORD}@umami_db:5432/${UMAMI_POSTGRES_DB}
+      APP_SECRET: ${UMAMI_APP_SECRET}
+      DISABLE_TELEMETRY: '1'
+      CLIENT_IP_HEADER: X-Forwarded-For
+    networks:
+      - web
+      - internal
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/heartbeat || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  cap_valkey:
+    image: valkey/valkey:9-alpine
+    command:
+      - valkey-server
+      - --save
+      - ''
+      - --loglevel
+      - warning
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - allkeys-lru
+    networks:
+      - internal
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  cap:
+    image: tiago2/cap:latest
+    environment:
+      ADMIN_KEY: ${CAP_ADMIN_KEY}
+      REDIS_URL: redis://cap_valkey:6379
+    networks:
+      - web
+      - internal
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD-SHELL', 'bun -e "fetch(\"http://127.0.0.1:3000/\").then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 networks:
   web:
     driver: overlay
@@ -218,6 +336,12 @@ volumes:
       type: none
       o: bind
       device: ${PORTAINER_DATA_DIR}
+  umami_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${UMAMI_DATA_DIR}
 
 secrets:
   postgres_password:
@@ -229,4 +353,6 @@ secrets:
   auth_url:
     external: true
   cron_secret:
+    external: true
+  cap_secret:
     external: true

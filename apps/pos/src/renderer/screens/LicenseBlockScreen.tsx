@@ -65,7 +65,7 @@ export function LicenseBlockScreen({ reason, offlineDaysLeft, onRetry, retrying,
         </div>
 
         <div className="flex items-center gap-1.5 text-zinc-500">
-          <AndikoMark size="xs" tone="muted" />
+          <AndikoMark size="2xs" tone="muted" />
           <span className="text-[11px] font-medium">Andiko POS</span>
         </div>
       </div>
