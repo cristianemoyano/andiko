@@ -32,7 +32,7 @@ export function LandingHeader({ navLinks, primaryCtaClass }: LandingHeaderProps)
       )}
     >
       <div className="mx-auto flex h-full max-w-[1200px] items-center gap-7 px-[clamp(20px,5vw,56px)]">
-        <AndikoLogo size="sm" />
+        <AndikoLogo size="sm" wordmarkClass="text-zinc-900" />
         <nav className="ml-3 hidden items-center gap-[26px] md:flex">
           {navLinks.map((link) => (
             <a
