@@ -102,8 +102,75 @@ services:
       - ./infra/docker/woocommerce/dev-output:/output
     entrypoint: ["/bin/sh", "/scripts/bootstrap.sh"]
 
+  # --- Umami + Cap (profile analytics — optional local testing)
+  umami-db:
+    profiles: ["analytics"]
+    image: postgres:16-alpine
+    container_name: andiko_umami_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: umami
+      POSTGRES_DB: umami
+    ports:
+      - "5434:5432"
+    volumes:
+      - umami_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  umami:
+    profiles: ["analytics"]
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: andiko_umami
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      DATABASE_URL: postgresql://umami:umami@umami-db:5432/umami
+      APP_SECRET: local-dev-umami-secret-min-32-chars-long
+      DISABLE_TELEMETRY: "1"
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/heartbeat || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cap-valkey:
+    profiles: ["analytics"]
+    image: valkey/valkey:9-alpine
+    container_name: andiko_cap_valkey
+    restart: unless-stopped
+    command: valkey-server --save "" --loglevel warning --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  cap:
+    profiles: ["analytics"]
+    image: tiago2/cap:latest
+    container_name: andiko_cap
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      ADMIN_KEY: local-dev-cap-admin-key-min-32-chars
+      REDIS_URL: redis://cap-valkey:6379
+    depends_on:
+      cap-valkey:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   pgadmin_data:
   woo_db_data:
   woo_wp_data:
+  umami_db_data:

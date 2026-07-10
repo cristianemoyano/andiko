@@ -26,6 +26,10 @@ docker build -f "${REPO_ROOT}/infra/Dockerfile" \
   --build-arg "APP_VERSION=${TAG}" \
   --build-arg "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=${NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN:-}" \
   --build-arg "NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}" \
+  --build-arg "NEXT_PUBLIC_UMAMI_HOST=${NEXT_PUBLIC_UMAMI_HOST:-}" \
+  --build-arg "NEXT_PUBLIC_UMAMI_WEBSITE_ID=${NEXT_PUBLIC_UMAMI_WEBSITE_ID:-}" \
+  --build-arg "NEXT_PUBLIC_CAP_SITE_KEY=${NEXT_PUBLIC_CAP_SITE_KEY:-}" \
+  --build-arg "NEXT_PUBLIC_CAP_HOST=${NEXT_PUBLIC_CAP_HOST:-}" \
   -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" "${REPO_ROOT}"
 
 echo "Pushing ${IMAGE}:${TAG} ..."

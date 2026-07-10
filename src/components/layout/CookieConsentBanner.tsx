@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/primitives/Button'
 import { COOKIE_CONSENT_ENABLED, getStoredCookieConsent, storeCookieConsent } from '@/lib/cookie-consent'
-import { applyPostHogConsent } from '@/lib/posthog-consent'
+import { applyAnalyticsConsent } from '@/lib/analytics-consent'
 
 // Cookie consent banner — mounted in the root layout.
 export function CookieConsentBanner() {
@@ -14,7 +14,7 @@ export function CookieConsentBanner() {
     if (!COOKIE_CONSENT_ENABLED) return
 
     const consent = getStoredCookieConsent()
-    if (consent) applyPostHogConsent(consent)
+    if (consent) applyAnalyticsConsent(consent)
     // Client-only: read localStorage after mount to avoid SSR/hydration mismatch.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-mount flag
     setMounted(true)
@@ -26,14 +26,14 @@ export function CookieConsentBanner() {
   function acceptAll() {
     const choice = { necessary: true, analytics: true } as const
     storeCookieConsent(choice)
-    applyPostHogConsent(choice)
+    applyAnalyticsConsent(choice)
     setDismissed(true)
   }
 
   function acceptNecessaryOnly() {
     const choice = { necessary: true, analytics: false } as const
     storeCookieConsent(choice)
-    applyPostHogConsent(choice)
+    applyAnalyticsConsent(choice)
     setDismissed(true)
   }
 

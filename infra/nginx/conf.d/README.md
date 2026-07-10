@@ -8,6 +8,8 @@ On production, nginx mounts **`${NGINX_CONF_DIR}`** (default: `/var/lib/andiko/n
 |----------------|--------------------|------------------|
 | `default.conf` | `${NGINX_CONF_DIR}/default.conf` | from `templates/andiko.ssl.conf` |
 | `portainer.conf` | `${NGINX_CONF_DIR}/portainer.conf` | from `templates/portainer.ssl.conf` |
+| `analytics.conf` | `${NGINX_CONF_DIR}/analytics.conf` | from `templates/analytics.ssl.conf` |
+| `cap.conf` | `${NGINX_CONF_DIR}/cap.conf` | from `templates/cap.ssl.conf` |
 
 ```bash
 make prod-sync-nginx-conf   # copy bootstrap to live dir, or upgrade to SSL if cert exists

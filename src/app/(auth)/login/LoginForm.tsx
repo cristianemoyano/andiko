@@ -8,6 +8,8 @@ import { Input } from '@/components/primitives/Input'
 import { PasswordInput } from '@/components/primitives/PasswordInput'
 import { FormField } from '@/components/primitives/FormField'
 import { fetchLandingPath } from '@/lib/landing-path-client'
+import { solveCapChallenge } from '@/lib/cap-solve'
+import { isCapEnabled } from '@/lib/cap-config'
 import {
   fetchLoginThrottleSeconds,
   formatLoginThrottleMessage,
@@ -34,6 +36,7 @@ export function LoginForm() {
     [searchParams],
   )
   const [loading, setLoading] = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitThrottled, setSubmitThrottled] = useState(false)
 
@@ -50,9 +53,31 @@ export function LoginForm() {
 
     const form = new FormData(e.currentTarget)
     const email = String(form.get('email') ?? '')
+
+    let capToken: string | null = null
+    if (isCapEnabled()) {
+      setVerifying(true)
+      try {
+        capToken = await solveCapChallenge()
+        if (!capToken) {
+          setSubmitError(ERRORS.default)
+          setLoading(false)
+          setVerifying(false)
+          return
+        }
+      } catch {
+        setSubmitError(ERRORS.default)
+        setLoading(false)
+        setVerifying(false)
+        return
+      }
+      setVerifying(false)
+    }
+
     const result = await signIn('credentials', {
       email,
       password: form.get('password'),
+      capToken,
       redirect: false,
     })
 
@@ -116,7 +141,7 @@ export function LoginForm() {
       )}
 
       <Button type="submit" data-testid="login-submit-btn" disabled={loading} size="lg" className="w-full mt-1">
-        {loading ? 'Ingresando…' : 'Ingresar'}
+        {verifying ? 'Verificando…' : loading ? 'Ingresando…' : 'Ingresar'}
       </Button>
     </form>
   )

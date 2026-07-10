@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import { AppToaster } from '@/components/layout/AppToaster'
 import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner'
+import { UmamiAnalytics } from '@/components/layout/UmamiAnalytics'
 import { ThemeInitScript } from '@/components/layout/ThemeInitScript'
 import { ServiceWorkerRegister } from '@/components/layout/ServiceWorkerRegister'
 import { siteConfig, siteUrl } from '@/lib/site'
@@ -103,6 +104,7 @@ export default function RootLayout({
         <style dangerouslySetInnerHTML={{ __html: 'body{background:#FAFAFA}@media(prefers-color-scheme:dark){body{background:#18181B}}' }} />
         {children}
         <CookieConsentBanner />
+        <UmamiAnalytics />
         <AppToaster />
         <ServiceWorkerRegister />
         <Analytics />
