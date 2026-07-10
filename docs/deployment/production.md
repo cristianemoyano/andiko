@@ -379,7 +379,7 @@ make prod-expand-ssl-services
 3. After deploy, open **https://analytics.andiko.cloud** — change default `admin` / `umami` password, create a website, copy `NEXT_PUBLIC_UMAMI_WEBSITE_ID`
 4. Open **https://cap.andiko.cloud** — log in with `CAP_ADMIN_KEY`, create a site key → `NEXT_PUBLIC_CAP_SITE_KEY` + `CAP_SECRET_KEY`
 5. Update env vars, `make prod-push TAG=…` and `make prod-deploy-app TAG=…`
-6. Vercel staging: set the same `NEXT_PUBLIC_*`, `CAP_SECRET_KEY`, and `WEB3FORMS_ACCESS_KEY`
+6. **Vercel staging:** do **not** set Cap env vars — Cap is disabled on Vercel (`VERCEL=1`). Set `WEB3FORMS_ACCESS_KEY` only if contact form should work on staging.
 
 **Umami retention:** analytics older than **90 days** are purged weekly:
 

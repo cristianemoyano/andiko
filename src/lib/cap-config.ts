@@ -3,12 +3,18 @@
 export const CAP_SITE_KEY = process.env.NEXT_PUBLIC_CAP_SITE_KEY ?? ''
 export const CAP_PUBLIC_HOST = process.env.NEXT_PUBLIC_CAP_HOST ?? ''
 
+/** Cap runs on self-hosted production (VPS) only — not Vercel staging. */
+export function isCapRuntimeSupported(): boolean {
+  return process.env.VERCEL !== '1'
+}
+
 export function isCapConfigured(): boolean {
   return CAP_SITE_KEY.length > 0
 }
 
 /** Cap widget is off in local dev unless NEXT_PUBLIC_CAP_DEV=true. */
 export function isCapEnabled(): boolean {
+  if (!isCapRuntimeSupported()) return false
   if (!isCapConfigured()) return false
   if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_CAP_DEV !== 'true') {
     return false

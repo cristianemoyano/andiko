@@ -1,3 +1,4 @@
+import { isCapRuntimeSupported } from '@/lib/cap-config'
 import logger from '@/lib/logger'
 
 type SiteVerifyResponse = {
@@ -15,6 +16,7 @@ function capVerifyUrl(): string {
 }
 
 export function isCapServerConfigured(): boolean {
+  if (!isCapRuntimeSupported()) return false
   const key = capSecretKey()
   return key.length > 0 && key !== CAP_SECRET_PLACEHOLDER
 }

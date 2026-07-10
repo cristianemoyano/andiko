@@ -20,6 +20,12 @@ describe('verifyCapToken', () => {
     await expect(verifyCapToken('any')).resolves.toBe(true)
   })
 
+  it('returns true on Vercel staging even when Cap secret is set', async () => {
+    vi.stubEnv('VERCEL', '1')
+    vi.stubEnv('CAP_SECRET_KEY', 'test-secret')
+    await expect(verifyCapToken('')).resolves.toBe(true)
+  })
+
   it('returns false for empty token when Cap is configured', async () => {
     vi.stubEnv('CAP_SECRET_KEY', 'test-secret')
     await expect(verifyCapToken('')).resolves.toBe(false)
