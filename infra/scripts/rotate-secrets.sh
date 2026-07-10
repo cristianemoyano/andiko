@@ -14,7 +14,7 @@ secret_services() {
   case "$1" in
     postgres_password) echo "postgres" ;;
     database_url) echo "app" ;;
-    auth_secret|auth_url|cron_secret) echo "app" ;;
+    auth_secret|auth_url|cron_secret|cap_secret) echo "app" ;;
     *) echo "" ;;
   esac
 }
@@ -100,6 +100,9 @@ rotate_secret_rolling database_url "${DATABASE_URL}"
 rotate_secret_rolling auth_secret "${AUTH_SECRET}"
 rotate_secret_rolling auth_url "${AUTH_URL:-https://andiko.cloud}"
 rotate_secret_rolling cron_secret "${CRON_SECRET}"
+if [ -n "${CAP_SECRET_KEY:-}" ]; then
+  rotate_secret_rolling cap_secret "${CAP_SECRET_KEY}"
+fi
 
 echo ""
 echo "Secrets rotated. App/postgres services were updated in place."

@@ -13,5 +13,8 @@ fi
 if [ -f /run/secrets/cron_secret ]; then
   export CRON_SECRET="$(tr -d '\n' < /run/secrets/cron_secret)"
 fi
+if [ -f /run/secrets/cap_secret ]; then
+  export CAP_SECRET_KEY="$(tr -d '\n' < /run/secrets/cap_secret)"
+fi
 
 exec "$@"
