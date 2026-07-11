@@ -809,6 +809,23 @@ Consultas en lenguaje natural sobre datos del ERP y, más adelante, acciones asi
 
 ---
 
+## Fase 12 — Automatizaciones
+
+Scheduler de tareas recurrentes tipo cron, pensado como base extensible para automatizaciones futuras (diferencial de producto). Org-scoped con `branch_id` opcional — ver [docs/MULTITENANCY.md](MULTITENANCY.md). Módulo premium (`ORG_MODULE_DEFS`).
+
+- [x] Tablas `scheduled_tasks` / `scheduled_task_runs` (historial de ejecución)
+- [x] Registro de acciones plugeable (`action-registry.ts`) — sumar un tipo de acción nuevo no requiere tocar el core del scheduler
+- [x] Runner con claim por concurrencia optimista (`scheduled-task-runner.service.ts`), seguro ante ticks solapados o réplicas de la app; auto-pausa tras fallos consecutivos
+- [x] Tick vía `CRON_SECRET` (`/api/v1/sys-admin/jobs/automations-tick`, crontab cada minuto — ver [docs/deployment/production.md](deployment/production.md))
+- [x] CRUD tenant + UI `/automatizaciones` (lista, crear/editar, ejecutar ahora, historial de ejecuciones)
+- [x] Acciones v1: `sales.expire_overdue_quotes`, `core.webhook_call` (webhook saliente genérico)
+- [ ] Más acciones por módulo (recordatorios de cobranza, sincronizaciones, notificaciones)
+- [ ] Automatizaciones cross-org
+- [ ] Workflows multi-paso / condicionales (hoy: una acción por tarea)
+- [ ] Cadencias menores a 1 minuto (hoy: piso del tick por crontab externo)
+
+---
+
 ## Tesorería, Impuestos y Cumplimiento AR (gaps identificados — sin fecha)
 
 Funcionalidades fiscales y de tesorería específicas de Argentina que hoy están
