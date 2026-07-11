@@ -159,6 +159,10 @@ export async function updateScheduledTask(
     })
   }
 
+  // Only clear the auto-pause failure streak when status is actually transitioning,
+  // not merely re-sent unchanged (the UI always includes `status` on every edit).
+  const statusChanged = input.status !== undefined && input.status !== task.status
+
   await task.update({
     ...(input.name !== undefined ? { name: input.name } : {}),
     ...(input.description !== undefined ? { description: input.description } : {}),
@@ -168,7 +172,8 @@ export async function updateScheduledTask(
     ...(input.cron_expression !== undefined ? { cron_expression: input.cron_expression } : {}),
     ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
     ...(input.max_consecutive_failures !== undefined ? { max_consecutive_failures: input.max_consecutive_failures } : {}),
-    ...(input.status !== undefined ? { status: input.status, consecutive_failures: 0 } : {}),
+    ...(input.status !== undefined ? { status: input.status } : {}),
+    ...(statusChanged ? { consecutive_failures: 0 } : {}),
     ...(scheduleChanged ? { next_run_at: computeNextRunAt(nextCron, nextTimezone) } : {}),
     updated_by: actorId,
   })

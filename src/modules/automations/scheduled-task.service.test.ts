@@ -172,6 +172,46 @@ describe('updateScheduledTask', () => {
 
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ next_run_at: expect.any(Date) }))
   })
+
+  it('does not reset consecutive_failures when status is re-sent unchanged', async () => {
+    const update = vi.fn(async function (this: Record<string, unknown>, fields: Record<string, unknown>) {
+      Object.assign(this, fields)
+    })
+    findOneMock.mockResolvedValueOnce({
+      action_type: 'test.noop',
+      payload: {},
+      cron_expression: '0 6 * * *',
+      timezone: 'UTC',
+      status: 'active',
+      consecutive_failures: 4,
+      update,
+    })
+
+    await updateScheduledTask('task-1', { name: 'Nuevo nombre', status: 'active' }, ctxOrg1, 'user-1')
+
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ status: 'active' }))
+    const [fields] = update.mock.calls[0] as [Record<string, unknown>]
+    expect(fields).not.toHaveProperty('consecutive_failures')
+  })
+
+  it('resets consecutive_failures when status actually changes', async () => {
+    const update = vi.fn(async function (this: Record<string, unknown>, fields: Record<string, unknown>) {
+      Object.assign(this, fields)
+    })
+    findOneMock.mockResolvedValueOnce({
+      action_type: 'test.noop',
+      payload: {},
+      cron_expression: '0 6 * * *',
+      timezone: 'UTC',
+      status: 'paused',
+      consecutive_failures: 5,
+      update,
+    })
+
+    await updateScheduledTask('task-1', { status: 'active' }, ctxOrg1, 'user-1')
+
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ status: 'active', consecutive_failures: 0 }))
+  })
 })
 
 describe('listScheduledTaskRuns', () => {
