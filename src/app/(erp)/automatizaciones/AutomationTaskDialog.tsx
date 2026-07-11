@@ -81,6 +81,8 @@ export function AutomationTaskDialog({ open, onOpenChange, task, onSaved }: Auto
       return
     }
 
+    const parsedMaxFailures = Number(maxConsecutiveFailures)
+
     const body = {
       name: name.trim(),
       description: description.trim() || null,
@@ -88,7 +90,10 @@ export function AutomationTaskDialog({ open, onOpenChange, task, onSaved }: Auto
       cron_expression: cronExpression.trim(),
       timezone: timezone.trim() || DEFAULT_TIMEZONE,
       payload,
-      max_consecutive_failures: Number(maxConsecutiveFailures) || 5,
+      // Only fall back to the default when the input isn't a valid number at all
+      // (e.g. empty/NaN) — an explicit 0 must reach the backend so its real
+      // min(1) validation error surfaces, instead of being silently coerced to 5.
+      max_consecutive_failures: Number.isFinite(parsedMaxFailures) ? parsedMaxFailures : 5,
       ...(isEdit ? { status: active ? 'active' : 'paused' } : {}),
     }
 
