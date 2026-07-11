@@ -1,0 +1,37 @@
+import 'server-only'
+import { z } from 'zod'
+import { registerAutomationAction } from '../action-registry'
+
+const WEBHOOK_TIMEOUT_MS = 15_000
+const RESPONSE_SNIPPET_MAX_LENGTH = 2000
+
+const payloadSchema = z.object({
+  url: z.string().url(),
+  method: z.enum(['GET', 'POST']).default('POST'),
+  headers: z.record(z.string(), z.string()).optional(),
+  body: z.unknown().optional(),
+})
+
+registerAutomationAction({
+  type: 'core.webhook_call',
+  label: 'Llamar a un webhook',
+  payloadSchema,
+  async run(_ctx, payload) {
+    const response = await fetch(payload.url, {
+      method: payload.method,
+      headers: { 'content-type': 'application/json', ...payload.headers },
+      body: payload.method === 'POST' && payload.body !== undefined ? JSON.stringify(payload.body) : undefined,
+      signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
+    })
+    const bodySnippet = (await response.text()).slice(0, RESPONSE_SNIPPET_MAX_LENGTH)
+
+    if (!response.ok) {
+      throw new Error(`Webhook respondió ${response.status}: ${bodySnippet}`)
+    }
+
+    return {
+      summary: `Webhook respondió ${response.status}`,
+      data: { status: response.status, body: bodySnippet },
+    }
+  },
+})

@@ -7,7 +7,7 @@ import OrgRolePermission from '@/modules/auth/org-role-permission.model'
 import { currentGlobalGeneration, currentOrgGeneration } from '@/lib/capabilities-cache'
 import type { UserRole } from '@/types/roles'
 
-type ModuleResource = 'contacts' | 'products' | 'sales' | 'inventory' | 'purchases' | 'accounting' | 'logistics'
+type ModuleResource = 'contacts' | 'products' | 'sales' | 'inventory' | 'purchases' | 'accounting' | 'logistics' | 'automations'
 type Action = 'read' | 'write' | 'delete'
 
 export type ModulePermission = `${ModuleResource}:${Action}`
@@ -19,7 +19,7 @@ export type MatrixPermission = ModulePermission | PanelPermission | SalesScopePe
 export type Permission = ModulePermission | SettingsPermission | PanelPermission | SalesScopePermission | LogisticsScopePermission
 
 const MODULE_RESOURCES: ModuleResource[] = [
-  'contacts', 'products', 'sales', 'inventory', 'purchases', 'accounting', 'logistics',
+  'contacts', 'products', 'sales', 'inventory', 'purchases', 'accounting', 'logistics', 'automations',
 ]
 
 export function isSettingsPermission(p: string): p is SettingsPermission {

@@ -16,14 +16,16 @@ const MAX_EXPIRING_SOON = 100
 
 /**
  * Daily job: marks `draft`/`sent` quotes as `expired` once `valid_until` has passed.
- * Global across all orgs (no tenant context) — mirrors billing dunning's shape.
+ * Global across all orgs by default (no tenant context) — mirrors billing dunning's shape.
+ * Pass `orgId` to scope the update to a single org (used by per-org scheduled automations).
  */
-export async function expireOverdueQuotes(): Promise<{ expired_count: number }> {
+export async function expireOverdueQuotes(orgId?: string): Promise<{ expired_count: number }> {
   return sequelize.transaction(async (t) => {
     const where = {
       status: { [Op.in]: EXPIRABLE_STATUSES },
       valid_until: { [Op.lt]: new Date() },
       deleted_at: null,
+      ...(orgId ? { org_id: orgId } : {}),
     }
 
     const [expiredCount] = await SalesQuote.update(
