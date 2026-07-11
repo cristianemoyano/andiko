@@ -33,11 +33,20 @@ export interface RunNowResult {
   error?: string
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+/**
+ * Races `promise` against a timeout and aborts `controller` when the timeout wins, so
+ * actions that honor `AbortSignal` (via the context's `signal`) actually stop instead
+ * of continuing to run in the background after being recorded as failed. The race
+ * itself remains the safety net for actions that don't check the signal.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, controller: AbortController): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => {
-      setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
+      setTimeout(() => {
+        controller.abort()
+        reject(new Error(`Timed out after ${ms}ms`))
+      }, ms)
     }),
   ])
 }
@@ -116,13 +125,15 @@ async function executeClaimedTask(
     return { status: 'failed', runId: run.id }
   }
 
+  const controller = new AbortController()
   try {
     const result = await withTimeout(
       action.run(
-        { orgId: task.org_id!, branchId: task.branch_id, taskId: task.id, runId: run.id },
+        { orgId: task.org_id!, branchId: task.branch_id, taskId: task.id, runId: run.id, signal: controller.signal },
         parsedPayload.data,
       ),
       ACTION_TIMEOUT_MS,
+      controller,
     )
     await finalize('success', result.data ?? null, null)
     return { status: 'success', runId: run.id }

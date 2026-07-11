@@ -86,9 +86,21 @@ registerAutomationAction({
   },
 })
 
+let lastHangingSignal: AbortSignal | undefined
+registerAutomationAction({
+  type: 'test.hangs',
+  label: 'Hangs',
+  payloadSchema: z.object({}),
+  async run(ctx) {
+    lastHangingSignal = ctx.signal
+    return new Promise(() => {}) // never resolves on its own — only the timeout ends it
+  },
+})
+
 beforeEach(() => {
   vi.clearAllMocks()
   trackableLog.length = 0
+  lastHangingSignal = undefined
 })
 
 describe('runDueScheduledTasks', () => {
@@ -167,6 +179,25 @@ describe('runDueScheduledTasks', () => {
       consecutive_failures: 2,
       status: 'paused',
     }))
+  })
+
+  it('aborts the action context signal when the action times out', async () => {
+    vi.useFakeTimers()
+    try {
+      const task = makeTask({ action_type: 'test.hangs' })
+      findAllMock.mockResolvedValueOnce([task])
+      updateMock.mockResolvedValueOnce([1])
+      runCreateMock.mockResolvedValueOnce(makeRun())
+
+      const resultPromise = runDueScheduledTasks()
+      await vi.advanceTimersByTimeAsync(60_000) // matches ACTION_TIMEOUT_MS
+      const result = await resultPromise
+
+      expect(result.failed).toBe(1)
+      expect(lastHangingSignal?.aborted).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('runs claimed tasks concurrently instead of one at a time', async () => {

@@ -25,7 +25,7 @@ describe('sales.expire_overdue_quotes action', () => {
     const action = getAutomationAction('sales.expire_overdue_quotes')!
 
     const result = await action.run(
-      { orgId: 'org-1', branchId: null, taskId: 'task-1', runId: 'run-1' },
+      { orgId: 'org-1', branchId: null, taskId: 'task-1', runId: 'run-1', signal: new AbortController().signal },
       {},
     )
 

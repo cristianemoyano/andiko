@@ -6,7 +6,7 @@ import { assertPublicHttpTarget } from '../ssrf-guard'
 import { getAutomationAction } from '../action-registry'
 import './webhook-call.action'
 
-const ctx = { orgId: 'org-1', branchId: null, taskId: 'task-1', runId: 'run-1' }
+const ctx = { orgId: 'org-1', branchId: null, taskId: 'task-1', runId: 'run-1', signal: new AbortController().signal }
 const assertPublicHttpTargetMock = assertPublicHttpTarget as unknown as ReturnType<typeof vi.fn>
 
 describe('core.webhook_call action', () => {

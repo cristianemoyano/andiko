@@ -6,6 +6,14 @@ export interface AutomationActionContext {
   branchId: string | null
   taskId: string
   runId: string
+  /**
+   * Aborted when the action exceeds its wall-clock timeout. Actions that make
+   * cancellable I/O (fetch, etc.) should honor it so the underlying work actually
+   * stops instead of continuing in the background after being recorded as failed.
+   * Best-effort: not every operation (e.g. an in-flight DB transaction) can be
+   * preempted from JS-level cancellation.
+   */
+  signal: AbortSignal
 }
 
 export interface AutomationActionResult {

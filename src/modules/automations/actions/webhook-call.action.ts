@@ -17,13 +17,16 @@ registerAutomationAction({
   type: 'core.webhook_call',
   label: 'Llamar a un webhook',
   payloadSchema,
-  async run(_ctx, payload) {
+  async run(ctx, payload) {
     await assertPublicHttpTarget(payload.url)
     const response = await fetch(payload.url, {
       method: payload.method,
       headers: { 'content-type': 'application/json', ...payload.headers },
       body: payload.method === 'POST' && payload.body !== undefined ? JSON.stringify(payload.body) : undefined,
-      signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
+      // Whichever fires first: this action's own shorter timeout, or the runner's
+      // overall action timeout (ctx.signal) — so a slow/hung request is genuinely
+      // aborted instead of continuing after the run is recorded as failed.
+      signal: AbortSignal.any([ctx.signal, AbortSignal.timeout(WEBHOOK_TIMEOUT_MS)]),
     })
     const bodySnippet = (await response.text()).slice(0, RESPONSE_SNIPPET_MAX_LENGTH)
 
