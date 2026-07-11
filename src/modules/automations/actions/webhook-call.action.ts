@@ -1,6 +1,7 @@
 import 'server-only'
 import { z } from 'zod'
 import { registerAutomationAction } from '../action-registry'
+import { assertPublicHttpTarget } from '../ssrf-guard'
 
 const WEBHOOK_TIMEOUT_MS = 15_000
 const RESPONSE_SNIPPET_MAX_LENGTH = 2000
@@ -17,6 +18,7 @@ registerAutomationAction({
   label: 'Llamar a un webhook',
   payloadSchema,
   async run(_ctx, payload) {
+    await assertPublicHttpTarget(payload.url)
     const response = await fetch(payload.url, {
       method: payload.method,
       headers: { 'content-type': 'application/json', ...payload.headers },
