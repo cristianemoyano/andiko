@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { z } from 'zod'
+import { Op } from 'sequelize'
 
 vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 vi.mock('./actions', () => ({}))
@@ -156,14 +157,16 @@ describe('runDueScheduledTasks', () => {
 })
 
 describe('runScheduledTaskNow', () => {
+  const ctx = { orgId: 'org-1', userId: 'user-1', defaultBranchId: null, allowedBranchIds: [] as string[] }
+
   it('throws when the task does not exist for that org', async () => {
     findOneMock.mockResolvedValueOnce(null)
-    await expect(runScheduledTaskNow('missing', 'org-1')).rejects.toThrow('TASK_NOT_FOUND')
+    await expect(runScheduledTaskNow('missing', ctx)).rejects.toThrow('TASK_NOT_FOUND')
   })
 
   it('skips when the task is disabled', async () => {
     findOneMock.mockResolvedValueOnce(makeTask({ status: 'disabled' }))
-    const result = await runScheduledTaskNow('task-1', 'org-1')
+    const result = await runScheduledTaskNow('task-1', ctx)
     expect(result.status).toBe('skipped')
     expect(updateMock).not.toHaveBeenCalled()
   })
@@ -174,7 +177,7 @@ describe('runScheduledTaskNow', () => {
     updateMock.mockResolvedValueOnce([1])
     runCreateMock.mockResolvedValueOnce(makeRun())
 
-    const result = await runScheduledTaskNow('task-1', 'org-1')
+    const result = await runScheduledTaskNow('task-1', ctx)
 
     expect(result.status).toBe('success')
     expect(runCreateMock).toHaveBeenCalledWith(expect.objectContaining({ trigger_kind: 'manual' }))
@@ -186,9 +189,24 @@ describe('runScheduledTaskNow', () => {
     findOneMock.mockResolvedValueOnce(makeTask())
     updateMock.mockResolvedValueOnce([0])
 
-    const result = await runScheduledTaskNow('task-1', 'org-1')
+    const result = await runScheduledTaskNow('task-1', ctx)
 
     expect(result.status).toBe('skipped')
     expect(runCreateMock).not.toHaveBeenCalled()
+  })
+
+  it('scopes the lookup to org-wide tasks plus the caller\'s allowed branches when restricted', async () => {
+    findOneMock.mockResolvedValueOnce(null)
+    const restrictedCtx = { ...ctx, allowedBranchIds: ['branch-a'] }
+
+    await expect(runScheduledTaskNow('task-1', restrictedCtx)).rejects.toThrow('TASK_NOT_FOUND')
+
+    expect(findOneMock).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: 'task-1',
+        org_id: 'org-1',
+        [Op.or]: [{ branch_id: null }, { branch_id: { [Op.in]: ['branch-a'] } }],
+      }),
+    })
   })
 })

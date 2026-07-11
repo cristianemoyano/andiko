@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { z } from 'zod'
+import { Op } from 'sequelize'
 import type { TenantContext } from '@/lib/tenancy'
 
 vi.mock('./actions', () => ({}))
@@ -55,13 +56,42 @@ describe('listScheduledTasks', () => {
       where: expect.objectContaining({ org_id: 'org-1' }),
     }))
   })
+
+  it('scopes to org-wide tasks plus allowed branches when the caller is branch-restricted', async () => {
+    findAndCountAllMock.mockResolvedValueOnce({ rows: [], count: 0 })
+    const restrictedCtx: TenantContext = { ...ctxOrg1, allowedBranchIds: ['branch-a'] }
+
+    await listScheduledTasks({ page: 1, limit: 20 }, restrictedCtx)
+
+    expect(findAndCountAllMock).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        org_id: 'org-1',
+        [Op.or]: [{ branch_id: null }, { branch_id: { [Op.in]: ['branch-a'] } }],
+      }),
+    }))
+  })
 })
 
 describe('getScheduledTask', () => {
-  it('scopes findOne to id + org_id', async () => {
+  it('scopes findOne to id + org_id when unrestricted', async () => {
     findOneMock.mockResolvedValueOnce(null)
     await getScheduledTask('task-1', ctxOrg1)
     expect(findOneMock).toHaveBeenCalledWith({ where: { id: 'task-1', org_id: 'org-1' } })
+  })
+
+  it('excludes tasks scoped to a branch outside the caller\'s allowed branches', async () => {
+    findOneMock.mockResolvedValueOnce(null)
+    const restrictedCtx: TenantContext = { ...ctxOrg1, allowedBranchIds: ['branch-a'] }
+
+    await getScheduledTask('task-1', restrictedCtx)
+
+    expect(findOneMock).toHaveBeenCalledWith({
+      where: {
+        id: 'task-1',
+        org_id: 'org-1',
+        [Op.or]: [{ branch_id: null }, { branch_id: { [Op.in]: ['branch-a'] } }],
+      },
+    })
   })
 })
 

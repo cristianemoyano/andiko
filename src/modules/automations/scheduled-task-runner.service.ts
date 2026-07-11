@@ -1,6 +1,7 @@
 import 'server-only'
 import { Op } from 'sequelize'
 import logger from '@/lib/logger'
+import type { TenantContext } from '@/lib/tenancy'
 import ScheduledTask from './scheduled-task.model'
 import ScheduledTaskRun, { type ScheduledTaskRunTriggerKind, type ScheduledTaskRunLogStatus } from './scheduled-task-run.model'
 import { computeNextRunAt } from './cron'
@@ -180,8 +181,16 @@ export async function runDueScheduledTasks(limit = 50): Promise<TickResult> {
 }
 
 /** Runs one task immediately ("Ejecutar ahora"), without disturbing its scheduled next_run_at. */
-export async function runScheduledTaskNow(taskId: string, orgId: string): Promise<RunNowResult> {
-  const task = await ScheduledTask.findOne({ where: { id: taskId, org_id: orgId, deleted_at: null } })
+export async function runScheduledTaskNow(taskId: string, ctx: TenantContext): Promise<RunNowResult> {
+  const where: Record<string, unknown> = ctx.allowedBranchIds.length > 0
+    ? {
+        id: taskId,
+        org_id: ctx.orgId,
+        deleted_at: null,
+        [Op.or]: [{ branch_id: null }, { branch_id: { [Op.in]: ctx.allowedBranchIds } }],
+      }
+    : { id: taskId, org_id: ctx.orgId, deleted_at: null }
+  const task = await ScheduledTask.findOne({ where })
   if (!task) {
     throw new Error('TASK_NOT_FOUND')
   }

@@ -1,4 +1,5 @@
 import 'server-only'
+import { Op } from 'sequelize'
 import type { TenantContext } from '@/lib/tenancy'
 import { TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { paginate, toPaginated, type PaginatedResult } from '@/lib/pagination'
@@ -25,6 +26,23 @@ function assertBranchAllowed(branchId: string | null | undefined, ctx: TenantCon
   if (!branchId) return
   if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(branchId)) {
     throw new TenancyError(TENANCY_ERROR_CODES.BRANCH_NOT_ALLOWED)
+  }
+}
+
+/**
+ * Org scope + branch scope for reads. `branch_id` is nullable (org-wide automations),
+ * so this can't reuse `whereAllowedBranches()` from `@/lib/tenancy` — that helper assumes
+ * `branch_id NOT NULL` and would hide org-wide tasks from branch-restricted users. A
+ * branch-restricted user sees org-wide tasks plus tasks scoped to their allowed branches.
+ */
+function scopedWhere(ctx: TenantContext, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  if (ctx.allowedBranchIds.length === 0) {
+    return { ...extra, org_id: ctx.orgId }
+  }
+  return {
+    ...extra,
+    org_id: ctx.orgId,
+    [Op.or]: [{ branch_id: null }, { branch_id: { [Op.in]: ctx.allowedBranchIds } }],
   }
 }
 
@@ -64,8 +82,7 @@ export async function listScheduledTasks(
 ): Promise<PaginatedResult<ScheduledTask>> {
   const { page, limit } = query
   const { offset } = paginate(page, limit)
-  const where: Record<string, unknown> = { org_id: ctx.orgId }
-  if (query.status) where.status = query.status
+  const where = scopedWhere(ctx, query.status ? { status: query.status } : {})
 
   const { rows, count } = await ScheduledTask.findAndCountAll({
     where,
@@ -78,7 +95,7 @@ export async function listScheduledTasks(
 }
 
 export async function getScheduledTask(id: string, ctx: TenantContext): Promise<ScheduledTask | null> {
-  return ScheduledTask.findOne({ where: { id, org_id: ctx.orgId } })
+  return ScheduledTask.findOne({ where: scopedWhere(ctx, { id }) })
 }
 
 export async function createScheduledTask(

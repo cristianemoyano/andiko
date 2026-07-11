@@ -6,7 +6,7 @@ import { runScheduledTaskNow } from '@/modules/automations/scheduled-task-runner
 export const POST = withTenantPermission<{ id: string }>('automations:write', async (_req, routeCtx, _session, tenant) => {
   const { id } = await routeCtx.params
   try {
-    const result = await runScheduledTaskNow(id, tenant.orgId)
+    const result = await runScheduledTaskNow(id, tenant)
     return NextResponse.json(result)
   } catch (err) {
     return automationsErrorResponse(err)
