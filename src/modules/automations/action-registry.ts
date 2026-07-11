@@ -26,7 +26,10 @@ export interface AutomationActionDef<TPayload = unknown> {
 const registry = new Map<string, AutomationActionDef>()
 
 export function registerAutomationAction<TPayload>(def: AutomationActionDef<TPayload>): void {
-  if (registry.has(def.type)) {
+  // In dev, Next.js Fast Refresh can re-execute an action's module (and this barrel)
+  // without resetting this in-memory registry, so re-registering the same type is
+  // expected there. Outside dev, a duplicate type is a genuine programmer error.
+  if (registry.has(def.type) && process.env.NODE_ENV !== 'development') {
     throw new Error(`Automation action already registered: ${def.type}`)
   }
   registry.set(def.type, def as AutomationActionDef)

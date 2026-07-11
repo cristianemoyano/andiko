@@ -20,7 +20,7 @@ describe('action-registry', () => {
     expect(getAutomationAction('nope.nonexistent')).toBeUndefined()
   })
 
-  it('throws when registering the same type twice', () => {
+  it('throws when registering the same type twice outside dev', () => {
     registerAutomationAction({
       type: 'test.duplicate',
       label: 'Dup',
@@ -35,5 +35,28 @@ describe('action-registry', () => {
         run: vi.fn(async () => ({})),
       }),
     ).toThrow()
+  })
+
+  it('re-registering the same type in dev overwrites instead of throwing (Fast Refresh)', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    try {
+      registerAutomationAction({
+        type: 'test.dev-reload',
+        label: 'V1',
+        payloadSchema: z.object({}),
+        run: vi.fn(async () => ({})),
+      })
+      expect(() =>
+        registerAutomationAction({
+          type: 'test.dev-reload',
+          label: 'V2',
+          payloadSchema: z.object({}),
+          run: vi.fn(async () => ({})),
+        }),
+      ).not.toThrow()
+      expect(getAutomationAction('test.dev-reload')?.label).toBe('V2')
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 })
