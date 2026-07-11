@@ -15,6 +15,9 @@ const ACTION_TIMEOUT_MS = 60_000
 /** A claim older than this is considered abandoned (crashed process) and can be reclaimed. */
 const STUCK_CLAIM_MS = 15 * 60 * 1000
 
+/** How many claimed tasks a single tick runs at once, so one slow/heavy org doesn't stall the rest. */
+const TICK_CONCURRENCY = 5
+
 const INSTANCE_ID = `${process.pid}-${Math.random().toString(36).slice(2, 8)}`
 
 export interface TickResult {
@@ -37,6 +40,19 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
     }),
   ])
+}
+
+/** Runs `fn` over `items` with at most `limit` in flight at once. */
+async function runWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let index = 0
+  async function worker(): Promise<void> {
+    while (index < items.length) {
+      const current = items[index]
+      index += 1
+      await fn(current)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
 }
 
 /**
@@ -127,6 +143,13 @@ async function executeClaimedTask(
  * `next_run_at` is advanced to the task's *next* fire time before the action runs, so
  * a slow action or a crashed process can't cause the row to be reprocessed in a tight
  * loop on the very next tick.
+ *
+ * Claiming stays sequential (cheap, one row at a time), but running claimed tasks'
+ * actions happens with up to TICK_CONCURRENCY in flight — a handful of slow actions
+ * (a webhook near its timeout, a future sync-style action) shouldn't serialize behind
+ * each other and stall the rest of the batch. Each task's execution is isolated in its
+ * own try/catch so a failure that somehow escapes executeClaimedTask's own error
+ * handling (e.g. a DB error inside finalize() itself) can't abort the other tasks.
  */
 export async function runDueScheduledTasks(limit = 50): Promise<TickResult> {
   const now = new Date()
@@ -144,6 +167,7 @@ export async function runDueScheduledTasks(limit = 50): Promise<TickResult> {
   })
 
   const result: TickResult = { claimed: 0, succeeded: 0, failed: 0, skipped: 0 }
+  const claimedTasks: ScheduledTask[] = []
 
   for (const task of candidates) {
     const previousNextRunAt = task.next_run_at
@@ -171,11 +195,23 @@ export async function runDueScheduledTasks(limit = 50): Promise<TickResult> {
     task.set({ claimed_at: now, claimed_by: INSTANCE_ID, next_run_at: nextRunAt })
 
     result.claimed += 1
-    const { status } = await executeClaimedTask(task, 'scheduled')
-    if (status === 'success') result.succeeded += 1
-    else if (status === 'failed') result.failed += 1
-    else result.skipped += 1
+    claimedTasks.push(task)
   }
+
+  await runWithConcurrency(claimedTasks, TICK_CONCURRENCY, async (task) => {
+    try {
+      const { status } = await executeClaimedTask(task, 'scheduled')
+      if (status === 'success') result.succeeded += 1
+      else if (status === 'failed') result.failed += 1
+      else result.skipped += 1
+    } catch (err) {
+      logger.error(
+        { taskId: task.id, err: String(err) },
+        'automation task run crashed outside its own error handling',
+      )
+      result.failed += 1
+    }
+  })
 
   return result
 }

@@ -73,8 +73,22 @@ registerAutomationAction({
   }),
 })
 
+const trackableLog: string[] = []
+registerAutomationAction({
+  type: 'test.trackable',
+  label: 'Trackable',
+  payloadSchema: z.object({ id: z.string(), delayMs: z.number() }),
+  async run(_ctx, payload) {
+    trackableLog.push(`start-${payload.id}`)
+    await new Promise(resolve => setTimeout(resolve, payload.delayMs))
+    trackableLog.push(`end-${payload.id}`)
+    return {}
+  },
+})
+
 beforeEach(() => {
   vi.clearAllMocks()
+  trackableLog.length = 0
 })
 
 describe('runDueScheduledTasks', () => {
@@ -153,6 +167,34 @@ describe('runDueScheduledTasks', () => {
       consecutive_failures: 2,
       status: 'paused',
     }))
+  })
+
+  it('runs claimed tasks concurrently instead of one at a time', async () => {
+    const taskA = makeTask({ id: 'task-a', action_type: 'test.trackable', payload: { id: 'a', delayMs: 30 } })
+    const taskB = makeTask({ id: 'task-b', action_type: 'test.trackable', payload: { id: 'b', delayMs: 10 } })
+    findAllMock.mockResolvedValueOnce([taskA, taskB])
+    updateMock.mockResolvedValueOnce([1]).mockResolvedValueOnce([1])
+    runCreateMock.mockResolvedValueOnce(makeRun()).mockResolvedValueOnce(makeRun())
+
+    const result = await runDueScheduledTasks()
+
+    expect(result).toEqual({ claimed: 2, succeeded: 2, failed: 0, skipped: 0 })
+    // If they ran sequentially, 'start-b' would only appear after 'end-a'. Running
+    // concurrently, b (shorter delay) starts before a finishes.
+    expect(trackableLog.indexOf('start-b')).toBeLessThan(trackableLog.indexOf('end-a'))
+  })
+
+  it('isolates a task whose execution throws outside its own error handling from the rest of the batch', async () => {
+    const taskA = makeTask({ id: 'task-a' })
+    const taskB = makeTask({ id: 'task-b' })
+    findAllMock.mockResolvedValueOnce([taskA, taskB])
+    updateMock.mockResolvedValueOnce([1]).mockResolvedValueOnce([1])
+    // Task A's run-row creation itself fails (outside executeClaimedTask's action try/catch).
+    runCreateMock.mockRejectedValueOnce(new Error('db unavailable')).mockResolvedValueOnce(makeRun())
+
+    const result = await runDueScheduledTasks()
+
+    expect(result).toEqual({ claimed: 2, succeeded: 1, failed: 1, skipped: 0 })
   })
 })
 
