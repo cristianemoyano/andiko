@@ -519,6 +519,10 @@ scheduler behind `/automatizaciones`; if `CRON_SECRET` is set):
 * * * * * curl -sf -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://andiko.cloud/api/v1/sys-admin/jobs/automations-tick
 ```
 
+Or install it with `make prod-install-automations-cron` (reads `DOMAIN` and `CRON_SECRET`
+from `infra/.env.production`, idempotent — re-running updates the entry in place instead of
+duplicating it). Remove it with `make prod-remove-automations-cron`.
+
 One minute is the practical floor for automation schedules — a cron expression can't fire more
 often than this endpoint is polled. Calling it concurrently is safe by design (an automation's
 `next_run_at` is claimed with optimistic concurrency, so overlapping ticks — e.g. one run taking
