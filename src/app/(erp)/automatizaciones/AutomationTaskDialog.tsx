@@ -67,6 +67,22 @@ export function AutomationTaskDialog({ open, onOpenChange, task, onSaved }: Auto
     return () => { cancelled = true }
   }, [open])
 
+  // Preload the org's default timezone for new tasks. Best-effort: if the caller lacks
+  // settings:read (or the request otherwise fails), the hardcoded default still applies.
+  useEffect(() => {
+    if (!open || isEdit) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetchJson<{ organization: { timezone: string } }>('/api/v1/settings/organization')
+        if (!cancelled && res.organization?.timezone) setTimezone(res.organization.timezone)
+      } catch {
+        // Keep the hardcoded default.
+      }
+    })()
+    return () => { cancelled = true }
+  }, [open, isEdit])
+
   async function handleSave() {
     setSaving(true)
     setErrors({})

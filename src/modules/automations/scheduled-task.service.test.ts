@@ -11,8 +11,12 @@ vi.mock('./scheduled-task.model', () => ({
 vi.mock('./scheduled-task-run.model', () => ({
   default: { findAndCountAll: vi.fn() },
 }))
+vi.mock('@/modules/auth/organization.model', () => ({
+  default: { findByPk: vi.fn() },
+}))
 
 import ScheduledTask from './scheduled-task.model'
+import Organization from '@/modules/auth/organization.model'
 import ScheduledTaskRun from './scheduled-task-run.model'
 import { registerAutomationAction } from './action-registry'
 import {
@@ -29,6 +33,7 @@ const findOneMock = ScheduledTask.findOne as unknown as Mock
 const createMock = ScheduledTask.create as unknown as Mock
 const countMock = ScheduledTask.count as unknown as Mock
 const runFindAndCountAllMock = ScheduledTaskRun.findAndCountAll as unknown as Mock
+const orgFindByPkMock = Organization.findByPk as unknown as Mock
 
 registerAutomationAction({
   type: 'test.noop',
@@ -104,6 +109,13 @@ describe('createScheduledTask', () => {
     timezone: 'UTC',
     max_consecutive_failures: 5,
   }
+  const validInputNoTimezone = {
+    name: validInput.name,
+    action_type: validInput.action_type,
+    payload: validInput.payload,
+    cron_expression: validInput.cron_expression,
+    max_consecutive_failures: validInput.max_consecutive_failures,
+  }
 
   it('rejects an unknown action_type', async () => {
     countMock.mockResolvedValueOnce(0)
@@ -146,6 +158,37 @@ describe('createScheduledTask', () => {
       createScheduledTask({ ...validInput, branch_id: 'branch-b' }, ctxLimited, 'user-1'),
     ).rejects.toThrow()
     expect(createMock).not.toHaveBeenCalled()
+  })
+
+  it('inherits the org timezone when the caller omits one', async () => {
+    countMock.mockResolvedValueOnce(0)
+    createMock.mockResolvedValueOnce({ id: 'task-1' })
+    orgFindByPkMock.mockResolvedValueOnce({ timezone: 'America/Mexico_City' })
+
+    await createScheduledTask(validInputNoTimezone, ctxOrg1, 'user-1')
+
+    expect(orgFindByPkMock).toHaveBeenCalledWith('org-1', expect.objectContaining({ attributes: ['timezone'] }))
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ timezone: 'America/Mexico_City' }))
+  })
+
+  it('does not look up the org when the caller specifies a timezone explicitly', async () => {
+    countMock.mockResolvedValueOnce(0)
+    createMock.mockResolvedValueOnce({ id: 'task-1' })
+
+    await createScheduledTask(validInput, ctxOrg1, 'user-1')
+
+    expect(orgFindByPkMock).not.toHaveBeenCalled()
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ timezone: 'UTC' }))
+  })
+
+  it('falls back to the default timezone if the org row is somehow missing', async () => {
+    countMock.mockResolvedValueOnce(0)
+    createMock.mockResolvedValueOnce({ id: 'task-1' })
+    orgFindByPkMock.mockResolvedValueOnce(null)
+
+    await createScheduledTask(validInputNoTimezone, ctxOrg1, 'user-1')
+
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ timezone: 'America/Argentina/Buenos_Aires' }))
   })
 })
 

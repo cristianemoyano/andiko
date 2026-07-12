@@ -9,7 +9,8 @@ export const scheduledTaskSchema = z.object({
   action_type: z.string().min(1).max(64),
   payload: z.record(z.string(), z.unknown()).default({}),
   cron_expression: z.string().min(1).max(64),
-  timezone: z.string().min(1).max(64).default('America/Argentina/Buenos_Aires'),
+  // No default here: absence means "inherit the org's timezone", resolved in the service layer.
+  timezone: z.string().min(1).max(64).optional(),
   max_consecutive_failures: z.coerce.number().int().min(1).max(50).default(5),
 })
 

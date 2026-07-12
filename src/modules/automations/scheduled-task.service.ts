@@ -3,6 +3,7 @@ import { Op } from 'sequelize'
 import type { TenantContext } from '@/lib/tenancy'
 import { TenancyError, TENANCY_ERROR_CODES } from '@/lib/tenancy'
 import { paginate, toPaginated, type PaginatedResult } from '@/lib/pagination'
+import Organization from '@/modules/auth/organization.model'
 import ScheduledTask from './scheduled-task.model'
 import ScheduledTaskRun from './scheduled-task-run.model'
 import { computeNextRunAt, minIntervalSecondsOf, validateCronExpression } from './cron'
@@ -12,6 +13,15 @@ import type { ScheduledTaskInput, ScheduledTaskQuery, ScheduledTaskUpdateInput }
 
 /** Hard cap on active automations per org, so one tenant can't overwhelm shared tick capacity. */
 const MAX_ACTIVE_TASKS_PER_ORG = 50
+
+/** Fallback used only if somehow the org row is missing (should not happen — org_id is a FK). */
+const FALLBACK_TIMEZONE = 'America/Argentina/Buenos_Aires'
+
+/** Resolves the timezone a new task should use when the caller didn't specify one. */
+async function resolveOrgTimezone(orgId: string): Promise<string> {
+  const org = await Organization.findByPk(orgId, { attributes: ['timezone'] })
+  return org?.timezone ?? FALLBACK_TIMEZONE
+}
 
 export class ScheduledTaskValidationError extends Error {
   readonly code: string
@@ -104,7 +114,8 @@ export async function createScheduledTask(
   actorId: string | null,
 ): Promise<ScheduledTask> {
   assertBranchAllowed(input.branch_id, ctx)
-  validateActionAndSchedule(input)
+  const timezone = input.timezone ?? await resolveOrgTimezone(ctx.orgId)
+  validateActionAndSchedule({ ...input, timezone })
 
   const activeCount = await ScheduledTask.count({ where: { org_id: ctx.orgId, status: 'active' } })
   if (activeCount >= MAX_ACTIVE_TASKS_PER_ORG) {
@@ -114,7 +125,7 @@ export async function createScheduledTask(
     )
   }
 
-  const nextRunAt = computeNextRunAt(input.cron_expression, input.timezone)
+  const nextRunAt = computeNextRunAt(input.cron_expression, timezone)
 
   return ScheduledTask.create({
     org_id: ctx.orgId,
@@ -124,7 +135,7 @@ export async function createScheduledTask(
     action_type: input.action_type,
     payload: input.payload,
     cron_expression: input.cron_expression,
-    timezone: input.timezone,
+    timezone,
     max_consecutive_failures: input.max_consecutive_failures,
     next_run_at: nextRunAt,
     created_by: actorId,
