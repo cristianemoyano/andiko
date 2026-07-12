@@ -8,6 +8,7 @@ import type { TenantContext } from '@/lib/tenancy'
 import { paginate, toPaginated } from '@/lib/pagination'
 import StockItem from './stock-item.model'
 import StockMovement from './stock-movement.model'
+import LowStockAlertQueue from './low-stock-alert-queue.model'
 import Warehouse from './warehouse.model'
 import type { StockMovementType, StockReferenceType } from './stock-movement.model'
 import { resolveWarehouseForBranch } from './branch-warehouse.resolution'
@@ -152,6 +153,17 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
     { quantity: after.toFixed(4), expires_on: await earliestExpiry(item.id, t) },
     { transaction: t },
   )
+
+  // Detect crossing below minimum and enqueue a lightweight marker for
+  // drainPendingLowStockAlerts to pick up later — no email/network I/O here,
+  // just a DB row inside this same transaction (ON CONFLICT DO NOTHING via
+  // the queue's unique index on stock_item_id).
+  if (after.lt(new Decimal(item.minimum_quantity))) {
+    await LowStockAlertQueue.bulkCreate(
+      [{ org_id: orgId, stock_item_id: item.id }],
+      { transaction: t, ignoreDuplicates: true },
+    )
+  }
 
   // Sync denormalized stock_quantity on product_variant
   if (!skipVariantStockSync) {

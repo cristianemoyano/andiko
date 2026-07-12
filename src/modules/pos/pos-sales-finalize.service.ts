@@ -140,7 +140,7 @@ export async function finalizePosSaleInErp(
 ): Promise<Invoice | null> {
   const requireAfip = options.requireAfip ?? true
 
-  return sequelize.transaction(async (t) => {
+  const invoiceResult = await sequelize.transaction(async (t) => {
     const order = await SalesOrder.findOne({
       where: { id: orderId, org_id: orgId, source: 'pos' },
       transaction: t,
@@ -263,4 +263,17 @@ export async function finalizePosSaleInErp(
     )
     return invoice
   })
+
+  // Non-blocking: drain any low-stock alerts queued while finalizing this
+  // sale, in real time rather than waiting for the automations safety-net.
+  if (invoiceResult) {
+    try {
+      const { drainPendingLowStockAlerts } = await import('@/modules/inventory/low-stock-alert.service')
+      await drainPendingLowStockAlerts(orgId)
+    } catch (err) {
+      logger.error({ err, orderId, orgId }, 'low stock alert drain failed')
+    }
+  }
+
+  return invoiceResult
 }

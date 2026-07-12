@@ -13,9 +13,10 @@ import { AppearanceTab } from './AppearanceTab'
 import { AfipConfigTab } from './AfipConfigTab'
 import { IntegracionesTab } from './IntegracionesTab'
 import { TermsAndConditionsTab } from './TermsAndConditionsTab'
+import { AlertasTab } from './AlertasTab'
 import { useCapabilities } from '@/components/layout/CapabilitiesContext'
 
-type Section = 'impresion' | 'plantillas-email' | 'emails-enviados' | 'apariencia' | 'afip' | 'integraciones' | 'terminos-condiciones'
+type Section = 'impresion' | 'plantillas-email' | 'emails-enviados' | 'apariencia' | 'afip' | 'integraciones' | 'terminos-condiciones' | 'alertas'
 
 const SECTION_LABEL: Record<Section, string> = {
   impresion: 'Plantilla de impresión',
@@ -25,6 +26,7 @@ const SECTION_LABEL: Record<Section, string> = {
   afip: 'AFIP',
   integraciones: 'Integraciones',
   'terminos-condiciones': 'Términos y condiciones',
+  alertas: 'Alertas',
 }
 
 function parseSection(value: string | null): Section {
@@ -35,6 +37,7 @@ function parseSection(value: string | null): Section {
     || value === 'afip'
     || value === 'integraciones'
     || value === 'terminos-condiciones'
+    || value === 'alertas'
   ) {
     return value
   }
@@ -71,7 +74,9 @@ export function ConfiguracionClient({
               ? 'afip'
               : tabs.terminosCondiciones
                 ? 'terminos-condiciones'
-                : 'apariencia'
+                : tabs.alertas
+                  ? 'alertas'
+                  : 'apariencia'
 
   const section = (
     (requested === 'impresion' && tabs.impresion) ||
@@ -80,7 +85,8 @@ export function ConfiguracionClient({
     (requested === 'apariencia' && tabs.apariencia) ||
     (requested === 'afip' && tabs.afip) ||
     (requested === 'integraciones' && tabs.integraciones) ||
-    (requested === 'terminos-condiciones' && tabs.terminosCondiciones)
+    (requested === 'terminos-condiciones' && tabs.terminosCondiciones) ||
+    (requested === 'alertas' && tabs.alertas)
   ) ? requested : defaultSection
 
   function handleSectionChange(next: string) {
@@ -117,6 +123,7 @@ export function ConfiguracionClient({
             {tabs.afip && <TabsTrigger value="afip">AFIP</TabsTrigger>}
             {tabs.integraciones && <TabsTrigger value="integraciones">Integraciones</TabsTrigger>}
             {tabs.terminosCondiciones && <TabsTrigger value="terminos-condiciones">Términos y condiciones</TabsTrigger>}
+            {tabs.alertas && <TabsTrigger value="alertas">Alertas</TabsTrigger>}
           </TabsList>
 
           {tabs.impresion && (
@@ -152,6 +159,11 @@ export function ConfiguracionClient({
           {tabs.terminosCondiciones && (
             <TabsContent value="terminos-condiciones">
               <TermsAndConditionsTab />
+            </TabsContent>
+          )}
+          {tabs.alertas && (
+            <TabsContent value="alertas">
+              <AlertasTab />
             </TabsContent>
           )}
         </Tabs>
