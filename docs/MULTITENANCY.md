@@ -68,6 +68,10 @@ Este documento define **cómo segmentamos datos** en Andiko para evitar cruces e
 ### Integraciones — Org-scoped
 - WooCommerce: sitios por org, vinculados a sucursal
 
+### Automations — Org-scoped (branch_id opcional)
+- `scheduled_tasks`, `scheduled_task_runs`
+- `branch_id` opcional; si se especifica, se valida contra sucursales habilitadas del usuario (`assertBranchAllowed` en `scheduled-task.service.ts`)
+
 ## Checklist técnico por entidad
 
 Para cada tabla **org-scoped**:

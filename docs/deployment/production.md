@@ -512,6 +512,23 @@ Test restores quarterly. Do not store backups in GitHub.
 0 6 * * * curl -sf -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://andiko.cloud/api/v1/sys-admin/billing/jobs/dunning
 ```
 
+**Automations tick** (drives every org's `scheduled_tasks` — the recurring task/automation
+scheduler behind `/automatizaciones`; if `CRON_SECRET` is set):
+
+```cron
+* * * * * curl -sf -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://andiko.cloud/api/v1/sys-admin/jobs/automations-tick
+```
+
+Or install it with `make prod-install-automations-cron` (reads `DOMAIN` and `CRON_SECRET`
+from `infra/.env.production`, idempotent — re-running updates the entry in place instead of
+duplicating it). Remove it with `make prod-remove-automations-cron`.
+
+One minute is the practical floor for automation schedules — a cron expression can't fire more
+often than this endpoint is polled. Calling it concurrently is safe by design (an automation's
+`next_run_at` is claimed with optimistic concurrency, so overlapping ticks — e.g. one run taking
+longer than 60s, or accidentally installing this crontab entry on more than one host — never
+process the same task twice); no `flock` or other host-side locking is needed.
+
 ## POS clients
 
 Point each terminal's `cloud_url` to `https://andiko.cloud`.
