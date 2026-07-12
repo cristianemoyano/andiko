@@ -65,7 +65,7 @@ export async function getPurchaseOrder(id: string, orgId: string) {
     where: { id, org_id: orgId },
     include: [
       { model: Branch,          as: 'branch',           attributes: ['id', 'name', 'branch_code'] },
-      { model: Contact,         as: 'contact',          attributes: ['id', 'legal_name', 'trade_name'], required: false },
+      { model: Contact,         as: 'contact',          attributes: ['id', 'legal_name', 'trade_name', 'email'], required: false },
       { model: User,            as: 'buyer',            attributes: ['id', 'name'] },
       { model: PurchaseOrderItem, as: 'items',          order: [['sort_order', 'ASC']] },
       { model: PurchaseReceipt, as: 'receipts',         attributes: ['id', 'receipt_number', 'status', 'receipt_date'] },
