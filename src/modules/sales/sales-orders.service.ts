@@ -314,7 +314,9 @@ export async function updateOrder(
     key => input[key as keyof SalesOrderUpdateInput] !== undefined,
   )
 
-  return sequelize.transaction(async (t) => {
+  let stockDeducted = false
+
+  const result = await sequelize.transaction(async (t) => {
     const order = await SalesOrder.findOne({ where: { id, org_id: ctx.orgId }, transaction: t })
     if (!order) throw new Error('ORDER_NOT_FOUND')
     if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(order.branch_id as string)) {
@@ -429,6 +431,7 @@ export async function updateOrder(
       }
       const { deductStockForOrder } = await import('@/modules/inventory/stock-movements.service')
       await deductStockForOrder(id, ctx.orgId, actorId, t)
+      stockDeducted = true
     } else if (input.status === 'cancelled' && prevStatus === 'confirmed') {
       const { restoreStockForOrder } = await import('@/modules/inventory/stock-movements.service')
       await restoreStockForOrder(id, ctx.orgId, actorId, t)
@@ -437,6 +440,19 @@ export async function updateOrder(
     logger.info({ orderId: id, actorId }, 'order updated')
     return getOrderInTransaction(id, ctx, t)
   })
+
+  // Non-blocking: drain any low-stock alerts queued by this confirmation, in
+  // real time rather than waiting for the automations safety-net sweep.
+  if (stockDeducted) {
+    try {
+      const { drainPendingLowStockAlerts } = await import('@/modules/inventory/low-stock-alert.service')
+      await drainPendingLowStockAlerts(ctx.orgId)
+    } catch (err) {
+      logger.error({ err, orderId: id, orgId: ctx.orgId }, 'low stock alert drain failed')
+    }
+  }
+
+  return result
 }
 
 export async function deleteOrder(id: string, ctx: TenantContext, actorId: string) {

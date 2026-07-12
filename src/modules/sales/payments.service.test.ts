@@ -23,17 +23,22 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/modules/auth/user.model', () => ({
   default: class User {},
 }))
-vi.mock('@/lib/logger', () => ({ default: { info: vi.fn() } }))
+vi.mock('@/lib/logger', () => ({ default: { info: vi.fn(), error: vi.fn() } }))
 vi.mock('./sales.utils', () => ({
   nextDocumentNumber: vi.fn().mockResolvedValue('COB-0001'),
 }))
 vi.mock('@/modules/accounting/sales-payment-accounting.service', () => ({
   postSalesPaymentAccounting: vi.fn().mockResolvedValue(undefined),
 }))
+vi.mock('./payment-receipt-notification.service', () => ({
+  sendPaymentReceiptEmail: vi.fn().mockResolvedValue(undefined),
+}))
 
 import Payment from './payment.model'
 import Invoice from './invoice.model'
+import logger from '@/lib/logger'
 import { createPayment } from './payments.service'
+import { sendPaymentReceiptEmail } from './payment-receipt-notification.service'
 
 const tenantCtx: TenantContext = {
   orgId: 'org-1',
@@ -108,5 +113,27 @@ describe('createPayment', () => {
       expect.objectContaining({ branch_id: 'branch-1' }),
       expect.anything(),
     )
+  })
+
+  it('sends the payment receipt email after the transaction commits', async () => {
+    ;(Invoice.findOne as Mock).mockResolvedValue(mockInvoice('issued'))
+    const created = { id: 'pay-1', ...input }
+    ;(Payment.create as Mock).mockResolvedValue(created)
+
+    await createPayment(input, tenantCtx, 'actor-1')
+
+    expect(sendPaymentReceiptEmail).toHaveBeenCalledWith(created, tenantCtx, 'actor-1')
+  })
+
+  it('still returns the payment when the receipt email fails', async () => {
+    ;(Invoice.findOne as Mock).mockResolvedValue(mockInvoice('issued'))
+    const created = { id: 'pay-1', ...input }
+    ;(Payment.create as Mock).mockResolvedValue(created)
+    ;(sendPaymentReceiptEmail as Mock).mockRejectedValueOnce(new Error('EMAIL_SEND_FAILED'))
+
+    const result = await createPayment(input, tenantCtx, 'actor-1')
+
+    expect(result).toBe(created)
+    expect(logger.error).toHaveBeenCalled()
   })
 })
