@@ -9,7 +9,7 @@ import { Dialog } from '@/components/primitives/Dialog'
 import { DropdownMenuItem } from '@/components/primitives/DropdownMenu'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 
-export type EmailDocumentType = 'quote' | 'order' | 'invoice' | 'delivery_note'
+export type EmailDocumentType = 'quote' | 'order' | 'invoice' | 'delivery_note' | 'purchase_order'
 
 interface TemplateEntry {
   subject: string

@@ -15,6 +15,7 @@ const PERMISSION_BY_TYPE: Record<EmailDocumentType, Permission> = {
   order: 'sales:read',
   invoice: 'sales:read',
   delivery_note: 'inventory:read',
+  purchase_order: 'purchases:read',
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
