@@ -512,6 +512,14 @@ Test restores quarterly. Do not store backups in GitHub.
 0 6 * * * curl -sf -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://andiko.cloud/api/v1/sys-admin/billing/jobs/dunning
 ```
 
+**Billing invoice automation** (generates draft invoices for subscriptions with an ended
+period, when enabled under `/sys-admin/billing/automatizacion`; if `CRON_SECRET` is set).
+Run every minute — the job no-ops when disabled or not due:
+
+```cron
+* * * * * curl -sf -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://andiko.cloud/api/v1/sys-admin/billing/jobs/generate-due-invoices
+```
+
 **Automations tick** (drives every org's `scheduled_tasks` — the recurring task/automation
 scheduler behind `/automatizaciones`; if `CRON_SECRET` is set):
 

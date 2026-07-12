@@ -503,7 +503,7 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [ ] Gateway de pagos (Mercado Pago / Stripe) + webhooks para débito automático
 - [ ] Portal self-service de facturación para la org — autogestión (cambiar plan/seats, pagar). El panel de lectura para el Gerente (suscripción, consumo, facturas) ya está implementado
 - [ ] Factura electrónica AFIP (CAE) de la plataforma hacia las orgs *(datos del emisor + snapshot en la factura ya implementados como base)*
-- [ ] Generación automática de facturas recurrentes (cron) *(hoy las facturas se generan manualmente desde sys-admin; `current_period_start/end` no los setea ningún scheduler)*
+- [x] Generación automática de facturas recurrentes (cron) — UI sys-admin en `/sys-admin/billing/automatizacion`; job `POST /api/v1/sys-admin/billing/jobs/generate-due-invoices` (`CRON_SECRET`); genera drafts + avanza `current_period_*`
 - [x] Dunning parcial — `billing-dunning.service.ts` marca `past_due` al vencer facturas impagas; job `POST /api/v1/sys-admin/billing/jobs/dunning`; reactivación al registrar pago
 - [ ] Suspensión / bloqueo de acceso ERP en `past_due` (hoy solo cambia estado de suscripción)
 
@@ -819,7 +819,8 @@ Scheduler de tareas recurrentes tipo cron, pensado como base extensible para aut
 - [x] Tick vía `CRON_SECRET` (`/api/v1/sys-admin/jobs/automations-tick`, crontab cada minuto — ver [docs/deployment/production.md](deployment/production.md))
 - [x] CRUD tenant + UI `/automatizaciones` (lista, crear/editar, ejecutar ahora, historial de ejecuciones)
 - [x] Acciones v1: `sales.expire_overdue_quotes`, `core.webhook_call` (webhook saliente genérico)
-- [ ] Más acciones por módulo (recordatorios de cobranza, sincronizaciones, notificaciones)
+- [x] UI de cron amigable (presets) + payloads tipados por acción en `/automatizaciones`
+- [ ] Más acciones por módulo (recordatorios de cobranza, sincronizaciones, notificaciones; futuros servicios recurrentes que la org vende a sus clientes)
 - [ ] Automatizaciones cross-org
 - [ ] Workflows multi-paso / condicionales (hoy: una acción por tarea)
 - [ ] Cadencias menores a 1 minuto (hoy: piso del tick por crontab externo)

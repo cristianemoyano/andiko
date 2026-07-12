@@ -108,7 +108,7 @@ export const NAV_MODULES: NavItem[] = [
     href: '/automatizaciones',
     icon: (
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M8 1v3M8 12v3M2.5 4.5l2 2M11.5 9.5l2 2M1 8h3M12 8h3M2.5 11.5l2-2M11.5 6.5l2-2"/><circle cx="8" cy="8" r="2.5"/>
+        <path d="M9.2 1.5 4.5 8.5H8l-1.3 6 5.8-7H9.2z"/>
       </svg>
     ),
   },
