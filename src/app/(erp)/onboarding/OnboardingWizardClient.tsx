@@ -282,6 +282,7 @@ const MODULE_DESCRIPTIONS: Record<OrgModuleKey, string> = {
   accounting: 'Libro diario, asientos e informes',
   pos: 'Cajas, turnos y punto de venta',
   automations: 'Tareas recurrentes y automatizaciones',
+  hr: 'Legajos de empleados y control de horario',
 }
 
 const INTEGRATIONS = [

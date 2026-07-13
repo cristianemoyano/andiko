@@ -10,6 +10,7 @@ const MODULE_READ_PERMISSION: Record<OrgModuleKey, string> = {
   accounting: 'accounting',
   pos: 'sales',
   automations: 'automations',
+  hr: 'attendance',
 }
 
 export function hasLogisticsReadAccess(permissions: readonly string[]): boolean {

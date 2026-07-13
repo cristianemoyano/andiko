@@ -7,6 +7,8 @@ import { slugifyText } from '@/lib/slug'
 import { formatAddress } from '@/lib/format-address'
 import { seedDefaultChartOfAccounts } from '@/modules/accounting/chart-seed'
 import { seedDefaultOrgRoles } from '@/modules/auth/org-roles.service'
+import { updateOrganizationSettings } from '@/modules/auth/organization-settings.service'
+import { getDefaultModulesForPlan } from '@/modules/auth/organization-modules'
 import type {
   OrganizationCreateInput,
   OrganizationUpdateInput,
@@ -79,6 +81,9 @@ export async function createOrganization(input: OrganizationCreateInput) {
     )
     await seedDefaultChartOfAccounts(org.id, t)
     await seedDefaultOrgRoles(org.id, t)
+    // Fija explícitamente los módulos habilitados en creación, en vez de dejar que
+    // el fallback implícito de organization-settings.service.ts (is_default) decida.
+    await updateOrganizationSettings(org.id, { enabled_modules: getDefaultModulesForPlan('full') }, t)
     return org
   })
 }

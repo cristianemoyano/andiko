@@ -827,6 +827,35 @@ Scheduler de tareas recurrentes tipo cron, pensado como base extensible para aut
 
 ---
 
+## Fase 13 — Control de Horario (RRHH)
+
+Control de horario / fichaje como base para una futura liquidación de sueldos. Se construye por fases: la Fase 1 es un control de horario útil por sí solo (fichaje propio, carga manual, import desde reloj físico); la liquidación de sueldos queda para una fase posterior una vez que haya suficiente historial de horas trabajadas.
+
+**Depende de:** `users`/`branches` (Auth). **Se integra con (posterior):** Contabilidad (asientos de sueldos/cargas sociales al liquidar).
+
+**Entidades:** `employees` (legajo, vinculado opcionalmente 1:1 a `users`), `attendance_events` (fichadas discretas: entrada/salida/ausencia, con `source` self_service | manual | device_import)
+
+### Fase 1 — MVP (completado)
+- [x] Legajo de empleado (`Employee`) independiente de `User`, para poder registrar personal sin acceso al sistema
+- [x] Fichaje self-service (entrada/salida) desde `/control-horario`
+- [x] Carga y corrección manual por admin/RRHH (sesión, evento único, ausencia) desde `/control-horario/registros`
+- [x] Importación CSV de fichadas desde relojes físicos (biométricos/fichadores), con dedup contra reimportaciones del mismo archivo
+- [x] Totales de horas trabajadas por día, calculados al leer (pareo cronológico de eventos, sin guardar floats)
+- [x] Permisos `employees:*` / `attendance:*` + `attendance:scope_own`, módulo `hr` (tier premium — habilitado salvo que el admin lo restrinja explícitamente en Configuración, igual que inventory/purchases/accounting/pos)
+
+### Posterior
+- [ ] Horarios pactados (`work_schedules`) para detectar llegadas tarde / horas extra
+- [ ] Ausencias/licencias/vacaciones como entidad propia con aprobación (`leave_requests`)
+- [ ] Flujo de aprobación de correcciones (`attendance_events.corrects_event_id` ya está en el esquema)
+- [ ] Liquidación de sueldos: tarifas/sueldo (`NUMERIC(15,2)` + Decimal.js), cálculo de períodos, asientos contables (Fase 7)
+- [ ] Import CSV multi-marca de reloj (adaptadores por dispositivo), columnas Fecha+Hora separadas, polling automático
+
+### Limitaciones conocidas (Fase 1)
+- Turnos que cruzan medianoche (ej. 23:00 a 07:00 del día siguiente) no se calculan correctamente en `computeDailyTotals` — cada fichada se agrupa por su propio `work_date`, sin pareo entre días. Ver comentario en `src/modules/attendance/attendance.utils.ts`.
+- El import CSV es todo-o-nada: si una fila del archivo falla, se revierte la transacción completa (mismo comportamiento que el import de contactos). Para archivos grandes de reloj físico, una sola fila corrupta obliga a reimportar todo.
+
+---
+
 ## Tesorería, Impuestos y Cumplimiento AR (gaps identificados — sin fecha)
 
 Funcionalidades fiscales y de tesorería específicas de Argentina que hoy están
@@ -855,7 +884,7 @@ Ideas validadas pero sin fecha definida.
 
 - Pipelines de estado configurables por el cliente: el `StatusPipeline` actual tiene los pasos hardcodeados por tipo de documento. A futuro, permitir que cada organización defina sus propios estados y transiciones (ej. agregar "En revisión" entre Borrador y Confirmado), con la lógica de transición validada en backend.
 - Multi-empresa (una instalación, múltiples razones sociales)
-- Módulo de Recursos Humanos básico (empleados, liquidación de sueldos)
+- Liquidación de sueldos (ver [Fase 12 — Control de Horario (RRHH)](#fase-12--control-de-horario-rrhh), Fase 1 de control de horario ya implementada)
 - Integración con medios de pago (Mercado Pago, transferencias bancarias)
 - App móvil para vendedores (solo consulta y carga de pedidos)
 - Portal de clientes (consulta de facturas y cuenta corriente)
