@@ -54,6 +54,9 @@ const STATUS_LABELS: Record<string, { status: BadgeProps['status']; label: strin
   Anulada:      { status: 'error',   label: 'Anulada' },
   Borrador:     { status: 'draft',   label: 'Borrador' },
   'En proceso': { status: 'info',    label: 'En proceso' },
+  // Producción (órdenes de producción)
+  Liberada:     { status: 'info',    label: 'Liberada' },
+  Terminada:    { status: 'success', label: 'Terminada' },
   // Suscripciones (billing)
   Activa:       { status: 'success', label: 'Activa' },
   Prueba:       { status: 'info',    label: 'Prueba' },

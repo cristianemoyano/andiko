@@ -11,6 +11,7 @@ export const ORG_MODULE_KEYS = [
   'pos',
   'automations',
   'hr',
+  'production',
 ] as const
 
 export type OrgModuleKey = typeof ORG_MODULE_KEYS[number]
@@ -33,6 +34,7 @@ export const ORG_MODULE_DEFS: OrgModuleDef[] = [
   { key: 'pos', label: 'POS (punto de venta)', tier: 'premium' },
   { key: 'automations', label: 'Automatizaciones', tier: 'premium' },
   { key: 'hr', label: 'Recursos Humanos', tier: 'premium' },
+  { key: 'production', label: 'Producción', tier: 'premium' },
 ]
 
 /** Módulos incluidos en plan base (sin premium). */
@@ -62,6 +64,7 @@ export const ROUTE_PREFIX_TO_MODULE: ReadonlyArray<{ prefix: string; module: Org
   { prefix: '/pos', module: 'pos' },
   { prefix: '/automatizaciones', module: 'automations' },
   { prefix: '/control-horario', module: 'hr' },
+  { prefix: '/produccion', module: 'production' },
 ]
 
 /** Sidebar nav id → module key */
@@ -79,6 +82,7 @@ export const NAV_ID_TO_MODULE: Record<string, OrgModuleKey> = {
   'pos-medios-de-pago': 'pos',
   automatizaciones: 'automations',
   'control-horario': 'hr',
+  produccion: 'production',
 }
 
 export function resolveModuleForPath(pathname: string): OrgModuleKey | null {
@@ -104,6 +108,7 @@ export const PERMISSION_RESOURCE_TO_MODULE: Record<string, OrgModuleKey> = {
   automations: 'automations',
   employees: 'hr',
   attendance: 'hr',
+  production: 'production',
 }
 
 export function isOrgModuleKey(value: string): value is OrgModuleKey {

@@ -301,7 +301,7 @@ src/app/(erp)/{module}/
 
 Features that touch sales, inventory, purchases, AFIP, accounting, billing, POS, or WooCommerce **must** follow [docs/dev/cross-module-checklist.md](docs/dev/cross-module-checklist.md) before merge.
 
-**Commit scopes** (enforced by commitlint): `sales`, `inventory`, `purchases`, `contacts`, `accounting`, `auth`, `core`, `catalog`, `afip`, `billing`, `pos`, `integrations`, `communications`, `storage`.
+**Commit scopes** (enforced by commitlint): `sales`, `inventory`, `purchases`, `contacts`, `accounting`, `auth`, `core`, `catalog`, `afip`, `billing`, `pos`, `integrations`, `communications`, `storage`, `production`.
 
 **Key docs:**
 

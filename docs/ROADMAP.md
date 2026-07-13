@@ -721,13 +721,13 @@ Fabricación / ensamble para PyMEs que transforman insumos en productos terminad
 **Entidades previstas:** `bills_of_materials`, `bom_items`, `production_orders`, `production_order_lines` (consumos planificados/reales)
 
 ### MVP
-- [ ] Tipos de producto en catálogo: insumo, semielaborado, producto terminado (fabricado)
-- [ ] Lista de materiales (BOM) por producto terminado: componentes, cantidades por unidad, merma opcional
-- [ ] Orden de producción: estados borrador → liberada → en proceso → terminada / cancelada
-- [ ] Al liberar/iniciar: reserva o consumo de insumos vía `stock_movements` (OUT), con lotes FEFO cuando aplique
-- [ ] Al cerrar: ingreso de producto terminado vía `stock_movements` (IN); cantidad real producida vs planificada
-- [ ] UI `/produccion`: listado de órdenes, detalle, alta/edición de BOM por variante
-- [ ] Permisos y scope `production` (commitlint) al implementar
+- [x] Tipos de producto en catálogo: insumo, semielaborado, producto terminado (fabricado)
+- [x] Lista de materiales (BOM) por producto terminado: componentes, cantidades por unidad, merma opcional
+- [x] Orden de producción: estados borrador → liberada → en proceso → terminada / cancelada
+- [x] Al liberar/iniciar: reserva o consumo de insumos vía `stock_movements` (OUT), con lotes FEFO cuando aplique
+- [x] Al cerrar: ingreso de producto terminado vía `stock_movements` (IN); cantidad real producida vs planificada
+- [x] UI `/produccion`: listado de órdenes, detalle, alta/edición de BOM por variante
+- [x] Permisos y scope `production` (commitlint) al implementar
 
 ### Posterior
 - [ ] Producción parcial y backflush

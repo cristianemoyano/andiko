@@ -5,6 +5,7 @@ import type { ProductStatus, ProductType, IvaRate, UnitOfMeasure } from './produ
 
 const productStatusEnum   = z.enum(['draft', 'active', 'archived'] as const)
 const productTypeEnum     = z.enum(['simple', 'service'] as const)
+const productionTypeEnum  = z.enum(['insumo', 'semielaborado', 'producto_terminado'] as const)
 const ivaRateEnum         = z.enum(['0', '10.5', '21', '27'] as const)
 const unitOfMeasureEnum   = z.enum(['unidad', 'kg', 'g', 'litro', 'ml', 'metro', 'cm', 'm2', 'm3', 'hora', 'caja', 'paquete', 'docena', 'par', 'rollo'] as const)
 
@@ -20,6 +21,7 @@ const productBaseSchema = z.object({
   description:       z.string().nullable().optional(),
   short_description: z.string().max(500).nullable().optional(),
   product_type:      productTypeEnum.optional(),
+  production_type:   productionTypeEnum.nullable().optional(),
   status:            productStatusEnum.optional(),
   vendor:            z.string().max(255).nullable().optional(),
   iva_rate:          ivaRateEnum.optional(),
@@ -72,6 +74,7 @@ export const productQuerySchema = paginationSchema.extend({
   category_id:  z.string().uuid().optional(),
   status:       productStatusEnum.optional(),
   product_type: productTypeEnum.optional(),
+  production_type: productionTypeEnum.optional(),
   source:       listSourceQuerySchema,
 })
 

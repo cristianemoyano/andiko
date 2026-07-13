@@ -60,6 +60,7 @@ const REFERENCE_TYPE_LABEL: Record<string, string> = {
   sales_exchange:   'Cambio venta',
   purchase_return:  'Devolución compra',
   purchase_exchange: 'Cambio compra',
+  production_order: 'Orden de producción',
 }
 
 const PAGE_SIZE = 20

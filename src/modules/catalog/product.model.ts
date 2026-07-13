@@ -9,11 +9,14 @@ export type ProductType     = 'simple' | 'service'
 export type ProductStatus   = 'draft' | 'active' | 'archived'
 export type IvaRate         = '0' | '10.5' | '21' | '27'
 export type UnitOfMeasure   = 'unidad' | 'kg' | 'g' | 'litro' | 'ml' | 'metro' | 'cm' | 'm2' | 'm3' | 'hora' | 'caja' | 'paquete' | 'docena' | 'par' | 'rollo'
+/** Clasificación de Producción (Fase 9), independiente de `product_type`. Nullable: catálogo existente no viene clasificado. */
+export type ProductionType  = 'insumo' | 'semielaborado' | 'producto_terminado'
 
 export const IVA_RATES: IvaRate[]       = ['0', '10.5', '21', '27']
 export const UNITS_OF_MEASURE: UnitOfMeasure[] = ['unidad', 'kg', 'g', 'litro', 'ml', 'metro', 'cm', 'm2', 'm3', 'hora', 'caja', 'paquete', 'docena', 'par', 'rollo']
 export const PRODUCT_STATUSES: ProductStatus[] = ['draft', 'active', 'archived']
 export const PRODUCT_TYPES: ProductType[]      = ['simple', 'service']
+export const PRODUCTION_TYPES: ProductionType[] = ['insumo', 'semielaborado', 'producto_terminado']
 
 interface ProductAttributes extends Timestamps, AuditFields {
   id: UUID
@@ -23,6 +26,7 @@ interface ProductAttributes extends Timestamps, AuditFields {
   description: string | null
   short_description: string | null
   product_type: ProductType
+  production_type: ProductionType | null
   status: ProductStatus
   vendor: string | null
   iva_rate: IvaRate
@@ -38,7 +42,7 @@ interface ProductAttributes extends Timestamps, AuditFields {
 
 type ProductCreationAttributes = Optional<
   ProductAttributes,
-  'id' | 'category_id' | 'description' | 'short_description' | 'product_type' | 'status' |
+  'id' | 'category_id' | 'description' | 'short_description' | 'product_type' | 'production_type' | 'status' |
   'vendor' | 'iva_rate' | 'unit_of_measure' | 'ncm_code' | 'tags' | 'images' |
   'import_source' | 'import_external_id' |
   'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by' | 'org_id'
@@ -52,6 +56,7 @@ class Product extends AuditModel<ProductAttributes, ProductCreationAttributes> {
   declare description: string | null
   declare short_description: string | null
   declare product_type: ProductType
+  declare production_type: ProductionType | null
   declare status: ProductStatus
   declare vendor: string | null
   declare iva_rate: IvaRate
@@ -72,6 +77,7 @@ Product.init(
     description:       { type: DataTypes.TEXT },
     short_description: { type: DataTypes.STRING(500) },
     product_type:      { type: DataTypes.ENUM('simple', 'service'), allowNull: false, defaultValue: 'simple' },
+    production_type:   { type: DataTypes.ENUM('insumo', 'semielaborado', 'producto_terminado') },
     status:            { type: DataTypes.ENUM('draft', 'active', 'archived'), allowNull: false, defaultValue: 'draft' },
     vendor:            { type: DataTypes.STRING(255) },
     iva_rate:          { type: DataTypes.ENUM('0', '10.5', '21', '27'), allowNull: false, defaultValue: '21' },

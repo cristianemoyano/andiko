@@ -6,7 +6,7 @@ import ProductVariant from '@/modules/catalog/product-variant.model'
 import { ensureAssociation, registeredModel } from '@/lib/sequelize-models'
 
 export type StockMovementType = 'in' | 'out' | 'adjustment' | 'transfer_in' | 'transfer_out'
-export type StockReferenceType = 'order' | 'invoice_cancel' | 'manual' | 'initial' | 'purchase_receipt' | 'delivery_note' | 'sales_return' | 'sales_exchange' | 'purchase_return' | 'purchase_exchange' | 'transfer'
+export type StockReferenceType = 'order' | 'invoice_cancel' | 'manual' | 'initial' | 'purchase_receipt' | 'delivery_note' | 'sales_return' | 'sales_exchange' | 'purchase_return' | 'purchase_exchange' | 'transfer' | 'production_order'
 
 export interface StockMovementAttributes {
   id: UUID

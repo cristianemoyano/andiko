@@ -283,6 +283,7 @@ const MODULE_DESCRIPTIONS: Record<OrgModuleKey, string> = {
   pos: 'Cajas, turnos y punto de venta',
   automations: 'Tareas recurrentes y automatizaciones',
   hr: 'Legajos de empleados y control de horario',
+  production: 'Recetas (BOM) y órdenes de producción',
 }
 
 const INTEGRATIONS = [

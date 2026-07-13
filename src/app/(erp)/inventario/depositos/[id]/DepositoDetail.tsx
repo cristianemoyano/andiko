@@ -103,6 +103,7 @@ const REFERENCE_TYPE_LABEL: Record<StockReferenceType, string> = {
   purchase_return:  'Devolución compra',
   purchase_exchange: 'Cambio compra',
   transfer:         'Transferencia',
+  production_order: 'Orden de producción',
 }
 
 function movementBadgeStatus(type: StockMovementType): 'success' | 'error' | 'neutral' {

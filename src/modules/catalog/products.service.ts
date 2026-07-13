@@ -70,13 +70,14 @@ function enrichMappedRowsFromCommonExports(
 }
 
 export async function listProducts(query: ProductQuery, ctx: TenantContext) {
-  const { page, limit, search, category_id, status, product_type, source } = query
+  const { page, limit, search, category_id, status, product_type, production_type, source } = query
   const { offset } = paginate(page, limit)
 
   const where = combineListWhere(
     whereOrg(ctx),
     status ? { status } : {},
     product_type ? { product_type } : {},
+    production_type ? { production_type } : {},
     category_id ? { category_id } : {},
     source ? importSourceListWhere(source, ctx.orgId, 'product') : {},
     search
