@@ -45,7 +45,7 @@ export async function listExpenses(query: ExpenseQuery, orgId: string) {
     attributes: [
       'id', 'branch_id', 'expense_number', 'invoice_number', 'status',
       'contact_id', 'recurring_template_id', 'description', 'expense_account_code',
-      'invoice_date', 'due_date', 'currency',
+      'invoice_date', 'due_date', 'currency', 'iva_rate',
       'subtotal', 'tax_amount', 'total', 'paid_amount', 'balance',
       'notes', 'created_at',
     ],
@@ -89,6 +89,7 @@ export async function createExpense(input: ExpenseInput, orgId: string, actorId:
       {
         ...fields,
         branch_id,
+        iva_rate:       iva_rate as IvaRate,
         org_id:         orgId,
         expense_number: docNumber,
         buyer_id:       actorId,
@@ -122,13 +123,14 @@ export async function updateExpense(id: string, input: ExpenseUpdateInput, orgId
     const { iva_rate, subtotal, discount_amount, ...restFields } = input
 
     if (subtotal !== undefined || discount_amount !== undefined || iva_rate !== undefined) {
+      const effectiveIvaRate = (iva_rate ?? expense.iva_rate) as IvaRate
       const totals = calcExpenseTotals(
         subtotal ?? expense.subtotal,
         discount_amount ?? expense.discount_amount,
-        (iva_rate ?? '21') as IvaRate,
+        effectiveIvaRate,
       )
       await expense.update(
-        { ...restFields, ...totals, balance: new Decimal(totals.total).minus(expense.paid_amount).toFixed(2), updated_by: actorId },
+        { ...restFields, iva_rate: effectiveIvaRate, ...totals, balance: new Decimal(totals.total).minus(expense.paid_amount).toFixed(2), updated_by: actorId },
         { transaction: t },
       )
     } else {

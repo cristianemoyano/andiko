@@ -52,6 +52,7 @@ export type Expense = {
   invoice_date: string | null
   due_date: string | null
   currency: string
+  iva_rate: string
   subtotal: string
   discount_amount: string
   tax_amount: string

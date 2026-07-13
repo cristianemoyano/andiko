@@ -26,11 +26,15 @@ export const up: Migration = async ({ context: queryInterface }) => {
     CREATE INDEX idx_expense_payments_org      ON expense_payments(org_id)     WHERE deleted_at IS NULL;
     CREATE INDEX idx_expense_payments_expense  ON expense_payments(expense_id) WHERE deleted_at IS NULL;
     CREATE INDEX idx_expense_payments_contact  ON expense_payments(contact_id) WHERE deleted_at IS NULL AND contact_id IS NOT NULL;
+    CREATE INDEX idx_expense_payments_branch   ON expense_payments(branch_id)  WHERE deleted_at IS NULL AND branch_id IS NOT NULL;
+    CREATE INDEX idx_expense_payments_buyer    ON expense_payments(buyer_id)   WHERE deleted_at IS NULL AND buyer_id IS NOT NULL;
   `)
 }
 
 export const down: Migration = async ({ context: queryInterface }) => {
   await queryInterface.sequelize.query(`
+    DROP INDEX IF EXISTS idx_expense_payments_buyer;
+    DROP INDEX IF EXISTS idx_expense_payments_branch;
     DROP INDEX IF EXISTS idx_expense_payments_contact;
     DROP INDEX IF EXISTS idx_expense_payments_expense;
     DROP INDEX IF EXISTS idx_expense_payments_org;
