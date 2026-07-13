@@ -21,8 +21,11 @@ Production stack details below. Vercel env vars and VPS `infra/.env.production` 
 
 ```
 Internet → nginx (:443) → app (:3000) → postgres (:5432, internal)
-                ├→ portainer (:9000, internal, UI at portainer.andiko.cloud)
-                ├→ mailserver (:25/:587/:993, host mode, mail.andiko.cloud)
+                ├→ portainer (:9000, UI at portainer.andiko.cloud)
+                ├→ umami (:3000, analytics.andiko.cloud)
+                ├→ cap (:3000, cap.andiko.cloud) → cap_valkey (in-memory)
+                ├→ umami_db (PostgreSQL, internal)
+                ├→ mailserver (:25/:587/:993, mail.andiko.cloud)
                 ↑
            Certbot (Let's Encrypt)
 ```
@@ -33,6 +36,10 @@ Internet → nginx (:443) → app (:3000) → postgres (:5432, internal)
 | `app`     | 1        | Next.js standalone (`node server.js`) |
 | `postgres`| 1        | PostgreSQL 16, bind-mounted volume   |
 | `portainer` | 1      | Docker Swarm UI (basic auth + HTTPS) |
+| `umami`   | 1        | Self-hosted pageview analytics |
+| `umami_db`| 1        | PostgreSQL 16 for Umami data |
+| `cap`     | 1        | Self-hosted invisible CAPTCHA |
+| `cap_valkey` | 1     | Ephemeral challenge store (in-memory) |
 | `mailserver` | 1     | Postfix + Dovecot + DKIM ([mail-server.md](mail-server.md)) |
 
 All orgs (multi-tenant) share one app instance and one database.
@@ -303,7 +310,8 @@ After bootstrap, use [Deploy a release (routine)](#deploy-a-release-routine) for
 | `prod-secrets` | VPS | Rare | Rotate Swarm secrets in place (rolling update; no stack rm) |
 | `prod-sync-db-password` | VPS | Incident | Sync Postgres password from `.env` + restart app only |
 | `prod-ssl` | VPS | **Once (new VPS)** | Certbot certificate + enable HTTPS |
-| `prod-portainer-auth` | VPS | **Once (new VPS)** | Generate nginx basic-auth for Portainer |
+| `prod-expand-ssl-services` | VPS | Once / new SANs | Expand cert for analytics.andiko.cloud + cap.andiko.cloud |
+| `prod-purge-umami` | VPS | Weekly cron | Delete Umami analytics older than `UMAMI_RETENTION_DAYS` (90) |
 
 ## Manual migrations
 
@@ -354,6 +362,32 @@ New installs request a certificate that includes `portainer.andiko.cloud`. On a 
 ```bash
 bash infra/scripts/expand-ssl-portainer.sh
 ```
+
+For **Umami** (`analytics.andiko.cloud`) and **Cap** (`cap.andiko.cloud`), add DNS A records to the VPS IP, then:
+
+```bash
+make prod-deploy-infra TAG=vX.Y.Z   # first time: adds umami, umami_db, cap, cap_valkey
+make prod-expand-ssl-services
+```
+
+### Umami + Cap first-time setup
+
+1. Set in `infra/.env.production` (see `infra/.env.production.example`):
+   - `UMAMI_APP_SECRET`, `UMAMI_POSTGRES_PASSWORD` (`openssl rand -hex 32`)
+   - `CAP_ADMIN_KEY` (`openssl rand -hex 32`)
+2. `make prod-init` (or `make prod-secrets` if rotating) to create Swarm secret `cap_secret` from `CAP_SECRET_KEY`
+3. After deploy, open **https://analytics.andiko.cloud** — change default `admin` / `umami` password, create a website, copy `NEXT_PUBLIC_UMAMI_WEBSITE_ID`
+4. Open **https://cap.andiko.cloud** — log in with `CAP_ADMIN_KEY`, create a site key → `NEXT_PUBLIC_CAP_SITE_KEY` + `CAP_SECRET_KEY`
+5. Update env vars, `make prod-push TAG=…` and `make prod-deploy-app TAG=…`
+6. **Vercel staging:** do **not** set Cap env vars — Cap is disabled on Vercel (`VERCEL=1`). Set `WEB3FORMS_ACCESS_KEY` only if contact form should work on staging.
+
+**Umami retention:** analytics older than **90 days** are purged weekly:
+
+```cron
+0 4 * * 0 cd /root/andiko && make prod-purge-umami >> /var/log/andiko-umami-purge.log 2>&1
+```
+
+**Local dev** (optional): `docker compose --profile analytics up -d` — Umami on `:3001`, Cap on `:3002`. Enable with `NEXT_PUBLIC_UMAMI_DEV=true` / `NEXT_PUBLIC_CAP_DEV=true` in `.env.local`.
 
 ## Container logs
 
@@ -477,6 +511,31 @@ Test restores quarterly. Do not store backups in GitHub.
 ```cron
 0 6 * * * curl -sf -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://andiko.cloud/api/v1/sys-admin/billing/jobs/dunning
 ```
+
+**Billing invoice automation** (generates draft invoices for subscriptions with an ended
+period, when enabled under `/sys-admin/billing/automatizacion`; if `CRON_SECRET` is set).
+Run every minute — the job no-ops when disabled or not due:
+
+```cron
+* * * * * curl -sf -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://andiko.cloud/api/v1/sys-admin/billing/jobs/generate-due-invoices
+```
+
+**Automations tick** (drives every org's `scheduled_tasks` — the recurring task/automation
+scheduler behind `/automatizaciones`; if `CRON_SECRET` is set):
+
+```cron
+* * * * * curl -sf -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://andiko.cloud/api/v1/sys-admin/jobs/automations-tick
+```
+
+Or install it with `make prod-install-automations-cron` (reads `DOMAIN` and `CRON_SECRET`
+from `infra/.env.production`, idempotent — re-running updates the entry in place instead of
+duplicating it). Remove it with `make prod-remove-automations-cron`.
+
+One minute is the practical floor for automation schedules — a cron expression can't fire more
+often than this endpoint is polled. Calling it concurrently is safe by design (an automation's
+`next_run_at` is claimed with optimistic concurrency, so overlapping ticks — e.g. one run taking
+longer than 60s, or accidentally installing this crontab entry on more than one host — never
+process the same task twice); no `flock` or other host-side locking is needed.
 
 ## POS clients
 

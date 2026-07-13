@@ -1,5 +1,78 @@
 # Changelog
 
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+## [0.47.0](https://github.com/cristianemoyano/andiko/compare/v0.46.1...v0.47.0) (2026-07-12)
+
+### Features
+
+* **automations:** add recurring task scheduler platform ([b288aaf](https://github.com/cristianemoyano/andiko/commit/b288aaf3e2af175598f168e57fa8b340a20d5797))
+* **automations:** default new task timezone to the org's timezone ([73efc32](https://github.com/cristianemoyano/andiko/commit/73efc323d6cd14889fb1b8b714672c2ec76431ce))
+
+### Bug Fixes
+
+* **automations:** block SSRF targets in webhook_call action ([df7ddea](https://github.com/cristianemoyano/andiko/commit/df7ddea11354ff3bcf2871b35adf61d033b029a7))
+* **automations:** fix falsy-zero bug in max failures input ([156df9d](https://github.com/cristianemoyano/andiko/commit/156df9d2d308ff5ec21752fe12417240e333fbc7))
+* **automations:** isolate per-task failures and run ticks concurrently ([68ec509](https://github.com/cristianemoyano/andiko/commit/68ec5093afc0790eb881d301a06c21a239d43553))
+* **automations:** make action registration idempotent in dev ([fac3cde](https://github.com/cristianemoyano/andiko/commit/fac3cdeaa8eda687e9a1758aa7953cee216989b5))
+* **automations:** only reset failure streak when status actually changes ([7f980b8](https://github.com/cristianemoyano/andiko/commit/7f980b8bf591305cc412008df7b3ce67a503c928))
+* **automations:** scope automations reads to allowed branches ([7afb18b](https://github.com/cristianemoyano/andiko/commit/7afb18bc604ba8168ea19478b7ba9eea691d612d))
+* **automations:** thread abort signal into action timeout ([f7f3d4f](https://github.com/cristianemoyano/andiko/commit/f7f3d4f7a05d19a7d3da2ce9daac25a96bb9406e))
+## [](https://github.com/cristianemoyano/andiko/compare/v0.46.1...vnull) (2026-07-12)
+
+### Features
+
+* **automations:** add recurring task scheduler platform ([b288aaf](https://github.com/cristianemoyano/andiko/commit/b288aaf3e2af175598f168e57fa8b340a20d5797))
+* **automations:** default new task timezone to the org's timezone ([73efc32](https://github.com/cristianemoyano/andiko/commit/73efc323d6cd14889fb1b8b714672c2ec76431ce))
+
+### Bug Fixes
+
+* **automations:** block SSRF targets in webhook_call action ([df7ddea](https://github.com/cristianemoyano/andiko/commit/df7ddea11354ff3bcf2871b35adf61d033b029a7))
+* **automations:** fix falsy-zero bug in max failures input ([156df9d](https://github.com/cristianemoyano/andiko/commit/156df9d2d308ff5ec21752fe12417240e333fbc7))
+* **automations:** isolate per-task failures and run ticks concurrently ([68ec509](https://github.com/cristianemoyano/andiko/commit/68ec5093afc0790eb881d301a06c21a239d43553))
+* **automations:** make action registration idempotent in dev ([fac3cde](https://github.com/cristianemoyano/andiko/commit/fac3cdeaa8eda687e9a1758aa7953cee216989b5))
+* **automations:** only reset failure streak when status actually changes ([7f980b8](https://github.com/cristianemoyano/andiko/commit/7f980b8bf591305cc412008df7b3ce67a503c928))
+* **automations:** scope automations reads to allowed branches ([7afb18b](https://github.com/cristianemoyano/andiko/commit/7afb18bc604ba8168ea19478b7ba9eea691d612d))
+* **automations:** thread abort signal into action timeout ([f7f3d4f](https://github.com/cristianemoyano/andiko/commit/f7f3d4f7a05d19a7d3da2ce9daac25a96bb9406e))
+
+## [0.47.0](https://github.com/cristianemoyano/andiko/compare/v0.46.1...v0.47.0) (2026-07-12)
+
+### Features
+
+* **automations:** add recurring task scheduler platform ([b288aaf](https://github.com/cristianemoyano/andiko/commit/b288aaf3e2af175598f168e57fa8b340a20d5797))
+* **automations:** default new task timezone to the org's timezone ([73efc32](https://github.com/cristianemoyano/andiko/commit/73efc323d6cd14889fb1b8b714672c2ec76431ce))
+
+### Bug Fixes
+
+* **automations:** block SSRF targets in webhook_call action ([df7ddea](https://github.com/cristianemoyano/andiko/commit/df7ddea11354ff3bcf2871b35adf61d033b029a7))
+* **automations:** fix falsy-zero bug in max failures input ([156df9d](https://github.com/cristianemoyano/andiko/commit/156df9d2d308ff5ec21752fe12417240e333fbc7))
+* **automations:** isolate per-task failures and run ticks concurrently ([68ec509](https://github.com/cristianemoyano/andiko/commit/68ec5093afc0790eb881d301a06c21a239d43553))
+* **automations:** make action registration idempotent in dev ([fac3cde](https://github.com/cristianemoyano/andiko/commit/fac3cdeaa8eda687e9a1758aa7953cee216989b5))
+* **automations:** only reset failure streak when status actually changes ([7f980b8](https://github.com/cristianemoyano/andiko/commit/7f980b8bf591305cc412008df7b3ce67a503c928))
+* **automations:** scope automations reads to allowed branches ([7afb18b](https://github.com/cristianemoyano/andiko/commit/7afb18bc604ba8168ea19478b7ba9eea691d612d))
+* **automations:** thread abort signal into action timeout ([f7f3d4f](https://github.com/cristianemoyano/andiko/commit/f7f3d4f7a05d19a7d3da2ce9daac25a96bb9406e))
+
+## [0.46.1](https://github.com/cristianemoyano/andiko/compare/v0.46.0...v0.46.1) (2026-07-10)
+
+### Bug Fixes
+
+* **core:** disable Cap on Vercel staging and fix prod-disk-check ([98f0c2c](https://github.com/cristianemoyano/andiko/commit/98f0c2c6e28ea2ca82f2e91db3617d454c2c52dc))
+
+## [0.46.0](https://github.com/cristianemoyano/andiko/compare/v0.45.0...v0.46.0) (2026-07-10)
+
+### Features
+
+* **core:** add self-hosted Umami analytics and Cap invisible captcha ([3c168b1](https://github.com/cristianemoyano/andiko/commit/3c168b1c2fa4165df422645959c706ae299b65a7))
+* **core:** refresh brand assets and A-mark logo ([8e68436](https://github.com/cristianemoyano/andiko/commit/8e68436f4b0b6bcdb61eab6f5cb6d950685de1cc))
+* **core:** unify A-mark branding across web and POS ([d1c5b80](https://github.com/cristianemoyano/andiko/commit/d1c5b8056f1d268a1c3ec09c30b89effe01fb380))
+
+### Bug Fixes
+
+* **core:** auto-create cap_secret placeholder for infra deploy ([5024a23](https://github.com/cristianemoyano/andiko/commit/5024a23ef75c6e4193b55e06105a396fb2c88e16))
+* **core:** correct Cap healthcheck YAML for Swarm ([54a51f4](https://github.com/cristianemoyano/andiko/commit/54a51f407b581e1141c03a47a3e5489d07142d48))
+* **core:** use bun-based healthcheck for Cap Swarm service ([b652e18](https://github.com/cristianemoyano/andiko/commit/b652e18f829c9fbbe7d30dd95b30f21b0317992f))
+* **core:** validate Umami/Cap env and ensure umami-db data dir on deploy ([fcc87bb](https://github.com/cristianemoyano/andiko/commit/fcc87bb52c9f7ae181d29872d85bb651d2ac5147))
+
 ## [0.45.0](https://github.com/cristianemoyano/andiko/compare/v0.44.7...v0.45.0) (2026-07-09)
 
 ### Features

@@ -170,3 +170,48 @@ resolve_database_url() {
     exit 1
   fi
 }
+
+CAP_SECRET_PLACEHOLDER='cap-secret-not-configured'
+
+# Swarm stack requires external secret cap_secret — create placeholder until Cap dashboard is configured.
+ensure_cap_secret() {
+  if docker secret inspect cap_secret >/dev/null 2>&1; then
+    return 0
+  fi
+  local value="${CAP_SECRET_KEY:-}"
+  if [ -z "$value" ]; then
+    echo "Warning: CAP_SECRET_KEY unset — creating placeholder cap_secret (Cap disabled until you run make prod-secrets)." >&2
+    value="$CAP_SECRET_PLACEHOLDER"
+  fi
+  echo -n "$value" | docker secret create cap_secret -
+  echo "Created secret cap_secret"
+}
+
+ensure_umami_data_dir() {
+  local dir="${UMAMI_DATA_DIR:-/var/lib/andiko/umami-db}"
+  if [ ! -d "$dir" ]; then
+    echo "Creating ${dir} for umami_db bind mount ..."
+    sudo mkdir -p "$dir"
+    sudo chmod 755 "$dir"
+  fi
+}
+
+validate_umami_cap_env() {
+  local missing=0
+  if [ -z "${UMAMI_POSTGRES_PASSWORD:-}" ]; then
+    echo "Error: UMAMI_POSTGRES_PASSWORD is empty in infra/.env.production" >&2
+    missing=1
+  fi
+  if [ -z "${UMAMI_APP_SECRET:-}" ]; then
+    echo "Error: UMAMI_APP_SECRET is empty in infra/.env.production" >&2
+    missing=1
+  fi
+  if [ -z "${CAP_ADMIN_KEY:-}" ]; then
+    echo "Error: CAP_ADMIN_KEY is empty in infra/.env.production" >&2
+    missing=1
+  fi
+  if [ "$missing" -ne 0 ]; then
+    echo "Generate values: openssl rand -hex 32" >&2
+    exit 1
+  fi
+}

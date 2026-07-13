@@ -57,6 +57,15 @@ describe('expireOverdueQuotes', () => {
     expect(options.where.deleted_at).toBeNull()
   })
 
+  it('scopes to a single org when orgId is passed', async () => {
+    updateMock.mockResolvedValueOnce([1])
+
+    await expireOverdueQuotes('org-1')
+
+    const [, options] = updateMock.mock.calls[0] as [unknown, { where: Record<string, unknown> }]
+    expect(options.where.org_id).toBe('org-1')
+  })
+
   it('logs the affected count only when quotes were expired', async () => {
     updateMock.mockResolvedValueOnce([0])
     await expireOverdueQuotes()

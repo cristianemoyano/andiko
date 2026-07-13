@@ -49,6 +49,14 @@ export interface PlatformSettingAttributes {
   /** Encrypted generated access token (dev shortcut), or '' when not set. */
   dropbox_access_token_encrypted: string
   dropbox_root_path: string
+  /** Platform billing: auto-generate due subscription invoices. */
+  billing_invoice_automation_enabled: boolean
+  billing_invoice_automation_cron: string
+  billing_invoice_automation_timezone: string
+  billing_invoice_automation_last_run_at: Date | null
+  billing_invoice_automation_last_run_status: 'success' | 'failed' | 'skipped' | null
+  billing_invoice_automation_last_run_summary: Record<string, unknown> | null
+  billing_invoice_automation_next_run_at: Date | null
   created_at: Date
   updated_at: Date
 }
@@ -63,6 +71,10 @@ type PlatformSettingCreationAttributes = Optional<
   | 's3_secret_access_key_encrypted' | 's3_endpoint' | 'gdrive_service_account_json_encrypted'
   | 'gdrive_folder_id' | 'dropbox_app_key' | 'dropbox_app_secret_encrypted'
   | 'dropbox_refresh_token_encrypted' | 'dropbox_access_token_encrypted' | 'dropbox_root_path'
+  | 'billing_invoice_automation_enabled' | 'billing_invoice_automation_cron'
+  | 'billing_invoice_automation_timezone' | 'billing_invoice_automation_last_run_at'
+  | 'billing_invoice_automation_last_run_status' | 'billing_invoice_automation_last_run_summary'
+  | 'billing_invoice_automation_next_run_at'
   | 'created_at' | 'updated_at'
 >
 
@@ -102,6 +114,13 @@ export class PlatformSetting extends Model<
   declare dropbox_refresh_token_encrypted: string
   declare dropbox_access_token_encrypted: string
   declare dropbox_root_path: string
+  declare billing_invoice_automation_enabled: boolean
+  declare billing_invoice_automation_cron: string
+  declare billing_invoice_automation_timezone: string
+  declare billing_invoice_automation_last_run_at: Date | null
+  declare billing_invoice_automation_last_run_status: 'success' | 'failed' | 'skipped' | null
+  declare billing_invoice_automation_last_run_summary: Record<string, unknown> | null
+  declare billing_invoice_automation_next_run_at: Date | null
   declare created_at: Date
   declare updated_at: Date
 }
@@ -140,6 +159,21 @@ PlatformSetting.init(
     dropbox_refresh_token_encrypted: { type: DataTypes.TEXT, allowNull: false, defaultValue: '' },
     dropbox_access_token_encrypted: { type: DataTypes.TEXT, allowNull: false, defaultValue: '' },
     dropbox_root_path: { type: DataTypes.STRING(512), allowNull: false, defaultValue: '/andiko' },
+    billing_invoice_automation_enabled: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    billing_invoice_automation_cron: {
+      type: DataTypes.STRING(64),
+      allowNull: false,
+      defaultValue: '0 5 * * *',
+    },
+    billing_invoice_automation_timezone: {
+      type: DataTypes.STRING(64),
+      allowNull: false,
+      defaultValue: 'America/Argentina/Buenos_Aires',
+    },
+    billing_invoice_automation_last_run_at: { type: DataTypes.DATE, allowNull: true },
+    billing_invoice_automation_last_run_status: { type: DataTypes.STRING(16), allowNull: true },
+    billing_invoice_automation_last_run_summary: { type: DataTypes.JSONB, allowNull: true },
+    billing_invoice_automation_next_run_at: { type: DataTypes.DATE, allowNull: true },
     created_at: { type: DataTypes.DATE, allowNull: false },
     updated_at: { type: DataTypes.DATE, allowNull: false },
   },

@@ -9,6 +9,7 @@ import User from '@/modules/auth/user.model'
 import logger from './logger'
 import { clearThrottle, isThrottled, recordFailedAttempt } from './rate-limit'
 import { LoginThrottledError } from './login-throttle-error'
+import { isCapServerConfigured, verifyCapToken } from './cap-verify'
 import type { UserRole } from '@/types/roles'
 
 const LOGIN_THROTTLE = { maxAttempts: 5, windowSeconds: 15 * 60, lockSeconds: 15 * 60 }
@@ -34,6 +35,7 @@ async function isUserActive(userId: string): Promise<boolean> {
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+  capToken: z.string().optional(),
 })
 
 function clearImpersonation(token: JWT) {
@@ -53,6 +55,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) return null
+
+        if (isCapServerConfigured()) {
+          const capOk = await verifyCapToken(parsed.data.capToken ?? '')
+          if (!capOk) {
+            logger.warn({ email: parsed.data.email }, 'login blocked: invalid cap token')
+            return null
+          }
+        }
 
         const throttleKey = `login:${parsed.data.email.toLowerCase()}`
         const throttled = await isThrottled(throttleKey)

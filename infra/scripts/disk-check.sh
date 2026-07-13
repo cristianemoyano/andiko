@@ -14,6 +14,7 @@ PORTAINER_DATA_DIR="${PORTAINER_DATA_DIR:-/var/lib/andiko/portainer}"
 BACKUP_LOCAL_DIR="${BACKUP_LOCAL_DIR:-/var/lib/andiko/backups}"
 CERTBOT_CERTS_DIR="${CERTBOT_CERTS_DIR:-/var/lib/andiko/certs}"
 CERTBOT_WWW_DIR="${CERTBOT_WWW_DIR:-/var/lib/andiko/certbot-www}"
+UMAMI_DATA_DIR="${UMAMI_DATA_DIR:-/var/lib/andiko/umami-db}"
 NGINX_CONF_DIR="${NGINX_CONF_DIR:-/var/lib/andiko/nginx/conf.d}"
 DISK_WARN_PCT="${DISK_WARN_PCT:-85}"
 DISK_CRIT_PCT="${DISK_CRIT_PCT:-95}"
@@ -49,6 +50,7 @@ for label_path in \
   "backups:${BACKUP_LOCAL_DIR}" \
   "certs:${CERTBOT_CERTS_DIR}" \
   "portainer:${PORTAINER_DATA_DIR}" \
+  "umami-db:${UMAMI_DATA_DIR}" \
   "nginx-conf:${NGINX_CONF_DIR}"; do
   label="${label_path%%:*}"
   path="${label_path#*:}"

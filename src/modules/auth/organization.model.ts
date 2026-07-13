@@ -60,6 +60,8 @@ export interface OrganizationAttributes extends Timestamps {
   activity_start_date: Date | string | null
   onboarding_completed_at: Date | null
   onboarding_data: OnboardingData | null
+  /** IANA timezone used as the default for this org's scheduled automations. */
+  timezone: string
 }
 
 type OrganizationCreationAttributes = Optional<
@@ -67,6 +69,7 @@ type OrganizationCreationAttributes = Optional<
   | 'id' | 'is_active' | 'legal_name' | 'cuit' | 'iva_condition' | 'fiscal_address'
   | 'gross_income' | 'activity_start_date'
   | 'onboarding_completed_at' | 'onboarding_data' | 'created_at' | 'updated_at' | 'deleted_at'
+  | 'timezone'
 >
 
 export class Organization extends Model<OrganizationAttributes, OrganizationCreationAttributes> {
@@ -82,6 +85,7 @@ export class Organization extends Model<OrganizationAttributes, OrganizationCrea
   declare activity_start_date: Date | string | null
   declare onboarding_completed_at: Date | null
   declare onboarding_data: OnboardingData | null
+  declare timezone: string
   declare created_at: Date
   declare updated_at: Date
   declare deleted_at: Date | null
@@ -101,6 +105,7 @@ Organization.init(
     activity_start_date: { type: DataTypes.DATEONLY, allowNull: true },
     onboarding_completed_at: { type: DataTypes.DATE, allowNull: true },
     onboarding_data: { type: DataTypes.JSONB, allowNull: true },
+    timezone: { type: DataTypes.STRING(64), allowNull: false, defaultValue: 'America/Argentina/Buenos_Aires' },
     created_at: { type: DataTypes.DATE, allowNull: false },
     updated_at: { type: DataTypes.DATE, allowNull: false },
     deleted_at: { type: DataTypes.DATE },

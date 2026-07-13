@@ -15,6 +15,8 @@ const fiscalFields = {
   cuit: cuitSchema.nullable().optional(),
   iva_condition: z.enum(ORG_IVA_CONDITIONS).nullable().optional(),
   fiscal_address: z.string().min(1).max(500).nullable().optional(),
+  /** Default IANA timezone for this org — used to schedule automations unless a task overrides it. */
+  timezone: z.string().min(1).max(64).optional(),
 }
 
 export const organizationCreateSchema = z.object({
@@ -72,6 +74,7 @@ export const organizationFiscalUpdateSchema = z
     cuit: cuitSchema.nullable().optional(),
     iva_condition: z.enum(ORG_IVA_CONDITIONS).nullable().optional(),
     fiscal_address: z.string().min(1).max(500).nullable().optional(),
+    timezone: z.string().min(1).max(64).optional(),
   })
   .strict()
 

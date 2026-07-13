@@ -9,6 +9,7 @@ const MODULE_READ_PERMISSION: Record<OrgModuleKey, string> = {
   purchases: 'purchases',
   accounting: 'accounting',
   pos: 'sales',
+  automations: 'automations',
   hr: 'attendance',
 }
 

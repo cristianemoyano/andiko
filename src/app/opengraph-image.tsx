@@ -28,15 +28,12 @@ export default function OpenGraphImage() {
               justifyContent: 'center',
               width: 72,
               height: 72,
-              borderRadius: 12,
+              borderRadius: 14,
               background: '#0C647A',
             }}
           >
-            <svg viewBox="0 0 12 12" width="36" height="36" fill="#FFFFFF">
-              <rect x="0" y="1" width="3" height="10" />
-              <rect x="0" y="1" width="12" height="3" />
-              <rect x="9" y="1" width="3" height="10" />
-              <rect x="2" y="5" width="8" height="2.5" />
+            <svg viewBox="0 0 64 64" width="44" height="44" fill="none">
+              <path d="M13 55 L28 11 L36 11 L51 55" stroke="#FFFFFF" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <span style={{ fontSize: 48, fontWeight: 700, color: '#18181B', letterSpacing: '-0.02em' }}>
@@ -71,7 +68,7 @@ export default function OpenGraphImage() {
               letterSpacing: '-0.03em',
             }}
           >
-            Software de gestión para pymes argentinas
+            Software de gestión integral para pymes
           </h1>
           <p style={{ margin: 0, fontSize: 28, lineHeight: 1.4, color: '#52525B' }}>
             Contactos, catálogo, ventas, stock, compras, contabilidad y POS.

@@ -103,6 +103,16 @@ export const NAV_MODULES: NavItem[] = [
     ),
   },
   {
+    id: 'automatizaciones',
+    label: 'Automatizaciones',
+    href: '/automatizaciones',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9.2 1.5 4.5 8.5H8l-1.3 6 5.8-7H9.2z"/>
+      </svg>
+    ),
+  },
+  {
     id: 'control-horario',
     label: 'Control de Horario',
     href: '/control-horario',

@@ -46,6 +46,7 @@ export const PATCH = withSettingsPermission('settings:write', async (req, _ctx, 
       cuit: org.cuit,
       iva_condition: org.iva_condition,
       fiscal_address: org.fiscal_address,
+      timezone: org.timezone,
       updated_at: org.updated_at.toISOString(),
     })
   } catch (err: unknown) {
