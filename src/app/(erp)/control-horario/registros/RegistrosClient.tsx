@@ -73,17 +73,18 @@ export function RegistrosClient() {
     let mounted = true
     ;(async () => {
       try {
-        const [employeesRes, branchesRes] = await Promise.all([
-          fetchJson<{ data: EmployeeRow[] }>('/api/v1/attendance/employees?limit=200'),
-          fetchJson<{ data: BranchOption[] }>('/api/v1/branches?limit=100'),
-        ])
-        if (!mounted) return
-        setEmployees(employeesRes.data ?? [])
-        setBranches(branchesRes.data ?? [])
+        const branchesRes = await fetchJson<{ data: BranchOption[] }>('/api/v1/branches?limit=100')
+        if (mounted) setBranches(branchesRes.data ?? [])
       } catch {
-        if (!mounted) return
-        setEmployees([])
-        setBranches([])
+        if (mounted) setBranches([])
+      }
+    })()
+    ;(async () => {
+      try {
+        const employeesRes = await fetchJson<{ data: EmployeeRow[] }>('/api/v1/attendance/employees?limit=100')
+        if (mounted) setEmployees(employeesRes.data ?? [])
+      } catch {
+        if (mounted) setEmployees([])
       }
     })()
     return () => { mounted = false }

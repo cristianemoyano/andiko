@@ -362,7 +362,7 @@ function MobileListRow<T extends object>({ row, rowId, mobileColumns, onActivate
       )}
 
       {hasContent(titleLine) && (
-        <p className="text-[14px] font-medium text-fg leading-snug line-clamp-2">{titleLine}</p>
+        <div className="text-[14px] font-medium text-fg leading-snug line-clamp-2">{titleLine}</div>
       )}
 
       {subtitleContents.length > 0 && (

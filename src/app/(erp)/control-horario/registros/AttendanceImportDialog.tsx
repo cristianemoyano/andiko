@@ -131,12 +131,27 @@ export function AttendanceImportDialog({ open, onOpenChange, branches, onImporte
     >
       {!result ? (
         <div className="flex flex-col gap-4">
-          <p className="text-[13px] text-fg-muted">
-            Subí el archivo CSV exportado por el reloj biométrico. Las fichadas se cargan como origen «Reloj físico»
-            y las que ya estén importadas no se duplican. Si alguna fila tiene un error (código de empleado o
-            tipo de evento no reconocido), <strong>no se importa ninguna fila del archivo</strong> — corregí la
-            fila indicada en el archivo original y volvé a intentar.
-          </p>
+          <div className="flex flex-col gap-2 text-[13px] text-fg-muted">
+            <p>
+              Subí el CSV del reloj biométrico (una fila por fichada). Tras elegir el archivo vas a mapear
+              sus columnas a estos 3 campos:
+            </p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              <li><strong className="text-fg">Código de empleado</strong> — debe coincidir con el código externo del legajo</li>
+              <li><strong className="text-fg">Fecha y hora</strong> — ISO 8601 (ej. <code className="text-[12px]">2026-07-12T09:00:00-03:00</code>)</li>
+              <li><strong className="text-fg">Tipo de evento</strong> — los valores de entrada/salida que configures abajo (por defecto <code className="text-[12px]">IN</code>/<code className="text-[12px]">OUT</code>)</li>
+            </ul>
+            <pre className="overflow-x-auto rounded border border-border bg-surface-muted px-3 py-2 text-[11px] leading-relaxed text-fg font-mono">
+{`Código de empleado,Fecha y hora,Tipo de evento
+1001,2026-07-12T09:00:00-03:00,IN
+1001,2026-07-12T18:00:00-03:00,OUT
+1002,2026-07-12T08:55:00-03:00,IN`}
+            </pre>
+            <p>
+              Las fichadas se cargan como origen «Reloj físico» y las ya importadas no se duplican.
+              Si alguna fila falla, <strong className="text-fg">no se importa ninguna</strong> — corregí el archivo y reintentá.
+            </p>
+          </div>
 
           <FormField label="Archivo CSV" htmlFor="import_file" required>
             <input

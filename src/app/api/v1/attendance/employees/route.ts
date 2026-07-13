@@ -6,8 +6,14 @@ import { listEmployees, createEmployee } from '@/modules/attendance/employees.se
 
 export const GET = withTenantPermission('employees:read', async (req, _ctx, _session, ctx) => {
   try {
-    const query = employeeQuerySchema.parse(Object.fromEntries(req.nextUrl.searchParams))
-    const result = await listEmployees(query, ctx)
+    const parsed = employeeQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid query', code: 'VALIDATION_ERROR', details: parsed.error.flatten() },
+        { status: 400 },
+      )
+    }
+    const result = await listEmployees(parsed.data, ctx)
     return NextResponse.json(result)
   } catch (err) {
     return attendanceErrorResponse(err)

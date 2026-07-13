@@ -3,12 +3,16 @@
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { DataTable, TablePagination, ImportModal, type Column } from '@/components/erp'
 import { Badge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
+import {
+  EMPLOYEE_CSV_HEADERS,
+  EMPLOYEE_CSV_REQUIRED_FIELDS,
+} from '@/modules/attendance/employees-csv-adapter'
 import { ControlHorarioSubNav } from '../ControlHorarioSubNav'
 import { EmployeeDialog } from './EmployeeDialog'
 import type { EmployeeRow } from '../types'
@@ -29,6 +33,8 @@ export function EmpleadosClient() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<EmployeeRow | null>(null)
   const [deleting, setDeleting] = useState<EmployeeRow | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
+  const [importSession, setImportSession] = useState(0)
 
   useEffect(() => {
     let mounted = true
@@ -85,6 +91,11 @@ export function EmpleadosClient() {
   function openCreate() {
     setEditing(null)
     setDialogOpen(true)
+  }
+
+  function openImport() {
+    setImportSession(s => s + 1)
+    setImportOpen(true)
   }
 
   function branchLabel(branchId: string): string {
@@ -150,7 +161,12 @@ export function EmpleadosClient() {
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[{ label: 'Control de Horario', href: '/control-horario' }, { label: 'Empleados' }]}
-        actions={<Button size="sm" onClick={openCreate}>+ Nuevo empleado</Button>}
+        actions={(
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={openImport}>Importar CSV</Button>
+            <Button size="sm" onClick={openCreate}>+ Nuevo empleado</Button>
+          </div>
+        )}
       />
       <ControlHorarioSubNav />
 
@@ -191,6 +207,22 @@ export function EmpleadosClient() {
         onOpenChange={setDialogOpen}
         employee={editing}
         onSaved={() => setRefresh(r => r + 1)}
+      />
+
+      <ImportModal
+        key={importSession}
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Importar empleados"
+        fields={EMPLOYEE_CSV_HEADERS}
+        requiredFields={[...EMPLOYEE_CSV_REQUIRED_FIELDS]}
+        importUrl="/api/v1/attendance/employees/import"
+        confirmHint="El código de sucursal debe coincidir con el de Configuración. El código de legajo es el que usa el reloj biométrico al importar fichadas."
+        onImported={() => {
+          notifySuccess('Empleados importados correctamente')
+          setRefresh(r => r + 1)
+          setImportOpen(false)
+        }}
       />
 
       <ConfirmDialog
