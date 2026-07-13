@@ -4,7 +4,7 @@
     "scope-enum": [2, "always", [
       "sales", "inventory", "purchases", "contacts", "accounting", "auth", "core",
       "catalog", "afip", "billing", "pos", "integrations", "communications", "storage",
-      "logistics", "automations"
+      "logistics", "automations", "expenses"
     ]],
     "scope-empty": [2, "never"]
   }

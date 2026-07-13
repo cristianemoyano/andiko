@@ -16,6 +16,8 @@ export const OWNER_PATH_SEGMENTS: Record<FileOwnerType, { module: string; entity
   invoice: { module: 'ventas', entity: 'facturas' },
   product: { module: 'catalogo', entity: 'productos' },
   contact: { module: 'contactos', entity: 'contactos' },
+  expense: { module: 'expensas', entity: 'facturas' },
+  expense_payment: { module: 'expensas', entity: 'pagos' },
 }
 
 export type BuildStorageKeyInput = {

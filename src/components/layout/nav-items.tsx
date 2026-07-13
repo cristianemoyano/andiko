@@ -112,6 +112,16 @@ export const NAV_MODULES: NavItem[] = [
       </svg>
     ),
   },
+  {
+    id: 'expensas',
+    label: 'Expensas',
+    href: '/expensas',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 1.5v13M13 1.5v13M3 4.5h10M3 8h10M3 11.5h10"/>
+      </svg>
+    ),
+  },
 ]
 
 export const NAV_WOOCOMMERCE: NavItem = {

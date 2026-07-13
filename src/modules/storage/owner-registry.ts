@@ -157,4 +157,52 @@ export const OWNER_RESOLVERS: Record<FileOwnerType, OwnerResolver> = {
       }
     },
   },
+  expense: {
+    readPermission: 'expenses:read',
+    writePermission: 'expenses:write',
+    async exists(ownerId, ctx) {
+      const { default: Expense } = await import('@/modules/expenses/expense.model')
+      const row = await Expense.findOne({
+        where: whereAllowedBranches(ctx, { id: ownerId }),
+        attributes: ['id'],
+      })
+      return row !== null
+    },
+    async pathContext(ownerId, ctx) {
+      const { default: Expense } = await import('@/modules/expenses/expense.model')
+      const row = await Expense.findOne({
+        where: whereAllowedBranches(ctx, { id: ownerId }),
+        attributes: ['branch_id', 'expense_number'],
+      })
+      if (!row) return { branchCode: null, documentRef: shortOwnerId(ownerId) }
+      return {
+        branchCode: await branchCodeFromId(row.branch_id),
+        documentRef: row.expense_number,
+      }
+    },
+  },
+  expense_payment: {
+    readPermission: 'expenses:read',
+    writePermission: 'expenses:write',
+    async exists(ownerId, ctx) {
+      const { default: ExpensePayment } = await import('@/modules/expenses/expense-payment.model')
+      const row = await ExpensePayment.findOne({
+        where: whereAllowedBranches(ctx, { id: ownerId }),
+        attributes: ['id'],
+      })
+      return row !== null
+    },
+    async pathContext(ownerId, ctx) {
+      const { default: ExpensePayment } = await import('@/modules/expenses/expense-payment.model')
+      const row = await ExpensePayment.findOne({
+        where: whereAllowedBranches(ctx, { id: ownerId }),
+        attributes: ['branch_id', 'payment_number'],
+      })
+      if (!row) return { branchCode: null, documentRef: shortOwnerId(ownerId) }
+      return {
+        branchCode: await branchCodeFromId(row.branch_id),
+        documentRef: row.payment_number,
+      }
+    },
+  },
 }

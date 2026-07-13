@@ -6,6 +6,7 @@ const MODULE_LABELS: Record<string, string> = {
   purchases: 'Compras',
   accounting: 'Contabilidad',
   logistics: 'Logística',
+  expenses: 'Expensas',
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -53,6 +54,10 @@ const PERMISSION_DESCRIPTIONS: Record<string, string> = {
   'accounting:read': 'Plan de cuentas, asientos, libros e informes.',
   'accounting:write': 'Crear asientos y configurar contabilidad.',
   'accounting:delete': 'Eliminar asientos en borrador.',
+
+  'expenses:read': 'Gastos recurrentes, facturas y pagos de Expensas.',
+  'expenses:write': 'Crear y editar gastos, plantillas recurrentes y registrar pagos.',
+  'expenses:delete': 'Eliminar gastos en borrador.',
 }
 
 /** Human-readable label for matrix permissions (client + server). */
