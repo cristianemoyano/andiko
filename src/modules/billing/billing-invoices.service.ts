@@ -236,9 +236,11 @@ function defaultDueDate(issueDate: Date): Date {
 }
 
 async function getBillingInvoiceInTransaction(id: string, t: import('sequelize').Transaction) {
-  return BillingInvoice.findByPk(id, {
+  const invoice = await BillingInvoice.findByPk(id, {
     include: [{ model: BillingInvoiceItem, as: 'items' }],
     order: [[{ model: BillingInvoiceItem, as: 'items' }, 'sort_order', 'ASC']],
     transaction: t,
   })
+  if (!invoice) throw new Error('BILLING_INVOICE_NOT_FOUND')
+  return invoice
 }
