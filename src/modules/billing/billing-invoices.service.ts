@@ -69,7 +69,7 @@ export async function getBillingInvoice(id: string) {
   return invoice
 }
 
-export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, actorId: string) {
+export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, actorId: string | null) {
   return sequelize.transaction(async (t) => {
     const sub = await OrgSubscription.findByPk(input.subscription_id, {
       include: [

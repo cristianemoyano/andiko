@@ -7,6 +7,8 @@ import { slugifyText } from '@/lib/slug'
 import { formatAddress } from '@/lib/format-address'
 import { seedDefaultChartOfAccounts } from '@/modules/accounting/chart-seed'
 import { seedDefaultOrgRoles } from '@/modules/auth/org-roles.service'
+import { updateOrganizationSettings } from '@/modules/auth/organization-settings.service'
+import { getDefaultModulesForPlan } from '@/modules/auth/organization-modules'
 import type {
   OrganizationCreateInput,
   OrganizationUpdateInput,
@@ -73,11 +75,15 @@ export async function createOrganization(input: OrganizationCreateInput) {
         cuit: input.cuit ?? null,
         iva_condition: input.iva_condition ?? null,
         fiscal_address: input.fiscal_address?.trim() ?? null,
+        ...(input.timezone?.trim() ? { timezone: input.timezone.trim() } : {}),
       },
       { transaction: t },
     )
     await seedDefaultChartOfAccounts(org.id, t)
     await seedDefaultOrgRoles(org.id, t)
+    // Fija explícitamente los módulos habilitados en creación, en vez de dejar que
+    // el fallback implícito de organization-settings.service.ts (is_default) decida.
+    await updateOrganizationSettings(org.id, { enabled_modules: getDefaultModulesForPlan('full') }, t)
     return org
   })
 }
@@ -108,6 +114,7 @@ export async function updateOrganization(id: string, input: OrganizationUpdateIn
     cuit: string | null
     iva_condition: OrgIvaCondition | null
     fiscal_address: string | null
+    timezone: string
   }> = {}
   if (input.name !== undefined) next.name = input.name.trim()
   if (input.is_active !== undefined) next.is_active = input.is_active
@@ -115,6 +122,7 @@ export async function updateOrganization(id: string, input: OrganizationUpdateIn
   if (input.cuit !== undefined) next.cuit = input.cuit
   if (input.iva_condition !== undefined) next.iva_condition = input.iva_condition
   if (input.fiscal_address !== undefined) next.fiscal_address = input.fiscal_address?.trim() || null
+  if (input.timezone !== undefined) next.timezone = input.timezone.trim()
 
   await org.update(next)
   return org.reload()
@@ -129,12 +137,14 @@ export async function updateOrganizationFiscal(orgId: string, input: Organizatio
     cuit: string | null
     iva_condition: OrgIvaCondition | null
     fiscal_address: string | null
+    timezone: string
   }> = {}
 
   if (input.legal_name !== undefined) next.legal_name = input.legal_name?.trim() || null
   if (input.cuit !== undefined) next.cuit = input.cuit
   if (input.iva_condition !== undefined) next.iva_condition = input.iva_condition
   if (input.fiscal_address !== undefined) next.fiscal_address = input.fiscal_address?.trim() || null
+  if (input.timezone !== undefined) next.timezone = input.timezone.trim()
 
   await org.update(next)
   return org.reload()
@@ -152,6 +162,7 @@ export async function getOrganizationDetailForTenant(orgId: string) {
       cuit: organization.cuit,
       iva_condition: organization.iva_condition,
       fiscal_address: organization.fiscal_address,
+      timezone: organization.timezone,
       created_at: organization.created_at.toISOString(),
       updated_at: organization.updated_at.toISOString(),
     },

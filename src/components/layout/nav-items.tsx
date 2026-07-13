@@ -102,6 +102,26 @@ export const NAV_MODULES: NavItem[] = [
       </svg>
     ),
   },
+  {
+    id: 'automatizaciones',
+    label: 'Automatizaciones',
+    href: '/automatizaciones',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9.2 1.5 4.5 8.5H8l-1.3 6 5.8-7H9.2z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'control-horario',
+    label: 'Control de Horario',
+    href: '/control-horario',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="8" cy="8" r="6.5"/><path d="M8 4.5V8l2.5 1.5"/>
+      </svg>
+    ),
+  },
 ]
 
 export const NAV_WOOCOMMERCE: NavItem = {

@@ -3,6 +3,7 @@
 	prod-push prod-release prod-bootstrap-vps prod-init prod-secrets prod-sync-db-password prod-deploy-app prod-deploy-infra prod-deploy prod-ssl prod-sync-nginx-conf prod-migrate prod-migrate-status \
 	prod-create-sysadmin prod-health prod-backup prod-backup-mail prod-disk-check prod-prune prod-logs prod-renew-certs prod-portainer-auth \
 	prod-init-mail prod-mail-add-user prod-mail-dkim prod-mail-logs prod-mail-restart prod-mail-check prod-expand-ssl-mail prod-expand-ssl-services prod-purge-umami \
+	prod-install-automations-cron prod-remove-automations-cron \
 	aws-storage-plan aws-storage-apply aws-storage-outputs
 
 # =============================================================================
@@ -165,6 +166,12 @@ prod-expand-ssl-services:
 
 prod-purge-umami:
 	bash infra/scripts/purge-umami-data.sh
+
+prod-install-automations-cron:
+	bash infra/scripts/install-automations-cron.sh
+
+prod-remove-automations-cron:
+	bash infra/scripts/install-automations-cron.sh --remove
 
 prod-mail-add-user:
 	@test -n "$(EMAIL)" || (echo "EMAIL is required: make prod-mail-add-user EMAIL=erp@andiko.cloud PASSWORD=..." && exit 1)

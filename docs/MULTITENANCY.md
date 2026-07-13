@@ -61,12 +61,20 @@ Este documento define **cómo segmentamos datos** en Andiko para evitar cruces e
 - `pos_devices`, `pos_cash_sessions`, `pos_payment_methods`
 - APIs POS autentican por `api_token` del dispositivo → `tenantContextFromPosDevice`
 
+### HR / Control de Horario — Branch-scoped
+- `employees` (legajo, vinculado opcionalmente 1:1 a `users`), `attendance_events` (fichaje: self-service, carga manual, import CSV de reloj físico)
+- Permiso opcional `attendance:scope_own` limita fichajes a los del propio empleado (mismo patrón que `logistics:scope_assigned`)
+
 ### Billing (SaaS plataforma) — Global sys-admin + lectura org propia
 - Planes, suscripciones, facturas de plataforma: sys-admin
 - Portal `/facturacion`: org-scoped vía `requireOrgBilling` (nunca confía `org_id` del cliente)
 
 ### Integraciones — Org-scoped
 - WooCommerce: sitios por org, vinculados a sucursal
+
+### Automations — Org-scoped (branch_id opcional)
+- `scheduled_tasks`, `scheduled_task_runs`
+- `branch_id` opcional; si se especifica, se valida contra sucursales habilitadas del usuario (`assertBranchAllowed` en `scheduled-task.service.ts`)
 
 ## Checklist técnico por entidad
 

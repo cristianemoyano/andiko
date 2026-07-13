@@ -1,6 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import type { Transaction } from 'sequelize'
+import { invalidateCapabilitiesForOrg } from '@/lib/capabilities-cache'
 import OrganizationSetting from './organization-setting.model'
 import Organization from './organization.model'
 import {
@@ -98,5 +99,8 @@ export async function updateOrganizationSettings(
   }
   const settings = await loadEffectiveSettings(orgId, t)
   settingsCache.delete(orgId)
+  // Module gates in the sidebar/layout read capabilities + enabled_modules together.
+  // Bump org gen so any stale permission/capability cache from before a migrate is refreshed.
+  invalidateCapabilitiesForOrg(orgId)
   return settings
 }

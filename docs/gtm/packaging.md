@@ -126,7 +126,7 @@ Preview en sys-admin: suscripción → generar preview de período.
 - [ ] Precios públicos en landing
 - [ ] Cobro automático (Mercado Pago)
 - [ ] Factura electrónica Andiko → cliente (CAE plataforma)
-- [ ] Cron facturación recurrente
+- [x] Cron facturación recurrente
 - [ ] Plan anual con descuento (10–15%)
 
 ---

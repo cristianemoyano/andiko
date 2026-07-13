@@ -28,6 +28,25 @@ const Check = ({ className = 'h-[15px] w-[15px]' }: { className?: string }) => (
   </svg>
 )
 
+const InstagramIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+  </svg>
+)
+
+const FacebookIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+    <path d="M14 13.5h2.5l1-4H14v-2c0-1.03 0-2 2-2h1.5V2.14C17.174 2.097 15.943 2 14.643 2 11.928 2 10 3.657 10 6.7v2.8H7v4h3V22h4z" />
+  </svg>
+)
+
+const socialLinks = [
+  { label: 'Instagram de Andiko', href: siteConfig.social.instagram, Icon: InstagramIcon },
+  { label: 'Facebook de Andiko', href: siteConfig.social.facebook, Icon: FacebookIcon },
+] as const
+
 const navLinks = [
   { label: 'Producto', href: '#sec-producto' },
   { label: 'Módulos', href: '#sec-modulos' },
@@ -73,7 +92,7 @@ const modules = [
   },
   {
     title: 'Ventas y facturación',
-    body: 'Presupuestos, pedidos y facturas A, B y C con ARCA. Notas de crédito, débito, devoluciones y cobranzas.',
+    body: 'Presupuestos, pedidos y facturas con emisión fiscal. Notas de crédito, débito, devoluciones y cobranzas.',
     icon: (
       <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -138,12 +157,13 @@ const modules = [
 
 const reasons = [
   {
-    title: 'Hecho para Argentina',
-    body: 'La facturación electrónica ARCA y los circuitos fiscales locales vienen de fábrica. No adaptás software extranjero a la fuerza.',
+    title: 'Fiscal listo de fábrica',
+    body: 'La facturación electrónica y los circuitos fiscales vienen integrados. No adaptás software genérico a la fuerza.',
     icon: (
       <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-        <circle cx="12" cy="10" r="3" />
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <path d="M14 2v6h6" />
+        <path d="M9 15l2 2 4-4" />
       </svg>
     ),
   },
@@ -175,9 +195,9 @@ const reasons = [
 
 const metrics = [
   { value: '7', label: 'módulos integrados' },
-  { value: '100%', label: 'operativo en ARS' },
+  { value: '1', label: 'sistema para todo' },
   { value: 'Multi', label: 'sucursal y depósito' },
-  { value: 'ARCA', label: 'facturación nativa' },
+  { value: 'Fiscal', label: 'facturación nativa' },
 ] as const
 
 const sectors = ['Retail y comercios', 'Distribución y mayoristas', 'Servicios', 'Industria y manufactura'] as const
@@ -194,6 +214,7 @@ function LandingJsonLd() {
         name: siteConfig.name,
         url: siteUrl,
         description: siteConfig.description,
+        sameAs: [siteConfig.social.instagram, siteConfig.social.facebook],
       },
       {
         '@type': 'WebSite',
@@ -273,14 +294,14 @@ export default async function LandingPage() {
                 </div>
 
                 <h1 className="landing-enter landing-enter-delay-1 mt-[22px] text-[clamp(34px,4.6vw,55px)] font-semibold leading-[1.04] tracking-[-0.025em] text-zinc-900 text-balance">
-                  Software de gestión hecho para{' '}
-                  <span className="text-brand-700">las pymes argentinas</span>
+                  Gestioná tu negocio con{' '}
+                  <span className="text-brand-700">Andiko</span>
                 </h1>
 
                 <p className="landing-enter landing-enter-delay-2 mt-5 max-w-[30em] text-base leading-relaxed text-zinc-600">
                   Contactos, catálogo, ventas, stock, compras, contabilidad y POS en un solo flujo.
-                  Facturación electrónica con ARCA, multisucursal y pensado para cómo trabaja tu
-                  pyme — sin planillas ni integraciones frágiles.
+                  Facturación electrónica, multisucursal y pensado para cómo trabaja tu negocio —
+                  sin planillas ni integraciones frágiles.
                 </p>
 
                 <div className="landing-enter landing-enter-delay-3 mt-[30px] flex flex-wrap gap-3">
@@ -349,7 +370,7 @@ export default async function LandingPage() {
             <section id="sec-producto" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] py-[clamp(32px,4vw,56px)]">
             <div className="max-w-[640px]">
               <h2 className="text-[clamp(26px,3vw,32px)] font-semibold leading-[1.12] tracking-[-0.02em] text-zinc-900">
-                Software de gestión que entiende cómo trabaja una pyme acá
+                Software de gestión que entiende cómo trabaja una pyme
               </h2>
             </div>
             <div className="mt-[38px] grid gap-[18px] lg:grid-cols-2">
@@ -424,8 +445,7 @@ export default async function LandingPage() {
                   </h2>
                   <p className="mt-3 max-w-[40em] text-[15px] leading-relaxed text-brand-100">
                     El acceso anticipado es sin costo durante el período de beta. Después, planes por
-                    módulo en ARS, claros y sin sorpresas. Sumate a la lista y arrancá antes que el
-                    resto.
+                    módulo, claros y sin sorpresas. Sumate a la lista y arrancá antes que el resto.
                   </p>
                 </div>
                 <a href="#sec-contacto" className={`${landingInverseCta} h-[46px] flex-shrink-0 px-6 text-[15px]`}>
@@ -448,6 +468,23 @@ export default async function LandingPage() {
                 <p className="mt-2.5 text-[15px] leading-relaxed text-zinc-600">
                   Dejanos tus datos y te avisamos cuando abramos el acceso. Sin spam.
                 </p>
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <span className="text-[13px] text-zinc-500">Seguinos</span>
+                  <div className="flex items-center gap-1" aria-label="Redes sociales">
+                    {socialLinks.map(({ label, href, Icon }) => (
+                      <a
+                        key={href}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={label}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-[4px] text-zinc-500 transition-[color,background-color] duration-150 hover:bg-brand-50 hover:text-brand-700"
+                      >
+                        <Icon />
+                      </a>
+                    ))}
+                  </div>
+                </div>
               </div>
               <ContactForm />
             </div>
@@ -465,7 +502,21 @@ export default async function LandingPage() {
                 <a href="#sec-producto" className="text-[13px] text-zinc-600 transition-colors hover:text-brand-600">Producto</a>
                 <a href="#sec-modulos" className="text-[13px] text-zinc-600 transition-colors hover:text-brand-600">Módulos</a>
                 <a href="#sec-contacto" className="text-[13px] text-zinc-600 transition-colors hover:text-brand-600">Contacto</a>
-                <span className="font-mono text-[10px] text-zinc-400">ARCA · ARS · CUIT</span>
+                <div className="flex items-center gap-1.5" aria-label="Redes sociales">
+                  {socialLinks.map(({ label, href, Icon }) => (
+                    <a
+                      key={href}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-[4px] text-zinc-500 transition-[color,background-color] duration-150 hover:bg-brand-50 hover:text-brand-700"
+                    >
+                      <Icon />
+                    </a>
+                  ))}
+                </div>
+                <span className="font-mono text-[10px] text-zinc-400">Ventas · Stock · POS</span>
                 <AppVersion />
               </div>
             </div>

@@ -22,4 +22,14 @@ describe('organizationUpdateSchema', () => {
     const parsed = organizationUpdateSchema.safeParse({ slug: 'otro-slug' })
     expect(parsed.success).toBe(false)
   })
+
+  it('accepts a timezone override', () => {
+    const parsed = organizationUpdateSchema.safeParse({ timezone: 'America/Mexico_City' })
+    expect(parsed.success).toBe(true)
+  })
+
+  it('rejects an empty timezone', () => {
+    const parsed = organizationUpdateSchema.safeParse({ timezone: '' })
+    expect(parsed.success).toBe(false)
+  })
 })
