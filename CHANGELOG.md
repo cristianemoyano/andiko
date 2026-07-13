@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.47.1](https://github.com/cristianemoyano/andiko/compare/v0.47.0...v0.47.1) (2026-07-13)
+
+### Bug Fixes
+
+* **billing:** throw when invoice reload fails after generation ([26b2703](https://github.com/cristianemoyano/andiko/commit/26b27038d4c0e265a4bcf0dc37ff2c60308e8100))
+
 ## [0.47.0](https://github.com/cristianemoyano/andiko/compare/v0.46.1...v0.47.0) (2026-07-13)
 
 ### Features
