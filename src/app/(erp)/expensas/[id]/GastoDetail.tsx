@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Decimal from 'decimal.js'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
@@ -14,12 +15,17 @@ import { Dialog } from '@/components/primitives/Dialog'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { CurrencyInput, formatARS } from '@/components/primitives/CurrencyInput'
 import { FormField } from '@/components/primitives/FormField'
-import { ExpensasSubNav } from '../../ExpensasSubNav'
-import type { Expense, ExpensePayment, PaymentMethod } from '../../types'
-import { EXPENSE_STATUS_LABEL, PAYMENT_METHOD_LABEL } from '../../types'
+import type { Expense, ExpenseInstallment, ExpensePayment, PaymentMethod } from '../types'
+import {
+  EXPENSE_KIND_LABEL,
+  EXPENSE_STATUS_LABEL,
+  INSTALLMENT_STATUS_LABEL,
+  PAYMENT_METHOD_LABEL,
+  RECURRING_FREQUENCY_LABEL,
+} from '../types'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
 
-interface FacturaExpensaDetailProps {
+interface GastoDetailProps {
   id: string
 }
 
@@ -27,7 +33,7 @@ const PAYMENT_METHODS = (Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).m
   m => ({ value: m, label: PAYMENT_METHOD_LABEL[m] })
 )
 
-export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
+export function GastoDetail({ id }: GastoDetailProps) {
   const router = useRouter()
   const [expense, setExpense]   = useState<Expense | null>(null)
   const [loading, setLoading]   = useState(true)
@@ -39,6 +45,7 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
   const [confirmDelete,  setConfirmDelete]  = useState(false)
   const [actionError,    setActionError]    = useState<string | null>(null)
 
+  const [selectedInstallments, setSelectedInstallments] = useState<string[]>([])
   const [paymentAmount, setPaymentAmount]   = useState('')
   const [paymentDate,   setPaymentDate]     = useState<Date | null>(new Date())
   const [paymentMethod, setPaymentMethod]   = useState<PaymentMethod>('transfer')
@@ -47,6 +54,7 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
   const [paymentSaving, setPaymentSaving]   = useState(false)
   const [paymentToDelete, setPaymentToDelete] = useState<ExpensePayment | null>(null)
   const [attachPayment, setAttachPayment]   = useState<ExpensePayment | null>(null)
+  const [scheduleSaving, setScheduleSaving] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -57,6 +65,7 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
         if (!mounted) return
         setExpense(e)
         setNotFound(false)
+        setSelectedInstallments([])
         const bal = parseFloat(e.balance)
         setPaymentAmount(!Number.isNaN(bal) && bal > 0 ? e.balance : '')
       } catch (e) {
@@ -83,7 +92,19 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
 
   async function handleDelete() {
     const ok = await doAction('', 'DELETE')
-    if (ok) router.push('/expensas/facturas')
+    if (ok) router.push('/expensas')
+  }
+
+  function toggleInstallment(inst: ExpenseInstallment) {
+    if (inst.status !== 'pending') return
+    setSelectedInstallments(prev => {
+      const next = prev.includes(inst.id) ? prev.filter(x => x !== inst.id) : [...prev, inst.id]
+      const sum = (expense?.installments ?? [])
+        .filter(i => next.includes(i.id))
+        .reduce((acc, i) => acc.plus(i.amount), new Decimal(0))
+      setPaymentAmount(sum.gt(0) ? sum.toFixed(2) : '')
+      return next
+    })
   }
 
   async function handleAddPayment() {
@@ -91,22 +112,30 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
     const amount = parseFloat(paymentAmount)
     if (!amount || amount <= 0) { setPaymentError('Ingresá un monto válido'); return }
 
+    if (expense.kind === 'installment_plan' && selectedInstallments.length === 0) {
+      setPaymentError('Seleccioná al menos una cuota'); return
+    }
+
     setPaymentSaving(true)
     setPaymentError(null)
     try {
       await fetchJson('/api/v1/expenses/expense-payments', {
         method: 'POST',
         body: JSON.stringify({
-          expense_id:    expense.id,
-          branch_id:     expense.branch_id,
-          contact_id:    expense.contact_id,
-          payment_date:  paymentDate ? paymentDate.toISOString() : new Date().toISOString(),
+          expense_id:     expense.id,
+          branch_id:      expense.branch_id,
+          contact_id:     expense.contact_id,
+          payment_date:   paymentDate ? paymentDate.toISOString() : new Date().toISOString(),
           amount,
           payment_method: paymentMethod,
-          notes:         paymentNotes.trim() || null,
+          notes:          paymentNotes.trim() || null,
+          ...(expense.kind === 'installment_plan'
+            ? { installment_ids: selectedInstallments }
+            : {}),
         }),
       })
       setPaymentNotes('')
+      setSelectedInstallments([])
       setRefresh(r => r + 1)
     } catch (e) {
       setPaymentError(getApiErrorMessage(e))
@@ -125,11 +154,27 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
     }
   }
 
+  async function toggleScheduleActive() {
+    if (!expense?.schedule) return
+    setScheduleSaving(true)
+    setActionError(null)
+    try {
+      await fetchJson(`/api/v1/expenses/schedules/${expense.schedule.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: !expense.schedule.is_active }),
+      })
+      setRefresh(r => r + 1)
+    } catch (e) {
+      setActionError(getApiErrorMessage(e))
+    } finally {
+      setScheduleSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col h-full">
-        <TopBar breadcrumbs={[{ label: 'Facturas', href: '/expensas/facturas' }, { label: '…' }]} />
-        <ExpensasSubNav />
+        <TopBar breadcrumbs={[{ label: 'Expensas', href: '/expensas' }, { label: '…' }]} />
         <div className="flex-1 flex items-center justify-center">
           <span className="text-fg-subtle text-sm">Cargando…</span>
         </div>
@@ -140,8 +185,7 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
   if (notFound || !expense) {
     return (
       <div className="flex flex-col h-full">
-        <TopBar breadcrumbs={[{ label: 'Facturas', href: '/expensas/facturas' }, { label: 'No encontrada' }]} />
-        <ExpensasSubNav />
+        <TopBar breadcrumbs={[{ label: 'Expensas', href: '/expensas' }, { label: 'No encontrado' }]} />
         <EmptyState title="Gasto no encontrado" description="El gasto no existe o fue eliminado." />
       </div>
     )
@@ -152,12 +196,13 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
   const isPaid      = expense.status === 'paid'
   const isCancelled = expense.status === 'cancelled'
   const canPay      = isReceived && !isPaid && !isCancelled
+  const isPlan      = expense.kind === 'installment_plan'
 
   return (
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[
-          { label: 'Facturas', href: '/expensas/facturas' },
+          { label: 'Expensas', href: '/expensas' },
           { label: expense.expense_number },
         ]}
         actions={
@@ -168,33 +213,32 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
                   Eliminar
                 </Button>
                 <Button size="sm" onClick={() => setConfirmReceive(true)}>
-                  Marcar como recibido
+                  Confirmar gasto
                 </Button>
               </>
             )}
             {!isCancelled && !isPaid && (
               <Button size="sm" variant="danger" onClick={() => setConfirmCancel(true)}>
-                Cancelar
+                Anular
               </Button>
             )}
           </div>
         }
       />
-      <ExpensasSubNav />
 
       <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
-
           {actionError && (
             <div className="px-4 py-2 bg-danger-bg border border-danger rounded-sm text-sm text-danger">
               {actionError}
             </div>
           )}
 
-          {/* Header card */}
           <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">Gasto</p>
+              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">
+                {EXPENSE_KIND_LABEL[expense.kind]}
+              </p>
               <h1 className="text-[20px] font-bold text-fg tracking-tight">{expense.description}</h1>
               <p className="text-[13px] text-fg-muted mt-0.5">
                 {expense.expense_number}
@@ -209,7 +253,6 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
             </div>
           </div>
 
-          {/* Metadata card */}
           <div className="bg-surface border border-border rounded-sm p-5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[13px]">
               <div>
@@ -217,7 +260,9 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
                 <p className="text-fg">{expense.expense_account_code}</p>
               </div>
               <div>
-                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Vencimiento</p>
+                <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">
+                  {isPlan ? 'Próximo vencimiento' : 'Vencimiento'}
+                </p>
                 <p className="text-fg">
                   {expense.due_date ? new Date(expense.due_date).toLocaleDateString('es-AR') : '—'}
                 </p>
@@ -232,14 +277,26 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
                   {formatARS(expense.balance)}
                 </p>
               </div>
-              {expense.buyer && (
-                <div>
-                  <p className="text-[11px] text-fg-subtle font-medium uppercase tracking-wide mb-0.5">Cargado por</p>
-                  <p className="text-fg">{expense.buyer.name}</p>
-                </div>
-              )}
             </div>
           </div>
+
+          {expense.schedule && (
+            <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide mb-1">Serie recurrente</p>
+                <p className="text-[13px] text-fg">
+                  {RECURRING_FREQUENCY_LABEL[expense.schedule.frequency]} · Próxima generación:{' '}
+                  {new Date(expense.schedule.next_run_date).toLocaleDateString('es-AR')}
+                </p>
+                <p className="text-[12px] text-fg-muted mt-0.5">
+                  {expense.schedule.is_active ? 'Activa' : 'Pausada'}
+                </p>
+              </div>
+              <Button size="sm" variant="secondary" onClick={toggleScheduleActive} disabled={scheduleSaving}>
+                {expense.schedule.is_active ? 'Pausar serie' : 'Reactivar serie'}
+              </Button>
+            </div>
+          )}
 
           <OwnerAttachmentsSection
             ownerType="expense"
@@ -255,7 +312,54 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
             />
           </div>
 
-          {/* Payments card */}
+          {isPlan && (expense.installments?.length ?? 0) > 0 && (
+            <div className="bg-surface border border-border rounded-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-border">
+                <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide">Cuotas</p>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-surface-muted border-b border-border">
+                  <tr>
+                    {canPay && <th className="w-10 px-3 py-2.5" />}
+                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">#</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Vencimiento</th>
+                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Estado</th>
+                    <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Monto</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {expense.installments!.map(inst => (
+                    <tr
+                      key={inst.id}
+                      className={`hover:bg-surface-muted/50 ${canPay && inst.status === 'pending' ? 'cursor-pointer' : ''}`}
+                      onClick={() => { if (canPay) toggleInstallment(inst) }}
+                    >
+                      {canPay && (
+                        <td className="px-3 py-2.5">
+                          {inst.status === 'pending' ? (
+                            <input
+                              type="checkbox"
+                              checked={selectedInstallments.includes(inst.id)}
+                              onChange={() => toggleInstallment(inst)}
+                              onClick={e => e.stopPropagation()}
+                              aria-label={`Seleccionar cuota ${inst.installment_number}`}
+                            />
+                          ) : null}
+                        </td>
+                      )}
+                      <td className="px-4 py-2.5 text-fg-muted">{inst.installment_number}</td>
+                      <td className="px-4 py-2.5 text-fg-muted">{new Date(inst.due_date).toLocaleDateString('es-AR')}</td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge value={INSTALLMENT_STATUS_LABEL[inst.status]} />
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-medium">{formatARS(inst.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <div className="bg-surface border border-border rounded-sm overflow-hidden">
             <div className="px-5 py-3 border-b border-border">
               <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide">Pagos registrados</p>
@@ -302,16 +406,17 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
 
             {canPay && (
               <div className="border-t border-border px-5 py-4 space-y-3 bg-surface-muted/50">
-                <p className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide">Registrar pago</p>
-                {paymentError && (
-                  <p className="text-sm text-danger">{paymentError}</p>
-                )}
+                <p className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide">
+                  {isPlan ? 'Pagar cuotas seleccionadas' : 'Registrar pago'}
+                </p>
+                {paymentError && <p className="text-sm text-danger">{paymentError}</p>}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <FormField label="Monto">
                     <CurrencyInput
                       value={paymentAmount}
                       onChange={setPaymentAmount}
                       placeholder="0,00"
+                      disabled={isPlan}
                     />
                   </FormField>
                   <FormField label="Fecha">
@@ -337,30 +442,27 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
               </div>
             )}
           </div>
-
         </div>
       </PageBody>
 
       <ConfirmDialog
         open={confirmReceive}
         onOpenChange={setConfirmReceive}
-        title="Marcar como recibido"
-        description={`¿Confirmás que recibiste el comprobante de "${expense.description}"?`}
+        title="Confirmar gasto"
+        description={`"${expense.description}" dejará de ser borrador, se asentará en contabilidad y quedará pendiente de pago. ¿Confirmás?`}
         variant="warning"
-        confirmLabel="Confirmar recepción"
+        confirmLabel="Confirmar gasto"
         onConfirm={async () => { await doAction('/receive'); setConfirmReceive(false) }}
       />
-
       <ConfirmDialog
         open={confirmCancel}
         onOpenChange={setConfirmCancel}
-        title="Cancelar gasto"
-        description={`¿Estás seguro de que querés cancelar "${expense.description}"?`}
+        title="Anular gasto"
+        description={`¿Estás seguro de que querés anular "${expense.description}"?`}
         variant="danger"
-        confirmLabel="Cancelar gasto"
+        confirmLabel="Anular gasto"
         onConfirm={async () => { await doAction('/cancel'); setConfirmCancel(false) }}
       />
-
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
@@ -370,7 +472,6 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
         confirmLabel="Eliminar"
         onConfirm={handleDelete}
       />
-
       <ConfirmDialog
         open={!!paymentToDelete}
         onOpenChange={open => { if (!open) setPaymentToDelete(null) }}
@@ -380,7 +481,6 @@ export function FacturaExpensaDetail({ id }: FacturaExpensaDetailProps) {
         confirmLabel="Eliminar"
         onConfirm={async () => { if (paymentToDelete) await handleDeletePayment(paymentToDelete) }}
       />
-
       <Dialog
         open={!!attachPayment}
         onOpenChange={open => { if (!open) setAttachPayment(null) }}

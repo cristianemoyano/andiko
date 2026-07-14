@@ -1,8 +1,5 @@
-import type { Metadata } from 'next'
-import { PagosExpensasClient } from './PagosExpensasClient'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = { title: 'Pagos de gastos' }
-
-export default function PagosExpensasPage() {
-  return <PagosExpensasClient />
+export default function PagosExpensasRedirect() {
+  redirect('/expensas')
 }

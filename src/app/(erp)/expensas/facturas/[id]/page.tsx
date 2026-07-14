@@ -1,9 +1,6 @@
-import type { Metadata } from 'next'
-import { FacturaExpensaDetail } from './FacturaExpensaDetail'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = { title: 'Gasto' }
-
-export default async function FacturaExpensaPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function FacturaDetailRedirect({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  return <FacturaExpensaDetail id={id} />
+  redirect(`/expensas/${id}`)
 }

@@ -3,9 +3,9 @@ import { z } from 'zod'
 import { registerAutomationAction } from '../action-registry'
 import sequelize from '@/lib/db'
 import {
-  findDueRecurringExpenseTemplates,
-  generateExpenseFromTemplate,
-} from '@/modules/expenses/recurring-expense-templates.service'
+  findDueExpenseSchedules,
+  generateExpenseFromSchedule,
+} from '@/modules/expenses/expense-schedules.service'
 
 const payloadSchema = z.object({})
 
@@ -14,13 +14,13 @@ registerAutomationAction({
   label: 'Generar gastos recurrentes',
   payloadSchema,
   async run(ctx) {
-    const templates = await findDueRecurringExpenseTemplates(ctx.orgId, ctx.branchId, new Date())
+    const schedules = await findDueExpenseSchedules(ctx.orgId, ctx.branchId, new Date())
 
     let generated = 0
     let failed = 0
-    for (const template of templates) {
+    for (const schedule of schedules) {
       try {
-        await sequelize.transaction((t) => generateExpenseFromTemplate(template, ctx.orgId, t))
+        await sequelize.transaction((t) => generateExpenseFromSchedule(schedule, ctx.orgId, t))
         generated += 1
       } catch {
         failed += 1
@@ -29,7 +29,7 @@ registerAutomationAction({
 
     return {
       summary: `${generated} gasto(s) recurrente(s) generado(s)${failed > 0 ? `, ${failed} fallido(s)` : ''}`,
-      data: { generated, failed, examined: templates.length },
+      data: { generated, failed, examined: schedules.length },
     }
   },
 })

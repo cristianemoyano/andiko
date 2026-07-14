@@ -282,7 +282,7 @@ const MODULE_DESCRIPTIONS: Record<OrgModuleKey, string> = {
   accounting: 'Libro diario, asientos e informes',
   pos: 'Cajas, turnos y punto de venta',
   automations: 'Tareas recurrentes y automatizaciones',
-  expenses: 'Gastos recurrentes: alquiler, servicios y más',
+  expenses: 'Gastos únicos, recurrentes y planes en cuotas',
   hr: 'Legajos de empleados y control de horario',
 }
 

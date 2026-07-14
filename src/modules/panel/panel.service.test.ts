@@ -31,6 +31,8 @@ describe('panel.service', () => {
           overdue_count: '2',
         }] as never)
         .mockResolvedValueOnce([{ cxp_value: '18000.00', overdue_count: '1' }] as never)
+        .mockResolvedValueOnce([{ cxp_value: '2000.00', overdue_count: '0' }] as never)
+        .mockResolvedValueOnce([{ current: '5000.00', previous: '4000.00' }] as never)
         .mockResolvedValueOnce([{ current: '120000.00', previous: '130000.00' }] as never)
         .mockResolvedValueOnce([] as never)
 
@@ -42,8 +44,11 @@ describe('panel.service', () => {
       expect(result.cobrado.pct_change).toBe(-8)
       expect(result.por_cobrar.value).toBe(30000)
       expect(result.por_cobrar.overdue_count).toBe(2)
-      expect(result.por_pagar.value).toBe(18000)
+      expect(result.por_pagar.value).toBe(20000)
       expect(result.por_pagar.overdue_count).toBe(1)
+      expect(result.expensas.value).toBe(5000)
+      expect(result.expensas.pct_change).toBe(25)
+      expect(result.resultado.value).toBe(145000)
       expect(result.saldo_cuenta).toBeNull()
     })
 
@@ -57,6 +62,8 @@ describe('panel.service', () => {
           overdue_count: '0',
         }] as never)
         .mockResolvedValueOnce([{ cxp_value: '0', overdue_count: '0' }] as never)
+        .mockResolvedValueOnce([{ cxp_value: '0', overdue_count: '0' }] as never)
+        .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
         .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
         .mockResolvedValueOnce([] as never)
 
@@ -64,6 +71,7 @@ describe('panel.service', () => {
 
       expect(result.facturado.pct_change).toBe(0)
       expect(result.cobrado.pct_change).toBe(0)
+      expect(result.expensas.pct_change).toBe(0)
     })
 
     it('returns empty spark array when no monthly data', async () => {
@@ -76,6 +84,8 @@ describe('panel.service', () => {
           overdue_count: '0',
         }] as never)
         .mockResolvedValueOnce([{ cxp_value: '0', overdue_count: '0' }] as never)
+        .mockResolvedValueOnce([{ cxp_value: '0', overdue_count: '0' }] as never)
+        .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
         .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
         .mockResolvedValueOnce([] as never)
 

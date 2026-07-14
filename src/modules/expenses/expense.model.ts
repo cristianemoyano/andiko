@@ -3,10 +3,13 @@ import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
 import type { UUID, Timestamps, AuditFields, IvaRate } from '@/types'
 import User from '@/modules/auth/user.model'
-import RecurringExpenseTemplate from './recurring-expense-template.model'
+import ExpenseSchedule from './expense-schedule.model'
 
 export const EXPENSE_STATUSES = ['draft', 'received', 'partially_paid', 'paid', 'cancelled'] as const
 export type ExpenseStatus = typeof EXPENSE_STATUSES[number]
+
+export const EXPENSE_KINDS = ['one_off', 'recurring_occurrence', 'installment_plan'] as const
+export type ExpenseKind = typeof EXPENSE_KINDS[number]
 
 export { OPEN_PAYABLE_EXPENSE_STATUSES } from './expense.constants'
 
@@ -14,8 +17,9 @@ export interface ExpenseAttributes extends Timestamps, AuditFields {
   id: UUID
   branch_id: UUID | null
   contact_id: UUID | null
-  recurring_template_id: UUID | null
+  schedule_id: UUID | null
   buyer_id: UUID | null
+  kind: ExpenseKind
   expense_number: string
   description: string
   expense_account_code: string
@@ -36,7 +40,7 @@ export interface ExpenseAttributes extends Timestamps, AuditFields {
 
 type ExpenseCreationAttributes = Optional<
   ExpenseAttributes,
-  | 'id' | 'branch_id' | 'contact_id' | 'recurring_template_id' | 'buyer_id'
+  | 'id' | 'branch_id' | 'contact_id' | 'schedule_id' | 'buyer_id' | 'kind'
   | 'invoice_number' | 'status' | 'invoice_date' | 'due_date' | 'currency' | 'iva_rate'
   | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total' | 'paid_amount' | 'balance'
   | 'notes'
@@ -47,8 +51,9 @@ class Expense extends AuditModel<ExpenseAttributes, ExpenseCreationAttributes> {
   declare id: UUID
   declare branch_id: UUID | null
   declare contact_id: UUID | null
-  declare recurring_template_id: UUID | null
+  declare schedule_id: UUID | null
   declare buyer_id: UUID | null
+  declare kind: ExpenseKind
   declare expense_number: string
   declare description: string
   declare expense_account_code: string
@@ -72,8 +77,13 @@ Expense.init(
     id:                    { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     branch_id:             { type: DataTypes.UUID },
     contact_id:            { type: DataTypes.UUID },
-    recurring_template_id: { type: DataTypes.UUID },
+    schedule_id:           { type: DataTypes.UUID },
     buyer_id:              { type: DataTypes.UUID },
+    kind:                  {
+      type: DataTypes.STRING(30),
+      allowNull: false,
+      defaultValue: 'one_off',
+    },
     expense_number:        { type: DataTypes.STRING(20), allowNull: false },
     description:           { type: DataTypes.STRING(500), allowNull: false },
     expense_account_code:  { type: DataTypes.STRING(20), allowNull: false },
@@ -95,8 +105,8 @@ Expense.init(
   { sequelize, tableName: 'expenses', paranoid: true, underscored: true },
 )
 
-RecurringExpenseTemplate.hasMany(Expense, { foreignKey: 'recurring_template_id', as: 'expenses' })
-Expense.belongsTo(RecurringExpenseTemplate, { foreignKey: 'recurring_template_id', as: 'recurringTemplate' })
+ExpenseSchedule.hasMany(Expense, { foreignKey: 'schedule_id', as: 'expenses' })
+Expense.belongsTo(ExpenseSchedule, { foreignKey: 'schedule_id', as: 'schedule' })
 
 Expense.belongsTo(User, { foreignKey: 'buyer_id', as: 'buyer' })
 User.hasMany(Expense, { foreignKey: 'buyer_id', as: 'expenses' })

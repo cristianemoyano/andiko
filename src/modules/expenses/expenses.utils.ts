@@ -108,3 +108,68 @@ export function calcExpenseTotals(
     total:           total.toFixed(2),
   }
 }
+
+/**
+ * Derive net/tax from a gross payable total (cuotas sum).
+ * `total = (subtotal - discount) * (1 + iva_rate/100)`.
+ */
+export function calcExpenseTotalsFromGross(
+  grossTotal: string | number,
+  discount_amount: string | number,
+  iva_rate: IvaRate,
+): ExpenseTotals {
+  const gross    = new Decimal(grossTotal)
+  const discount = new Decimal(discount_amount)
+  const rate     = new Decimal(iva_rate).div(100)
+  const taxBase  = gross.div(rate.plus(1))
+  const tax      = gross.minus(taxBase)
+  const net      = taxBase.plus(discount)
+
+  return {
+    subtotal:        net.toFixed(2),
+    discount_amount: discount.toFixed(2),
+    tax_amount:      tax.toFixed(2),
+    total:           gross.toFixed(2),
+  }
+}
+
+export interface InstallmentDraft {
+  installment_number: number
+  due_date: Date
+  amount: string
+}
+
+/**
+ * Builds N installment rows with equal amounts; the last cuota absorbs cent rounding.
+ * Due dates advance with the same month-end clamp as recurring schedules.
+ */
+export function buildInstallmentSchedule(params: {
+  count: number
+  firstDueDate: Date
+  frequency: 'monthly' | 'weekly'
+  /** Gross payable total of the plan (sum of cuotas). */
+  total: string | number
+}): InstallmentDraft[] {
+  const count = params.count
+  const total = new Decimal(params.total)
+  if (count < 1) throw new Error('INSTALLMENT_COUNT_INVALID')
+  if (total.lte(0)) throw new Error('INSTALLMENT_TOTAL_INVALID')
+
+  const base = total.div(count).toDecimalPlaces(2, Decimal.ROUND_DOWN)
+  const rows: InstallmentDraft[] = []
+  let allocated = new Decimal(0)
+  let due = new Date(params.firstDueDate)
+
+  for (let i = 1; i <= count; i++) {
+    const amount = i === count ? total.minus(allocated) : base
+    rows.push({
+      installment_number: i,
+      due_date: new Date(due),
+      amount: amount.toFixed(2),
+    })
+    allocated = allocated.plus(amount)
+    if (i < count) due = advanceNextRunDate(due, params.frequency)
+  }
+
+  return rows
+}

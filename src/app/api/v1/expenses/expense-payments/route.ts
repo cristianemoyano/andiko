@@ -31,11 +31,16 @@ export const POST = withPermission('expenses:write', async (req, _ctx, session) 
   } catch (err: unknown) {
     if (err instanceof Error) {
       if (err.message === 'EXPENSE_NOT_FOUND')             return NextResponse.json({ error: 'Gasto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
-      if (err.message === 'EXPENSE_CANCELLED')             return NextResponse.json({ error: 'No se puede pagar un gasto cancelado', code: 'INVALID_STATUS' }, { status: 409 })
+      if (err.message === 'EXPENSE_CANCELLED')             return NextResponse.json({ error: 'No se puede pagar un gasto anulado', code: 'INVALID_STATUS' }, { status: 409 })
       if (err.message === 'EXPENSE_ALREADY_PAID')          return NextResponse.json({ error: 'El gasto ya está pagado', code: 'INVALID_STATUS' }, { status: 409 })
-      if (err.message === 'EXPENSE_NOT_RECEIVED')          return NextResponse.json({ error: 'El gasto debe estar recibido para registrar un pago', code: 'INVALID_STATUS' }, { status: 409 })
+      if (err.message === 'EXPENSE_NOT_RECEIVED')          return NextResponse.json({ error: 'El gasto debe estar confirmado para registrar un pago', code: 'INVALID_STATUS' }, { status: 409 })
       if (err.message === 'EXPENSE_PAYMENT_BRANCH_REQUIRED') return NextResponse.json({ error: 'Se requiere sucursal para numerar el pago', code: 'EXPENSE_PAYMENT_BRANCH_REQUIRED' }, { status: 422 })
       if (err.message === 'BRANCH_NOT_FOUND')              return NextResponse.json({ error: 'Sucursal no encontrada o inactiva', code: 'BRANCH_NOT_FOUND' }, { status: 404 })
+      if (err.message === 'INSTALLMENT_IDS_REQUIRED')      return NextResponse.json({ error: 'Seleccioná las cuotas a pagar', code: 'INSTALLMENT_IDS_REQUIRED' }, { status: 422 })
+      if (err.message === 'INSTALLMENT_NOT_FOUND')         return NextResponse.json({ error: 'Cuota no encontrada', code: 'INSTALLMENT_NOT_FOUND' }, { status: 404 })
+      if (err.message === 'INSTALLMENT_NOT_PENDING')       return NextResponse.json({ error: 'La cuota ya no está pendiente', code: 'INSTALLMENT_NOT_PENDING' }, { status: 409 })
+      if (err.message === 'INSTALLMENT_AMOUNT_MISMATCH')   return NextResponse.json({ error: 'El monto no coincide con las cuotas seleccionadas', code: 'INSTALLMENT_AMOUNT_MISMATCH' }, { status: 422 })
+      if (err.message === 'INSTALLMENTS_NOT_APPLICABLE')   return NextResponse.json({ error: 'Este gasto no es un plan de cuotas', code: 'INSTALLMENTS_NOT_APPLICABLE' }, { status: 422 })
     }
     throw err
   }

@@ -16,7 +16,7 @@ export const POST = withPermission('expenses:write', async (_req, ctx, session) 
     if (err instanceof Error) {
       if (err.message === 'EXPENSE_NOT_FOUND')          return NextResponse.json({ error: 'Gasto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
       if (err.message === 'EXPENSE_ALREADY_PAID')       return NextResponse.json({ error: 'El gasto ya está pagado', code: 'INVALID_STATUS' }, { status: 409 })
-      if (err.message === 'EXPENSE_ALREADY_CANCELLED')  return NextResponse.json({ error: 'El gasto ya está cancelado', code: 'INVALID_STATUS' }, { status: 409 })
+      if (err.message === 'EXPENSE_ALREADY_CANCELLED')  return NextResponse.json({ error: 'El gasto ya está anulado', code: 'INVALID_STATUS' }, { status: 409 })
     }
     throw err
   }

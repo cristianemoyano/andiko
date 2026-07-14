@@ -51,7 +51,7 @@ Este documento define **cómo segmentamos datos** en Andiko para evitar cruces e
 - Secuencias de documento por org + branch
 
 ### Expenses — Branch-scoped (módulo independiente de Purchases; solo comparte `Contact`)
-- `expenses`, `expense_payments`, `recurring_expense_templates`
+- `expenses`, `expense_payments`, `expense_schedules`, `expense_installments`
 - Secuencias de documento propias por org + branch (mismo mecanismo `document_sequences` que Purchases, tipos `expense`/`expense_payment`)
 - `Expense.expense_account_code` referencia el plan de cuentas (`accounts`, org-scoped) — no hay FK, se valida contra cuentas activas/postables al contabilizar
 - Las facturas de Expensas se incluyen también en el Libro IVA Compras (módulo `afip`, que ya es cross-module por diseño) para no perder crédito fiscal

@@ -1,29 +1,40 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
-import { ExpensasSubNav } from '../ExpensasSubNav'
-import type { Expense, ExpenseStatus } from '../types'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
-import { EXPENSE_STATUS_LABEL } from '../types'
+import type { Expense, ExpenseKind, ExpenseStatus } from './types'
+import { EXPENSE_KIND_LABEL, EXPENSE_STATUS_LABEL } from './types'
 
 const PAGE_SIZE = 20
 
 const STATUS_OPTIONS: { value: ExpenseStatus | ''; label: string }[] = [
   { value: '',               label: 'Todos los estados' },
   { value: 'draft',          label: 'Borrador' },
-  { value: 'received',       label: 'Recibido' },
+  { value: 'received',       label: 'Confirmado' },
   { value: 'partially_paid', label: 'Pago parcial' },
   { value: 'paid',           label: 'Pagado' },
-  { value: 'cancelled',      label: 'Cancelado' },
+  { value: 'cancelled',      label: 'Anulado' },
 ]
+
+const KIND_OPTIONS: { value: ExpenseKind | ''; label: string }[] = [
+  { value: '',                     label: 'Todos los tipos' },
+  { value: 'one_off',              label: 'Único' },
+  { value: 'recurring_occurrence', label: 'Recurrente' },
+  { value: 'installment_plan',     label: 'Plan / cuotas' },
+]
+
+function parseKindParam(raw: string | null): ExpenseKind | '' {
+  if (raw === 'one_off' || raw === 'recurring_occurrence' || raw === 'installment_plan') return raw
+  return ''
+}
 
 const COLUMNS: Column<Expense>[] = [
   {
@@ -35,6 +46,13 @@ const COLUMNS: Column<Expense>[] = [
     key: 'description',
     header: 'Descripción',
     render: row => <span className="font-medium text-fg">{row.description}</span>,
+  },
+  {
+    key: 'kind',
+    header: 'Tipo',
+    render: row => (
+      <span className="text-[12px] text-fg-muted">{EXPENSE_KIND_LABEL[row.kind] ?? row.kind}</span>
+    ),
   },
   {
     key: 'contact',
@@ -75,13 +93,15 @@ const COLUMNS: Column<Expense>[] = [
   },
 ]
 
-export function FacturasExpensasClient() {
+export function GastosExpensasClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [expenses, setExpenses] = useState<Expense[] | null>(null)
   const [total, setTotal]       = useState(0)
   const [page, setPage]         = useState(1)
   const [search, setSearch]     = useState('')
   const [status, setStatus]     = useState<ExpenseStatus | ''>('')
+  const kind = parseKindParam(searchParams.get('kind'))
   const [error, setError]       = useState<string | null>(null)
 
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -91,6 +111,7 @@ export function FacturasExpensasClient() {
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
     if (debouncedSearch) params.set('search', debouncedSearch)
     if (status) params.set('status', status)
+    if (kind) params.set('kind', kind)
     ;(async () => {
       try {
         const d = await fetchJson<{ data: Expense[]; total: number }>(
@@ -108,19 +129,31 @@ export function FacturasExpensasClient() {
       }
     })()
     return () => { controller.abort() }
-  }, [page, debouncedSearch, status])
+  }, [page, debouncedSearch, status, kind])
+
+  function updateKind(next: ExpenseKind | '') {
+    setPage(1)
+    const url = new URL(window.location.href)
+    if (next) url.searchParams.set('kind', next)
+    else url.searchParams.delete('kind')
+    router.replace(url.pathname + url.search)
+  }
 
   return (
     <div className="flex flex-col h-full">
       <TopBar
-        breadcrumbs={[{ label: 'Expensas', href: '/expensas' }, { label: 'Facturas' }]}
+        breadcrumbs={[{ label: 'Expensas' }]}
         actions={
-          <Button size="sm" onClick={() => router.push('/expensas/facturas/nueva')}>
-            Nuevo gasto
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" onClick={() => router.push('/expensas/reportes')}>
+              Reportes
+            </Button>
+            <Button size="sm" onClick={() => router.push('/expensas/nueva')}>
+              Nuevo gasto
+            </Button>
+          </div>
         }
       />
-      <ExpensasSubNav />
 
       <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
@@ -128,7 +161,7 @@ export function FacturasExpensasClient() {
           columns={COLUMNS}
           data={expenses}
           keyExtractor={row => row.id}
-          onRowClick={row => router.push(`/expensas/facturas/${row.id}`)}
+          onRowClick={row => router.push(`/expensas/${row.id}`)}
           emptyMessage="No hay gastos cargados"
           toolbar={
             <>
@@ -144,6 +177,15 @@ export function FacturasExpensasClient() {
                   className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-64 bg-surface focus:outline-none focus:border-ring"
                 />
               </div>
+              <select
+                value={kind}
+                onChange={e => updateKind(e.target.value as ExpenseKind | '')}
+                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
+              >
+                {KIND_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
               <select
                 value={status}
                 onChange={e => { setStatus(e.target.value as ExpenseStatus | ''); setPage(1) }}

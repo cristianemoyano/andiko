@@ -118,7 +118,8 @@ export const NAV_MODULES: NavItem[] = [
     href: '/expensas',
     icon: (
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 1.5v13M13 1.5v13M3 4.5h10M3 8h10M3 11.5h10"/>
+        <path d="M3.5 1.5h9v13l-1.5-1-1.5 1-1.5-1-1.5 1-1.5-1-1.5 1z"/>
+        <path d="M6 5h4M6 7.5h4M6 10h2.5"/>
       </svg>
     ),
   },

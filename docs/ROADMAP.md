@@ -859,18 +859,25 @@ Control de horario / fichaje como base para una futura liquidación de sueldos. 
 
 ## Fase 14 — Expensas
 
-Gastos fijos/recurrentes de la empresa (alquiler, luz, agua, seguros, etc.) — módulo independiente de Compras: comparte únicamente la entidad `Contact` (proveedor), no `supplier_invoices`. Módulo premium (`ORG_MODULE_DEFS`), permiso `expenses:*`.
+Gastos fijos/recurrentes de la empresa (alquiler, luz, agua, seguros, planes en cuotas, etc.) — módulo independiente de Compras: comparte únicamente la entidad `Contact` (proveedor), no `supplier_invoices`. Módulo premium (`ORG_MODULE_DEFS`), permiso `expenses:*`.
 
-**Entidades:** `expenses`, `expense_payments`, `recurring_expense_templates`
+**Modelo unificado:** un solo listado `/expensas` y un flujo *Nuevo gasto* con 3 tipos — `one_off` (único), `recurring` (serie indefinida + ocurrencias), `installment_plan` (1 gasto = total del plan + calendario de cuotas).
 
-- [x] Migraciones: `recurring_expense_templates`, `expenses`, `expense_payments` + permisos `expenses:read/write/delete`
+**Entidades:** `expenses` (con `kind`), `expense_payments`, `expense_schedules` (ex `recurring_expense_templates`), `expense_installments`
+
+- [x] Migraciones: schedules, expenses, expense_payments, expense_installments + permisos `expenses:read/write/delete`
 - [x] Flujo de estados igual que Compras: `draft → received → partially_paid/paid`, con `cancelled` en cualquier punto no pagado
-- [x] Flujo de pagos propio (`expense_payments`) con actualización atómica de `paid_amount`/`balance`/`status`
-- [x] Contabilización automática: `expense-accounting.service.ts` (débito cuenta de gasto elegida + IVA crédito fiscal, crédito Proveedores) y `expense-payment-accounting.service.ts` (cancelación de deuda)
-- [x] Gasto recurrente: plantilla (`recurring_expense_templates`) + acción de automatización `expenses.generate_recurring_expense` que genera la factura en borrador cada período y avanza `next_run_date`
+- [x] Flujo de pagos propio (`expense_payments`) con actualización atómica de `paid_amount`/`balance`/`status`; en planes, pago ligado a cuotas (`installment_ids`)
+- [x] Contabilización automática: `expense-accounting.service.ts` (débito cuenta de gasto elegida + IVA crédito fiscal, crédito Proveedores) y `expense-payment-accounting.service.ts` (cancelación de deuda) — el plan contable se asienta por el **total** al recibir
+- [x] Gasto recurrente: `expense_schedules` + acción `expenses.generate_recurring_expense` (genera ocurrencias en borrador y avanza `next_run_date`); al crear tipo Recurrente se emite también el 1er período
+- [x] Plan / cuotas: un gasto `installment_plan` + N filas en `expense_installments` (vencimiento, monto, estado)
 - [x] Las facturas de Expensas se incluyen en **Libro IVA Compras** (`buildLibroIvaCompras`) para no perder crédito fiscal, aunque el módulo esté separado de Compras
-- [x] Adjuntos opcionales: factura del proveedor (`owner_type: 'expense'`) y comprobante de pago (`owner_type: 'expense_payment'`), vía el sistema de archivos existente (`OwnerAttachmentsSection`)
-- [x] UI `/expensas` (Facturas / Recurrentes / Pagos), ítem propio en la sidebar (sin submenú)
+- [x] Adjuntos opcionales: factura del proveedor (`owner_type: 'expense'`) y comprobante de pago (`owner_type: 'expense_payment'`)
+- [x] UI unificada `/expensas` (lista + tipos + detalle con cuotas/serie); sin tabs Facturas/Recurrentes/Pagos
+- [x] Reportes `/expensas/reportes` — KPIs del período, torta por tipo y por proveedor, barras mensuales
+- [x] Panel: KPI Expensas + widget por tipo + por pagar/gastos del período cuando el módulo está habilitado
+- [x] Alta rápida de proveedor desde Nuevo gasto (`SupplierQuickCreateDialog`)
+- [x] Copy de estados: Confirmar gasto / Confirmado; Anular / Anulado
 - [ ] Cuenta corriente / aging por proveedor de Expensas (hoy: solo Compras tiene este reporte)
 - [ ] Conciliación bancaria de pagos de Expensas
 
@@ -903,6 +910,7 @@ adopción B2B en PyMEs argentinas; relevadas en revisión de producto.
 
 Ideas validadas pero sin fecha definida.
 
+- **Activos fijos / Bienes de uso** — compra de maquinaria, herramientas durables, equipos (no mercadería). Hoy Compras está pensado para productos a revender (stock) y Expensas para egresos operativos que impactan el resultado; no hay módulo para capitalizar en `1.2.01` (Bienes de uso) + amortización (`5.2.08`). Un plan/cuotas en Expensas controla el pago, pero asienta el total como gasto al confirmar — incorrecto para activos. Alcance futuro: ficha del bien, alta/baja, vida útil, asientos de compra a activo (con o sin cuotas) y amortizaciones; hogar natural junto a Contabilidad, no dentro de Compras.
 - Pipelines de estado configurables por el cliente: el `StatusPipeline` actual tiene los pasos hardcodeados por tipo de documento. A futuro, permitir que cada organización defina sus propios estados y transiciones (ej. agregar "En revisión" entre Borrador y Confirmado), con la lógica de transición validada en backend.
 - Multi-empresa (una instalación, múltiples razones sociales)
 - Liquidación de sueldos (ver [Fase 13 — Control de Horario (RRHH)](#fase-13--control-de-horario-rrhh), Fase 1 de control de horario ya implementada)

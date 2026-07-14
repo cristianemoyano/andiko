@@ -15,7 +15,6 @@ function isNotFound(err: unknown): boolean {
   )
 }
 
-/** @deprecated Prefer `/api/v1/expenses/schedules/:id` — alias kept for compatibility. */
 export const GET = withPermission('expenses:read', async (_req, ctx, session) => {
   const { id } = await ctx.params
   const orgScope = await resolveOrgScope(session.user)

@@ -32,11 +32,14 @@ interface KpisData {
     cobrado:   { value: number; pct_change: number; spark: number[] }
     por_cobrar: { value: number; overdue_count: number }
     por_pagar: { value: number; overdue_count: number }
+    expensas?: { value: number; pct_change: number }
+    resultado?: { value: number; pct_change: number }
     saldo_cuenta: null
   }
   counts: { productos: number; clientes: number; proveedores: number; comprobantes: number }
   cash_flow: { semanal: BarChartDataPoint[]; mensual: BarChartDataPoint[]; anual: BarChartDataPoint[] }
   gastos: DonutSegment[]
+  expenses_by_kind?: DonutSegment[]
   performance_series: PerformanceSeriesPoint[]
   analytics: PanelAnalyticsData
 }
@@ -83,6 +86,10 @@ const DESKTOP_KPI_INFO = {
   por_cobrar:
     'Saldo pendiente de cobro en facturas emitidas o parcialmente pagadas. Incluye vencidas y al día.',
   saldo_cuenta: 'Saldo bancario/contable. Disponible cuando esté activo el módulo de contabilidad.',
+  expensas:
+    'Gastos del módulo Expensas en el período (únicos, recurrentes y planes). Excluye borradores y cancelados.',
+  resultado:
+    'Facturado menos Expensas del período. Aproximación de resultado operativo (no incluye costo de mercadería ni compras de mercadería).',
 } as const
 
 const ars = (v: number) =>
@@ -278,15 +285,21 @@ export function PanelClient({
   initialHiddenWidgets = [],
   initialWidgetOrder = DEFAULT_PANEL_WIDGET_ORDER,
   lockedBranchId = null,
+  expensesEnabled = false,
 }: {
   orgName?: string | null
   initialHiddenWidgets?: PanelWidgetId[]
   initialWidgetOrder?: PanelWidgetId[]
   lockedBranchId?: string | null
+  expensesEnabled?: boolean
 }) {
   return (
     <PanelWidgetProvider initialHidden={initialHiddenWidgets} initialOrder={initialWidgetOrder}>
-      <PanelClientContent orgName={orgName} lockedBranchId={lockedBranchId} />
+      <PanelClientContent
+        orgName={orgName}
+        lockedBranchId={lockedBranchId}
+        expensesEnabled={expensesEnabled}
+      />
     </PanelWidgetProvider>
   )
 }
@@ -294,9 +307,11 @@ export function PanelClient({
 function PanelClientContent({
   orgName = null,
   lockedBranchId = null,
+  expensesEnabled = false,
 }: {
   orgName?: string | null
   lockedBranchId?: string | null
+  expensesEnabled?: boolean
 }) {
   const { widgetOrder, isHidden } = usePanelWidgets()
   const router = useRouter()
@@ -418,6 +433,7 @@ function PanelClientContent({
   const counts = kpisData?.counts
   const cashFlow = kpisData?.cash_flow
   const gastos = useMemo(() => kpisData?.gastos ?? [], [kpisData?.gastos])
+  const expensesByKind = useMemo(() => kpisData?.expenses_by_kind ?? [], [kpisData?.expenses_by_kind])
 
   const periodLabel = getPeriodLabel(period, fromDate, toDate)
   const comparePeriodLabel = kpisData?.analytics?.compare_period_label ?? ''
@@ -493,12 +509,30 @@ function PanelClientContent({
                   : <Skeleton className="h-3 w-24" />
               }
             />
-            <KPICard
-              label="Saldo en cuenta"
-              info={DESKTOP_KPI_INFO.saldo_cuenta}
-              value="—"
-              sub={<span className="text-[11px] text-fg-subtle line-clamp-2">Módulo contabilidad pendiente</span>}
-            />
+            {expensesEnabled ? (
+              <KPICard
+                label="Expensas"
+                info={withPanelTrendInfo(DESKTOP_KPI_INFO.expensas, comparePeriodLabel)}
+                value={kpis?.expensas ? ars(kpis.expensas.value) : <Skeleton className="h-5 w-28" />}
+                sub={
+                  kpis?.resultado != null ? (
+                    <span className="text-[11px] text-fg-muted">
+                      Resultado approx. {ars(kpis.resultado.value)}
+                      {kpis.resultado.pct_change !== 0 && (
+                        <> · <TrendBadge pct={kpis.resultado.pct_change} /></>
+                      )}
+                    </span>
+                  ) : <Skeleton className="h-3 w-24" />
+                }
+              />
+            ) : (
+              <KPICard
+                label="Saldo en cuenta"
+                info={DESKTOP_KPI_INFO.saldo_cuenta}
+                value="—"
+                sub={<span className="text-[11px] text-fg-subtle line-clamp-2">Módulo contabilidad pendiente</span>}
+              />
+            )}
           </div>
         </div>
       </PanelWidgetSlot>
@@ -625,7 +659,12 @@ function PanelClientContent({
       <PanelWidgetSlot widgetId="gastos">
         <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
           <div className="flex items-center justify-between gap-2 mb-4">
-            <span className="text-[13px] font-semibold text-fg">Gastos por proveedor</span>
+            <div>
+              <span className="text-[13px] font-semibold text-fg">Gastos por proveedor</span>
+              <p className="text-[11px] text-fg-muted mt-0.5">
+                {expensesEnabled ? 'Compras + Expensas del período' : 'Compras del período'}
+              </p>
+            </div>
             <PanelWidgetMenu widgetId="gastos" />
           </div>
           {gastos.length > 0 ? (
@@ -633,11 +672,33 @@ function PanelClientContent({
           ) : loading ? (
             <Skeleton shape="block" className="h-40 w-full" />
           ) : (
-            <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Sin datos de compras en el período</div>
+            <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Sin datos de gastos en el período</div>
           )}
         </div>
       </PanelWidgetSlot>
     ),
+    expensas: expensesEnabled ? (
+      <PanelWidgetSlot widgetId="expensas">
+        <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-4">
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div>
+              <span className="text-[13px] font-semibold text-fg">Expensas por tipo</span>
+              <Link href="/expensas/reportes" className="block text-[11px] text-brand-600 hover:underline mt-0.5">
+                Ver reportes
+              </Link>
+            </div>
+            <PanelWidgetMenu widgetId="expensas" />
+          </div>
+          {expensesByKind.length > 0 ? (
+            <PanelDonutChart segments={expensesByKind} />
+          ) : loading ? (
+            <Skeleton shape="block" className="h-40 w-full" />
+          ) : (
+            <div className="h-40 flex items-center justify-center text-sm text-fg-subtle">Sin expensas en el período</div>
+          )}
+        </div>
+      </PanelWidgetSlot>
+    ) : null,
     recent_invoices: (
       <PanelWidgetSlot widgetId="recent_invoices">
         <div className="bg-surface border border-border rounded-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
@@ -744,6 +805,8 @@ function PanelClientContent({
     cashFlow,
     cashView,
     gastos,
+    expensesByKind,
+    expensesEnabled,
     invoices,
     activity,
   ])

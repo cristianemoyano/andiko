@@ -1,8 +1,5 @@
-import type { Metadata } from 'next'
-import { RecurrentesClient } from './RecurrentesClient'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = { title: 'Gastos recurrentes' }
-
-export default function RecurrentesPage() {
-  return <RecurrentesClient />
+export default function RecurrentesRedirect() {
+  redirect('/expensas?kind=recurring_occurrence')
 }

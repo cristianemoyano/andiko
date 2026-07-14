@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('@/lib/db', () => ({ default: {} }))
 
-import { calcExpenseTotals, advanceNextRunDate } from './expenses.utils'
+import { calcExpenseTotals, calcExpenseTotalsFromGross, advanceNextRunDate, buildInstallmentSchedule } from './expenses.utils'
 
 describe('calcExpenseTotals', () => {
   it('computes net, IVA, and total from subtotal/discount/rate', () => {
@@ -59,5 +59,30 @@ describe('advanceNextRunDate', () => {
   it('rolls over the year for a December anchor', () => {
     const next = advanceNextRunDate(new Date('2026-12-31T00:00:00Z'), 'monthly')
     expect(next.toISOString().slice(0, 10)).toBe('2027-01-31')
+  })
+})
+
+describe('calcExpenseTotalsFromGross', () => {
+  it('reverses IVA from a payable total', () => {
+    const totals = calcExpenseTotalsFromGross('121.00', '0.00', '21')
+    expect(totals.total).toBe('121.00')
+    expect(totals.subtotal).toBe('100.00')
+    expect(totals.tax_amount).toBe('21.00')
+  })
+})
+
+describe('buildInstallmentSchedule', () => {
+  it('splits a total into equal cuotas with cent adjustment on the last', () => {
+    const rows = buildInstallmentSchedule({
+      count: 3,
+      firstDueDate: new Date('2026-07-01T00:00:00Z'),
+      frequency: 'monthly',
+      total: '100.00',
+    })
+    expect(rows).toHaveLength(3)
+    expect(rows.map(r => r.amount)).toEqual(['33.33', '33.33', '33.34'])
+    expect(rows[0]!.due_date.toISOString().slice(0, 10)).toBe('2026-07-01')
+    expect(rows[1]!.due_date.toISOString().slice(0, 10)).toBe('2026-08-01')
+    expect(rows[2]!.due_date.toISOString().slice(0, 10)).toBe('2026-09-01')
   })
 })

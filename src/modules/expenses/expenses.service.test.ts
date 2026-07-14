@@ -13,10 +13,18 @@ const { expenseFindByPk, expenseFindOne, paymentFindAll, calcExpenseTotalsMock }
 
 vi.mock('./expense.model', () => ({ default: { findByPk: expenseFindByPk, findOne: expenseFindOne } }))
 vi.mock('./expense-payment.model', () => ({ default: { findAll: paymentFindAll } }))
+vi.mock('./expense-installment.model', () => ({
+  default: { findOne: vi.fn(), findAll: vi.fn(), update: vi.fn(), bulkCreate: vi.fn() },
+}))
+vi.mock('./expense-schedule.model', () => ({ default: {} }))
+vi.mock('./expense-schedules.service', () => ({ createExpenseSchedule: vi.fn() }))
 vi.mock('./expenses-branch-associations', () => ({ ensureExpensesBranchAssociations: vi.fn() }))
 vi.mock('./expenses.utils', () => ({
   nextExpenseDocNumber: vi.fn(),
   calcExpenseTotals: calcExpenseTotalsMock,
+  calcExpenseTotalsFromGross: vi.fn(),
+  buildInstallmentSchedule: vi.fn(),
+  advanceNextRunDate: vi.fn(),
 }))
 vi.mock('@/modules/accounting/expense-accounting.service', () => ({ postExpenseAccounting: vi.fn() }))
 
@@ -27,6 +35,7 @@ const t = {} as never
 function mockExpense(overrides: Record<string, unknown> = {}) {
   return {
     id: 'exp-1',
+    kind: 'one_off',
     status: 'received',
     total: '121.00',
     subtotal: '100.00',

@@ -9,6 +9,7 @@ export type PanelWidgetId =
   | 'stock_alerts'
   | 'cash_flow'
   | 'gastos'
+  | 'expensas'
   | 'recent_invoices'
   | 'activity'
 
@@ -23,6 +24,7 @@ export const PANEL_WIDGETS: Record<PanelWidgetId, { label: string }> = {
   stock_alerts: { label: 'Alertas de stock' },
   cash_flow: { label: 'Flujo de caja' },
   gastos: { label: 'Gastos por proveedor' },
+  expensas: { label: 'Expensas por tipo' },
   recent_invoices: { label: 'Facturas recientes' },
   activity: { label: 'Actividad reciente' },
 }
@@ -41,6 +43,7 @@ export const DEFAULT_PANEL_WIDGET_ORDER: PanelWidgetId[] = [
   'stock_alerts',
   'cash_flow',
   'gastos',
+  'expensas',
   'recent_invoices',
   'activity',
 ]

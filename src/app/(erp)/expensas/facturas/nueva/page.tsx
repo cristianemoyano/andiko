@@ -1,8 +1,5 @@
-import type { Metadata } from 'next'
-import { NuevaFacturaExpensaClient } from './NuevaFacturaExpensaClient'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = { title: 'Nuevo gasto' }
-
-export default function NuevaFacturaExpensaPage() {
-  return <NuevaFacturaExpensaClient />
+export default function NuevaFacturaRedirect() {
+  redirect('/expensas/nueva')
 }
