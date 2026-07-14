@@ -6,8 +6,10 @@ import SupplierInvoice from '@/modules/purchases/supplier-invoice.model'
 import PurchaseReturn from '@/modules/purchases/purchase-return.model'
 import PurchaseOrder from '@/modules/purchases/purchase-order.model'
 import Contact from '@/modules/contacts/contact.model'
+import Expense from '@/modules/expenses/expense.model'
 import { ensurePurchasesBranchAssociations } from '@/modules/purchases/purchases-branch-associations'
 import { ensurePurchaseReturnAssociations } from '@/modules/purchases/purchase-returns.service'
+import { ensureExpensesBranchAssociations } from '@/modules/expenses/expenses-branch-associations'
 import { sumTotals, type LibroIvaResult, type LibroIvaRow } from './libro-iva-ventas.service'
 
 /**
@@ -22,6 +24,7 @@ export async function buildLibroIvaCompras(
 ): Promise<LibroIvaResult> {
   ensurePurchasesBranchAssociations()
   ensurePurchaseReturnAssociations()
+  ensureExpensesBranchAssociations()
 
   const invoices = await SupplierInvoice.findAll({
     where: {
@@ -104,7 +107,43 @@ export async function buildLibroIvaCompras(
       }
     })
 
-  const rows = [...invoiceRows, ...returnRows].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+  const expenses = await Expense.findAll({
+    where: {
+      org_id: ctx.orgId,
+      status: { [Op.notIn]: ['draft', 'cancelled'] },
+      invoice_date: { [Op.between]: [range.from, range.to] },
+    },
+    include: [{ model: Contact, as: 'contact', attributes: ['legal_name', 'cuit'], required: false }],
+    order: [['invoice_date', 'ASC']],
+  })
+
+  const expenseRows: LibroIvaRow[] = expenses.map((d) => {
+    const doc = d as unknown as {
+      invoice_date: Date | string | null
+      invoice_number: string | null
+      expense_number: string
+      subtotal: string
+      discount_amount: string
+      tax_amount: string
+      total: string
+      contact?: { legal_name: string; cuit: string | null } | null
+    }
+    return {
+      date: doc.invoice_date ? new Date(doc.invoice_date).toISOString().slice(0, 10) : null,
+      kind: 'invoice' as const,
+      comprobante_tipo: null,
+      number: doc.invoice_number ?? doc.expense_number,
+      contact_name: doc.contact?.legal_name ?? null,
+      cuit: doc.contact?.cuit ?? null,
+      cae: null,
+      neto: new Decimal(doc.subtotal).minus(doc.discount_amount).toFixed(2),
+      iva: new Decimal(doc.tax_amount).toFixed(2),
+      total: new Decimal(doc.total).toFixed(2),
+      sign: 1 as const,
+    }
+  })
+
+  const rows = [...invoiceRows, ...returnRows, ...expenseRows].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
 
   return {
     from: range.from.toISOString().slice(0, 10),

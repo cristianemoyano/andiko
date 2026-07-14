@@ -13,12 +13,16 @@ export type FileOwnerType =
   | 'contact'
   | 'supplier_invoice'
   | 'purchase_receipt'
+  | 'expense'
+  | 'expense_payment'
 export const FILE_OWNER_TYPES: FileOwnerType[] = [
   'invoice',
   'product',
   'contact',
   'supplier_invoice',
   'purchase_receipt',
+  'expense',
+  'expense_payment',
 ]
 
 export interface FileLinkAttributes extends Timestamps, AuditFields {

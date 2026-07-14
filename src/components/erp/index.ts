@@ -22,6 +22,8 @@ export { SalesWorkflowHelp } from './SalesWorkflowHelp'
 export type { SalesWorkflowHelpProps } from './SalesWorkflowHelp'
 export { AccountingAutoPostHint } from './AccountingAutoPostHint'
 export type { AccountingAutoPostHintProps, AccountingAutoPostScreen } from './AccountingAutoPostHint'
+export { SupplierQuickCreateDialog } from './SupplierQuickCreateDialog'
+
 export { SearchableSelect } from './SearchableSelect'
 export type { SearchableSelectProps, SearchableSelectOption } from './SearchableSelect'
 export { TotalsFooter } from './TotalsFooter'
