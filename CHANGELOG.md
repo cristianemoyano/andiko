@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.48.0](https://github.com/cristianemoyano/andiko/compare/v0.47.1...v0.48.0) (2026-07-14)
+
+### Features
+
+* **expenses:** add Expensas module for recurring business expenses ([2ed21b2](https://github.com/cristianemoyano/andiko/commit/2ed21b27df9b9b6f3ea23e8a8ca7ddf36c8b2f78))
+* **expenses:** unify kinds, reports, panel, and UX polish ([ae977f2](https://github.com/cristianemoyano/andiko/commit/ae977f2c6bbaacce6ef471f9fb213ceebbfb9990))
+
+### Bug Fixes
+
+* **expenses:** fix attachments, IVA rate persistence, and recurrence drift ([70cb831](https://github.com/cristianemoyano/andiko/commit/70cb831a6d1e43b9c0a71a8d9d4527b1de3ab2fd))
+
+
 ## [0.47.1](https://github.com/cristianemoyano/andiko/compare/v0.47.0...v0.47.1) (2026-07-13)
 
 ### Bug Fixes
