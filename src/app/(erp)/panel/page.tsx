@@ -41,6 +41,9 @@ export default async function HomePage() {
     : null
   const orgName = org ? (org.legal_name?.trim() || org.name) : null
 
+  const orgSettings = orgId ? await getEffectiveOrganizationSettings(orgId) : null
+  const expensesEnabled = orgSettings?.enabled_modules.includes('expenses') ?? false
+
   return (
     <Suspense>
       <PanelClient
@@ -48,6 +51,7 @@ export default async function HomePage() {
         initialHiddenWidgets={initialHiddenWidgets}
         initialWidgetOrder={initialWidgetOrder}
         lockedBranchId={caps.nav.panelBranchId}
+        expensesEnabled={expensesEnabled}
       />
     </Suspense>
   )

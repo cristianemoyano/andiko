@@ -31,6 +31,7 @@ const MODULE_GROUP_LABELS: Record<string, string> = {
   purchases: 'Compras',
   accounting: 'Contabilidad',
   logistics: 'Logística',
+  expenses: 'Expensas',
 }
 
 const DEFAULT_ROLE_FILTER_KEY = 'admin'
@@ -44,6 +45,7 @@ const MODULE_GROUP_ORDER = [
   'purchases',
   'accounting',
   'logistics',
+  'expenses',
 ] as const
 
 function TrashIcon({ className }: { className?: string }) {

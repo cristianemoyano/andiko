@@ -7,3 +7,4 @@ import 'server-only'
 // never needs to change.
 import './sales-expire-quotes.action'
 import './webhook-call.action'
+import './expenses-generate-recurring.action'

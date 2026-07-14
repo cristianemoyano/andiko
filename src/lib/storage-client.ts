@@ -32,6 +32,8 @@ export type FileOwnerType =
   | 'contact'
   | 'supplier_invoice'
   | 'purchase_receipt'
+  | 'expense'
+  | 'expense_payment'
 export type SharePrincipalType = 'user' | 'org_role' | 'branch'
 export type SharePermission = 'read' | 'write'
 export type FileStatus = 'pending' | 'available' | 'failed'
@@ -42,6 +44,8 @@ export const FILE_OWNER_TYPE_LABELS: Record<FileOwnerType, string> = {
   contact: 'Contacto',
   supplier_invoice: 'Factura de proveedor',
   purchase_receipt: 'Recepción de compra',
+  expense: 'Gasto',
+  expense_payment: 'Pago de gasto',
 }
 
 export interface OwnerLink {

@@ -113,6 +113,17 @@ export const NAV_MODULES: NavItem[] = [
     ),
   },
   {
+    id: 'expensas',
+    label: 'Expensas',
+    href: '/expensas',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3.5 1.5h9v13l-1.5-1-1.5 1-1.5-1-1.5 1-1.5-1-1.5 1z"/>
+        <path d="M6 5h4M6 7.5h4M6 10h2.5"/>
+      </svg>
+    ),
+  },
+  {
     id: 'control-horario',
     label: 'Control de Horario',
     href: '/control-horario',

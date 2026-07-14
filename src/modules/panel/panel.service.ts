@@ -2,6 +2,7 @@ import 'server-only'
 import sequelize from '@/lib/db'
 import { QueryTypes } from 'sequelize'
 import { OPEN_PAYABLE_INVOICE_STATUSES } from '@/modules/purchases/supplier-invoice.constants'
+import { OPEN_PAYABLE_EXPENSE_STATUSES } from '@/modules/expenses/expense.constants'
 import { OPEN_RECEIVABLE_INVOICE_STATUSES } from '@/modules/sales/invoice.constants'
 
 export type PanelPeriod = 'last_week' | 'last_month' | 'last_3months' | 'last_year' | 'custom'
@@ -141,6 +142,29 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
     WHERE si.org_id = :orgId AND si.deleted_at IS NULL ${bc3}
   `, { replacements: { orgId, openPayableStatuses: [...OPEN_PAYABLE_INVOICE_STATUSES] }, type: QueryTypes.SELECT })
 
+  const bcExp = branchClause('e', filters.branch_id)
+  const [expensePayableRows] = await sequelize.query<SupplierInvoiceKpiRow>(`
+    SELECT
+      COALESCE(SUM(CASE WHEN e.status IN (:openExpenseStatuses) THEN CAST(e.balance AS NUMERIC) END), 0)::text AS cxp_value,
+      COUNT(CASE WHEN e.status IN (:openExpenseStatuses) AND e.due_date < NOW() AND CAST(e.balance AS NUMERIC) > 0 THEN 1 END)::text AS overdue_count
+    FROM expenses e
+    WHERE e.org_id = :orgId AND e.deleted_at IS NULL ${bcExp}
+  `, { replacements: { orgId, openExpenseStatuses: [...OPEN_PAYABLE_EXPENSE_STATUSES] }, type: QueryTypes.SELECT })
+
+  const [expensePeriodRows] = await sequelize.query<{ current: string; previous: string }>(`
+    SELECT
+      COALESCE(SUM(CASE WHEN e.status NOT IN ('draft', 'cancelled')
+        AND COALESCE(e.invoice_date, e.created_at) >= :from
+        AND COALESCE(e.invoice_date, e.created_at) <= :to
+        THEN CAST(e.total AS NUMERIC) END), 0)::text AS current,
+      COALESCE(SUM(CASE WHEN e.status NOT IN ('draft', 'cancelled')
+        AND COALESCE(e.invoice_date, e.created_at) >= :prevFrom
+        AND COALESCE(e.invoice_date, e.created_at) < :from
+        THEN CAST(e.total AS NUMERIC) END), 0)::text AS previous
+    FROM expenses e
+    WHERE e.org_id = :orgId AND e.deleted_at IS NULL ${bcExp}
+  `, { replacements: { orgId, from, to, prevFrom, prevTo }, type: QueryTypes.SELECT })
+
   const [cobradoRows] = await sequelize.query<KpiRow>(`
     SELECT
       COALESCE(SUM(CASE WHEN p.payment_date >= :from AND p.payment_date <= :to THEN CAST(p.amount AS NUMERIC) END), 0)::text AS current,
@@ -165,6 +189,12 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
   const facturadoPrev = parseFloat(invoiceRows?.facturado_previous ?? '0')
   const cobradoCurrent = parseFloat(cobradoRows?.current ?? '0')
   const cobradoPrev = parseFloat(cobradoRows?.previous ?? '0')
+  const expensesCurrent = parseFloat(expensePeriodRows?.current ?? '0')
+  const expensesPrev = parseFloat(expensePeriodRows?.previous ?? '0')
+  const porPagarPurchases = parseFloat(supplierInvoiceRows?.cxp_value ?? '0')
+  const porPagarExpenses = parseFloat(expensePayableRows?.cxp_value ?? '0')
+  const overduePurchases = parseInt(supplierInvoiceRows?.overdue_count ?? '0', 10)
+  const overdueExpenses = parseInt(expensePayableRows?.overdue_count ?? '0', 10)
 
   const pctChange = (cur: number, prev: number) =>
     prev === 0 ? 0 : Math.round(((cur - prev) / prev) * 100)
@@ -185,8 +215,16 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
       overdue_count: parseInt(invoiceRows?.overdue_count ?? '0', 10),
     },
     por_pagar: {
-      value: parseFloat(supplierInvoiceRows?.cxp_value ?? '0'),
-      overdue_count: parseInt(supplierInvoiceRows?.overdue_count ?? '0', 10),
+      value: porPagarPurchases + porPagarExpenses,
+      overdue_count: overduePurchases + overdueExpenses,
+    },
+    expensas: {
+      value: expensesCurrent,
+      pct_change: pctChange(expensesCurrent, expensesPrev),
+    },
+    resultado: {
+      value: facturadoCurrent - expensesCurrent,
+      pct_change: pctChange(facturadoCurrent - expensesCurrent, facturadoPrev - expensesPrev),
     },
     saldo_cuenta: null,
   }
@@ -564,20 +602,59 @@ const DONUT_COLORS = ['#0C647A', '#0E7E9A', '#38A3BF', '#6EC9DF', '#A2DCE7', '#D
 export async function getPanelGastos(orgId: string, filters: PanelFilters) {
   const { from, to } = resolveDateRange(filters)
   const bc = branchClause('si', filters.branch_id)
+  const bcExp = branchClause('e', filters.branch_id)
 
   const rows = await sequelize.query<{ label: string; value: string }>(`
-    SELECT c.legal_name AS label, SUM(CAST(si.total AS NUMERIC))::text AS value
-    FROM supplier_invoices si
-    JOIN contacts c ON c.id = si.contact_id
-    WHERE si.org_id = :orgId AND si.deleted_at IS NULL
-      AND si.invoice_date >= :from AND si.invoice_date <= :to ${bc}
-    GROUP BY c.legal_name
-    ORDER BY SUM(CAST(si.total AS NUMERIC)) DESC
+    SELECT label, SUM(value)::text AS value FROM (
+      SELECT c.legal_name AS label, CAST(si.total AS NUMERIC) AS value
+      FROM supplier_invoices si
+      JOIN contacts c ON c.id = si.contact_id
+      WHERE si.org_id = :orgId AND si.deleted_at IS NULL
+        AND si.invoice_date >= :from AND si.invoice_date <= :to ${bc}
+      UNION ALL
+      SELECT c.legal_name AS label, CAST(e.total AS NUMERIC) AS value
+      FROM expenses e
+      JOIN contacts c ON c.id = e.contact_id
+      WHERE e.org_id = :orgId AND e.deleted_at IS NULL
+        AND e.status NOT IN ('draft', 'cancelled')
+        AND COALESCE(e.invoice_date, e.created_at) >= :from
+        AND COALESCE(e.invoice_date, e.created_at) <= :to ${bcExp}
+    ) combined
+    GROUP BY label
+    ORDER BY SUM(value) DESC
     LIMIT 6
   `, { replacements: { orgId, from, to }, type: QueryTypes.SELECT })
 
   return rows.map((r, i) => ({
     label: r.label,
+    value: parseFloat(r.value),
+    color: DONUT_COLORS[i] ?? '#A2DCE7',
+  }))
+}
+
+const EXPENSE_KIND_LABEL: Record<string, string> = {
+  one_off: 'Único',
+  recurring_occurrence: 'Recurrente',
+  installment_plan: 'Plan / cuotas',
+}
+
+export async function getPanelExpensesByKind(orgId: string, filters: PanelFilters) {
+  const { from, to } = resolveDateRange(filters)
+  const bc = branchClause('e', filters.branch_id)
+
+  const rows = await sequelize.query<{ kind: string; value: string }>(`
+    SELECT e.kind, SUM(CAST(e.total AS NUMERIC))::text AS value
+    FROM expenses e
+    WHERE e.org_id = :orgId AND e.deleted_at IS NULL
+      AND e.status NOT IN ('draft', 'cancelled')
+      AND COALESCE(e.invoice_date, e.created_at) >= :from
+      AND COALESCE(e.invoice_date, e.created_at) <= :to ${bc}
+    GROUP BY e.kind
+    ORDER BY SUM(CAST(e.total AS NUMERIC)) DESC
+  `, { replacements: { orgId, from, to }, type: QueryTypes.SELECT })
+
+  return rows.map((r, i) => ({
+    label: EXPENSE_KIND_LABEL[r.kind] ?? r.kind,
     value: parseFloat(r.value),
     color: DONUT_COLORS[i] ?? '#A2DCE7',
   }))
@@ -683,17 +760,19 @@ export interface PanelKpisPayload {
   counts: Awaited<ReturnType<typeof getPanelCounts>>
   cash_flow: Awaited<ReturnType<typeof getPanelCashFlow>>
   gastos: Awaited<ReturnType<typeof getPanelGastos>>
+  expenses_by_kind: Awaited<ReturnType<typeof getPanelExpensesByKind>>
   performance_series: PerformanceSeriesPoint[]
   analytics: PanelAnalytics
 }
 
-/** Loads all KPI/chart data for /api/v1/panel/kpis in one parallel batch (~9 SQL round-trips). */
+/** Loads all KPI/chart data for /api/v1/panel/kpis in one parallel batch. */
 export async function getPanelKpisPayload(orgId: string, filters: PanelFilters): Promise<PanelKpisPayload> {
-  const [kpis, counts, cash_flow, gastos, performance_series, salesMetrics, topProducts] = await Promise.all([
+  const [kpis, counts, cash_flow, gastos, expenses_by_kind, performance_series, salesMetrics, topProducts] = await Promise.all([
     getPanelKpis(orgId, filters),
     getPanelCounts(orgId, filters),
     getPanelCashFlow(orgId, filters),
     getPanelGastos(orgId, filters),
+    getPanelExpensesByKind(orgId, filters),
     getPanelPerformanceSeries(orgId, filters),
     getPanelSalesMetrics(orgId, filters),
     getPanelTopProducts(orgId, filters),
@@ -707,5 +786,5 @@ export async function getPanelKpisPayload(orgId: string, filters: PanelFilters):
     formatComparePeriodLabel(prevFrom, prevTo),
   )
 
-  return { kpis, counts, cash_flow, gastos, performance_series, analytics }
+  return { kpis, counts, cash_flow, gastos, expenses_by_kind, performance_series, analytics }
 }

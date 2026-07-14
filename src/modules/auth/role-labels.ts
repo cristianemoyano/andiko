@@ -93,6 +93,8 @@ export const DEFAULT_ORG_ROLE_TEMPLATES: DefaultOrgRoleTemplate[] = [
       'inventory:read',
       'inventory:write',
       'products:read',
+      'expenses:read',
+      'expenses:write',
     ],
   },
   {
@@ -105,6 +107,7 @@ export const DEFAULT_ORG_ROLE_TEMPLATES: DefaultOrgRoleTemplate[] = [
       'sales:read',
       'purchases:read',
       'contacts:read',
+      'expenses:read',
     ],
   },
   {

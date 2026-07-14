@@ -10,6 +10,7 @@ export const ORG_MODULE_KEYS = [
   'accounting',
   'pos',
   'automations',
+  'expenses',
   'hr',
 ] as const
 
@@ -32,6 +33,7 @@ export const ORG_MODULE_DEFS: OrgModuleDef[] = [
   { key: 'accounting', label: 'Contabilidad', tier: 'premium' },
   { key: 'pos', label: 'POS (punto de venta)', tier: 'premium' },
   { key: 'automations', label: 'Automatizaciones', tier: 'premium' },
+  { key: 'expenses', label: 'Expensas', tier: 'premium' },
   { key: 'hr', label: 'Recursos Humanos', tier: 'premium' },
 ]
 
@@ -61,6 +63,7 @@ export const ROUTE_PREFIX_TO_MODULE: ReadonlyArray<{ prefix: string; module: Org
   { prefix: '/catalogo', module: 'catalog' },
   { prefix: '/pos', module: 'pos' },
   { prefix: '/automatizaciones', module: 'automations' },
+  { prefix: '/expensas', module: 'expenses' },
   { prefix: '/control-horario', module: 'hr' },
 ]
 
@@ -78,6 +81,7 @@ export const NAV_ID_TO_MODULE: Record<string, OrgModuleKey> = {
   'pos-cajas': 'pos',
   'pos-medios-de-pago': 'pos',
   automatizaciones: 'automations',
+  expensas: 'expenses',
   'control-horario': 'hr',
 }
 
@@ -102,6 +106,7 @@ export const PERMISSION_RESOURCE_TO_MODULE: Record<string, OrgModuleKey> = {
   accounting: 'accounting',
   pos: 'pos',
   automations: 'automations',
+  expenses: 'expenses',
   employees: 'hr',
   attendance: 'hr',
 }
