@@ -54,11 +54,28 @@ export async function nextExpenseDocNumber(
 
 // ─── Recurrence ──────────────────────────────────────────────────────────────
 
-/** Advances a recurring template's `next_run_date` by its frequency. */
+/**
+ * Advances a recurring template's `next_run_date` by its frequency.
+ *
+ * `monthly` clamps to the last day of the target month instead of overflowing
+ * (plain `Date.setMonth` arithmetic) — a template anchored on Jan 31 must land
+ * on Feb 28/29, not roll over into March, or the anchor day drifts forward
+ * permanently on every subsequent cycle.
+ */
 export function advanceNextRunDate(current: Date, frequency: 'monthly' | 'weekly'): Date {
+  if (frequency === 'weekly') {
+    const next = new Date(current)
+    next.setUTCDate(next.getUTCDate() + 7)
+    return next
+  }
+
+  const targetYear  = current.getUTCFullYear()
+  const targetMonth = current.getUTCMonth() + 1
+  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate()
+  const day = Math.min(current.getUTCDate(), lastDayOfTargetMonth)
+
   const next = new Date(current)
-  if (frequency === 'monthly') next.setMonth(next.getMonth() + 1)
-  else next.setDate(next.getDate() + 7)
+  next.setUTCFullYear(targetYear, targetMonth, day)
   return next
 }
 

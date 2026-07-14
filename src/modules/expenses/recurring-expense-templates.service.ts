@@ -142,6 +142,7 @@ export async function generateExpenseFromTemplate(
       expense_number:        docNumber,
       description:           template.description,
       expense_account_code:  template.expense_account_code,
+      iva_rate:              template.iva_rate as IvaRate,
       status:                'draft',
       invoice_date:          now,
       due_date:              now,

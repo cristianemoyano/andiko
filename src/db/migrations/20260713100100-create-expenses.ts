@@ -21,6 +21,7 @@ export const up: Migration = async ({ context: queryInterface }) => {
       invoice_date           TIMESTAMPTZ,
       due_date               TIMESTAMPTZ,
       currency               VARCHAR(3)    NOT NULL DEFAULT 'ARS',
+      iva_rate               VARCHAR(10)   NOT NULL DEFAULT '21',
       subtotal               NUMERIC(15,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
       discount_amount        NUMERIC(15,2) NOT NULL DEFAULT 0 CHECK (discount_amount >= 0),
       tax_amount             NUMERIC(15,2) NOT NULL DEFAULT 0 CHECK (tax_amount >= 0),
@@ -41,11 +42,13 @@ export const up: Migration = async ({ context: queryInterface }) => {
     CREATE INDEX idx_expenses_contact    ON expenses(contact_id)        WHERE deleted_at IS NULL;
     CREATE INDEX idx_expenses_template   ON expenses(recurring_template_id) WHERE deleted_at IS NULL AND recurring_template_id IS NOT NULL;
     CREATE INDEX idx_expenses_status     ON expenses(status)            WHERE deleted_at IS NULL;
+    CREATE INDEX idx_expenses_buyer      ON expenses(buyer_id)          WHERE deleted_at IS NULL AND buyer_id IS NOT NULL;
   `)
 }
 
 export const down: Migration = async ({ context: queryInterface }) => {
   await queryInterface.sequelize.query(`
+    DROP INDEX IF EXISTS idx_expenses_buyer;
     DROP INDEX IF EXISTS idx_expenses_status;
     DROP INDEX IF EXISTS idx_expenses_template;
     DROP INDEX IF EXISTS idx_expenses_contact;

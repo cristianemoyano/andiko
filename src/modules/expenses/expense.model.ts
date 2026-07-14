@@ -1,7 +1,7 @@
 import { DataTypes, Optional } from 'sequelize'
 import sequelize from '@/lib/db'
 import { AuditModel, auditColumnDefs } from '@/lib/base-model'
-import type { UUID, Timestamps, AuditFields } from '@/types'
+import type { UUID, Timestamps, AuditFields, IvaRate } from '@/types'
 import User from '@/modules/auth/user.model'
 import RecurringExpenseTemplate from './recurring-expense-template.model'
 
@@ -24,6 +24,7 @@ export interface ExpenseAttributes extends Timestamps, AuditFields {
   invoice_date: Date | null
   due_date: Date | null
   currency: string
+  iva_rate: IvaRate
   subtotal: string
   discount_amount: string
   tax_amount: string
@@ -36,7 +37,7 @@ export interface ExpenseAttributes extends Timestamps, AuditFields {
 type ExpenseCreationAttributes = Optional<
   ExpenseAttributes,
   | 'id' | 'branch_id' | 'contact_id' | 'recurring_template_id' | 'buyer_id'
-  | 'invoice_number' | 'status' | 'invoice_date' | 'due_date' | 'currency'
+  | 'invoice_number' | 'status' | 'invoice_date' | 'due_date' | 'currency' | 'iva_rate'
   | 'subtotal' | 'discount_amount' | 'tax_amount' | 'total' | 'paid_amount' | 'balance'
   | 'notes'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
@@ -56,6 +57,7 @@ class Expense extends AuditModel<ExpenseAttributes, ExpenseCreationAttributes> {
   declare invoice_date: Date | null
   declare due_date: Date | null
   declare currency: string
+  declare iva_rate: IvaRate
   declare subtotal: string
   declare discount_amount: string
   declare tax_amount: string
@@ -80,6 +82,7 @@ Expense.init(
     invoice_date:          { type: DataTypes.DATE },
     due_date:              { type: DataTypes.DATE },
     currency:              { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'ARS' },
+    iva_rate:              { type: DataTypes.STRING(10), allowNull: false, defaultValue: '21' },
     subtotal:              { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
     discount_amount:       { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
     tax_amount:            { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: '0.00' },
