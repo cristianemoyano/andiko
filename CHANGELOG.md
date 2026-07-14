@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.48.1](https://github.com/cristianemoyano/andiko/compare/v0.48.0...v0.48.1) (2026-07-14)
+
 ## [0.48.0](https://github.com/cristianemoyano/andiko/compare/v0.47.1...v0.48.0) (2026-07-14)
 
 ### Features

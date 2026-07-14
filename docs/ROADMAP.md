@@ -11,6 +11,8 @@ Infraestructura base sin lógica de negocio.
 
 - [x] Scaffold Next.js 16 + TypeScript + Tailwind
 - [x] pnpm, Vitest, ESLint, commitlint, husky, lint-staged
+- [x] TypeScript 6.0 en todos los workspaces (preparación para TS 7 nativo — ver [docs/plans/typescript-6-upgrade.md](plans/typescript-6-upgrade.md))
+- [ ] TypeScript 7 (tsgo): esperar soporte nativo en Next.js + API estable 7.1 (typescript-eslint); verificar binarios nativos vs `node:24-alpine`
 - [x] release-it + conventional changelog
 - [x] AGENTS.md + skills de Claude (ship-feature, release, setup-tooling)
 - [x] Docker Compose con PostgreSQL 16 + pgAdmin (Colima como engine)
