@@ -1,6 +1,7 @@
 import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { handleApiError } from '@/lib/api-error'
 import { can, type Permission } from '@/lib/permissions'
 import { isModuleEnabled, moduleForPermission } from '@/modules/auth/organization-settings.service'
 import { resolveOrgScope } from '@/lib/session-org'
@@ -97,7 +98,11 @@ export function withPermission<P extends Record<string, string> = Record<string,
       )
     }
 
-    return handler(req, ctx, session as AuthedSession)
+    try {
+      return await handler(req, ctx, session as AuthedSession)
+    } catch (err) {
+      return handleApiError(err)
+    }
   }
 }
 
@@ -148,7 +153,11 @@ export function withTenantAnyPermission<P extends Record<string, string> = Recor
 
     const tenant = await resolveTenantContext(session.user)
     if ('error' in tenant) return tenant.error
-    return handler(req, ctx, session as AuthedSession, tenant.ctx)
+    try {
+      return await handler(req, ctx, session as AuthedSession, tenant.ctx)
+    } catch (err) {
+      return handleApiError(err)
+    }
   }
 }
 
@@ -170,7 +179,11 @@ export function withTenantAuth<P extends Record<string, string> = Record<string,
     }
     const tenant = await resolveTenantContext((session as AuthedSession).user)
     if ('error' in tenant) return tenant.error
-    return handler(req, ctx, session as AuthedSession, tenant.ctx)
+    try {
+      return await handler(req, ctx, session as AuthedSession, tenant.ctx)
+    } catch (err) {
+      return handleApiError(err)
+    }
   }
 }
 
