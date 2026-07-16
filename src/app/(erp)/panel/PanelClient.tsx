@@ -28,13 +28,19 @@ type Period = PanelPeriod
 
 interface KpisData {
   kpis: {
+    facturacion_neta: { value: number; pct_change: number }
+    margen_bruto: { value: number; pct_change: number }
+    margen_ganancia_pct: { value: number | null; pct_change: number }
+    rentabilidad: { value: number; pct: number | null; pct_change: number }
+    punto_equilibrio: number | null
+    cost_coverage_pct: number
     facturado: { value: number; pct_change: number; spark: number[] }
     cobrado:   { value: number; pct_change: number; spark: number[] }
     por_cobrar: { value: number; overdue_count: number }
     por_pagar: { value: number; overdue_count: number }
     expensas?: { value: number; pct_change: number }
-    resultado?: { value: number; pct_change: number }
     saldo_cuenta: null
+    saldo_cuenta_status: 'unavailable_treasury'
   }
   counts: { productos: number; clientes: number; proveedores: number; comprobantes: number }
   cash_flow: { semanal: BarChartDataPoint[]; mensual: BarChartDataPoint[]; anual: BarChartDataPoint[] }
@@ -79,17 +85,22 @@ const INVOICE_STATUS_MAP: Record<string, string> = {
 import { BRAND_CHART_COLOR } from '@/lib/brand-colors'
 
 const DESKTOP_KPI_INFO = {
-  facturado:
-    'Total facturado en el período seleccionado. Incluye IVA. Excluye borradores y anulados.',
-  cobrado:
-    'Pagos registrados en el período, según fecha de cobro (no fecha de emisión de la factura).',
+  facturacion_neta:
+    'Ventas netas del período (base imponible sin IVA). Excluye borradores y anulados.',
+  margen_bruto:
+    'Facturación neta menos costo de mercadería vendida (CMV). El CMV usa el costo al momento de la venta.',
+  margen_ganancia_pct:
+    'Ganancia sobre la venta: (facturación neta − CMV) ÷ facturación neta. No es markup sobre el costo.',
+  rentabilidad:
+    'Ganancia sobre la venta después de expensas: (facturación neta − CMV − expensas) ÷ facturación neta, más el monto en pesos.',
+  punto_equilibrio:
+    'Facturación neta mínima para cubrir expensas al margen actual: expensas ÷ margen de ganancia. Vacío si el margen es ≤ 0.',
+  saldo_cuenta:
+    'Saldo en cuentas bancarias. Requiere el módulo Tesorería (próximamente); no se calcula desde Caja/Banco del libro mayor.',
   por_cobrar:
     'Saldo pendiente de cobro en facturas emitidas o parcialmente pagadas. Incluye vencidas y al día.',
-  saldo_cuenta: 'Saldo bancario/contable. Disponible cuando esté activo el módulo de contabilidad.',
-  expensas:
-    'Gastos del módulo Expensas en el período (únicos, recurrentes y planes). Excluye borradores y cancelados.',
-  resultado:
-    'Facturado menos Expensas del período. Aproximación de resultado operativo (no incluye costo de mercadería ni compras de mercadería).',
+  por_pagar:
+    'Saldo pendiente con proveedores (compras y expensas abiertas).',
 } as const
 
 const ars = (v: number) =>
@@ -122,6 +133,15 @@ function getPeriodLabel(period: Period, fromDate: string, toDate: string): strin
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────
+
+function CostCoverageWarning({ pct }: { pct: number }) {
+  if (pct >= 100) return null
+  return (
+    <span className="text-[11px] font-medium text-warning line-clamp-2">
+      Costo disponible en el {pct}% de la facturación neta
+    </span>
+  )
+}
 
 function TrendBadge({ pct }: { pct: number }) {
   if (pct > 0) return <span className="text-[11px] font-medium text-success truncate block">↑ {pct}% vs período anterior</span>
@@ -480,25 +500,69 @@ function PanelClientContent({
           <div className="flex justify-end mb-1">
             <PanelWidgetMenu widgetId="kpi_cards" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
             <KPICard
-              label="Facturado"
-              info={withPanelTrendInfo(DESKTOP_KPI_INFO.facturado, comparePeriodLabel)}
-              value={kpis ? ars(kpis.facturado.value) : <Skeleton className="h-5 w-28" />}
-              spark={kpis?.facturado.spark}
-              sparkColor={kpis && kpis.facturado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
-              sub={kpis ? <TrendBadge pct={kpis.facturado.pct_change} /> : <Skeleton className="h-3 w-24" />}
+              label="Facturación (neta)"
+              info={withPanelTrendInfo(DESKTOP_KPI_INFO.facturacion_neta, comparePeriodLabel)}
+              value={kpis ? ars(kpis.facturacion_neta.value) : <Skeleton className="h-5 w-28" />}
+              sub={kpis ? <TrendBadge pct={kpis.facturacion_neta.pct_change} /> : <Skeleton className="h-3 w-24" />}
             />
             <KPICard
-              label="Cobrado"
-              info={withPanelTrendInfo(DESKTOP_KPI_INFO.cobrado, comparePeriodLabel)}
-              value={kpis ? ars(kpis.cobrado.value) : <Skeleton className="h-5 w-28" />}
-              spark={kpis?.cobrado.spark}
-              sparkColor={kpis && kpis.cobrado.pct_change >= 0 ? '#16A34A' : '#DC2626'}
-              sub={kpis ? <TrendBadge pct={kpis.cobrado.pct_change} /> : <Skeleton className="h-3 w-24" />}
+              label="Margen bruto"
+              info={withPanelTrendInfo(DESKTOP_KPI_INFO.margen_bruto, comparePeriodLabel)}
+              value={kpis ? ars(kpis.margen_bruto.value) : <Skeleton className="h-5 w-28" />}
+              sub={
+                kpis ? (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] text-fg-muted">
+                      Margen de ganancia{' '}
+                      {kpis.margen_ganancia_pct.value != null ? `${kpis.margen_ganancia_pct.value}%` : '—'}
+                    </span>
+                    <CostCoverageWarning pct={kpis.cost_coverage_pct} />
+                    <TrendBadge pct={kpis.margen_bruto.pct_change} />
+                  </div>
+                ) : <Skeleton className="h-3 w-24" />
+              }
             />
             <KPICard
-              label="Cuentas por cobrar"
+              label="Rentabilidad"
+              info={withPanelTrendInfo(DESKTOP_KPI_INFO.rentabilidad, comparePeriodLabel)}
+              value={kpis ? ars(kpis.rentabilidad.value) : <Skeleton className="h-5 w-28" />}
+              sub={
+                kpis ? (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] text-fg-muted">
+                      {kpis.rentabilidad.pct != null ? `${kpis.rentabilidad.pct}% sobre venta` : 'Sin ventas en el período'}
+                    </span>
+                    <TrendBadge pct={kpis.rentabilidad.pct_change} />
+                  </div>
+                ) : <Skeleton className="h-3 w-24" />
+              }
+            />
+            <KPICard
+              label="Punto de equilibrio"
+              info={DESKTOP_KPI_INFO.punto_equilibrio}
+              value={kpis?.punto_equilibrio != null ? ars(kpis.punto_equilibrio) : '—'}
+              sub={
+                kpis
+                  ? kpis.punto_equilibrio != null
+                    ? <span className="text-[11px] text-fg-muted">Facturación neta mínima</span>
+                    : <span className="text-[11px] text-fg-subtle">Margen ≤ 0 o sin expensas</span>
+                  : <Skeleton className="h-3 w-24" />
+              }
+            />
+            <KPICard
+              label="Dinero en cuentas"
+              info={DESKTOP_KPI_INFO.saldo_cuenta}
+              value="—"
+              sub={
+                <span className="text-[11px] text-fg-subtle line-clamp-3">
+                  Sin cuentas bancarias — próximamente en Tesorería
+                </span>
+              }
+            />
+            <KPICard
+              label="Por cobrar"
               info={DESKTOP_KPI_INFO.por_cobrar}
               value={kpis ? ars(kpis.por_cobrar.value) : <Skeleton className="h-5 w-28" />}
               sub={
@@ -509,30 +573,18 @@ function PanelClientContent({
                   : <Skeleton className="h-3 w-24" />
               }
             />
-            {expensesEnabled ? (
-              <KPICard
-                label="Expensas"
-                info={withPanelTrendInfo(DESKTOP_KPI_INFO.expensas, comparePeriodLabel)}
-                value={kpis?.expensas ? ars(kpis.expensas.value) : <Skeleton className="h-5 w-28" />}
-                sub={
-                  kpis?.resultado != null ? (
-                    <span className="text-[11px] text-fg-muted">
-                      Resultado approx. {ars(kpis.resultado.value)}
-                      {kpis.resultado.pct_change !== 0 && (
-                        <> · <TrendBadge pct={kpis.resultado.pct_change} /></>
-                      )}
-                    </span>
-                  ) : <Skeleton className="h-3 w-24" />
-                }
-              />
-            ) : (
-              <KPICard
-                label="Saldo en cuenta"
-                info={DESKTOP_KPI_INFO.saldo_cuenta}
-                value="—"
-                sub={<span className="text-[11px] text-fg-subtle line-clamp-2">Módulo contabilidad pendiente</span>}
-              />
-            )}
+            <KPICard
+              label="Por pagar"
+              info={DESKTOP_KPI_INFO.por_pagar}
+              value={kpis ? ars(kpis.por_pagar.value) : <Skeleton className="h-5 w-28" />}
+              sub={
+                kpis
+                  ? kpis.por_pagar.overdue_count > 0
+                    ? <span className="text-[11px] font-medium text-warning">{kpis.por_pagar.overdue_count} vencida{kpis.por_pagar.overdue_count > 1 ? 's' : ''}</span>
+                    : <span className="text-[11px] text-success">Al día</span>
+                  : <Skeleton className="h-3 w-24" />
+              }
+            />
           </div>
         </div>
       </PanelWidgetSlot>

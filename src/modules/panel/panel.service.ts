@@ -4,6 +4,13 @@ import { QueryTypes } from 'sequelize'
 import { OPEN_PAYABLE_INVOICE_STATUSES } from '@/modules/purchases/supplier-invoice.constants'
 import { OPEN_PAYABLE_EXPENSE_STATUSES } from '@/modules/expenses/expense.constants'
 import { OPEN_RECEIVABLE_INVOICE_STATUSES } from '@/modules/sales/invoice.constants'
+import {
+  calcCostCoveragePct,
+  calcMargenBruto,
+  calcMargenGananciaPct,
+  calcPuntoEquilibrio,
+  calcRentabilidad,
+} from './panel-metrics'
 
 export type PanelPeriod = 'last_week' | 'last_month' | 'last_3months' | 'last_year' | 'custom'
 
@@ -117,6 +124,14 @@ interface ActivityRow {
   text: string
   occurred_at: Date
 }
+interface MarginKpiRow {
+  net_sales_current: string
+  net_sales_previous: string
+  cmv_current: string
+  cmv_previous: string
+  covered_revenue_current: string
+  total_revenue_current: string
+}
 
 export async function getPanelKpis(orgId: string, filters: PanelFilters) {
   const { from, to, prevFrom, prevTo } = resolveDateRange(filters)
@@ -173,6 +188,29 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
     WHERE p.org_id = :orgId AND p.deleted_at IS NULL ${bc2}
   `, { replacements: { orgId, from, to, prevFrom, prevTo }, type: QueryTypes.SELECT })
 
+  const [marginRows] = await sequelize.query<MarginKpiRow>(`
+    SELECT
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to
+        THEN CAST(ii.tax_base AS NUMERIC) END), 0)::text AS net_sales_current,
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :prevFrom AND i.issue_date < :from
+        THEN CAST(ii.tax_base AS NUMERIC) END), 0)::text AS net_sales_previous,
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to
+        AND COALESCE(ii.unit_cost, pv.cost_price) IS NOT NULL
+        THEN CAST(ii.quantity AS NUMERIC) * COALESCE(CAST(ii.unit_cost AS NUMERIC), CAST(pv.cost_price AS NUMERIC)) END), 0)::text AS cmv_current,
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :prevFrom AND i.issue_date < :from
+        AND COALESCE(ii.unit_cost, pv.cost_price) IS NOT NULL
+        THEN CAST(ii.quantity AS NUMERIC) * COALESCE(CAST(ii.unit_cost AS NUMERIC), CAST(pv.cost_price AS NUMERIC)) END), 0)::text AS cmv_previous,
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to
+        AND COALESCE(ii.unit_cost, pv.cost_price) IS NOT NULL
+        THEN CAST(ii.tax_base AS NUMERIC) END), 0)::text AS covered_revenue_current,
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to
+        THEN CAST(ii.tax_base AS NUMERIC) END), 0)::text AS total_revenue_current
+    FROM invoices i
+    INNER JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.deleted_at IS NULL
+    LEFT JOIN product_variants pv ON pv.id = ii.variant_id AND pv.deleted_at IS NULL
+    WHERE i.org_id = :orgId AND i.deleted_at IS NULL ${bc}
+  `, { replacements: { orgId, from, to, prevFrom, prevTo }, type: QueryTypes.SELECT })
+
   const sparkRows = await sequelize.query<SparkRow>(`
     SELECT
       TO_CHAR(DATE_TRUNC('month', i.issue_date), 'Mon') AS month,
@@ -196,10 +234,49 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
   const overduePurchases = parseInt(supplierInvoiceRows?.overdue_count ?? '0', 10)
   const overdueExpenses = parseInt(expensePayableRows?.overdue_count ?? '0', 10)
 
+  const facturacionNetaCurrent = parseFloat(marginRows?.net_sales_current ?? '0')
+  const facturacionNetaPrev = parseFloat(marginRows?.net_sales_previous ?? '0')
+  const cmvCurrent = parseFloat(marginRows?.cmv_current ?? '0')
+  const cmvPrev = parseFloat(marginRows?.cmv_previous ?? '0')
+  const coveredRevenueCurrent = parseFloat(marginRows?.covered_revenue_current ?? '0')
+  const totalRevenueCurrent = parseFloat(marginRows?.total_revenue_current ?? '0')
+
+  const margenBrutoCurrent = calcMargenBruto(facturacionNetaCurrent, cmvCurrent)
+  const margenBrutoPrev = calcMargenBruto(facturacionNetaPrev, cmvPrev)
+  const margenGananciaCurrent = calcMargenGananciaPct(facturacionNetaCurrent, cmvCurrent)
+  const margenGananciaPrev = calcMargenGananciaPct(facturacionNetaPrev, cmvPrev)
+  const rentabilidadCurrent = calcRentabilidad(facturacionNetaCurrent, cmvCurrent, expensesCurrent)
+  const rentabilidadPrev = calcRentabilidad(facturacionNetaPrev, cmvPrev, expensesPrev)
+  const costCoveragePct = calcCostCoveragePct(coveredRevenueCurrent, totalRevenueCurrent)
+
   const pctChange = (cur: number, prev: number) =>
     prev === 0 ? 0 : Math.round(((cur - prev) / prev) * 100)
 
+  const pctPointChange = (cur: number | null, prev: number | null) => {
+    if (cur == null || prev == null) return 0
+    return Math.round((cur - prev) * 100) / 100
+  }
+
   return {
+    facturacion_neta: {
+      value: facturacionNetaCurrent,
+      pct_change: pctChange(facturacionNetaCurrent, facturacionNetaPrev),
+    },
+    margen_bruto: {
+      value: margenBrutoCurrent,
+      pct_change: pctChange(margenBrutoCurrent, margenBrutoPrev),
+    },
+    margen_ganancia_pct: {
+      value: margenGananciaCurrent,
+      pct_change: pctPointChange(margenGananciaCurrent, margenGananciaPrev),
+    },
+    rentabilidad: {
+      value: rentabilidadCurrent.value,
+      pct: rentabilidadCurrent.pct,
+      pct_change: pctChange(rentabilidadCurrent.value, rentabilidadPrev.value),
+    },
+    punto_equilibrio: calcPuntoEquilibrio(expensesCurrent, margenGananciaCurrent),
+    cost_coverage_pct: costCoveragePct,
     facturado: {
       value: facturadoCurrent,
       pct_change: pctChange(facturadoCurrent, facturadoPrev),
@@ -222,11 +299,8 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
       value: expensesCurrent,
       pct_change: pctChange(expensesCurrent, expensesPrev),
     },
-    resultado: {
-      value: facturadoCurrent - expensesCurrent,
-      pct_change: pctChange(facturadoCurrent - expensesCurrent, facturadoPrev - expensesPrev),
-    },
     saldo_cuenta: null,
+    saldo_cuenta_status: 'unavailable_treasury' as const,
   }
 }
 

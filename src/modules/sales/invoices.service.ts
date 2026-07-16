@@ -23,6 +23,7 @@ import { isOrderInvoiceable } from './sales-order-workflow'
 import type { InvoiceStatus } from './invoice.model'
 import type { IvaRate } from '@/types'
 import { postInvoiceIssuedAccounting } from '@/modules/accounting/sales-invoice-accounting.service'
+import { resolveVariantUnitCosts, snapshotUnitCost } from './invoice-item-cost'
 
 export async function listInvoices(query: InvoiceQuery, ctx: TenantContext) {
   ensureSalesBranchAssociations()
@@ -202,6 +203,8 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
       { transaction: t },
     )
 
+    const costByVariant = await resolveVariantUnitCosts(items.map(i => i.variant_id), orgId, t)
+
     await InvoiceItem.bulkCreate(
       items.map((item, idx) => ({
         invoice_id:   invoice.id,
@@ -211,6 +214,7 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
         description:  item.description,
         quantity:     String(item.quantity),
         unit_price:   String(item.unit_price),
+        unit_cost:    snapshotUnitCost(item.variant_id, costByVariant),
         discount_pct: String(item.discount_pct ?? 0),
         iva_rate:     (item.iva_rate ?? '21') as IvaRate,
         sort_order:   item.sort_order ?? idx,
@@ -242,14 +246,22 @@ export async function updateInvoice(id: string, input: InvoiceUpdateInput, ctx: 
 
       await InvoiceItem.destroy({ where: { invoice_id: id }, transaction: t, force: false })
 
+      const costByVariant = await resolveVariantUnitCosts(
+        input.items.map(i => i.variant_id),
+        invoice.org_id!,
+        t,
+      )
+
       await InvoiceItem.bulkCreate(
         input.items.map((item, idx) => ({
           invoice_id:   id,
           org_id:       invoice.org_id,
           product_id:   item.product_id ?? null,
+          variant_id:   item.variant_id ?? null,
           description:  item.description,
           quantity:     String(item.quantity),
           unit_price:   String(item.unit_price),
+          unit_cost:    snapshotUnitCost(item.variant_id, costByVariant),
           discount_pct: String(item.discount_pct ?? 0),
           iva_rate:     (item.iva_rate ?? '21') as IvaRate,
           sort_order:   item.sort_order ?? idx,
