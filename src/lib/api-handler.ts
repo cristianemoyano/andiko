@@ -5,6 +5,8 @@ import { handleApiError } from '@/lib/api-error'
 import { can, type Permission } from '@/lib/permissions'
 import { isModuleEnabled, moduleForPermission } from '@/modules/auth/organization-settings.service'
 import { resolveOrgScope } from '@/lib/session-org'
+import { shouldBlockSuspendedApiRequest } from '@/lib/suspension-guard'
+import { isOrgSuspended } from '@/modules/billing/subscription-access.service'
 import {
   orgContextRequiredResponse,
   resolveTenantContext,
@@ -54,6 +56,24 @@ function effectiveOrgId(session: Session): string | null {
 }
 
 /**
+ * Backstop del gate de suscripción `past_due`: bloquea mutaciones (todo lo que no sea
+ * GET/HEAD/OPTIONS) cuando la org efectiva está suspendida. Las lecturas quedan abiertas
+ * y los sys-admin reales (incluso impersonando) están exentos. `/api/v1/billing/*` usa
+ * `requireOrgBilling` (no estos wrappers), así que pagar la suscripción sigue posible.
+ */
+async function suspendedOrgResponse(req: NextRequest, session: Session): Promise<NextResponse | null> {
+  if (!shouldBlockSuspendedApiRequest(req.method)) return null
+  if (isRealSysAdmin(session)) return null
+  const orgId = effectiveOrgId(session)
+  if (!orgId) return null
+  if (!(await isOrgSuspended(orgId))) return null
+  return NextResponse.json(
+    { error: 'Suscripción suspendida por falta de pago.', code: 'SUBSCRIPTION_SUSPENDED' },
+    { status: 403 },
+  )
+}
+
+/**
  * Wraps a Next.js App Router route handler with auth + permission check.
  *
  * Usage:
@@ -97,6 +117,9 @@ export function withPermission<P extends Record<string, string> = Record<string,
         { status: 403 },
       )
     }
+
+    const suspendedRes = await suspendedOrgResponse(req, session)
+    if (suspendedRes) return suspendedRes
 
     try {
       return await handler(req, ctx, session as AuthedSession)
@@ -151,6 +174,9 @@ export function withTenantAnyPermission<P extends Record<string, string> = Recor
       return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 })
     }
 
+    const suspendedRes = await suspendedOrgResponse(req, session)
+    if (suspendedRes) return suspendedRes
+
     const tenant = await resolveTenantContext(session.user)
     if ('error' in tenant) return tenant.error
     try {
@@ -177,6 +203,10 @@ export function withTenantAuth<P extends Record<string, string> = Record<string,
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
     }
+
+    const suspendedRes = await suspendedOrgResponse(req, session)
+    if (suspendedRes) return suspendedRes
+
     const tenant = await resolveTenantContext((session as AuthedSession).user)
     if ('error' in tenant) return tenant.error
     try {

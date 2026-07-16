@@ -29,6 +29,9 @@ vi.mock('@/modules/auth/branch.model', () => ({ default: { findAll: branchFindAl
 vi.mock('./accounting-associations', () => ({ ensureAccountingAssociations: vi.fn() }))
 vi.mock('./accounting.utils', () => ({ nextEntryNumber: vi.fn(async () => 'AS-000001') }))
 
+const { isDateInClosedPeriodMock } = vi.hoisted(() => ({ isDateInClosedPeriodMock: vi.fn() }))
+vi.mock('./accounting-period-guards', () => ({ isDateInClosedPeriod: isDateInClosedPeriodMock }))
+
 import {
   createEntry,
   postEntry,
@@ -158,21 +161,34 @@ describe('accounting/journal-entries.service createEntry', () => {
 describe('accounting/journal-entries.service postEntry', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    isDateInClosedPeriodMock.mockResolvedValue(false)
   })
 
   it('posts a balanced draft entry', async () => {
     const update = vi.fn().mockResolvedValue(undefined)
     entryFindOne
-      .mockResolvedValueOnce({ id: 'e1', status: 'draft', total_debit: '100.00', total_credit: '100.00', update })
+      .mockResolvedValueOnce({ id: 'e1', status: 'draft', entry_date: '2026-06-13', total_debit: '100.00', total_credit: '100.00', update })
       .mockResolvedValueOnce({ id: 'e1', status: 'posted' })
 
     await postEntry('e1', ctx, 'actor-1')
 
-    expect(update).toHaveBeenCalledWith({ status: 'posted', updated_by: 'actor-1' })
+    expect(update).toHaveBeenCalledWith(
+      { status: 'posted', updated_by: 'actor-1' },
+      expect.objectContaining({ transaction: expect.anything() }),
+    )
   })
 
   it('refuses to re-post an already posted entry', async () => {
     ;(entryFindOne as Mock).mockResolvedValueOnce({ id: 'e1', status: 'posted', total_debit: '100.00', total_credit: '100.00', update: vi.fn() })
     await expect(postEntry('e1', ctx, 'actor-1')).rejects.toThrow('ENTRY_ALREADY_POSTED')
+  })
+
+  it('refuses to post an entry dated inside a closed period', async () => {
+    isDateInClosedPeriodMock.mockResolvedValue(true)
+    const update = vi.fn()
+    entryFindOne.mockResolvedValueOnce({ id: 'e1', status: 'draft', entry_date: '2026-05-15', total_debit: '100.00', total_credit: '100.00', update })
+
+    await expect(postEntry('e1', ctx, 'actor-1')).rejects.toThrow('PERIOD_CLOSED')
+    expect(update).not.toHaveBeenCalled()
   })
 })

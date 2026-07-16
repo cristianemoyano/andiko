@@ -43,8 +43,11 @@ export const trialBalanceQuerySchema = z.object({
   branch_id: z.string().uuid().optional(),
 })
 
+export const incomeStatementQuerySchema = trialBalanceQuerySchema
+
 export type JournalEntryLineInput = z.infer<typeof journalEntryLineSchema>
 export type JournalEntryInput      = z.infer<typeof journalEntrySchema>
 export type JournalEntryUpdateInput = z.infer<typeof journalEntryUpdateSchema>
 export type JournalEntryQuery      = z.infer<typeof journalEntryQuerySchema>
 export type TrialBalanceQuery      = z.infer<typeof trialBalanceQuerySchema>
+export type IncomeStatementQuery   = z.infer<typeof incomeStatementQuerySchema>

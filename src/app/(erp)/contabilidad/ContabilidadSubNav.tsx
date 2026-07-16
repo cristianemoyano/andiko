@@ -8,10 +8,12 @@ const LINKS = [
   { href: '/contabilidad/asientos', label: 'Asientos' },
   { href: '/contabilidad/plan-de-cuentas', label: 'Plan de cuentas' },
   { href: '/contabilidad/balance', label: 'Balance de sumas y saldos' },
+  { href: '/contabilidad/estado-de-resultados', label: 'Estado de resultados' },
   { href: '/contabilidad/libro-iva/ventas', label: 'Libro IVA Ventas' },
   { href: '/contabilidad/libro-iva/compras', label: 'Libro IVA Compras' },
   { href: '/contabilidad/reportes/ventas', label: 'Reportes ventas' },
   { href: '/contabilidad/reportes/compras', label: 'Reportes compras' },
+  { href: '/contabilidad/cierres', label: 'Cierres' },
 ] as const
 
 export function ContabilidadSubNav() {
