@@ -44,7 +44,7 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
 }
 
 export type Branch = { id: string; name: string; branch_code: number }
-export type ContactSummary = { id: string; legal_name: string; trade_name: string | null }
+export type ContactSummary = { id: string; legal_name: string; trade_name: string | null; email?: string | null }
 export type WarehouseSummary = { id: string; name: string }
 
 export type PurchaseOrderSummary = { id: string; order_number: string; status: PurchaseOrderStatus }

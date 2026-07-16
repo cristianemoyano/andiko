@@ -40,6 +40,7 @@ const DETAIL_PATH: Record<EmailDocumentType, (id: string) => string> = {
   order: (id) => `/ventas/pedidos/${id}`,
   invoice: (id) => `/ventas/facturas/${id}`,
   delivery_note: (id) => `/inventario/remitos/${id}`,
+  purchase_order: (id) => `/compras/ordenes/${id}`,
 }
 
 function isEmailDocumentType(value: string): value is EmailDocumentType {
@@ -47,7 +48,7 @@ function isEmailDocumentType(value: string): value is EmailDocumentType {
 }
 
 function extractDocumentNumber(subject: string): string | null {
-  const match = subject.match(/(?:Presupuesto|Pedido|Factura|Remito)\s+(\S+)/i)
+  const match = subject.match(/(?:Presupuesto|Pedido|Factura|Remito|Orden de compra)\s+(\S+)/i)
   return match?.[1] ?? null
 }
 

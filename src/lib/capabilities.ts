@@ -120,6 +120,7 @@ function buildCapabilities(
         afip: canOrgSettingsRead,
         integraciones: canIntegracionesRead,
         terminosCondiciones: canOrgSettingsRead,
+        alertas: canOrgSettingsRead,
       },
     },
     onboarding: {

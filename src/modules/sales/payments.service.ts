@@ -11,6 +11,7 @@ import { nextDocumentNumber } from './sales.utils'
 import { type TenantContext } from '@/lib/tenancy'
 import { whereSalesDocumentScope } from './sales-scope'
 import { postSalesPaymentAccounting } from '@/modules/accounting/sales-payment-accounting.service'
+import { sendPaymentReceiptEmail } from './payment-receipt-notification.service'
 
 export async function listPayments(query: PaymentQuery, ctx: TenantContext) {
   const { page, limit, invoice_id, contact_id, payment_method } = query
@@ -46,7 +47,7 @@ export async function getPayment(id: string, ctx: TenantContext) {
 }
 
 export async function createPayment(input: PaymentInput, ctx: TenantContext, actorId: string) {
-  return sequelize.transaction(async (t) => {
+  const payment = await sequelize.transaction(async (t) => {
     const invoice = await Invoice.findOne({
       where: whereSalesDocumentScope(ctx, { id: input.invoice_id }),
       transaction: t,
@@ -59,7 +60,7 @@ export async function createPayment(input: PaymentInput, ctx: TenantContext, act
 
     const payment_number = await nextDocumentNumber(ctx.orgId, invoice.branch_id, 'payment', t)
 
-    const payment = await Payment.create(
+    const created = await Payment.create(
       {
         ...input,
         branch_id:      invoice.branch_id,
@@ -74,11 +75,20 @@ export async function createPayment(input: PaymentInput, ctx: TenantContext, act
     )
 
     await recalcInvoiceBalance(input.invoice_id, t)
-    await postSalesPaymentAccounting(payment.id, ctx, t)
+    await postSalesPaymentAccounting(created.id, ctx, t)
 
-    logger.info({ paymentId: payment.id, invoiceId: input.invoice_id, orgId: ctx.orgId, actorId }, 'payment registered')
-    return payment
+    logger.info({ paymentId: created.id, invoiceId: input.invoice_id, orgId: ctx.orgId, actorId }, 'payment registered')
+    return created
   })
+
+  // Non-blocking: a receipt-email failure must never undo a registered payment.
+  try {
+    await sendPaymentReceiptEmail(payment, ctx, actorId)
+  } catch (err) {
+    logger.error({ err, paymentId: payment.id, orgId: ctx.orgId }, 'payment receipt email failed')
+  }
+
+  return payment
 }
 
 export async function updatePayment(id: string, input: PaymentUpdateInput, ctx: TenantContext, actorId: string) {

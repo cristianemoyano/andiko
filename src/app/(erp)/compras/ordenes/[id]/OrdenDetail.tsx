@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/primitives/Badge'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
 import { EmptyState } from '@/components/erp/EmptyState'
+import { SendDocumentEmail } from '@/components/erp/SendDocumentEmail'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import type { PurchaseOrder } from '../../types'
@@ -113,6 +114,14 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
                 Imprimir
               </Link>
             </Button>
+            <SendDocumentEmail
+              documentType="purchase_order"
+              documentId={id}
+              documentLabel={`Orden ${order.order_number}`}
+              defaultEmail={order.contact?.email}
+              buttonVariant="ghost"
+              buttonSize="sm"
+            />
             {isDraft && (
               <>
                 <Button size="sm" variant="secondary" onClick={() => setConfirmDelete(true)}>

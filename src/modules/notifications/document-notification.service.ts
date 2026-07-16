@@ -10,11 +10,12 @@ import { emitNotification } from './emit-notification.service'
 import { documentSharedPayloadSchema } from './notification.schema'
 
 /** email_logs.document_domain per document type (module that owns the record). */
-const DOCUMENT_DOMAIN: Record<EmailDocumentType, 'sales' | 'inventory'> = {
+const DOCUMENT_DOMAIN: Record<EmailDocumentType, 'sales' | 'inventory' | 'purchases'> = {
   quote: 'sales',
   order: 'sales',
   invoice: 'sales',
   delivery_note: 'inventory',
+  purchase_order: 'purchases',
 }
 
 export interface SendDocumentNotificationInput {

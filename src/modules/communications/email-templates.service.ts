@@ -3,7 +3,7 @@ import OrganizationSetting from '@/modules/auth/organization-setting.model'
 import {
   emailTemplatesUpdateSchema,
   mergeEmailTemplates,
-  EMAIL_DOCUMENT_TYPES,
+  EMAIL_TEMPLATE_KEYS,
   type EmailTemplates,
   type EmailTemplatesUpdateInput,
 } from './email-template.schema'
@@ -26,10 +26,10 @@ export async function updateEmailTemplates(
   emailTemplatesUpdateSchema.parse(input)
 
   const current = await getEffectiveEmailTemplates(orgId)
-  const next: EmailTemplates = { ...current }
-  for (const type of EMAIL_DOCUMENT_TYPES) {
-    const entry = input[type]
-    if (entry) next[type] = entry
+  const next: Record<string, unknown> = { ...current }
+  for (const key of EMAIL_TEMPLATE_KEYS) {
+    const entry = input[key]
+    if (entry) next[key] = entry
   }
 
   const existing = await OrganizationSetting.findOne({ where: { org_id: orgId } })
@@ -38,5 +38,5 @@ export async function updateEmailTemplates(
   } else {
     await OrganizationSetting.create({ org_id: orgId, email_templates: next })
   }
-  return next
+  return next as EmailTemplates
 }
