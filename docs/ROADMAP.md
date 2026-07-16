@@ -11,6 +11,8 @@ Infraestructura base sin lógica de negocio.
 
 - [x] Scaffold Next.js 16 + TypeScript + Tailwind
 - [x] pnpm, Vitest, ESLint, commitlint, husky, lint-staged
+- [x] TypeScript 6.0 en todos los workspaces (preparación para TS 7 nativo — ver [docs/plans/typescript-6-upgrade.md](plans/typescript-6-upgrade.md))
+- [ ] TypeScript 7 (tsgo): esperar soporte nativo en Next.js + API estable 7.1 (typescript-eslint); verificar binarios nativos vs `node:24-alpine`
 - [x] release-it + conventional changelog
 - [x] AGENTS.md + skills de Claude (ship-feature, release, setup-tooling)
 - [x] Docker Compose con PostgreSQL 16 + pgAdmin (Colima como engine)
@@ -503,7 +505,7 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [ ] Gateway de pagos (Mercado Pago / Stripe) + webhooks para débito automático
 - [ ] Portal self-service de facturación para la org — autogestión (cambiar plan/seats, pagar). El panel de lectura para el Gerente (suscripción, consumo, facturas) ya está implementado
 - [ ] Factura electrónica AFIP (CAE) de la plataforma hacia las orgs *(datos del emisor + snapshot en la factura ya implementados como base)*
-- [ ] Generación automática de facturas recurrentes (cron) *(hoy las facturas se generan manualmente desde sys-admin; `current_period_start/end` no los setea ningún scheduler)*
+- [x] Generación automática de facturas recurrentes (cron) — UI sys-admin en `/sys-admin/billing/automatizacion`; job `POST /api/v1/sys-admin/billing/jobs/generate-due-invoices` (`CRON_SECRET`); genera drafts + avanza `current_period_*`
 - [x] Dunning parcial — `billing-dunning.service.ts` marca `past_due` al vencer facturas impagas; job `POST /api/v1/sys-admin/billing/jobs/dunning`; reactivación al registrar pago
 - [ ] Suspensión / bloqueo de acceso ERP en `past_due` (hoy solo cambia estado de suscripción)
 
@@ -819,10 +821,68 @@ Scheduler de tareas recurrentes tipo cron, pensado como base extensible para aut
 - [x] Tick vía `CRON_SECRET` (`/api/v1/sys-admin/jobs/automations-tick`, crontab cada minuto — ver [docs/deployment/production.md](deployment/production.md))
 - [x] CRUD tenant + UI `/automatizaciones` (lista, crear/editar, ejecutar ahora, historial de ejecuciones)
 - [x] Acciones v1: `sales.expire_overdue_quotes`, `core.webhook_call` (webhook saliente genérico)
-- [ ] Más acciones por módulo (recordatorios de cobranza, sincronizaciones, notificaciones)
+- [x] `expenses.generate_recurring_expense` — genera automáticamente las facturas de Expensas vencidas (ver Fase 14)
+- [x] UI de cron amigable (presets) + payloads tipados por acción en `/automatizaciones`
+- [ ] Más acciones por módulo (recordatorios de cobranza, sincronizaciones, notificaciones; futuros servicios recurrentes que la org vende a sus clientes)
 - [ ] Automatizaciones cross-org
 - [ ] Workflows multi-paso / condicionales (hoy: una acción por tarea)
 - [ ] Cadencias menores a 1 minuto (hoy: piso del tick por crontab externo)
+
+---
+
+## Fase 13 — Control de Horario (RRHH)
+
+Control de horario / fichaje como base para una futura liquidación de sueldos. Se construye por fases: la Fase 1 es un control de horario útil por sí solo (fichaje propio, carga manual, import desde reloj físico); la liquidación de sueldos queda para una fase posterior una vez que haya suficiente historial de horas trabajadas.
+
+**Depende de:** `users`/`branches` (Auth). **Se integra con (posterior):** Contabilidad (asientos de sueldos/cargas sociales al liquidar).
+
+**Entidades:** `employees` (legajo, vinculado opcionalmente 1:1 a `users`), `attendance_events` (fichadas discretas: entrada/salida/ausencia, con `source` self_service | manual | device_import)
+
+### Fase 1 — MVP (completado)
+- [x] Legajo de empleado (`Employee`) independiente de `User`, para poder registrar personal sin acceso al sistema
+- [x] Fichaje self-service (entrada/salida) desde `/control-horario`
+- [x] Carga y corrección manual por admin/RRHH (sesión, evento único, ausencia) desde `/control-horario/registros`
+- [x] Importación CSV de fichadas desde relojes físicos (biométricos/fichadores), con dedup contra reimportaciones del mismo archivo
+- [x] Totales de horas trabajadas por día, calculados al leer (pareo cronológico de eventos, sin guardar floats)
+- [x] Permisos `employees:*` / `attendance:*` + `attendance:scope_own`, módulo `hr` (tier premium — habilitado salvo que el admin lo restrinja explícitamente en Configuración, igual que inventory/purchases/accounting/pos)
+
+### Posterior
+- [ ] Horarios pactados (`work_schedules`) para detectar llegadas tarde / horas extra
+- [ ] Ausencias/licencias/vacaciones como entidad propia con aprobación (`leave_requests`)
+- [ ] Flujo de aprobación de correcciones (`attendance_events.corrects_event_id` ya está en el esquema)
+- [ ] Liquidación de sueldos: tarifas/sueldo (`NUMERIC(15,2)` + Decimal.js), cálculo de períodos, asientos contables (Fase 7)
+- [ ] Import CSV multi-marca de reloj (adaptadores por dispositivo), columnas Fecha+Hora separadas, polling automático
+
+### Limitaciones conocidas (Fase 1)
+- Turnos que cruzan medianoche (ej. 23:00 a 07:00 del día siguiente) no se calculan correctamente en `computeDailyTotals` — cada fichada se agrupa por su propio `work_date`, sin pareo entre días. Ver comentario en `src/modules/attendance/attendance.utils.ts`.
+- El import CSV es todo-o-nada: si una fila del archivo falla, se revierte la transacción completa (mismo comportamiento que el import de contactos). Para archivos grandes de reloj físico, una sola fila corrupta obliga a reimportar todo.
+
+---
+
+## Fase 14 — Expensas
+
+Gastos fijos/recurrentes de la empresa (alquiler, luz, agua, seguros, planes en cuotas, etc.) — módulo independiente de Compras: comparte únicamente la entidad `Contact` (proveedor), no `supplier_invoices`. Módulo premium (`ORG_MODULE_DEFS`), permiso `expenses:*`.
+
+**Modelo unificado:** un solo listado `/expensas` y un flujo *Nuevo gasto* con 3 tipos — `one_off` (único), `recurring` (serie indefinida + ocurrencias), `installment_plan` (1 gasto = total del plan + calendario de cuotas).
+
+**Entidades:** `expenses` (con `kind`), `expense_payments`, `expense_schedules` (ex `recurring_expense_templates`), `expense_installments`
+
+- [x] Migraciones: schedules, expenses, expense_payments, expense_installments + permisos `expenses:read/write/delete`
+- [x] Flujo de estados igual que Compras: `draft → received → partially_paid/paid`, con `cancelled` en cualquier punto no pagado
+- [x] Flujo de pagos propio (`expense_payments`) con actualización atómica de `paid_amount`/`balance`/`status`; en planes, pago ligado a cuotas (`installment_ids`)
+- [x] Contabilización automática: `expense-accounting.service.ts` (débito cuenta de gasto elegida + IVA crédito fiscal, crédito Proveedores) y `expense-payment-accounting.service.ts` (cancelación de deuda) — el plan contable se asienta por el **total** al recibir
+- [x] Gasto recurrente: `expense_schedules` + acción `expenses.generate_recurring_expense` (genera ocurrencias en borrador y avanza `next_run_date`); al crear tipo Recurrente se emite también el 1er período
+- [x] Plan / cuotas: un gasto `installment_plan` + N filas en `expense_installments` (vencimiento, monto, estado)
+- [x] Las facturas de Expensas se incluyen en **Libro IVA Compras** (`buildLibroIvaCompras`) para no perder crédito fiscal, aunque el módulo esté separado de Compras
+- [x] Adjuntos opcionales: factura del proveedor (`owner_type: 'expense'`) y comprobante de pago (`owner_type: 'expense_payment'`)
+- [x] UI unificada `/expensas` (lista + tipos + detalle con cuotas/serie); sin tabs Facturas/Recurrentes/Pagos
+- [x] Reportes `/expensas/reportes` — KPIs del período, torta por tipo y por proveedor, barras mensuales
+- [x] Panel: KPI Expensas + widget por tipo + por pagar/gastos del período cuando el módulo está habilitado
+- [x] Alta rápida de proveedor desde Nuevo gasto (`SupplierQuickCreateDialog`)
+- [x] Copy de estados: Confirmar gasto / Confirmado; Anular / Anulado
+- [ ] Cuenta corriente / aging por proveedor de Expensas (hoy: solo Compras tiene este reporte)
+- [ ] Conciliación bancaria de pagos de Expensas
+
 
 ---
 
@@ -852,9 +912,10 @@ adopción B2B en PyMEs argentinas; relevadas en revisión de producto.
 
 Ideas validadas pero sin fecha definida.
 
+- **Activos fijos / Bienes de uso** — compra de maquinaria, herramientas durables, equipos (no mercadería). Hoy Compras está pensado para productos a revender (stock) y Expensas para egresos operativos que impactan el resultado; no hay módulo para capitalizar en `1.2.01` (Bienes de uso) + amortización (`5.2.08`). Un plan/cuotas en Expensas controla el pago, pero asienta el total como gasto al confirmar — incorrecto para activos. Alcance futuro: ficha del bien, alta/baja, vida útil, asientos de compra a activo (con o sin cuotas) y amortizaciones; hogar natural junto a Contabilidad, no dentro de Compras.
 - Pipelines de estado configurables por el cliente: el `StatusPipeline` actual tiene los pasos hardcodeados por tipo de documento. A futuro, permitir que cada organización defina sus propios estados y transiciones (ej. agregar "En revisión" entre Borrador y Confirmado), con la lógica de transición validada en backend.
 - Multi-empresa (una instalación, múltiples razones sociales)
-- Módulo de Recursos Humanos básico (empleados, liquidación de sueldos)
+- Liquidación de sueldos (ver [Fase 13 — Control de Horario (RRHH)](#fase-13--control-de-horario-rrhh), Fase 1 de control de horario ya implementada)
 - Integración con medios de pago (Mercado Pago, transferencias bancarias)
 - App móvil para vendedores (solo consulta y carga de pedidos)
 - Portal de clientes (consulta de facturas y cuenta corriente)

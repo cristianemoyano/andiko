@@ -325,7 +325,7 @@ async function hashPassword(plaintext: string) {
 }
 
 async function ensurePermissionsSeeded(t: import('sequelize').Transaction) {
-  const resources = ['contacts', 'products', 'sales', 'inventory', 'purchases', 'accounting', 'logistics'] as const
+  const resources = ['contacts', 'products', 'sales', 'inventory', 'purchases', 'accounting', 'logistics', 'automations'] as const
   const actions = ['read', 'write', 'delete'] as const
 
   const modulePermissions = resources.flatMap((r) =>

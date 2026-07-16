@@ -8,6 +8,7 @@
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
+    "types": [],
     "paths": {
       "@andiko/shared": ["../../packages/shared/src/index.ts"],
       "@andiko/ui": ["../../packages/ui/src/index.ts"]

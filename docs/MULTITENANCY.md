@@ -50,9 +50,15 @@ Este documento define **cómo segmentamos datos** en Andiko para evitar cruces e
 - `supplier_payments`, `purchase_returns` y derivados
 - Secuencias de documento por org + branch
 
+### Expenses — Branch-scoped (módulo independiente de Purchases; solo comparte `Contact`)
+- `expenses`, `expense_payments`, `expense_schedules`, `expense_installments`
+- Secuencias de documento propias por org + branch (mismo mecanismo `document_sequences` que Purchases, tipos `expense`/`expense_payment`)
+- `Expense.expense_account_code` referencia el plan de cuentas (`accounts`, org-scoped) — no hay FK, se valida contra cuentas activas/postables al contabilizar
+- Las facturas de Expensas se incluyen también en el Libro IVA Compras (módulo `afip`, que ya es cross-module por diseño) para no perder crédito fiscal
+
 ### Accounting — Org-scoped (líneas con `branch_id` opcional como centro de costo)
 - `accounts`, `journal_entries`, `journal_entry_lines`
-- Asientos automáticos: devoluciones de venta/compra, factura de venta emitida (con costo de mercadería vendida si hay `cost_price`), cobro a cliente, factura de compra recibida, pago a proveedor
+- Asientos automáticos: devoluciones de venta/compra, factura de venta emitida (con costo de mercadería vendida si hay `cost_price`), cobro a cliente, factura de compra recibida, pago a proveedor, factura y pago de gasto (Expensas)
 
 ### AFIP — Org-scoped
 - `afip_credentials`, `afip_emissions`, configuración fiscal por org/sucursal
@@ -60,6 +66,10 @@ Este documento define **cómo segmentamos datos** en Andiko para evitar cruces e
 ### POS — Org + branch del dispositivo
 - `pos_devices`, `pos_cash_sessions`, `pos_payment_methods`
 - APIs POS autentican por `api_token` del dispositivo → `tenantContextFromPosDevice`
+
+### HR / Control de Horario — Branch-scoped
+- `employees` (legajo, vinculado opcionalmente 1:1 a `users`), `attendance_events` (fichaje: self-service, carga manual, import CSV de reloj físico)
+- Permiso opcional `attendance:scope_own` limita fichajes a los del propio empleado (mismo patrón que `logistics:scope_assigned`)
 
 ### Billing (SaaS plataforma) — Global sys-admin + lectura org propia
 - Planes, suscripciones, facturas de plataforma: sys-admin

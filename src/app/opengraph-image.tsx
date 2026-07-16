@@ -68,7 +68,7 @@ export default function OpenGraphImage() {
               letterSpacing: '-0.03em',
             }}
           >
-            Software de gestión para pymes argentinas
+            Software de gestión integral para pymes
           </h1>
           <p style={{ margin: 0, fontSize: 28, lineHeight: 1.4, color: '#52525B' }}>
             Contactos, catálogo, ventas, stock, compras, contabilidad y POS.

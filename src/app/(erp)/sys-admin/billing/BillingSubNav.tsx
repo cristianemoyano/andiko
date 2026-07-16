@@ -40,6 +40,11 @@ const SECTIONS: { links: NavLink[] }[] = [
         label: 'Emisor',
         isActive: p => p.startsWith('/sys-admin/billing/emisor'),
       },
+      {
+        href: '/sys-admin/billing/automatizacion',
+        label: 'Automatización',
+        isActive: p => p.startsWith('/sys-admin/billing/automatizacion'),
+      },
     ],
   },
 ]

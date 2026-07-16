@@ -5,12 +5,16 @@ export const siteUrl = env.AUTH_URL.replace(/\/$/, '')
 
 export const siteConfig = {
   name: 'Andiko',
-  title: 'Andiko — Software de gestión para pymes argentinas',
+  title: 'Andiko — Software de gestión integral para pymes',
   tagline: 'Gestión integral',
   description:
-    'Software de gestión para pymes argentinas. Contactos, catálogo, ventas, inventario, compras, contabilidad y POS en un solo lugar, con facturación electrónica vía ARCA.',
+    'Software de gestión para pymes. Contactos, catálogo, ventas, inventario, compras, contabilidad y POS en un solo lugar, con facturación electrónica incluida.',
   locale: 'es_AR',
   language: 'es-AR',
+  social: {
+    instagram: 'https://www.instagram.com/andiko.erp/',
+    facebook: 'https://www.facebook.com/andiko.erp',
+  },
 } as const
 
 /** Rutas internas del ERP que no deben indexarse. */

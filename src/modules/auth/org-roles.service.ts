@@ -12,6 +12,7 @@ import {
   isPanelPermission,
   isLogisticsScopePermission,
   isSalesScopePermission,
+  isAttendanceScopePermission,
   isSettingsPermission,
   type MatrixPermission,
 } from '@/lib/permissions'
@@ -32,7 +33,8 @@ function permissionGroup(name: MatrixPermission): string {
 }
 
 function isMatrixPermission(name: string): name is MatrixPermission {
-  return isModulePermission(name) || isPanelPermission(name) || isSalesScopePermission(name) || isLogisticsScopePermission(name)
+  return isModulePermission(name) || isPanelPermission(name) || isSalesScopePermission(name) ||
+    isLogisticsScopePermission(name) || isAttendanceScopePermission(name)
 }
 
 async function assertAssignablePermissions(permissionNames: string[]) {

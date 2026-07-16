@@ -47,7 +47,7 @@ export const metadata: Metadata = {
   },
   keywords: [
     'ERP',
-    'pymes argentinas',
+    'pymes',
     'facturación electrónica',
     'inventario',
     'contabilidad',

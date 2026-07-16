@@ -48,6 +48,18 @@ export const BillingStatuses: Story = {
   ),
 }
 
+export const ExpenseStatuses: Story = {
+  render: () => (
+    <div className="flex flex-wrap gap-2">
+      <StatusBadge value="Borrador" />
+      <StatusBadge value="Confirmado" />
+      <StatusBadge value="Pago parcial" />
+      <StatusBadge value="Pagado" />
+      <StatusBadge value="Anulado" />
+    </div>
+  ),
+}
+
 export const TypeTags: Story = {
   render: () => (
     <div className="flex flex-wrap gap-2">

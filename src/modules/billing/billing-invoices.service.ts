@@ -69,7 +69,7 @@ export async function getBillingInvoice(id: string) {
   return invoice
 }
 
-export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, actorId: string) {
+export async function generateInvoiceForPeriod(input: GenerateInvoiceInput, actorId: string | null) {
   return sequelize.transaction(async (t) => {
     const sub = await OrgSubscription.findByPk(input.subscription_id, {
       include: [
@@ -236,9 +236,11 @@ function defaultDueDate(issueDate: Date): Date {
 }
 
 async function getBillingInvoiceInTransaction(id: string, t: import('sequelize').Transaction) {
-  return BillingInvoice.findByPk(id, {
+  const invoice = await BillingInvoice.findByPk(id, {
     include: [{ model: BillingInvoiceItem, as: 'items' }],
     order: [[{ model: BillingInvoiceItem, as: 'items' }, 'sort_order', 'ASC']],
     transaction: t,
   })
+  if (!invoice) throw new Error('BILLING_INVOICE_NOT_FOUND')
+  return invoice
 }
