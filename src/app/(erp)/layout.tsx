@@ -86,8 +86,6 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
     }
   }
 
-  const userName = session.user?.name ?? session.user?.email ?? undefined
-  const userRole = session.user?.role ?? undefined
   const showSysAdminNavigation = isRealSysAdmin && !session.user.impersonation
 
   return (
@@ -97,8 +95,6 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
     >
       <div className="flex h-screen overflow-hidden bg-bg">
         <Sidebar
-          userName={userName}
-          userRole={userRole}
           isRealSysAdmin={isRealSysAdmin}
           showSysAdminNavigation={showSysAdminNavigation}
           enabledModules={enabledModules}

@@ -112,7 +112,11 @@ export class World extends CucumberWorld {
   }
 
   async logout() {
-    await this.page.getByTestId(TEST_IDS.logoutBtn).click()
+    const userMenu = this.page.getByTestId(TEST_IDS.userMenuTrigger)
+    if (await userMenu.isVisible().catch(() => false)) {
+      await userMenu.click()
+    }
+    await this.page.getByTestId(TEST_IDS.logoutBtn).filter({ visible: true }).first().click()
     await this.page.waitForResponse(
       (res) => res.url().includes('/api/auth/signout'),
       { timeout: 10000 },

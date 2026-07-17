@@ -6,6 +6,7 @@ export const TEST_IDS = {
   // Layout / auth
   sidebar: 'sidebar',
   logoutBtn: 'logout-btn',
+  userMenuTrigger: 'user-menu-trigger',
   loginEmail: 'login-email-input',
   loginPassword: 'login-password-input',
   loginSubmit: 'login-submit-btn',
