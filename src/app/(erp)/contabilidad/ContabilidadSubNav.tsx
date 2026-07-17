@@ -14,6 +14,7 @@ const LINKS = [
   { href: '/contabilidad/reportes/ventas', label: 'Reportes ventas' },
   { href: '/contabilidad/reportes/compras', label: 'Reportes compras' },
   { href: '/contabilidad/cierres', label: 'Cierres' },
+  { href: '/contabilidad/exportacion', label: 'Exportación' },
 ] as const
 
 export function ContabilidadSubNav() {
