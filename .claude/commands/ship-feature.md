@@ -212,7 +212,41 @@ Add `import 'server-only'` to any module using pino, Sequelize, or secrets.
 - App version is injected at build-time as `__APP_VERSION__` via `electron.vite.config.ts`.
 - Always sourced from `apps/pos/package.json` — bump it there before releasing.
 
-### Release
-- Releases are triggered by pushing a `pos/v*` tag to origin.
-- Tag format: `pos/v<semver>` (e.g. `pos/v1.0.0`).
-- Never tag without first bumping the version in `apps/pos/package.json`.
+### Release (POS)
+
+Only run this when the user explicitly asks to cut a POS release (not on every `/ship-feature`).
+
+1. **Bump version** in `apps/pos/package.json` (semver). Do not change the root ERP `package.json`.
+2. **Update landing download links** (mandatory — keeps `/` in sync with the public installers):
+
+```bash
+node scripts/update-pos-download-links.mjs
+# or with explicit version: node scripts/update-pos-download-links.mjs 0.5.2
+```
+
+   This rewrites `siteConfig.posDownloads` in `src/lib/site.ts` to:
+   - `Andiko.POS.Setup.<ver>.exe` (Windows)
+   - `Andiko.POS-<ver>-arm64.dmg` (macOS Apple Silicon)
+   - `Andiko.POS-<ver>.dmg` (macOS Intel)
+
+3. **Commit both files** on `develop` (version bump + landing links):
+
+```bash
+git add apps/pos/package.json src/lib/site.ts
+git commit -m "chore(pos): release vX.Y.Z"
+git push origin develop
+```
+
+4. **Tag and push** (triggers `.github/workflows/pos-release.yml`):
+
+```bash
+git tag pos/vX.Y.Z
+git push origin pos/vX.Y.Z
+```
+
+5. **Verify** the GitHub Action published assets to `cristianemoyano/andiko-pos-releases` and that the landing buttons resolve (assets may 404 until the workflow finishes).
+
+**Rules**
+- Tag format: `pos/v<semver>` (e.g. `pos/v1.0.0`). Never tag without steps 1–3.
+- Never skip updating `src/lib/site.ts` — the marketing landing is the public download surface.
+- Asset filenames must match electron-builder output; if naming changes, update `scripts/update-pos-download-links.mjs` first.

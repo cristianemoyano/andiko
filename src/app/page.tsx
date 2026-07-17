@@ -50,9 +50,30 @@ const socialLinks = [
 const navLinks = [
   { label: 'Producto', href: '#sec-producto' },
   { label: 'Módulos', href: '#sec-modulos' },
+  { label: 'Descargar POS', href: '#sec-pos' },
   { label: 'Precios', href: '#sec-precios' },
   { label: 'Contacto', href: '#sec-contacto' },
 ] as const
+
+const WindowsIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+    <path d="M3 5.5 10.5 4.4v7.1H3V5.5Zm0 13 7.5 1.1v-7.2H3v6.1ZM11.7 4.2 21 3v8.5h-9.3V4.2Zm0 16.6L21 21.9V12.5h-9.3v8.3Z" />
+  </svg>
+)
+
+const AppleIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+  </svg>
+)
+
+const DownloadIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" x2="12" y1="15" y2="3" />
+  </svg>
+)
 
 const landingPrimaryCta =
   'inline-flex items-center gap-2.5 whitespace-nowrap rounded-[4px] bg-brand-600 font-semibold text-white shadow-[0_2px_8px_rgba(12,100,122,0.28)] transition-[color,transform,box-shadow] duration-150 ease-out hover:-translate-y-px hover:bg-brand-700 active:translate-y-0 active:scale-[0.98]'
@@ -169,7 +190,7 @@ const reasons = [
   },
   {
     title: 'Un solo sistema',
-    body: 'Basta de planillas e integraciones frágiles. Los siete módulos comparten clientes, productos y comprobantes, siempre.',
+    body: 'Basta de planillas e integraciones frágiles. Los módulos comparten clientes, productos y comprobantes, siempre.',
     icon: (
       <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
@@ -194,7 +215,7 @@ const reasons = [
 ] as const
 
 const metrics = [
-  { value: '7', label: 'módulos integrados' },
+  { value: 'Modular', label: 'activá lo que necesitás' },
   { value: '1', label: 'sistema para todo' },
   { value: 'Multi', label: 'sucursal y depósito' },
   { value: 'Fiscal', label: 'facturación nativa' },
@@ -236,6 +257,23 @@ function LandingJsonLd() {
         offers: {
           '@type': 'Offer',
           availability: 'https://schema.org/PreOrder',
+          price: '0',
+          priceCurrency: 'ARS',
+        },
+      },
+      {
+        '@type': 'SoftwareApplication',
+        '@id': `${siteUrl}/#pos`,
+        name: 'Andiko POS',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Windows, macOS',
+        description: 'Punto de venta de escritorio para Windows y macOS, integrado con Andiko.',
+        inLanguage: siteConfig.language,
+        softwareVersion: siteConfig.posDownloads.version,
+        downloadUrl: siteConfig.posDownloads.releasesUrl,
+        offers: {
+          '@type': 'Offer',
+          availability: 'https://schema.org/InStock',
           price: '0',
           priceCurrency: 'ARS',
         },
@@ -343,8 +381,8 @@ export default async function LandingPage() {
                   Un módulo para cada parte de tu operación
                 </h2>
                 <p className="mt-3.5 text-base leading-relaxed text-zinc-600">
-                  Siete módulos integrados que comparten clientes, productos y comprobantes. Activás
-                  lo que necesitás y todo conversa entre sí.
+                  Módulos integrados que comparten clientes, productos y comprobantes. Activás lo
+                  que necesitás y todo conversa entre sí.
                 </p>
               </div>
               <div className="mt-10 grid grid-cols-[repeat(auto-fit,minmax(252px,1fr))] gap-[18px]">
@@ -361,6 +399,69 @@ export default async function LandingPage() {
                     <p className="mt-2 text-[13.5px] leading-relaxed text-zinc-600">{mod.body}</p>
                   </LandingReveal>
                 ))}
+              </div>
+            </section>
+          </LandingReveal>
+
+          {/* ░░ POS DOWNLOADS ░░ */}
+          <LandingReveal>
+            <section id="sec-pos" className="mx-auto max-w-[1200px] scroll-mt-20 px-[clamp(20px,5vw,56px)] pb-[clamp(32px,4vw,56px)] pt-[clamp(20px,3vw,40px)]">
+              <div className="rounded-xl border border-zinc-200/70 bg-white/70 p-[clamp(26px,4vw,36px)] shadow-[0_1px_3px_rgba(0,0,0,0.03)] backdrop-blur-md">
+                <div className="flex flex-wrap items-end justify-between gap-6">
+                  <div className="min-w-[260px] max-w-[520px] flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-600">
+                      Andiko POS · v{siteConfig.posDownloads.version}
+                    </p>
+                    <h2 className="mt-2 text-[clamp(24px,2.8vw,30px)] font-semibold leading-[1.12] tracking-[-0.02em] text-zinc-900">
+                      Descargá el punto de venta
+                    </h2>
+                    <p className="mt-3 text-[15px] leading-relaxed text-zinc-600">
+                      App de escritorio para la caja: funciona offline, sincroniza con el ERP y comparte
+                      el mismo catálogo, clientes y stock.
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-stretch gap-3 sm:items-end">
+                    <div className="flex flex-wrap gap-3">
+                      <a
+                        href={siteConfig.posDownloads.windows}
+                        className={`${landingPrimaryCta} h-11 px-5 text-[15px]`}
+                        download
+                      >
+                        <WindowsIcon />
+                        Windows
+                        <DownloadIcon className="h-[15px] w-[15px] opacity-80" />
+                      </a>
+                      <a
+                        href={siteConfig.posDownloads.macAppleSilicon}
+                        className={`${landingSecondaryCta} h-11 gap-2.5 px-5 text-[15px]`}
+                        download
+                      >
+                        <AppleIcon />
+                        macOS
+                        <DownloadIcon className="h-[15px] w-[15px] opacity-70" />
+                      </a>
+                    </div>
+                    <p className="text-[12px] leading-relaxed text-zinc-500 sm:text-right">
+                      macOS es para Apple Silicon.{' '}
+                      <a
+                        href={siteConfig.posDownloads.macIntel}
+                        className="font-medium text-brand-700 underline-offset-2 hover:underline"
+                        download
+                      >
+                        Descargar para Intel
+                      </a>
+                      {' · '}
+                      <a
+                        href={siteConfig.posDownloads.releasesUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-brand-700 underline-offset-2 hover:underline"
+                      >
+                        Todas las versiones
+                      </a>
+                    </p>
+                  </div>
+                </div>
               </div>
             </section>
           </LandingReveal>
@@ -501,6 +602,7 @@ export default async function LandingPage() {
               <div className="ml-auto flex flex-wrap items-center gap-[22px]">
                 <a href="#sec-producto" className="text-[13px] text-zinc-600 transition-colors hover:text-brand-600">Producto</a>
                 <a href="#sec-modulos" className="text-[13px] text-zinc-600 transition-colors hover:text-brand-600">Módulos</a>
+                <a href="#sec-pos" className="text-[13px] text-zinc-600 transition-colors hover:text-brand-600">Descargar POS</a>
                 <a href="#sec-contacto" className="text-[13px] text-zinc-600 transition-colors hover:text-brand-600">Contacto</a>
                 <div className="flex items-center gap-1.5" aria-label="Redes sociales">
                   {socialLinks.map(({ label, href, Icon }) => (

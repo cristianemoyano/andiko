@@ -3,6 +3,10 @@ import { env } from '@/config/env'
 
 export const siteUrl = env.AUTH_URL.replace(/\/$/, '')
 
+/** Public POS installers — keep in sync via `node scripts/update-pos-download-links.mjs` on each `pos/v*` release. */
+const POS_RELEASES_BASE =
+  'https://github.com/cristianemoyano/andiko-pos-releases/releases'
+
 export const siteConfig = {
   name: 'Andiko',
   title: 'Andiko — Software de gestión integral para pymes',
@@ -14,6 +18,13 @@ export const siteConfig = {
   social: {
     instagram: 'https://www.instagram.com/andiko.erp/',
     facebook: 'https://www.facebook.com/andiko.erp',
+  },
+  posDownloads: {
+    version: '0.5.1',
+    releasesUrl: `${POS_RELEASES_BASE}/latest`,
+    windows: `${POS_RELEASES_BASE}/download/v0.5.1/Andiko.POS.Setup.0.5.1.exe`,
+    macAppleSilicon: `${POS_RELEASES_BASE}/download/v0.5.1/Andiko.POS-0.5.1-arm64.dmg`,
+    macIntel: `${POS_RELEASES_BASE}/download/v0.5.1/Andiko.POS-0.5.1.dmg`,
   },
 } as const
 
