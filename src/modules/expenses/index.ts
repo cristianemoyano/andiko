@@ -22,6 +22,9 @@ export {
   recalcExpenseBalance,
 } from './expenses.service'
 
+export { getExpensesPayablesAging } from './expenses-payables-aging.service'
+export { getExpenseSupplierAccountStatement } from './expense-supplier-statement.service'
+
 export {
   listExpensePayments,
   getExpensePayment,

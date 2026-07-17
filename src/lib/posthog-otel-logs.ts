@@ -4,6 +4,7 @@ import type { LogDescriptor } from 'pino'
 import { SeverityNumber } from '@opentelemetry/api-logs'
 
 import { getPostHogOtelLogger } from '../../instrumentation'
+import { redactAttributes } from '@/lib/log-redact'
 import { POSTHOG_SERVICE_NAME } from '@/lib/posthog-config'
 
 const PINO_LEVEL_TO_SEVERITY: Record<number, SeverityNumber> = {
@@ -39,7 +40,8 @@ export function emitPinoLogToPostHog(
   }
 
   const severityNumber = PINO_LEVEL_TO_SEVERITY[level] ?? SeverityNumber.INFO
-  const attributes = { ...mergeObj }
+  // pino's `redact` does not apply to logMethod-hook args — censor here before shipping.
+  const attributes = redactAttributes(mergeObj)
   delete attributes.msg
   delete attributes.time
   delete attributes.level

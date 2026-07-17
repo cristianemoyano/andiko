@@ -7,6 +7,8 @@ const envSchema = z.object({
   AUTH_URL: z.string().url().default('http://localhost:3000'),
   MIGRATION_SECRET: z.string().min(32).optional(),
 
+  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).optional(),
+
   AFIP_MODE: z.enum(['stub', 'homologacion', 'produccion']).default('stub'),
 
   // Hard cap on a single upload, enforced at request validation and on the storage proxy.

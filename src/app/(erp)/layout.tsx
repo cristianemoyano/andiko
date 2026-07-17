@@ -10,6 +10,8 @@ import { resolveModuleForPath, type OrgModuleKey } from '@/modules/auth/organiza
 import { resolveCapabilities } from '@/lib/capabilities'
 import { hasLogisticsReadAccess, hasModuleReadAccess } from '@/lib/nav-module-access'
 import { resolveModuleAccessRedirect, SIN_ACCESO_PATH } from '@/lib/panel-access'
+import { isSuspensionExemptPath, SUSPENDIDO_PATH } from '@/lib/suspension-guard'
+import { isOrgSuspended } from '@/modules/billing/subscription-access.service'
 import {
   isOnboardingPath,
   shouldLayoutForceOnboardingRedirect,
@@ -32,11 +34,19 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
   const orgId = session.user.orgId
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') ?? headersList.get('x-invoke-path') ?? ''
+  const isRealSysAdmin = session.user.realRole === 'sys-admin'
 
-  const [capabilities, settings] = await Promise.all([
+  const [capabilities, settings, suspended] = await Promise.all([
     resolveCapabilities(session),
     orgId ? getEffectiveOrganizationSettings(orgId) : Promise.resolve(null),
+    orgId && !isRealSysAdmin ? isOrgSuspended(orgId) : Promise.resolve(false),
   ])
+
+  // Suscripción past_due: gate duro sobre todo (erp), salvo /suspendido y /facturacion
+  // (el Gerente necesita ver facturas y pagar). Los sys-admin reales están exentos.
+  if (suspended && !isSuspensionExemptPath(pathname)) {
+    redirect(SUSPENDIDO_PATH)
+  }
 
   const enabledModules: OrgModuleKey[] | undefined = settings?.enabled_modules
   let showOnboardingResume = false
@@ -78,7 +88,6 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
 
   const userName = session.user?.name ?? session.user?.email ?? undefined
   const userRole = session.user?.role ?? undefined
-  const isRealSysAdmin = session.user.realRole === 'sys-admin'
   const showSysAdminNavigation = isRealSysAdmin && !session.user.impersonation
 
   return (

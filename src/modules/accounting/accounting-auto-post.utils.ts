@@ -10,6 +10,7 @@ import {
   nextEntryNumber,
   type AccountingContext,
 } from './accounting.utils'
+import { clampDateOutOfClosedPeriods } from './accounting-period-guards'
 
 export type { AccountingContext } from './accounting.utils'
 export {
@@ -64,11 +65,27 @@ export async function createPostedEntry(
   const userId = auditUserId(params.ctx.userId)
   const entry_number = await nextEntryNumber(params.ctx.orgId, t)
 
+  // El auto-posting nunca puede frenar la operación de negocio: si la fecha cae
+  // en un período cerrado, se reimputa al primer día abierto (nunca falla).
+  let entryDate: Date | string = params.entryDate
+  let description = params.description
+  if (params.sourceType !== 'period_close' && params.sourceType !== 'period_close_reversal') {
+    const clamp = await clampDateOutOfClosedPeriods(params.ctx.orgId, params.entryDate, t)
+    if (clamp.clamped) {
+      entryDate = clamp.dateOnly
+      description = `${description} (período cerrado: reimputado)`
+      logger.warn(
+        { orgId: params.ctx.orgId, sourceType: params.sourceType, sourceId: params.sourceId, originalDate: params.entryDate, entryDate },
+        'accounting auto-post reimputed out of closed period',
+      )
+    }
+  }
+
   const entry = await JournalEntry.create({
     org_id:       params.ctx.orgId,
     entry_number,
-    entry_date:   params.entryDate,
-    description:  params.description,
+    entry_date:   entryDate as Date,
+    description,
     status:       'posted',
     source_type:  params.sourceType,
     source_id:    params.sourceId,
