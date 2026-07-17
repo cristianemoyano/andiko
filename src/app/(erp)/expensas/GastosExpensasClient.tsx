@@ -222,6 +222,9 @@ export function GastosExpensasClient() {
             <Button size="sm" variant="secondary" onClick={() => router.push('/expensas/tarjetas')}>
               Tarjetas
             </Button>
+            <Button size="sm" variant="secondary" onClick={() => router.push('/expensas/cuenta-corriente')}>
+              Cuenta corriente
+            </Button>
             <Button size="sm" variant="secondary" onClick={() => router.push('/expensas/reportes')}>
               Reportes
             </Button>
