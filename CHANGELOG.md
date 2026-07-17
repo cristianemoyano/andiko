@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.50.0](https://github.com/cristianemoyano/andiko/compare/v0.48.1...v0.50.0) (2026-07-17)
+
+### Features
+
+* **accounting:** avanzar cierres y reportes ([f1e0f1d](https://github.com/cristianemoyano/andiko/commit/f1e0f1d40d32a93d76bcf6581de0da1441e5b4af))
+* **auth:** add user welcome email and full forgot-password flow ([ee94f9d](https://github.com/cristianemoyano/andiko/commit/ee94f9d47dbc1c4d8cbeebd8bb4d31f5d5fbbbbe))
+* **automations:** register low-stock alert queue drain action ([4661c3d](https://github.com/cristianemoyano/andiko/commit/4661c3d682da3f937baeee20110e83af858b9def))
+* **communications:** generalize email templates and notification routing ([4c94011](https://github.com/cristianemoyano/andiko/commit/4c94011ea46e4cb69047046b3c519a3b549e5c9d))
+* **contacts:** add resolveContactDisplay lookup service ([3081d53](https://github.com/cristianemoyano/andiko/commit/3081d53b31780a6a013c1ea5b0b10ffe70d9a16e))
+* **core:** add money and absolute-url formatting helpers ([5230b65](https://github.com/cristianemoyano/andiko/commit/5230b65dc25a2b3c60aecc921be05e74cfde4a60))
+* **core:** add panel north-star decision KPIs with cost snapshots ([d659921](https://github.com/cristianemoyano/andiko/commit/d659921573c30dd369bb5813ecf7d333750505d8))
+* **core:** add POS download section to landing and release link sync ([574d052](https://github.com/cristianemoyano/andiko/commit/574d052a7c11975dcd55682e233fe6324a807c5b))
+* **core:** modernize ERP shell with collapsible sidebar and top user menu ([f444836](https://github.com/cristianemoyano/andiko/commit/f444836853f82c38cdb56cdbab52598710abf734))
+* **core:** nivel de log configurable, redacción de secretos en pino y handleApiError centralizado ([1a11642](https://github.com/cristianemoyano/andiko/commit/1a1164208badbc94ed708dae16e5685be3891266))
+* **inventory:** real-time low-stock alert emails to configured users ([9e04cb7](https://github.com/cristianemoyano/andiko/commit/9e04cb7c2ae0286cd86a08ec81c3694c86a7ce17))
+* **purchases:** send purchase order to supplier by email ([976483e](https://github.com/cristianemoyano/andiko/commit/976483e85ec0baea3ba88db7bbed9d13ca2c14b9))
+* **sales:** send payment receipt email and drain stock alerts on confirm ([2d34045](https://github.com/cristianemoyano/andiko/commit/2d3404528d9f8c59b25ea868fb078a5695a5e5fc))
+
+### Bug Fixes
+
+* **core:** harden panel KPI bases after review ([5a14945](https://github.com/cristianemoyano/andiko/commit/5a149450d188da70d67602747c5493693443c760))
+
 ## [0.48.1](https://github.com/cristianemoyano/andiko/compare/v0.48.0...v0.48.1) (2026-07-14)
 
 ## [0.48.0](https://github.com/cristianemoyano/andiko/compare/v0.47.1...v0.48.0) (2026-07-14)
