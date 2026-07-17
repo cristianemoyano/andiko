@@ -88,13 +88,13 @@ const DESKTOP_KPI_INFO = {
   facturacion_neta:
     'Ventas netas del período (base imponible sin IVA). Excluye borradores y anulados.',
   margen_bruto:
-    'Facturación neta menos costo de mercadería vendida (CMV). El CMV usa el costo al momento de la venta.',
+    'Sobre líneas con costo al momento de la venta (unit_cost): venta neta cubierta − CMV. Si el aviso de cobertura aparece, hay ventas sin costo snapshot.',
   margen_ganancia_pct:
-    'Ganancia sobre la venta: (facturación neta − CMV) ÷ facturación neta. No es markup sobre el costo.',
+    'Ganancia sobre la venta (solo líneas con costo): (venta cubierta − CMV) ÷ venta cubierta. No es markup sobre el costo.',
   rentabilidad:
-    'Ganancia sobre la venta después de expensas: (facturación neta − CMV − expensas) ÷ facturación neta, más el monto en pesos.',
+    'Sobre ventas con costo: (venta cubierta − CMV − expensas netas) ÷ venta cubierta. Expensas sin IVA, alineadas a la facturación neta.',
   punto_equilibrio:
-    'Facturación neta mínima para cubrir expensas al margen actual: expensas ÷ margen de ganancia. Vacío si el margen es ≤ 0.',
+    'Facturación neta mínima (con el margen de las líneas costadas) para cubrir expensas netas: expensas ÷ margen de ganancia. Vacío si el margen es ≤ 0.',
   saldo_cuenta:
     'Saldo en cuentas bancarias. Requiere el módulo Tesorería (próximamente); no se calcula desde Caja/Banco del libro mayor.',
   por_cobrar:

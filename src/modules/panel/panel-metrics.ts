@@ -1,36 +1,45 @@
 export interface PanelMarginInputs {
-  facturacionNeta: number
+  /** Net sales with a cost snapshot (denominator for margin %). */
+  coveredRevenue: number
   cmv: number
   expensas: number
 }
 
-export function calcMargenBruto(facturacionNeta: number, cmv: number): number {
-  return facturacionNeta - cmv
+/** Gross profit on lines that have a cost snapshot. */
+export function calcMargenBruto(coveredRevenue: number, cmv: number): number {
+  return coveredRevenue - cmv
 }
 
-/** Ganancia sobre la venta: (venta − costo) / venta */
-export function calcMargenGananciaPct(facturacionNeta: number, cmv: number): number | null {
-  if (facturacionNeta <= 0) return null
-  const margen = facturacionNeta - cmv
-  return roundPct((margen / facturacionNeta) * 100)
+/**
+ * Ganancia sobre la venta: (venta − costo) / venta.
+ * `coveredRevenue` must be net sales that have unit_cost — never include lines without cost.
+ */
+export function calcMargenGananciaPct(coveredRevenue: number, cmv: number): number | null {
+  if (coveredRevenue <= 0) return null
+  const margen = coveredRevenue - cmv
+  return roundPct((margen / coveredRevenue) * 100)
 }
 
+/**
+ * Operating result after CMV and net expenses, over covered (costed) sales.
+ * Callers must pass expense amounts net of IVA.
+ */
 export function calcRentabilidad(
-  facturacionNeta: number,
+  coveredRevenue: number,
   cmv: number,
-  expensas: number,
+  expensasNetas: number,
 ): { value: number; pct: number | null } {
-  const value = facturacionNeta - cmv - expensas
-  const pct = facturacionNeta > 0
-    ? roundPct((value / facturacionNeta) * 100)
+  const value = coveredRevenue - cmv - expensasNetas
+  const pct = coveredRevenue > 0
+    ? roundPct((value / coveredRevenue) * 100)
     : null
   return { value, pct }
 }
 
-/** Expensas ÷ margen de ganancia (como fracción). Null si margen ≤ 0. */
-export function calcPuntoEquilibrio(expensas: number, margenGananciaPct: number | null): number | null {
-  if (margenGananciaPct == null || margenGananciaPct <= 0 || expensas <= 0) return null
-  return Math.round((expensas / (margenGananciaPct / 100)) * 100) / 100
+/** Expensas netas ÷ margen de ganancia (fracción). Null si margen ≤ 0. */
+export function calcPuntoEquilibrio(expensasNetas: number, margenGananciaPct: number | null): number | null {
+  if (margenGananciaPct == null || margenGananciaPct <= 0 || expensasNetas <= 0) return null
+  return Math.round((expensasNetas / (margenGananciaPct / 100)) * 100) / 100
 }
 
 export function calcCostCoveragePct(coveredRevenue: number, totalRevenue: number): number {

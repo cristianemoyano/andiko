@@ -130,6 +130,7 @@ interface MarginKpiRow {
   cmv_current: string
   cmv_previous: string
   covered_revenue_current: string
+  covered_revenue_previous: string
   total_revenue_current: string
 }
 
@@ -166,16 +167,17 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
     WHERE e.org_id = :orgId AND e.deleted_at IS NULL ${bcExp}
   `, { replacements: { orgId, openExpenseStatuses: [...OPEN_PAYABLE_EXPENSE_STATUSES] }, type: QueryTypes.SELECT })
 
+  // Decision KPIs use expense subtotal (net of IVA) to match facturación neta / CMV.
   const [expensePeriodRows] = await sequelize.query<{ current: string; previous: string }>(`
     SELECT
       COALESCE(SUM(CASE WHEN e.status NOT IN ('draft', 'cancelled')
         AND COALESCE(e.invoice_date, e.created_at) >= :from
         AND COALESCE(e.invoice_date, e.created_at) <= :to
-        THEN CAST(e.total AS NUMERIC) END), 0)::text AS current,
+        THEN CAST(e.subtotal AS NUMERIC) END), 0)::text AS current,
       COALESCE(SUM(CASE WHEN e.status NOT IN ('draft', 'cancelled')
         AND COALESCE(e.invoice_date, e.created_at) >= :prevFrom
         AND COALESCE(e.invoice_date, e.created_at) < :from
-        THEN CAST(e.total AS NUMERIC) END), 0)::text AS previous
+        THEN CAST(e.subtotal AS NUMERIC) END), 0)::text AS previous
     FROM expenses e
     WHERE e.org_id = :orgId AND e.deleted_at IS NULL ${bcExp}
   `, { replacements: { orgId, from, to, prevFrom, prevTo }, type: QueryTypes.SELECT })
@@ -188,6 +190,7 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
     WHERE p.org_id = :orgId AND p.deleted_at IS NULL ${bc2}
   `, { replacements: { orgId, from, to, prevFrom, prevTo }, type: QueryTypes.SELECT })
 
+  // CMV / coverage use only invoice_items.unit_cost snapshots — never live catalog cost_price.
   const [marginRows] = await sequelize.query<MarginKpiRow>(`
     SELECT
       COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to
@@ -195,19 +198,21 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
       COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :prevFrom AND i.issue_date < :from
         THEN CAST(ii.tax_base AS NUMERIC) END), 0)::text AS net_sales_previous,
       COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to
-        AND COALESCE(ii.unit_cost, pv.cost_price) IS NOT NULL
-        THEN CAST(ii.quantity AS NUMERIC) * COALESCE(CAST(ii.unit_cost AS NUMERIC), CAST(pv.cost_price AS NUMERIC)) END), 0)::text AS cmv_current,
+        AND ii.unit_cost IS NOT NULL
+        THEN CAST(ii.quantity AS NUMERIC) * CAST(ii.unit_cost AS NUMERIC) END), 0)::text AS cmv_current,
       COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :prevFrom AND i.issue_date < :from
-        AND COALESCE(ii.unit_cost, pv.cost_price) IS NOT NULL
-        THEN CAST(ii.quantity AS NUMERIC) * COALESCE(CAST(ii.unit_cost AS NUMERIC), CAST(pv.cost_price AS NUMERIC)) END), 0)::text AS cmv_previous,
+        AND ii.unit_cost IS NOT NULL
+        THEN CAST(ii.quantity AS NUMERIC) * CAST(ii.unit_cost AS NUMERIC) END), 0)::text AS cmv_previous,
       COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to
-        AND COALESCE(ii.unit_cost, pv.cost_price) IS NOT NULL
+        AND ii.unit_cost IS NOT NULL
         THEN CAST(ii.tax_base AS NUMERIC) END), 0)::text AS covered_revenue_current,
+      COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :prevFrom AND i.issue_date < :from
+        AND ii.unit_cost IS NOT NULL
+        THEN CAST(ii.tax_base AS NUMERIC) END), 0)::text AS covered_revenue_previous,
       COALESCE(SUM(CASE WHEN i.status NOT IN ('draft', 'cancelled') AND i.issue_date >= :from AND i.issue_date <= :to
         THEN CAST(ii.tax_base AS NUMERIC) END), 0)::text AS total_revenue_current
     FROM invoices i
     INNER JOIN invoice_items ii ON ii.invoice_id = i.id AND ii.deleted_at IS NULL
-    LEFT JOIN product_variants pv ON pv.id = ii.variant_id AND pv.deleted_at IS NULL
     WHERE i.org_id = :orgId AND i.deleted_at IS NULL ${bc}
   `, { replacements: { orgId, from, to, prevFrom, prevTo }, type: QueryTypes.SELECT })
 
@@ -239,14 +244,16 @@ export async function getPanelKpis(orgId: string, filters: PanelFilters) {
   const cmvCurrent = parseFloat(marginRows?.cmv_current ?? '0')
   const cmvPrev = parseFloat(marginRows?.cmv_previous ?? '0')
   const coveredRevenueCurrent = parseFloat(marginRows?.covered_revenue_current ?? '0')
+  const coveredRevenuePrev = parseFloat(marginRows?.covered_revenue_previous ?? '0')
   const totalRevenueCurrent = parseFloat(marginRows?.total_revenue_current ?? '0')
 
-  const margenBrutoCurrent = calcMargenBruto(facturacionNetaCurrent, cmvCurrent)
-  const margenBrutoPrev = calcMargenBruto(facturacionNetaPrev, cmvPrev)
-  const margenGananciaCurrent = calcMargenGananciaPct(facturacionNetaCurrent, cmvCurrent)
-  const margenGananciaPrev = calcMargenGananciaPct(facturacionNetaPrev, cmvPrev)
-  const rentabilidadCurrent = calcRentabilidad(facturacionNetaCurrent, cmvCurrent, expensesCurrent)
-  const rentabilidadPrev = calcRentabilidad(facturacionNetaPrev, cmvPrev, expensesPrev)
+  // Margin / rentabilidad / break-even use only costed (covered) net sales — never treat missing cost as free margin.
+  const margenBrutoCurrent = calcMargenBruto(coveredRevenueCurrent, cmvCurrent)
+  const margenBrutoPrev = calcMargenBruto(coveredRevenuePrev, cmvPrev)
+  const margenGananciaCurrent = calcMargenGananciaPct(coveredRevenueCurrent, cmvCurrent)
+  const margenGananciaPrev = calcMargenGananciaPct(coveredRevenuePrev, cmvPrev)
+  const rentabilidadCurrent = calcRentabilidad(coveredRevenueCurrent, cmvCurrent, expensesCurrent)
+  const rentabilidadPrev = calcRentabilidad(coveredRevenuePrev, cmvPrev, expensesPrev)
   const costCoveragePct = calcCostCoveragePct(coveredRevenueCurrent, totalRevenueCurrent)
 
   const pctChange = (cur: number, prev: number) =>

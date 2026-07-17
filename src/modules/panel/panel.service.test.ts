@@ -30,6 +30,7 @@ function mockKpiQueries(overrides: {
     cmv_current: string
     cmv_previous: string
     covered_revenue_current: string
+    covered_revenue_previous: string
     total_revenue_current: string
   }>
   expenses?: { current: string; previous: string }
@@ -54,6 +55,7 @@ function mockKpiQueries(overrides: {
       cmv_current: '40000.00',
       cmv_previous: '32000.00',
       covered_revenue_current: '100000.00',
+      covered_revenue_previous: '80000.00',
       total_revenue_current: '100000.00',
       ...overrides.margin,
     }] as never)
@@ -87,6 +89,31 @@ describe('panel.service', () => {
       expect(result).not.toHaveProperty('resultado')
     })
 
+    it('computes margin % on covered revenue only when cost coverage is incomplete', async () => {
+      mockKpiQueries({
+        margin: {
+          net_sales_current: '100000.00',
+          net_sales_previous: '0',
+          cmv_current: '40000.00',
+          cmv_previous: '0',
+          covered_revenue_current: '80000.00',
+          covered_revenue_previous: '0',
+          total_revenue_current: '100000.00',
+        },
+        expenses: { current: '10000.00', previous: '0' },
+      })
+
+      const result = await getPanelKpis(ORG_ID, BASE_FILTERS)
+
+      // Not (100k-40k)/100k = 60% — only covered 80k with CMV 40k → 50%
+      expect(result.cost_coverage_pct).toBe(80)
+      expect(result.margen_bruto.value).toBe(40000)
+      expect(result.margen_ganancia_pct.value).toBe(50)
+      expect(result.rentabilidad.value).toBe(30000)
+      expect(result.rentabilidad.pct).toBe(37.5)
+      expect(result.punto_equilibrio).toBe(20000)
+    })
+
     it('returns null break-even when margin is zero', async () => {
       mockKpiQueries({
         margin: {
@@ -95,6 +122,7 @@ describe('panel.service', () => {
           cmv_current: '100000.00',
           cmv_previous: '0',
           covered_revenue_current: '100000.00',
+          covered_revenue_previous: '0',
           total_revenue_current: '100000.00',
         },
       })
@@ -121,6 +149,7 @@ describe('panel.service', () => {
           cmv_current: '0',
           cmv_previous: '0',
           covered_revenue_current: '0',
+          covered_revenue_previous: '0',
           total_revenue_current: '0',
         },
       })
@@ -149,6 +178,7 @@ describe('panel.service', () => {
           cmv_current: '0',
           cmv_previous: '0',
           covered_revenue_current: '0',
+          covered_revenue_previous: '0',
           total_revenue_current: '0',
         },
       })
