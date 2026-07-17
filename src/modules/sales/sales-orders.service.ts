@@ -12,6 +12,7 @@ import type { SalesOrderInput, SalesOrderUpdateInput, SalesOrderQuery, SalesOrde
 import type { OrderBillInput } from './order-bill.schema'
 import { recalcInvoiceBalance } from './invoices.service'
 import { postInvoiceIssuedAccounting } from '@/modules/accounting/sales-invoice-accounting.service'
+import { resolveVariantUnitCosts, snapshotUnitCost } from './invoice-item-cost'
 import { postSalesPaymentAccounting } from '@/modules/accounting/sales-payment-accounting.service'
 import Decimal from 'decimal.js'
 import type { Transaction } from 'sequelize'
@@ -535,6 +536,8 @@ async function createInvoiceFromOrderInTx(
     { transaction: t },
   )
 
+  const costByVariant = await resolveVariantUnitCosts(order.items.map(i => i.variant_id), ctx.orgId, t)
+
   await InvoiceItem.bulkCreate(
     order.items.map(item => ({
       invoice_id:      invoice.id,
@@ -544,6 +547,7 @@ async function createInvoiceFromOrderInTx(
       description:     item.description,
       quantity:        item.quantity,
       unit_price:      item.unit_price,
+      unit_cost:       snapshotUnitCost(item.variant_id, costByVariant),
       discount_pct:    item.discount_pct,
       iva_rate:        item.iva_rate,
       subtotal:        item.subtotal,

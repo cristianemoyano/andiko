@@ -27,23 +27,28 @@ const REQUIRED_CODES = [
 async function calcCogsTotal(invoiceId: string, orgId: string, t: Transaction): Promise<Decimal> {
   const items = await InvoiceItem.findAll({
     where: { invoice_id: invoiceId },
-    attributes: ['quantity', 'variant_id'],
+    attributes: ['quantity', 'variant_id', 'unit_cost'],
     transaction: t,
   })
 
-  const variantIds = [...new Set(items.map(i => i.variant_id).filter((v): v is string => !!v))]
-  if (variantIds.length === 0) return new Decimal(0)
+  const missingSnapshotIds = [...new Set(
+    items
+      .filter(i => i.unit_cost == null && i.variant_id)
+      .map(i => i.variant_id as string),
+  )]
 
-  const variants = await ProductVariant.findAll({
-    where: { id: variantIds, org_id: orgId },
-    attributes: ['id', 'cost_price'],
-    transaction: t,
-  })
-  const costByVariant = new Map(variants.map(v => [v.id, v.cost_price]))
+  const variantCosts = missingSnapshotIds.length > 0
+    ? await ProductVariant.findAll({
+        where: { id: missingSnapshotIds, org_id: orgId },
+        attributes: ['id', 'cost_price'],
+        transaction: t,
+      })
+    : []
+  const costByVariant = new Map(variantCosts.map(v => [v.id, v.cost_price]))
 
   return items.reduce((acc, item) => {
-    const cost = item.variant_id ? costByVariant.get(item.variant_id) : null
-    return cost ? acc.plus(new Decimal(item.quantity).mul(cost)) : acc
+    const unitCost = item.unit_cost ?? (item.variant_id ? costByVariant.get(item.variant_id) : null)
+    return unitCost ? acc.plus(new Decimal(item.quantity).mul(unitCost)) : acc
   }, new Decimal(0))
 }
 

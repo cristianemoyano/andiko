@@ -18,7 +18,7 @@ export const PANEL_WIDGETS: Record<PanelWidgetId, { label: string }> = {
   analytics_revenue: { label: 'Ingresos' },
   analytics_orders: { label: 'Pedidos' },
   analytics_products: { label: 'Mejores productos' },
-  kpi_cards: { label: 'Indicadores principales' },
+  kpi_cards: { label: 'Indicadores de decisión' },
   top_debts: { label: 'Cobranzas y deudas (top 5)' },
   counts: { label: 'Resumen de registros' },
   stock_alerts: { label: 'Alertas de stock' },

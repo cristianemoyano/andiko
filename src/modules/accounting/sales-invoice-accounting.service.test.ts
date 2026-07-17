@@ -143,7 +143,7 @@ describe('postInvoiceIssuedAccounting', () => {
 
   it('adds a balanced COGS line pair when a variant has a cost_price', async () => {
     invoiceFindByPk.mockResolvedValue(mockInvoice())
-    itemFindAll.mockResolvedValue([{ quantity: '2.0000', variant_id: 'variant-1' }])
+    itemFindAll.mockResolvedValue([{ quantity: '2.0000', variant_id: 'variant-1', unit_cost: null }])
     variantFindAll.mockResolvedValue([{ id: 'variant-1', cost_price: '30.00' }])
 
     await postInvoiceIssuedAccounting('inv-1', ctx, t)
@@ -158,11 +158,23 @@ describe('postInvoiceIssuedAccounting', () => {
     expect(totalDebit).toBeCloseTo(totalCredit, 2)
   })
 
+  it('prefers invoice line unit_cost snapshot over live variant cost_price', async () => {
+    invoiceFindByPk.mockResolvedValue(mockInvoice())
+    itemFindAll.mockResolvedValue([{ quantity: '2.0000', variant_id: 'variant-1', unit_cost: '25.00' }])
+
+    await postInvoiceIssuedAccounting('inv-1', ctx, t)
+
+    expect(variantFindAll).not.toHaveBeenCalled()
+    const lines = lineBulkCreate.mock.calls[0]![0] as Array<{ account_id: string; debit: string; credit: string }>
+    expect(lines.find(l => l.account_id === 'acc-cogs')).toMatchObject({ debit: '50.00', credit: '0.00' })
+    expect(lines.find(l => l.account_id === 'acc-inventory')).toMatchObject({ debit: '0.00', credit: '50.00' })
+  })
+
   it('skips COGS for lines without a variant_id or without a cost_price', async () => {
     invoiceFindByPk.mockResolvedValue(mockInvoice())
     itemFindAll.mockResolvedValue([
-      { quantity: '1.0000', variant_id: null },
-      { quantity: '1.0000', variant_id: 'variant-no-cost' },
+      { quantity: '1.0000', variant_id: null, unit_cost: null },
+      { quantity: '1.0000', variant_id: 'variant-no-cost', unit_cost: null },
     ])
     variantFindAll.mockResolvedValue([{ id: 'variant-no-cost', cost_price: null }])
 
