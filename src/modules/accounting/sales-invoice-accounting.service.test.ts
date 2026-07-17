@@ -19,6 +19,12 @@ vi.mock('./account.model', () => ({ default: { findAll: accountFindAll } }))
 vi.mock('./journal-entry.model', () => ({ default: { create: entryCreate, findOne: entryFindOne } }))
 vi.mock('./journal-entry-line.model', () => ({ default: { bulkCreate: lineBulkCreate } }))
 vi.mock('./accounting-associations', () => ({ ensureAccountingAssociations: vi.fn() }))
+vi.mock('./accounting-period-guards', () => ({
+  clampDateOutOfClosedPeriods: vi.fn(async (_orgId: string, date: Date | string) => ({
+    dateOnly: typeof date === 'string' ? date.slice(0, 10) : date.toISOString().slice(0, 10),
+    clamped: false,
+  })),
+}))
 vi.mock('./accounting.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./accounting.utils')>()
   return { ...actual, nextEntryNumber: vi.fn(async () => 'AS-000001') }
