@@ -4,8 +4,14 @@
 export {
   EMAIL_DOCUMENT_TYPES,
   EMAIL_DOCUMENT_LABEL,
+  EMAIL_TEMPLATE_KEYS,
+  SYSTEM_EMAIL_TEMPLATE_KEYS,
+  EMAIL_TEMPLATE_TOGGLEABLE_KEYS,
+  EMAIL_TEMPLATE_LABEL,
   EMAIL_TEMPLATE_VARIABLES,
   type EmailDocumentType,
+  type EmailTemplateKey,
+  type SystemEmailTemplateKey,
 } from './email-template.schema'
 
 export {

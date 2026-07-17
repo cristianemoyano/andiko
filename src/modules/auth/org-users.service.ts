@@ -1,6 +1,7 @@
 import 'server-only'
 import { Op } from 'sequelize'
 import sequelize from '@/lib/db'
+import logger from '@/lib/logger'
 import User from '@/modules/auth/user.model'
 import Branch from '@/modules/auth/branch.model'
 import OrgRole from '@/modules/auth/org-role.model'
@@ -12,6 +13,7 @@ import type { OrgUserMutationActor } from '@/lib/org-user-mutation-actor'
 import type { OrgUserCreateInput, OrgUserUpdateInput } from '@/modules/auth/org-users.schema'
 import { CUSTOM_ORG_ROLE_CARRIER } from '@/modules/auth/role-labels'
 import { formatUserDisplayName, resolveUserNameParts } from '@/modules/auth/user.utils'
+import { sendUserWelcomeEmail } from '@/modules/auth/user-welcome-notification.service'
 import type { UserRole } from '@/types/roles'
 
 async function assertBranchesBelongToOrg(orgId: string, branchIds: string[]) {
@@ -193,6 +195,17 @@ export async function createOrgUser(orgId: string, input: OrgUserCreateInput) {
   })
 
   invalidateCapabilitiesIdentity(orgId, role, org_role_id)
+
+  // Non-blocking: a welcome-email failure must never undo the created user.
+  try {
+    await sendUserWelcomeEmail(
+      { id: user.id, email: user.email, name: user.name, org_id: orgId },
+      null,
+    )
+  } catch (err) {
+    logger.error({ err, userId: user.id, orgId }, 'user welcome email failed')
+  }
+
   return user
 }
 

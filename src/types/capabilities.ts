@@ -56,6 +56,7 @@ export type UiCapabilities = {
       afip: boolean
       integraciones: boolean
       terminosCondiciones: boolean
+      alertas: boolean
     }
   }
   /** Configuración inicial de la org (wizard). Mismo alcance que settings:write. */

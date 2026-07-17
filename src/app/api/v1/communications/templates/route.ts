@@ -3,7 +3,7 @@ import { withPermission } from '@/lib/api-handler'
 import { resolveOrgScope } from '@/lib/session-org'
 import {
   DEFAULT_EMAIL_TEMPLATES,
-  EMAIL_DOCUMENT_LABEL,
+  EMAIL_TEMPLATE_LABEL,
   EMAIL_TEMPLATE_VARIABLES,
   emailTemplatesUpdateSchema,
 } from '@/modules/communications/email-template.schema'
@@ -20,7 +20,7 @@ export const GET = withPermission('settings:read', async (_req, _ctx, session) =
   return NextResponse.json({
     templates,
     defaults: DEFAULT_EMAIL_TEMPLATES,
-    labels: EMAIL_DOCUMENT_LABEL,
+    labels: EMAIL_TEMPLATE_LABEL,
     variables: EMAIL_TEMPLATE_VARIABLES,
   })
 })

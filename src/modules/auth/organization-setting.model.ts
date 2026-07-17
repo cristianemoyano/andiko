@@ -15,13 +15,14 @@ export interface OrganizationSettingAttributes extends Timestamps {
   pos_config: PosConfig | null
   sales_config: SalesConfig | null
   terms_and_conditions: string | null
+  low_stock_alert_recipient_user_ids: UUID[]
 }
 
 type OrganizationSettingCreationAttributes = Optional<
   OrganizationSettingAttributes,
   | 'id' | 'enabled_modules' | 'enabled_features' | 'print_template'
   | 'email_templates' | 'pos_config' | 'sales_config' | 'terms_and_conditions'
-  | 'created_at' | 'updated_at' | 'deleted_at'
+  | 'created_at' | 'updated_at' | 'deleted_at' | 'low_stock_alert_recipient_user_ids'
 >
 
 export class OrganizationSetting extends Model<
@@ -37,6 +38,7 @@ export class OrganizationSetting extends Model<
   declare pos_config: PosConfig | null
   declare sales_config: SalesConfig | null
   declare terms_and_conditions: string | null
+  declare low_stock_alert_recipient_user_ids: UUID[]
   declare created_at: Date
   declare updated_at: Date
   declare deleted_at: Date | null
@@ -53,6 +55,11 @@ OrganizationSetting.init(
     pos_config: { type: DataTypes.JSONB, allowNull: true },
     sales_config: { type: DataTypes.JSONB, allowNull: true },
     terms_and_conditions: { type: DataTypes.TEXT, allowNull: true },
+    low_stock_alert_recipient_user_ids: {
+      type: DataTypes.ARRAY(DataTypes.UUID),
+      allowNull: false,
+      defaultValue: [],
+    },
     created_at: { type: DataTypes.DATE, allowNull: false },
     updated_at: { type: DataTypes.DATE, allowNull: false },
     deleted_at: { type: DataTypes.DATE },

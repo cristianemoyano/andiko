@@ -1,6 +1,7 @@
 export { Sidebar } from './Sidebar'
 export { PageBody } from './PageBody'
 export { TopBar } from './TopBar'
+export { UserMenu } from './UserMenu'
 export { AppVersion } from './AppVersion'
 export { AndikoLogo } from './AndikoLogo'
 export { AndikoMark, AndikoMarkGlyph, PoweredByAndiko } from './AndikoMark'

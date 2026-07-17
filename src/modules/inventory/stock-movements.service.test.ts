@@ -22,6 +22,12 @@ vi.mock('./stock-movement.model', () => ({
   },
 }))
 
+vi.mock('./low-stock-alert-queue.model', () => ({
+  default: {
+    bulkCreate: vi.fn().mockResolvedValue([]),
+  },
+}))
+
 vi.mock('./stock-batches.service', () => ({
   allocateInbound:              vi.fn(),
   consumeFefo:                  vi.fn(),
@@ -65,16 +71,18 @@ vi.mock('@/modules/sales/sales-order-item.model', () => ({
 
 import StockItem    from './stock-item.model'
 import StockMovement from './stock-movement.model'
+import LowStockAlertQueue from './low-stock-alert-queue.model'
 import { applyMovement, restoreStockForOrder, manualAdjustment } from './stock-movements.service'
 import { resolveDefaultWarehouse } from './warehouses.service'
 import { allocateInbound, consumeFefo, earliestExpiry, ensureBatchesMatchAggregate } from './stock-batches.service'
 
 const T = {} as never // mock transaction
 
-function mockStockItem(quantity: string) {
+function mockStockItem(quantity: string, minimumQuantity = '0') {
   return {
     id: 'item-1',
     quantity,
+    minimum_quantity: minimumQuantity,
     update: vi.fn().mockResolvedValue(undefined),
   }
 }
@@ -339,6 +347,69 @@ describe('applyMovement', () => {
       expect.objectContaining({ quantity: '10.0000' }),
       expect.anything(),
     )
+  })
+})
+
+// ─────────────────────────────────────────────
+// low-stock alert enqueue
+// ─────────────────────────────────────────────
+
+describe('applyMovement — low stock alert enqueue', () => {
+  it('enqueues a low-stock alert row when an outbound movement crosses below minimum', async () => {
+    const item = mockStockItem('12.0000', '10.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+    ;(StockItem.sum as Mock).mockResolvedValue(7)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await applyMovement(
+      {
+        variantId:     'var-1',
+        warehouseId:   'wh-1',
+        orgId:         'org-1',
+        movementType:  'out',
+        referenceType: 'order',
+        referenceId:   'ord-1',
+        quantityDelta: new Decimal('-5'),
+        notes:         null,
+        actorId:       'actor-1',
+      },
+      T,
+    )
+
+    expect(LowStockAlertQueue.bulkCreate).toHaveBeenCalledWith(
+      [{ org_id: 'org-1', stock_item_id: 'item-1' }],
+      expect.objectContaining({ ignoreDuplicates: true }),
+    )
+  })
+
+  it('does not enqueue when the resulting quantity stays at or above minimum', async () => {
+    const item = mockStockItem('20.0000', '10.0000')
+    ;(StockItem.findOrCreate as Mock).mockResolvedValue([item, false])
+    ;(StockItem.sum as Mock).mockResolvedValue(15)
+    ;(StockMovement.create as Mock).mockResolvedValue({})
+
+    const { default: ProductVariant } = await import('@/modules/catalog/product-variant.model')
+    ;(ProductVariant.update as Mock).mockResolvedValue([1])
+
+    await applyMovement(
+      {
+        variantId:     'var-1',
+        warehouseId:   'wh-1',
+        orgId:         'org-1',
+        movementType:  'out',
+        referenceType: 'order',
+        referenceId:   'ord-1',
+        quantityDelta: new Decimal('-5'),
+        notes:         null,
+        actorId:       'actor-1',
+      },
+      T,
+    )
+
+    expect(LowStockAlertQueue.bulkCreate).not.toHaveBeenCalled()
   })
 })
 

@@ -343,6 +343,7 @@ export function MenuPanel({
         <div className="px-4 py-6">
           <button
             type="button"
+            data-testid="logout-btn"
             onClick={() => signOut({ callbackUrl: '/login' })}
             className="w-full flex items-center justify-center gap-2 h-11 rounded-sm border border-border text-[14px] text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors"
           >

@@ -140,7 +140,7 @@ function ImpersonateActionIcon({ className }: { className?: string }) {
   )
 }
 
-export function SysAdminImpersonation() {
+export function SysAdminImpersonation({ collapsed = false }: { collapsed?: boolean }) {
   const router = useRouter()
   const { data: session, status, update } = useSession()
   const { refreshCapabilities } = useCapabilities()
@@ -226,21 +226,52 @@ export function SysAdminImpersonation() {
   }
 
   const imp = session.user.impersonation
+  const actionLabel = imp ? 'Cambiar usuario' : 'Impersonar usuario'
 
   return (
-    <div className="flex flex-col gap-1.5 mb-1">
+    <div className={cn('mb-1 flex flex-col gap-1.5', collapsed && 'md:items-center')}>
       {imp && (
         <div
-          className="rounded-sm border border-warning bg-warning-bg px-2 py-2 text-[11px] text-warning leading-snug"
+          className={cn(
+            'rounded-md border border-warning bg-warning-bg text-[11px] leading-snug text-warning',
+            collapsed ? 'px-1 py-1.5 md:px-1' : 'px-2 py-2',
+          )}
           role="status"
+          title={collapsed ? `Impersonando: ${imp.name}` : undefined}
         >
-          <div className="font-semibold text-warning">Impersonando</div>
-          <div className="truncate mt-0.5">
+          <div className={cn('font-semibold text-warning', collapsed && 'md:sr-only')}>Impersonando</div>
+          <div className={cn('mt-0.5 truncate', collapsed && 'md:hidden')}>
             {imp.name} · {imp.email}
           </div>
-          <div className="mt-1.5">
-            <Button type="button" variant="secondary" size="xs" onClick={() => void handleStopImpersonation()}>
-              Volver a sys-admin
+          {collapsed && (
+            <div className="hidden text-center text-[9px] font-semibold uppercase tracking-wide md:block" aria-hidden>
+              Imp
+            </div>
+          )}
+          <div className={cn('mt-1.5', collapsed && 'md:mt-1 md:flex md:justify-center')}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              onClick={() => void handleStopImpersonation()}
+              className={collapsed ? 'md:px-1.5' : undefined}
+              title="Volver a sys-admin"
+            >
+              <span className={cn(collapsed && 'md:hidden')}>Volver a sys-admin</span>
+              <svg
+                className={cn('hidden', collapsed && 'md:block')}
+                width="12"
+                height="12"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M6 3 2 8l4 5M2 8h12" />
+              </svg>
             </Button>
           </div>
         </div>
@@ -251,15 +282,16 @@ export function SysAdminImpersonation() {
         title={imp ? 'Cambiar de usuario impersonado' : 'Impersonar otro usuario'}
         onClick={openImpersonationModal}
         className={cn(
-          'flex w-full items-center gap-2.5 h-[34px] px-2 rounded-sm text-[13px] mb-px transition-colors text-left cursor-pointer',
+          'mb-px flex h-9 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] transition-colors',
           'text-fg-muted hover:bg-surface-hover',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 focus-visible:ring-offset-0',
+          collapsed && 'md:h-9 md:w-9 md:justify-center md:gap-0 md:px-0',
         )}
       >
         <span className="flex-shrink-0 text-fg-subtle">
           <ImpersonateActionIcon />
         </span>
-        <span className="truncate">{imp ? 'Cambiar usuario' : 'Impersonar usuario'}</span>
+        <span className={cn('truncate', collapsed && 'md:sr-only')}>{actionLabel}</span>
       </button>
 
       <Dialog

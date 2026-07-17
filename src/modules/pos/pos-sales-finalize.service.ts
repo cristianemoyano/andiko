@@ -14,6 +14,7 @@ import type { PaymentMethod } from '@/modules/sales/payment.constants'
 import type { PosSaleAuthorizeInput } from '@/modules/pos/pos-fiscal.schema'
 import type { TenantContext } from '@/lib/tenancy'
 import { postInvoiceIssuedAccounting } from '@/modules/accounting/sales-invoice-accounting.service'
+import { resolveVariantUnitCosts, snapshotUnitCost } from '@/modules/sales/invoice-item-cost'
 import { postSalesPaymentAccounting } from '@/modules/accounting/sales-payment-accounting.service'
 
 function mapPosPaymentMethod(type: string): PaymentMethod {
@@ -140,7 +141,7 @@ export async function finalizePosSaleInErp(
 ): Promise<Invoice | null> {
   const requireAfip = options.requireAfip ?? true
 
-  return sequelize.transaction(async (t) => {
+  const invoiceResult = await sequelize.transaction(async (t) => {
     const order = await SalesOrder.findOne({
       where: { id: orderId, org_id: orgId, source: 'pos' },
       transaction: t,
@@ -228,6 +229,8 @@ export async function finalizePosSaleInErp(
       { transaction: t },
     )
 
+    const costByVariant = await resolveVariantUnitCosts(items.map(i => i.variant_id), orgId, t)
+
     await InvoiceItem.bulkCreate(
       items.map((item) => ({
         invoice_id: invoice.id,
@@ -237,6 +240,7 @@ export async function finalizePosSaleInErp(
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
+        unit_cost: snapshotUnitCost(item.variant_id, costByVariant),
         discount_pct: item.discount_pct,
         iva_rate: item.iva_rate,
         subtotal: item.subtotal,
@@ -263,4 +267,17 @@ export async function finalizePosSaleInErp(
     )
     return invoice
   })
+
+  // Non-blocking: drain any low-stock alerts queued while finalizing this
+  // sale, in real time rather than waiting for the automations safety-net.
+  if (invoiceResult) {
+    try {
+      const { drainPendingLowStockAlerts } = await import('@/modules/inventory/low-stock-alert.service')
+      await drainPendingLowStockAlerts(orgId)
+    } catch (err) {
+      logger.error({ err, orderId, orgId }, 'low stock alert drain failed')
+    }
+  }
+
+  return invoiceResult
 }

@@ -153,6 +153,7 @@ Ningún componente se usa en producción sin su story.
 - [x] TopBar / PageHeader (breadcrumb + slot de acciones)
 - [x] Card / Panel
 - [x] Sidebar (navegación principal, logout, estado activo)
+- [x] Shell ERP desktop moderno: sidebar colapsable a icon-rail (estilo Datadog, preferencia en `localStorage`), menú de usuario en TopBar (arriba a la derecha) con email/rol/perfil/logout, placeholder de notificaciones; logout fuera del footer del sidebar
 - [x] Tabs
 - [x] Responsive móvil (<768px): barra de navegación inferior con Panel · Ventas · Productos · Menú (4 tabs, íconos más grandes); drawer "Menú" con el resto de módulos; Dialog con scroll y gutters; grillas de formulario/detalle que colapsan a una columna
 - [x] Mobile UX — fase 2 (estilo WooCommerce iOS): `PageBody` (`min-h-0 overflow-auto`) elimina recorte de contenido por BottomNav en todos los 58 screens; `MenuPanel` pre-renderizado con transición CSS (instantáneo, sin navegación); `TopBar` en dos filas mobile (chevron ← + título 17px / acciones desplazables); `DataTable` role `actions` muestra botones en cards mobile; `onRowClick` en tablas de usuarios y sucursales abre modal de edición
@@ -188,7 +189,9 @@ Ningún componente se usa en producción sin su story.
 
 Vista ejecutiva del negocio. Primer pantalla post-login.
 
-- [x] KPI cards: Facturado, Cobrado, Cuentas por cobrar, Saldo en cuenta (con sparklines y tendencia vs período anterior)
+- [x] KPI cards comerciales (PerformanceCard): Facturado c/ IVA, Cobrado, Pendiente (con sparklines y tendencia vs período anterior)
+- [x] KPIs de decisión: Facturación neta, Margen bruto, Margen de ganancia (% sobre la venta), Rentabilidad, Punto de equilibrio, Por cobrar, Por pagar
+- [ ] Dinero en cuentas — bloqueado hasta [Tesorería](#tesorería-impuestos-y-cumplimiento-ar-gaps-identificados--sin-fecha) (cuentas bancarias + conciliación); panel muestra CTA vacío, no calcula desde Caja/Banco del GL
 - [x] Count cards: Productos activos, Clientes, Proveedores, Comprobantes del período
 - [x] Flujo de caja — gráfico de barras con toggle Semanal / Mensual / Anual
 - [x] Gastos por proveedor — gráfico donut con top 6 proveedores del período
@@ -900,7 +903,7 @@ adopción B2B en PyMEs argentinas; relevadas en revisión de producto.
 
 ### Tesorería / Finanzas
 - [ ] Gestión de cheques (terceros y propios, e-cheq): cartera, estados, vencimientos, aplicación a cuenta corriente
-- [ ] Conciliación bancaria + múltiples cuentas bancarias
+- [ ] Conciliación bancaria + múltiples cuentas bancarias — desbloquea el KPI **Dinero en cuentas** del [Panel General](#panel-general-dashboard)
 - [ ] Multi-moneda (operaciones en USD) + ajuste por inflación / revaluación
 - [ ] Workflow de cobranzas (recordatorios de pago, gestión de mora) sobre cuenta corriente
 

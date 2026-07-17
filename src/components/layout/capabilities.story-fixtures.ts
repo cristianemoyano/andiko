@@ -54,6 +54,7 @@ export const storyCapabilities: UiCapabilities = {
       afip: false,
       integraciones: false,
       terminosCondiciones: true,
+      alertas: false,
     },
   },
   onboarding: {

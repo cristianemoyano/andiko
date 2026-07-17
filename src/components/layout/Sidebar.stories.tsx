@@ -6,6 +6,7 @@ import { SessionProvider } from 'next-auth/react'
 import { Sidebar } from './Sidebar'
 import { SidebarProvider } from './SidebarContext'
 import { CapabilitiesProvider } from './CapabilitiesContext'
+import { TopBar } from './TopBar'
 import { storyCapabilities } from './capabilities.story-fixtures'
 
 const session: Session = {
@@ -31,27 +32,58 @@ const meta: Meta<typeof Sidebar> = {
   component: Sidebar,
   tags: ['autodocs'],
   args: {
-    userName: 'Vendedor Demo',
-    userRole: 'operator',
     isRealSysAdmin: false,
   },
 }
 export default meta
 type Story = StoryObj<typeof Sidebar>
 
-// Desktop: the sidebar is a static 220px column (md:static), always visible.
+function ShellFrame({
+  children,
+  defaultCollapsed = false,
+}: {
+  children: React.ReactNode
+  defaultCollapsed?: boolean
+}) {
+  return (
+    <SessionProvider session={session}>
+      <CapabilitiesProvider initial={storyCapabilities}>
+        <SidebarProvider defaultCollapsed={defaultCollapsed} persistCollapsed={false}>
+          <div className="flex h-screen bg-bg">
+            {children}
+            <div className="flex min-w-0 flex-1 flex-col">
+              <TopBar
+                breadcrumbs={[{ label: 'Panel' }]}
+                userName="Vendedor Demo"
+                userRole="operator"
+              />
+              <div className="flex-1 p-5 text-sm text-fg-muted">Contenido de página</div>
+            </div>
+          </div>
+        </SidebarProvider>
+      </CapabilitiesProvider>
+    </SessionProvider>
+  )
+}
+
+// Desktop: expanded sidebar + top bar chrome
 export const Default: Story = {
   decorators: [
     Story => (
-      <SessionProvider session={session}>
-        <CapabilitiesProvider initial={storyCapabilities}>
-          <SidebarProvider>
-            <div className="flex h-screen bg-surface-muted">
-              <Story />
-            </div>
-          </SidebarProvider>
-        </CapabilitiesProvider>
-      </SessionProvider>
+      <ShellFrame>
+        <Story />
+      </ShellFrame>
+    ),
+  ],
+}
+
+// Desktop: collapsed icon rail
+export const Collapsed: Story = {
+  decorators: [
+    Story => (
+      <ShellFrame defaultCollapsed>
+        <Story />
+      </ShellFrame>
     ),
   ],
 }

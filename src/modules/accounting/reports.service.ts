@@ -3,7 +3,9 @@ import { QueryTypes } from 'sequelize'
 import Decimal from 'decimal.js'
 import sequelize from '@/lib/db'
 import type { TenantContext } from '@/lib/tenancy'
-import type { TrialBalanceQuery } from './journal-entry.schema'
+import type { IncomeStatementQuery, TrialBalanceQuery } from './journal-entry.schema'
+import { CLOSING_SOURCE_TYPES } from './accounting-period.constants'
+import { summarizeIncomeStatement, type IncomeStatementSummary } from './income-statement-summary'
 
 export type TrialBalanceRow = {
   account_id: string
@@ -43,7 +45,12 @@ type RawRow = {
  * por cuenta, en un rango de fechas opcional, con filtro opcional por sucursal
  * (centro de costo).
  */
-export async function getTrialBalance(query: TrialBalanceQuery, ctx: TenantContext): Promise<TrialBalance> {
+export async function getTrialBalance(
+  query: TrialBalanceQuery,
+  ctx: TenantContext,
+  options: { excludeSourceTypes?: readonly string[] } = {},
+): Promise<TrialBalance> {
+  const excludeSourceTypes = options.excludeSourceTypes ?? []
   const rows = await sequelize.query<RawRow>(
     `SELECT a.id AS account_id, a.code, a.name, a.type::text AS type,
             COALESCE(SUM(l.debit), 0)  AS total_debit,
@@ -56,6 +63,7 @@ export async function getTrialBalance(query: TrialBalanceQuery, ctx: TenantConte
         AND (:fromDate::date IS NULL OR e.entry_date >= :fromDate::date)
         AND (:toDate::date   IS NULL OR e.entry_date <= :toDate::date)
         AND (:branchId::uuid IS NULL OR l.branch_id = :branchId::uuid)
+        ${excludeSourceTypes.length > 0 ? 'AND (e.source_type IS NULL OR e.source_type NOT IN (:excludedSourceTypes))' : ''}
       GROUP BY a.id, a.code, a.name, a.type
      HAVING COALESCE(SUM(l.debit), 0) <> 0 OR COALESCE(SUM(l.credit), 0) <> 0
       ORDER BY a.code ASC`,
@@ -66,6 +74,7 @@ export async function getTrialBalance(query: TrialBalanceQuery, ctx: TenantConte
         fromDate: query.from ?? null,
         toDate: query.to ?? null,
         branchId: query.branch_id ?? null,
+        ...(excludeSourceTypes.length > 0 && { excludedSourceTypes: [...excludeSourceTypes] }),
       },
     },
   )
@@ -110,5 +119,32 @@ export async function getTrialBalance(query: TrialBalanceQuery, ctx: TenantConte
       saldo_debit: saldoDebitTotal.toFixed(2),
       saldo_credit: saldoCreditTotal.toFixed(2),
     },
+  }
+}
+
+export type IncomeStatement = IncomeStatementSummary & {
+  from: string | null
+  to: string | null
+  branch_id: string | null
+}
+
+/**
+ * Estado de resultados: cuentas de resultado (income/expense) del período.
+ * Excluye asientos de cierre/reapertura para que un período cerrado siga
+ * mostrando su resultado.
+ */
+export async function getIncomeStatement(
+  query: IncomeStatementQuery,
+  ctx: TenantContext,
+): Promise<IncomeStatement> {
+  const trialBalance = await getTrialBalance(query, ctx, {
+    excludeSourceTypes: CLOSING_SOURCE_TYPES,
+  })
+  const summary = summarizeIncomeStatement(trialBalance.rows)
+  return {
+    ...summary,
+    from: query.from ?? null,
+    to: query.to ?? null,
+    branch_id: query.branch_id ?? null,
   }
 }

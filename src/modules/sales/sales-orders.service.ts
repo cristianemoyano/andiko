@@ -12,6 +12,7 @@ import type { SalesOrderInput, SalesOrderUpdateInput, SalesOrderQuery, SalesOrde
 import type { OrderBillInput } from './order-bill.schema'
 import { recalcInvoiceBalance } from './invoices.service'
 import { postInvoiceIssuedAccounting } from '@/modules/accounting/sales-invoice-accounting.service'
+import { resolveVariantUnitCosts, snapshotUnitCost } from './invoice-item-cost'
 import { postSalesPaymentAccounting } from '@/modules/accounting/sales-payment-accounting.service'
 import Decimal from 'decimal.js'
 import type { Transaction } from 'sequelize'
@@ -314,7 +315,9 @@ export async function updateOrder(
     key => input[key as keyof SalesOrderUpdateInput] !== undefined,
   )
 
-  return sequelize.transaction(async (t) => {
+  let stockDeducted = false
+
+  const result = await sequelize.transaction(async (t) => {
     const order = await SalesOrder.findOne({ where: { id, org_id: ctx.orgId }, transaction: t })
     if (!order) throw new Error('ORDER_NOT_FOUND')
     if (ctx.allowedBranchIds.length > 0 && !ctx.allowedBranchIds.includes(order.branch_id as string)) {
@@ -429,6 +432,7 @@ export async function updateOrder(
       }
       const { deductStockForOrder } = await import('@/modules/inventory/stock-movements.service')
       await deductStockForOrder(id, ctx.orgId, actorId, t)
+      stockDeducted = true
     } else if (input.status === 'cancelled' && prevStatus === 'confirmed') {
       const { restoreStockForOrder } = await import('@/modules/inventory/stock-movements.service')
       await restoreStockForOrder(id, ctx.orgId, actorId, t)
@@ -437,6 +441,19 @@ export async function updateOrder(
     logger.info({ orderId: id, actorId }, 'order updated')
     return getOrderInTransaction(id, ctx, t)
   })
+
+  // Non-blocking: drain any low-stock alerts queued by this confirmation, in
+  // real time rather than waiting for the automations safety-net sweep.
+  if (stockDeducted) {
+    try {
+      const { drainPendingLowStockAlerts } = await import('@/modules/inventory/low-stock-alert.service')
+      await drainPendingLowStockAlerts(ctx.orgId)
+    } catch (err) {
+      logger.error({ err, orderId: id, orgId: ctx.orgId }, 'low stock alert drain failed')
+    }
+  }
+
+  return result
 }
 
 export async function deleteOrder(id: string, ctx: TenantContext, actorId: string) {
@@ -519,6 +536,8 @@ async function createInvoiceFromOrderInTx(
     { transaction: t },
   )
 
+  const costByVariant = await resolveVariantUnitCosts(order.items.map(i => i.variant_id), ctx.orgId, t)
+
   await InvoiceItem.bulkCreate(
     order.items.map(item => ({
       invoice_id:      invoice.id,
@@ -528,6 +547,7 @@ async function createInvoiceFromOrderInTx(
       description:     item.description,
       quantity:        item.quantity,
       unit_price:      item.unit_price,
+      unit_cost:       snapshotUnitCost(item.variant_id, costByVariant),
       discount_pct:    item.discount_pct,
       iva_rate:        item.iva_rate,
       subtotal:        item.subtotal,

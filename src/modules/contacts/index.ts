@@ -1,2 +1,1 @@
-// Module placeholder — implement models, services and routes here
-export {}
+export { resolveContactDisplay, type ContactDisplay } from './contact-lookup.service'

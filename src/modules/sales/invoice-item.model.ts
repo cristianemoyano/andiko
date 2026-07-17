@@ -12,6 +12,7 @@ export interface InvoiceItemAttributes extends Timestamps, AuditFields {
   description: string
   quantity: string
   unit_price: string
+  unit_cost: string | null
   discount_pct: string
   iva_rate: IvaRate
   subtotal: string
@@ -24,7 +25,7 @@ export interface InvoiceItemAttributes extends Timestamps, AuditFields {
 
 type InvoiceItemCreationAttributes = Optional<
   InvoiceItemAttributes,
-  | 'id' | 'product_id' | 'variant_id' | 'discount_pct' | 'iva_rate' | 'sort_order'
+  | 'id' | 'product_id' | 'variant_id' | 'unit_cost' | 'discount_pct' | 'iva_rate' | 'sort_order'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -36,6 +37,7 @@ class InvoiceItem extends AuditModel<InvoiceItemAttributes, InvoiceItemCreationA
   declare description: string
   declare quantity: string
   declare unit_price: string
+  declare unit_cost: string | null
   declare discount_pct: string
   declare iva_rate: IvaRate
   declare subtotal: string
@@ -55,6 +57,7 @@ InvoiceItem.init(
     description:     { type: DataTypes.STRING(500), allowNull: false },
     quantity:        { type: DataTypes.DECIMAL(15, 4), allowNull: false },
     unit_price:      { type: DataTypes.DECIMAL(15, 2), allowNull: false },
+    unit_cost:       { type: DataTypes.DECIMAL(15, 2) },
     discount_pct:    { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: '0.00' },
     iva_rate:        { type: DataTypes.ENUM('0', '10.5', '21', '27'), allowNull: false, defaultValue: '21' },
     subtotal:        { type: DataTypes.DECIMAL(15, 2), allowNull: false },

@@ -17,77 +17,171 @@ import type { PanelFilters } from './panel.service'
 const ORG_ID = 'org-123'
 const BASE_FILTERS: PanelFilters = { period: 'last_month' }
 
+function mockKpiQueries(overrides: {
+  invoice?: Partial<{
+    facturado_current: string
+    facturado_previous: string
+    cxc_value: string
+    overdue_count: string
+  }>
+  margin?: Partial<{
+    net_sales_current: string
+    net_sales_previous: string
+    cmv_current: string
+    cmv_previous: string
+    covered_revenue_current: string
+    covered_revenue_previous: string
+    total_revenue_current: string
+  }>
+  expenses?: { current: string; previous: string }
+  cobrado?: { current: string; previous: string }
+} = {}) {
+  const mockQuery = vi.mocked(sequelize.query)
+  mockQuery
+    .mockResolvedValueOnce([{
+      facturado_current: '150000.00',
+      facturado_previous: '100000.00',
+      cxc_value: '30000.00',
+      overdue_count: '2',
+      ...overrides.invoice,
+    }] as never)
+    .mockResolvedValueOnce([{ cxp_value: '18000.00', overdue_count: '1' }] as never)
+    .mockResolvedValueOnce([{ cxp_value: '2000.00', overdue_count: '0' }] as never)
+    .mockResolvedValueOnce([{ current: '5000.00', previous: '4000.00', ...overrides.expenses }] as never)
+    .mockResolvedValueOnce([{ current: '120000.00', previous: '130000.00', ...overrides.cobrado }] as never)
+    .mockResolvedValueOnce([{
+      net_sales_current: '100000.00',
+      net_sales_previous: '80000.00',
+      cmv_current: '40000.00',
+      cmv_previous: '32000.00',
+      covered_revenue_current: '100000.00',
+      covered_revenue_previous: '80000.00',
+      total_revenue_current: '100000.00',
+      ...overrides.margin,
+    }] as never)
+    .mockResolvedValueOnce([] as never)
+}
+
 beforeEach(() => vi.clearAllMocks())
 
 describe('panel.service', () => {
   describe('getPanelKpis', () => {
-    it('returns parsed numeric values for facturado and cobrado', async () => {
-      const mockQuery = vi.mocked(sequelize.query)
-      mockQuery
-        .mockResolvedValueOnce([{
-          facturado_current: '150000.00',
-          facturado_previous: '100000.00',
-          cxc_value: '30000.00',
-          overdue_count: '2',
-        }] as never)
-        .mockResolvedValueOnce([{ cxp_value: '18000.00', overdue_count: '1' }] as never)
-        .mockResolvedValueOnce([{ cxp_value: '2000.00', overdue_count: '0' }] as never)
-        .mockResolvedValueOnce([{ current: '5000.00', previous: '4000.00' }] as never)
-        .mockResolvedValueOnce([{ current: '120000.00', previous: '130000.00' }] as never)
-        .mockResolvedValueOnce([] as never)
+    it('returns north-star margin and profitability KPIs', async () => {
+      mockKpiQueries()
 
       const result = await getPanelKpis(ORG_ID, BASE_FILTERS)
 
+      expect(result.facturacion_neta.value).toBe(100000)
+      expect(result.facturacion_neta.pct_change).toBe(25)
+      expect(result.margen_bruto.value).toBe(60000)
+      expect(result.margen_ganancia_pct.value).toBe(60)
+      expect(result.rentabilidad.value).toBe(55000)
+      expect(result.rentabilidad.pct).toBe(55)
+      expect(result.punto_equilibrio).toBeCloseTo(8333.33, 1)
+      expect(result.cost_coverage_pct).toBe(100)
       expect(result.facturado.value).toBe(150000)
-      expect(result.facturado.pct_change).toBe(50)
       expect(result.cobrado.value).toBe(120000)
-      expect(result.cobrado.pct_change).toBe(-8)
       expect(result.por_cobrar.value).toBe(30000)
-      expect(result.por_cobrar.overdue_count).toBe(2)
       expect(result.por_pagar.value).toBe(20000)
-      expect(result.por_pagar.overdue_count).toBe(1)
       expect(result.expensas.value).toBe(5000)
-      expect(result.expensas.pct_change).toBe(25)
-      expect(result.resultado.value).toBe(145000)
       expect(result.saldo_cuenta).toBeNull()
+      expect(result.saldo_cuenta_status).toBe('unavailable_treasury')
+      expect(result).not.toHaveProperty('resultado')
+    })
+
+    it('computes margin % on covered revenue only when cost coverage is incomplete', async () => {
+      mockKpiQueries({
+        margin: {
+          net_sales_current: '100000.00',
+          net_sales_previous: '0',
+          cmv_current: '40000.00',
+          cmv_previous: '0',
+          covered_revenue_current: '80000.00',
+          covered_revenue_previous: '0',
+          total_revenue_current: '100000.00',
+        },
+        expenses: { current: '10000.00', previous: '0' },
+      })
+
+      const result = await getPanelKpis(ORG_ID, BASE_FILTERS)
+
+      // Not (100k-40k)/100k = 60% — only covered 80k with CMV 40k → 50%
+      expect(result.cost_coverage_pct).toBe(80)
+      expect(result.margen_bruto.value).toBe(40000)
+      expect(result.margen_ganancia_pct.value).toBe(50)
+      expect(result.rentabilidad.value).toBe(30000)
+      expect(result.rentabilidad.pct).toBe(37.5)
+      expect(result.punto_equilibrio).toBe(20000)
+    })
+
+    it('returns null break-even when margin is zero', async () => {
+      mockKpiQueries({
+        margin: {
+          net_sales_current: '100000.00',
+          net_sales_previous: '0',
+          cmv_current: '100000.00',
+          cmv_previous: '0',
+          covered_revenue_current: '100000.00',
+          covered_revenue_previous: '0',
+          total_revenue_current: '100000.00',
+        },
+      })
+
+      const result = await getPanelKpis(ORG_ID, BASE_FILTERS)
+
+      expect(result.margen_ganancia_pct.value).toBe(0)
+      expect(result.punto_equilibrio).toBeNull()
     })
 
     it('returns zero pct_change when previous period is zero', async () => {
-      const mockQuery = vi.mocked(sequelize.query)
-      mockQuery
-        .mockResolvedValueOnce([{
+      mockKpiQueries({
+        invoice: {
           facturado_current: '50000.00',
           facturado_previous: '0',
           cxc_value: '0',
           overdue_count: '0',
-        }] as never)
-        .mockResolvedValueOnce([{ cxp_value: '0', overdue_count: '0' }] as never)
-        .mockResolvedValueOnce([{ cxp_value: '0', overdue_count: '0' }] as never)
-        .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
-        .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
-        .mockResolvedValueOnce([] as never)
+        },
+        expenses: { current: '0', previous: '0' },
+        cobrado: { current: '0', previous: '0' },
+        margin: {
+          net_sales_current: '0',
+          net_sales_previous: '0',
+          cmv_current: '0',
+          cmv_previous: '0',
+          covered_revenue_current: '0',
+          covered_revenue_previous: '0',
+          total_revenue_current: '0',
+        },
+      })
 
       const result = await getPanelKpis(ORG_ID, BASE_FILTERS)
 
+      expect(result.facturacion_neta.pct_change).toBe(0)
       expect(result.facturado.pct_change).toBe(0)
       expect(result.cobrado.pct_change).toBe(0)
       expect(result.expensas.pct_change).toBe(0)
     })
 
     it('returns empty spark array when no monthly data', async () => {
-      const mockQuery = vi.mocked(sequelize.query)
-      mockQuery
-        .mockResolvedValueOnce([{
+      mockKpiQueries({
+        invoice: {
           facturado_current: '0',
           facturado_previous: '0',
           cxc_value: '0',
           overdue_count: '0',
-        }] as never)
-        .mockResolvedValueOnce([{ cxp_value: '0', overdue_count: '0' }] as never)
-        .mockResolvedValueOnce([{ cxp_value: '0', overdue_count: '0' }] as never)
-        .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
-        .mockResolvedValueOnce([{ current: '0', previous: '0' }] as never)
-        .mockResolvedValueOnce([] as never)
+        },
+        expenses: { current: '0', previous: '0' },
+        cobrado: { current: '0', previous: '0' },
+        margin: {
+          net_sales_current: '0',
+          net_sales_previous: '0',
+          cmv_current: '0',
+          cmv_previous: '0',
+          covered_revenue_current: '0',
+          covered_revenue_previous: '0',
+          total_revenue_current: '0',
+        },
+      })
 
       const result = await getPanelKpis(ORG_ID, BASE_FILTERS)
 

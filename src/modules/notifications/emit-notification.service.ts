@@ -5,6 +5,7 @@ import Notification from './notification.model'
 import NotificationDelivery from './notification-delivery.model'
 import {
   emitNotificationSchema,
+  NOTIFICATION_EVENT_KEYS,
   type EmitNotificationInput,
   type EmitNotificationResult,
   type NotificationChannel,
@@ -187,6 +188,6 @@ export function resolveChannelsForEvent(
   explicit?: NotificationChannel[],
 ): NotificationChannel[] {
   if (explicit && explicit.length > 0) return explicit
-  if (eventKey === 'sales.document.shared') return ['email']
+  if ((NOTIFICATION_EVENT_KEYS as readonly string[]).includes(eventKey)) return ['email']
   return ['in_app']
 }

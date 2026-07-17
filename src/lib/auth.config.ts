@@ -10,7 +10,7 @@ export const authConfig: NextAuthConfig = {
       const pathname = request.nextUrl.pathname
       const isPublic =
         pathname === '/' ||
-        ['/login', '/api/auth', '/api/v1/pos', '/api/admin'].some((p) =>
+        ['/login', '/forgot-password', '/reset-password', '/api/auth', '/api/v1/pos', '/api/admin'].some((p) =>
           pathname.startsWith(p),
         )
       return isPublic || !!auth?.user

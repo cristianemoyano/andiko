@@ -1,12 +1,14 @@
 import 'server-only'
 import type { TenantContext } from '@/lib/tenancy'
-import Contact from '@/modules/contacts/contact.model'
+import { formatArs } from '@/lib/money-format'
+import { absoluteUrl } from '@/lib/absolute-url'
+import { resolveContactDisplay } from '@/modules/contacts/contact-lookup.service'
 import { getQuote } from '@/modules/sales/sales-quotes.service'
 import { getOrder } from '@/modules/sales/sales-orders.service'
 import { getInvoice } from '@/modules/sales/invoices.service'
 import { getDeliveryNote } from '@/modules/inventory/delivery-notes.service'
+import { getPurchaseOrder } from '@/modules/purchases/purchase-orders.service'
 import { getIssuerName } from '@/modules/printing/issuer'
-import { env } from '@/config/env'
 import { EMAIL_DOCUMENT_LABEL, type EmailDocumentType } from './email-template.schema'
 
 /** Resolved facts about a document needed to build & send an email. */
@@ -24,37 +26,21 @@ export interface ResolvedDocument {
   document_url: string
 }
 
-function decToString(v: unknown): string {
-  if (v == null) return '0.00'
-  return String(v)
-}
-
-function formatArs(v: unknown): string {
-  const n = Number(decToString(v))
-  if (Number.isNaN(n)) return decToString(v)
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
-}
-
 const PRINT_PATH: Record<EmailDocumentType, (id: string) => string> = {
   quote: (id) => `/ventas/presupuestos/${id}/print`,
   order: (id) => `/ventas/pedidos/${id}/print`,
   invoice: (id) => `/ventas/facturas/${id}/print`,
   delivery_note: (id) => `/inventario/remitos/${id}/print`,
+  purchase_order: (id) => `/compras/ordenes/${id}/print`,
 }
 
-function absoluteUrl(path: string): string {
-  const base = env.AUTH_URL.replace(/\/$/, '')
-  return `${base}${path}`
-}
-
-async function resolveContact(contactId: string | null, orgId: string): Promise<{ email: string | null; name: string }> {
-  if (!contactId) return { email: null, name: 'Cliente' }
-  const contact = await Contact.findOne({
-    where: { id: contactId, org_id: orgId },
-    attributes: ['id', 'legal_name', 'trade_name', 'email'],
-  })
-  if (!contact) return { email: null, name: 'Cliente' }
-  return { email: contact.email ?? null, name: contact.trade_name || contact.legal_name }
+/** Contacts are "clients" for sales/inventory documents, "suppliers" for purchases. */
+const CONTACT_FALLBACK_NAME: Record<EmailDocumentType, string> = {
+  quote: 'Cliente',
+  order: 'Cliente',
+  invoice: 'Cliente',
+  delivery_note: 'Cliente',
+  purchase_order: 'Proveedor',
 }
 
 export async function resolveDocument(
@@ -99,9 +85,16 @@ export async function resolveDocument(
       contactId = doc.contact_id ?? null
       break
     }
+    case 'purchase_order': {
+      const doc = (await getPurchaseOrder(documentId, ctx.orgId)) as unknown as { order_number: string; total: unknown; contact_id: string | null }
+      number = doc.order_number
+      total = formatArs(doc.total)
+      contactId = doc.contact_id ?? null
+      break
+    }
   }
 
-  const contact = await resolveContact(contactId, ctx.orgId)
+  const contact = await resolveContactDisplay(contactId, ctx.orgId, CONTACT_FALLBACK_NAME[documentType])
 
   return {
     document_type: documentType,

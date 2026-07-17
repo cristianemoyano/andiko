@@ -69,6 +69,7 @@ const sampleCaps = {
       afip: true,
       integraciones: true,
       terminosCondiciones: true,
+      alertas: true,
     },
   },
   onboarding: {

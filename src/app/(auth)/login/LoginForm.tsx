@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { PasswordInput } from '@/components/primitives/PasswordInput'
@@ -125,6 +126,10 @@ export function LoginForm() {
           disabled={loading}
         />
       </FormField>
+
+      <Link href="/forgot-password" className="-mt-3 self-end text-sm text-brand-600 hover:underline">
+        ¿Olvidaste tu contraseña?
+      </Link>
 
       {error && (
         <p

@@ -11,6 +11,7 @@ import Account from './account.model'
 import JournalEntry from './journal-entry.model'
 import JournalEntryLine from './journal-entry-line.model'
 import { ensureAccountingAssociations } from './accounting-associations'
+import { isDateInClosedPeriod } from './accounting-period-guards'
 import { nextEntryNumber } from './accounting.utils'
 import type {
   JournalEntryInput,
@@ -233,14 +234,19 @@ export async function updateEntry(
 }
 
 export async function postEntry(id: string, ctx: TenantContext, actorId: string) {
-  const entry = await JournalEntry.findOne({ where: whereOrg(ctx, { id }) })
-  if (!entry) throw new Error('ENTRY_NOT_FOUND')
-  if (entry.status === 'posted') throw new Error('ENTRY_ALREADY_POSTED')
-  if (!new Decimal(entry.total_debit).equals(new Decimal(entry.total_credit))) {
-    throw new Error('ENTRY_NOT_BALANCED')
-  }
+  await sequelize.transaction(async (t) => {
+    const entry = await JournalEntry.findOne({ where: whereOrg(ctx, { id }), transaction: t, lock: t.LOCK.UPDATE })
+    if (!entry) throw new Error('ENTRY_NOT_FOUND')
+    if (entry.status === 'posted') throw new Error('ENTRY_ALREADY_POSTED')
+    if (!new Decimal(entry.total_debit).equals(new Decimal(entry.total_credit))) {
+      throw new Error('ENTRY_NOT_BALANCED')
+    }
+    if (await isDateInClosedPeriod(ctx.orgId, entry.entry_date, t)) {
+      throw new Error('PERIOD_CLOSED')
+    }
 
-  await entry.update({ status: 'posted', updated_by: actorId })
+    await entry.update({ status: 'posted', updated_by: actorId }, { transaction: t })
+  })
   logger.info({ entryId: id, orgId: ctx.orgId, actorId }, 'journal entry posted')
   return getEntry(id, ctx)
 }

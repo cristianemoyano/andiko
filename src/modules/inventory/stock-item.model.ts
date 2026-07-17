@@ -13,13 +13,14 @@ export interface StockItemAttributes {
   quantity: string
   minimum_quantity: string
   expires_on: string | null
+  last_low_stock_alert_at: Date | null
   created_at: Date
   updated_at: Date
 }
 
 type StockItemCreationAttributes = Optional<
   StockItemAttributes,
-  'id' | 'quantity' | 'minimum_quantity' | 'expires_on' | 'created_at' | 'updated_at'
+  'id' | 'quantity' | 'minimum_quantity' | 'expires_on' | 'last_low_stock_alert_at' | 'created_at' | 'updated_at'
 >
 
 class StockItem extends Model<StockItemAttributes, StockItemCreationAttributes> {
@@ -30,6 +31,7 @@ class StockItem extends Model<StockItemAttributes, StockItemCreationAttributes> 
   declare quantity: string
   declare minimum_quantity: string
   declare expires_on: string | null
+  declare last_low_stock_alert_at: Date | null
   declare created_at: Date
   declare updated_at: Date
 }
@@ -43,6 +45,7 @@ StockItem.init(
     quantity:           { type: DataTypes.DECIMAL(15, 4), allowNull: false, defaultValue: '0' },
     minimum_quantity:   { type: DataTypes.DECIMAL(15, 4), allowNull: false, defaultValue: '0' },
     expires_on:         { type: DataTypes.DATEONLY, allowNull: true },
+    last_low_stock_alert_at: { type: DataTypes.DATE, allowNull: true },
     created_at:         { type: DataTypes.DATE, allowNull: false },
     updated_at:         { type: DataTypes.DATE, allowNull: false },
   },
