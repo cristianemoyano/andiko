@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.51.0](https://github.com/cristianemoyano/andiko/compare/v0.50.0...v0.51.0) (2026-07-18)
+
+### Features
+
+* **expenses:** tarjetas, líneas de detalle y corrección de montos ([713397e](https://github.com/cristianemoyano/andiko/commit/713397e4d2c01c33a14b3196ab0fdd2472c0a397))
+
 ## [0.50.0](https://github.com/cristianemoyano/andiko/compare/v0.48.1...v0.50.0) (2026-07-17)
 
 ### Features
