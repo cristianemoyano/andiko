@@ -324,10 +324,13 @@ export function ReportesExpensasClient() {
 
           <section aria-label="Deuda por proveedor">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <div>
+              <div className="max-w-2xl">
                 <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide">Deuda por proveedor</p>
                 <p className="text-[12px] text-fg-muted">
-                  Antigüedad de saldos a hoy. Incluye solo gastos con proveedor asignado.
+                  Cuánto le debés hoy a cada proveedor, separado según hace cuánto venció cada saldo:
+                  <span className="text-fg-muted font-medium"> No vencido</span> (aún no llegó el vencimiento) y los tramos
+                  de atraso <span className="text-fg-muted font-medium">1-30, 31-60, 61-90 y +90 días</span>. Cuanto más a la
+                  derecha, más atrasada la deuda. Solo cuenta gastos confirmados con saldo pendiente y proveedor asignado.
                 </p>
               </div>
               <span className="flex-1" />

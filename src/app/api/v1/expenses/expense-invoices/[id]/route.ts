@@ -37,6 +37,24 @@ export const PATCH = withPermission('expenses:write', async (req, ctx, session) 
     if (err instanceof Error) {
       if (err.message === 'EXPENSE_NOT_FOUND') return NextResponse.json({ error: 'Gasto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
       if (err.message === 'EXPENSE_LOCKED')    return NextResponse.json({ error: 'El gasto está bloqueado y no puede editarse', code: 'EXPENSE_LOCKED' }, { status: 409 })
+      if (err.message === 'EXPENSE_VALUES_LOCKED') {
+        return NextResponse.json(
+          { error: 'Los montos de un gasto confirmado no se editan directamente. Usá "Corregir" para volverlo a borrador.', code: 'EXPENSE_VALUES_LOCKED' },
+          { status: 409 },
+        )
+      }
+      if (err.message === 'INSTALLMENT_PLAN_AMOUNTS_LOCKED') {
+        return NextResponse.json(
+          { error: 'El total de un plan en cuotas surge de sus cuotas: editá los montos de cada cuota.', code: 'INSTALLMENT_PLAN_AMOUNTS_LOCKED' },
+          { status: 409 },
+        )
+      }
+      if (err.message === 'EXPENSE_ITEMS_LOCKED') {
+        return NextResponse.json(
+          { error: 'Las líneas solo se editan en borrador. Usá "Corregir" para volver el gasto a borrador.', code: 'EXPENSE_ITEMS_LOCKED' },
+          { status: 409 },
+        )
+      }
     }
     throw err
   }

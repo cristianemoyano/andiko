@@ -3,6 +3,7 @@ import type { Transaction } from 'sequelize'
 import Decimal from 'decimal.js'
 import sequelize from '@/lib/db'
 import type { IvaRate } from '@/types'
+import type { ExpenseScheduleFrequency } from './expense-schedule.model'
 
 // ─── Document numbering ──────────────────────────────────────────────────────
 // Uses the same org+branch `document_sequences` table as purchases, with its
@@ -54,29 +55,37 @@ export async function nextExpenseDocNumber(
 
 // ─── Recurrence ──────────────────────────────────────────────────────────────
 
-/**
- * Advances a recurring template's `next_run_date` by its frequency.
- *
- * `monthly` clamps to the last day of the target month instead of overflowing
- * (plain `Date.setMonth` arithmetic) — a template anchored on Jan 31 must land
- * on Feb 28/29, not roll over into March, or the anchor day drifts forward
- * permanently on every subsequent cycle.
- */
-export function advanceNextRunDate(current: Date, frequency: 'monthly' | 'weekly'): Date {
-  if (frequency === 'weekly') {
-    const next = new Date(current)
-    next.setUTCDate(next.getUTCDate() + 7)
-    return next
-  }
-
+function advanceByCalendarMonths(current: Date, months: number): Date {
   const targetYear  = current.getUTCFullYear()
-  const targetMonth = current.getUTCMonth() + 1
+  const targetMonth = current.getUTCMonth() + months
   const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate()
   const day = Math.min(current.getUTCDate(), lastDayOfTargetMonth)
 
   const next = new Date(current)
   next.setUTCFullYear(targetYear, targetMonth, day)
   return next
+}
+
+/**
+ * Advances a recurring template's `next_run_date` by its frequency.
+ *
+ * Calendar-based frequencies clamp to the last day of the target month instead
+ * of overflowing (plain `Date.setMonth` arithmetic) — a template anchored on
+ * Jan 31 must land on Feb 28/29, not roll over into March, or the anchor day
+ * drifts forward permanently on every subsequent cycle.
+ */
+export function advanceNextRunDate(current: Date, frequency: ExpenseScheduleFrequency): Date {
+  if (frequency === 'weekly') {
+    const next = new Date(current)
+    next.setUTCDate(next.getUTCDate() + 7)
+    return next
+  }
+
+  if (frequency === 'bimonthly') {
+    return advanceByCalendarMonths(current, 2)
+  }
+
+  return advanceByCalendarMonths(current, 1)
 }
 
 // ─── Financial math (Decimal-safe) ──────────────────────────────────────────
@@ -86,6 +95,40 @@ export interface ExpenseTotals {
   discount_amount: string
   tax_amount: string
   total: string
+}
+
+export interface ExpenseLineTotals extends ExpenseTotals {
+  tax_base: string
+}
+
+export function calcExpenseLine(
+  quantity: string | number,
+  unitPrice: string | number,
+  discountPct: string | number,
+  ivaRate: IvaRate,
+): ExpenseLineTotals {
+  const subtotal = new Decimal(quantity).mul(unitPrice)
+  const discount = subtotal.mul(discountPct).div(100)
+  const taxBase = subtotal.minus(discount)
+  const tax = taxBase.mul(new Decimal(ivaRate).div(100))
+
+  return {
+    subtotal: subtotal.toFixed(2),
+    discount_amount: discount.toFixed(2),
+    tax_base: taxBase.toFixed(2),
+    tax_amount: tax.toFixed(2),
+    total: taxBase.plus(tax).toFixed(2),
+  }
+}
+
+export function calcExpenseDocumentTotals(lines: ExpenseLineTotals[]): ExpenseTotals {
+  const zero = new Decimal(0)
+  return {
+    subtotal: lines.reduce((sum, line) => sum.plus(line.subtotal), zero).toFixed(2),
+    discount_amount: lines.reduce((sum, line) => sum.plus(line.discount_amount), zero).toFixed(2),
+    tax_amount: lines.reduce((sum, line) => sum.plus(line.tax_amount), zero).toFixed(2),
+    total: lines.reduce((sum, line) => sum.plus(line.total), zero).toFixed(2),
+  }
 }
 
 /** Single-line expense totals: net amount, discount, and IVA over `subtotal - discount_amount`. */
@@ -146,7 +189,7 @@ export interface InstallmentDraft {
 export function buildInstallmentSchedule(params: {
   count: number
   firstDueDate: Date
-  frequency: 'monthly' | 'weekly'
+  frequency: ExpenseScheduleFrequency
   /** Gross payable total of the plan (sum of cuotas). */
   total: string | number
 }): InstallmentDraft[] {

@@ -868,23 +868,29 @@ Gastos fijos/recurrentes de la empresa (alquiler, luz, agua, seguros, planes en 
 
 **Modelo unificado:** un solo listado `/expensas` y un flujo *Nuevo gasto* con 3 tipos — `one_off` (único), `recurring` (serie indefinida + ocurrencias), `installment_plan` (1 gasto = total del plan + calendario de cuotas).
 
-**Entidades:** `expenses` (con `kind`), `expense_payments`, `expense_schedules` (ex `recurring_expense_templates`), `expense_installments`
+**Entidades:** `expenses` (con `kind`), `expense_items`, `expense_payments`, `expense_schedules` (ex `recurring_expense_templates`), `expense_schedule_items`, `expense_installments`, `credit_cards`, `credit_card_statements`
 
 - [x] Migraciones: schedules, expenses, expense_payments, expense_installments + permisos `expenses:read/write/delete`
 - [x] Flujo de estados igual que Compras: `draft → received → partially_paid/paid`, con `cancelled` en cualquier punto no pagado
 - [x] Flujo de pagos propio (`expense_payments`) con actualización atómica de `paid_amount`/`balance`/`status`; en planes, pago ligado a cuotas (`installment_ids`)
 - [x] Contabilización automática: `expense-accounting.service.ts` (débito cuenta de gasto elegida + IVA crédito fiscal, crédito Proveedores) y `expense-payment-accounting.service.ts` (cancelación de deuda) — el plan contable se asienta por el **total** al recibir
 - [x] Gasto recurrente: `expense_schedules` + acción `expenses.generate_recurring_expense` (genera ocurrencias en borrador y avanza `next_run_date`); al crear tipo Recurrente se emite también el 1er período
-- [x] Plan / cuotas: un gasto `installment_plan` + N filas en `expense_installments` (vencimiento, monto, estado)
+- [x] Plan / cuotas: un gasto `installment_plan` + N filas en `expense_installments` (vencimiento, monto, estado); cronograma manual con montos/fechas distintos y cuotas ya pagadas (prepaid sin payment row)
+- [x] Tarjetas de crédito: ficha con días de cierre/vto + resúmenes mensuales ARS/USD (FX al cargar) que generan un gasto confirmado (`/expensas/tarjetas`)
 - [x] Las facturas de Expensas se incluyen en **Libro IVA Compras** (`buildLibroIvaCompras`) para no perder crédito fiscal, aunque el módulo esté separado de Compras
 - [x] Adjuntos opcionales: factura del proveedor (`owner_type: 'expense'`) y comprobante de pago (`owner_type: 'expense_payment'`)
 - [x] UI unificada `/expensas` (lista + tipos + detalle con cuotas/serie); sin tabs Facturas/Recurrentes/Pagos
 - [x] Reportes `/expensas/reportes` — KPIs del período, torta por tipo y por proveedor, barras mensuales
 - [x] Panel: KPI Expensas + widget por tipo + por pagar/gastos del período cuando el módulo está habilitado
 - [x] Alta rápida de proveedor desde Nuevo gasto (`SupplierQuickCreateDialog`)
+- [x] Líneas de detalle por gasto (cantidad, precio, descuento, IVA y cuenta contable); las series recurrentes copian snapshots para preservar el histórico
+- [x] Frecuencia bimestral en series recurrentes; carga Con IVA / Sin IVA (default Con IVA); actualizar monto futuro de la serie sin reescribir ocurrencias
 - [x] Copy de estados: Confirmar gasto / Confirmado; Anular / Anulado
-- [ ] Cuenta corriente / aging por proveedor de Expensas (hoy: solo Compras tiene este reporte)
+- [x] Aging / deuda por proveedor en `/expensas/reportes` (buckets de antigüedad a hoy)
 - [ ] Conciliación bancaria de pagos de Expensas
+- [x] Sincronizar estado/saldo del resumen de tarjeta con el gasto vinculado (pago, pago parcial, anulación); período reutilizable si el resumen se anula
+- [x] Corrección de gastos confirmados: revertir a borrador (reversión de asiento + repost al reconfirmar); montos de cuotas pendientes editables; montos de resúmenes de tarjeta editables
+- [x] Listado `/expensas` con tabs Activos vs Borradores/anulados; sección Notas u observaciones en detalle de todo gasto
 
 
 ---

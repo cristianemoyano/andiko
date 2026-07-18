@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { paginationSchema } from '@/lib/pagination'
 import { IVA_RATES, type IvaRate } from '@/types'
 import { EXPENSE_SCHEDULE_FREQUENCIES } from './expense-schedule.model'
+import { expenseLineItemSchema } from './expense.schema'
 
 const ivaRateEnum = z.enum([...IVA_RATES] as [IvaRate, ...IvaRate[]])
 const frequencyEnum = z.enum(EXPENSE_SCHEDULE_FREQUENCIES)
@@ -16,6 +17,7 @@ export const expenseScheduleSchema = z.object({
   frequency:             frequencyEnum.default('monthly'),
   next_run_date:         z.string().datetime({ offset: true }).transform(s => new Date(s)),
   is_active:             z.boolean().default(true),
+  items:                 z.array(expenseLineItemSchema).min(1).optional(),
 })
 
 export const expenseScheduleUpdateSchema = expenseScheduleSchema.partial()

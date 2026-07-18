@@ -69,7 +69,7 @@ export function SupplierQuickCreateDialog({
         body: JSON.stringify({
           type: 'supplier',
           legal_name: legalName.trim(),
-          cuit: cuit.trim(),
+          cuit: cuit.trim() || null,
           iva_condition: ivaCondition,
         }),
       })
@@ -112,13 +112,12 @@ export function SupplierQuickCreateDialog({
           />
         </FormField>
 
-        <FormField label="CUIT" htmlFor="supplier_quick_cuit" required error={errors.cuit?.[0]}>
+        <FormField label="CUIT (opcional)" htmlFor="supplier_quick_cuit" error={errors.cuit?.[0]}>
           <Input
             id="supplier_quick_cuit"
             value={cuit}
             onChange={(e) => setCuit(e.target.value)}
             placeholder="30-12345678-9"
-            required
             error={!!errors.cuit}
             disabled={saving}
           />
