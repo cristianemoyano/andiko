@@ -2,7 +2,39 @@ import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('@/lib/db', () => ({ default: {} }))
 
-import { calcExpenseTotals, calcExpenseTotalsFromGross, advanceNextRunDate, buildInstallmentSchedule } from './expenses.utils'
+import {
+  calcExpenseDocumentTotals,
+  calcExpenseLine,
+  calcExpenseTotals,
+  calcExpenseTotalsFromGross,
+  advanceNextRunDate,
+  buildInstallmentSchedule,
+} from './expenses.utils'
+
+describe('expense line totals', () => {
+  it('calculates quantity, discount and IVA per line', () => {
+    expect(calcExpenseLine('2', '100.00', '10', '21')).toEqual({
+      subtotal: '200.00',
+      discount_amount: '20.00',
+      tax_base: '180.00',
+      tax_amount: '37.80',
+      total: '217.80',
+    })
+  })
+
+  it('aggregates lines with different IVA rates without floating-point drift', () => {
+    const totals = calcExpenseDocumentTotals([
+      calcExpenseLine('1', '100.00', '0', '21'),
+      calcExpenseLine('1', '50.00', '0', '10.5'),
+    ])
+    expect(totals).toEqual({
+      subtotal: '150.00',
+      discount_amount: '0.00',
+      tax_amount: '26.25',
+      total: '176.25',
+    })
+  })
+})
 
 describe('calcExpenseTotals', () => {
   it('computes net, IVA, and total from subtotal/discount/rate', () => {
@@ -38,6 +70,16 @@ describe('advanceNextRunDate', () => {
   it('advances by 7 days for "weekly"', () => {
     const next = advanceNextRunDate(new Date('2026-07-13T00:00:00Z'), 'weekly')
     expect(next.toISOString().slice(0, 10)).toBe('2026-07-20')
+  })
+
+  it('advances by two calendar months for "bimonthly"', () => {
+    const next = advanceNextRunDate(new Date('2026-07-13T00:00:00Z'), 'bimonthly')
+    expect(next.toISOString().slice(0, 10)).toBe('2026-09-13')
+  })
+
+  it('clamps a day-31 anchor when advancing bimonthly', () => {
+    const next = advanceNextRunDate(new Date('2026-01-31T00:00:00Z'), 'bimonthly')
+    expect(next.toISOString().slice(0, 10)).toBe('2026-03-31')
   })
 
   it('clamps a day-31 anchor to Feb 28 in a non-leap year instead of overflowing into March', () => {

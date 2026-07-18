@@ -15,14 +15,31 @@ import { EXPENSE_KIND_LABEL, EXPENSE_STATUS_LABEL } from './types'
 
 const PAGE_SIZE = 20
 
-const STATUS_OPTIONS: { value: ExpenseStatus | ''; label: string }[] = [
-  { value: '',               label: 'Todos los estados' },
-  { value: 'draft',          label: 'Borrador' },
-  { value: 'received',       label: 'Confirmado' },
-  { value: 'partially_paid', label: 'Pago parcial' },
-  { value: 'paid',           label: 'Pagado' },
-  { value: 'cancelled',      label: 'Anulado' },
+type TabKey = 'active' | 'archive'
+
+const TAB_STATUSES: Record<TabKey, ExpenseStatus[]> = {
+  active:  ['received', 'partially_paid', 'paid'],
+  archive: ['draft', 'cancelled'],
+}
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'active',  label: 'Activos' },
+  { key: 'archive', label: 'Borradores y anulados' },
 ]
+
+const STATUS_OPTIONS_BY_TAB: Record<TabKey, { value: ExpenseStatus | ''; label: string }[]> = {
+  active: [
+    { value: '',               label: 'Todos' },
+    { value: 'received',       label: 'Confirmado' },
+    { value: 'partially_paid', label: 'Pago parcial' },
+    { value: 'paid',           label: 'Pagado' },
+  ],
+  archive: [
+    { value: '',          label: 'Todos' },
+    { value: 'draft',     label: 'Borrador' },
+    { value: 'cancelled', label: 'Anulado' },
+  ],
+}
 
 const KIND_OPTIONS: { value: ExpenseKind | ''; label: string }[] = [
   { value: '',                     label: 'Todos los tipos' },
@@ -100,6 +117,7 @@ export function GastosExpensasClient() {
   const [total, setTotal]       = useState(0)
   const [page, setPage]         = useState(1)
   const [search, setSearch]     = useState('')
+  const [tab, setTab]           = useState<TabKey>('active')
   const [status, setStatus]     = useState<ExpenseStatus | ''>('')
   const kind = parseKindParam(searchParams.get('kind'))
   const [error, setError]       = useState<string | null>(null)
@@ -111,6 +129,7 @@ export function GastosExpensasClient() {
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
     if (debouncedSearch) params.set('search', debouncedSearch)
     if (status) params.set('status', status)
+    else params.set('statuses', TAB_STATUSES[tab].join(','))
     if (kind) params.set('kind', kind)
     ;(async () => {
       try {
@@ -129,7 +148,14 @@ export function GastosExpensasClient() {
       }
     })()
     return () => { controller.abort() }
-  }, [page, debouncedSearch, status, kind])
+  }, [page, debouncedSearch, status, tab, kind])
+
+  function selectTab(next: TabKey) {
+    if (next === tab) return
+    setTab(next)
+    setStatus('')
+    setPage(1)
+  }
 
   function updateKind(next: ExpenseKind | '') {
     setPage(1)
@@ -145,6 +171,9 @@ export function GastosExpensasClient() {
         breadcrumbs={[{ label: 'Expensas' }]}
         actions={
           <div className="flex gap-2">
+            <Button size="sm" variant="secondary" onClick={() => router.push('/expensas/tarjetas')}>
+              Tarjetas
+            </Button>
             <Button size="sm" variant="secondary" onClick={() => router.push('/expensas/reportes')}>
               Reportes
             </Button>
@@ -156,6 +185,23 @@ export function GastosExpensasClient() {
       />
 
       <PageBody>
+        <div className="mb-4 flex items-center gap-1 border-b border-border">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => selectTab(t.key)}
+              className={`-mb-px border-b-2 px-4 py-2 text-[13px] transition-colors ${
+                tab === t.key
+                  ? 'border-teal-600 text-teal-700 font-medium'
+                  : 'border-transparent text-fg-muted hover:text-fg'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
         <DataTable
           columns={COLUMNS}
@@ -191,7 +237,7 @@ export function GastosExpensasClient() {
                 onChange={e => { setStatus(e.target.value as ExpenseStatus | ''); setPage(1) }}
                 className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
               >
-                {STATUS_OPTIONS.map(o => (
+                {STATUS_OPTIONS_BY_TAB[tab].map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>

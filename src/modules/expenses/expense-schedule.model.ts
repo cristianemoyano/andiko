@@ -6,7 +6,7 @@ import type { UUID, Timestamps, AuditFields, IvaRate } from '@/types'
 export const EXPENSE_SCHEDULE_KINDS = ['recurring'] as const
 export type ExpenseScheduleKind = typeof EXPENSE_SCHEDULE_KINDS[number]
 
-export const EXPENSE_SCHEDULE_FREQUENCIES = ['monthly', 'weekly'] as const
+export const EXPENSE_SCHEDULE_FREQUENCIES = ['monthly', 'bimonthly', 'weekly'] as const
 export type ExpenseScheduleFrequency = typeof EXPENSE_SCHEDULE_FREQUENCIES[number]
 
 /** @deprecated Use ExpenseScheduleFrequency */
