@@ -891,6 +891,7 @@ Gastos fijos/recurrentes de la empresa (alquiler, luz, agua, seguros, planes en 
 - [x] Sincronizar estado/saldo del resumen de tarjeta con el gasto vinculado (pago, pago parcial, anulación); período reutilizable si el resumen se anula
 - [x] Corrección de gastos confirmados: revertir a borrador (reversión de asiento + repost al reconfirmar); montos de cuotas pendientes editables; montos de resúmenes de tarjeta editables
 - [x] Listado `/expensas` con tabs Activos vs Borradores/anulados; sección Notas u observaciones en detalle de todo gasto
+- [x] Listado: totales de Total/Saldo del filtro actual + días hasta vencimiento / días atrasados en la columna de vencimiento
 
 
 ---

@@ -53,6 +53,42 @@ function parseKindParam(raw: string | null): ExpenseKind | '' {
   return ''
 }
 
+/** Calendar-day delta from today to due_date (local TZ). Positive = future, negative = overdue. */
+function daysUntilDue(dueDate: string): number {
+  const due = new Date(dueDate)
+  const today = new Date()
+  const dueUtc = Date.UTC(due.getFullYear(), due.getMonth(), due.getDate())
+  const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  return Math.round((dueUtc - todayUtc) / 86_400_000)
+}
+
+function DueRelativeHint({ dueDate, show }: { dueDate: string; show: boolean }) {
+  if (!show) return null
+  const days = daysUntilDue(dueDate)
+  if (days === 0) {
+    return <span className="text-[11px] font-medium text-warning">vence hoy</span>
+  }
+  if (days > 0) {
+    return (
+      <span className="text-[11px] text-fg-subtle">
+        en {days} día{days === 1 ? '' : 's'}
+      </span>
+    )
+  }
+  const overdue = Math.abs(days)
+  return (
+    <span className="text-[11px] font-medium text-danger">
+      {overdue} día{overdue === 1 ? '' : 's'} atrasado{overdue === 1 ? '' : 's'}
+    </span>
+  )
+}
+
+function shouldShowDueRelative(row: Expense): boolean {
+  if (!row.due_date) return false
+  if (row.status === 'paid' || row.status === 'cancelled') return false
+  return parseFloat(row.balance) > 0 || row.status === 'draft' || row.status === 'received' || row.status === 'partially_paid'
+}
+
 const COLUMNS: Column<Expense>[] = [
   {
     key: 'expense_number',
@@ -90,9 +126,14 @@ const COLUMNS: Column<Expense>[] = [
     key: 'due_date',
     header: 'Vencimiento',
     render: row =>
-      row.due_date
-        ? new Date(row.due_date).toLocaleDateString('es-AR')
-        : <span className="text-fg-subtle">—</span>,
+      row.due_date ? (
+        <span className="inline-flex flex-col gap-0.5">
+          <span className="text-fg-muted">{new Date(row.due_date).toLocaleDateString('es-AR')}</span>
+          <DueRelativeHint dueDate={row.due_date} show={shouldShowDueRelative(row)} />
+        </span>
+      ) : (
+        <span className="text-fg-subtle">—</span>
+      ),
   },
   {
     key: 'total',
@@ -115,6 +156,7 @@ export function GastosExpensasClient() {
   const searchParams = useSearchParams()
   const [expenses, setExpenses] = useState<Expense[] | null>(null)
   const [total, setTotal]       = useState(0)
+  const [sums, setSums]         = useState({ total: '0.00', balance: '0.00' })
   const [page, setPage]         = useState(1)
   const [search, setSearch]     = useState('')
   const [tab, setTab]           = useState<TabKey>('active')
@@ -133,18 +175,24 @@ export function GastosExpensasClient() {
     if (kind) params.set('kind', kind)
     ;(async () => {
       try {
-        const d = await fetchJson<{ data: Expense[]; total: number }>(
+        const d = await fetchJson<{
+          data: Expense[]
+          total: number
+          sums?: { total: string; balance: string }
+        }>(
           `/api/v1/expenses/expense-invoices?${params}`,
           { signal: controller.signal },
         )
         setExpenses(d.data ?? [])
         setTotal(d.total ?? 0)
+        setSums(d.sums ?? { total: '0.00', balance: '0.00' })
         setError(null)
       } catch (e) {
         if (controller.signal.aborted) return
         setError(getApiErrorMessage(e))
         setExpenses([])
         setTotal(0)
+        setSums({ total: '0.00', balance: '0.00' })
       }
     })()
     return () => { controller.abort() }
@@ -247,7 +295,22 @@ export function GastosExpensasClient() {
           }
           footer={
             total > 0 ? (
-              <TablePagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[13px]">
+                  <span className="text-fg-muted">
+                    Total{' '}
+                    <span className="tabular-nums font-semibold text-fg">{formatARS(sums.total)}</span>
+                  </span>
+                  <span className="text-fg-muted">
+                    Saldo{' '}
+                    <span className={`tabular-nums font-semibold ${parseFloat(sums.balance) > 0 ? 'text-danger' : 'text-fg'}`}>
+                      {formatARS(sums.balance)}
+                    </span>
+                  </span>
+                  <span className="text-[11px] text-fg-subtle">sobre el filtro actual</span>
+                </div>
+                <TablePagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+              </div>
             ) : undefined
           }
         />
