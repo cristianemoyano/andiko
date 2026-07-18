@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.51.1](https://github.com/cristianemoyano/andiko/compare/v0.51.0...v0.51.1) (2026-07-18)
+
+### Features
+
+* **expenses:** totales del listado y días de vencimiento ([aa24cc8](https://github.com/cristianemoyano/andiko/commit/aa24cc8f39aa0cf9ff1faed405c360e60f5f6004))
+
 ## [0.51.0](https://github.com/cristianemoyano/andiko/compare/v0.50.0...v0.51.0) (2026-07-18)
 
 ### Features
