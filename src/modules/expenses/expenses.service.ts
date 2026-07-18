@@ -1,5 +1,5 @@
 import 'server-only'
-import { Op } from 'sequelize'
+import { Op, fn, col, literal } from 'sequelize'
 import Decimal from 'decimal.js'
 import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
@@ -71,7 +71,23 @@ export async function listExpenses(query: ExpenseQuery, orgId: string) {
     ],
   })
 
-  return toPaginated(rows, count, page, limit)
+  // Totals over the whole filtered set (not just the current page) for the list footer.
+  const sumsRow = await Expense.findOne({
+    where,
+    attributes: [
+      [fn('COALESCE', fn('SUM', col('total')), literal('0')), 'sum_total'],
+      [fn('COALESCE', fn('SUM', col('balance')), literal('0')), 'sum_balance'],
+    ],
+    raw: true,
+  }) as { sum_total?: string; sum_balance?: string } | null
+
+  return {
+    ...toPaginated(rows, count, page, limit),
+    sums: {
+      total: new Decimal(String(sumsRow?.sum_total ?? '0')).toFixed(2),
+      balance: new Decimal(String(sumsRow?.sum_balance ?? '0')).toFixed(2),
+    },
+  }
 }
 
 export async function getExpense(id: string, orgId: string) {
