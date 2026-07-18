@@ -183,15 +183,15 @@ export async function applyMovement(params: ApplyMovementParams, t: Transaction)
     )
   }
 
-  // Best-effort: queue a stock push to any WooCommerce site sharing this
+  // Best-effort: queue a stock push to any e-commerce integration sharing this
   // warehouse. Written to the transactional outbox inside this transaction, so
   // it's atomic with the movement and never fires for a rolled-back change.
   if (!skipWooEnqueue) {
     try {
-      const woo = await import('@/modules/integrations/woocommerce/woo-stock.service')
-      await woo.enqueueStockSync(variantId, warehouseId, orgId, t)
+      const integrations = await import('@/modules/integrations')
+      await integrations.enqueueOutboundStockSync(variantId, warehouseId, orgId, t)
     } catch (err) {
-      logger.warn({ variantId, warehouseId, err: String(err) }, 'woocommerce stock enqueue skipped')
+      logger.warn({ variantId, warehouseId, err: String(err) }, 'integration stock enqueue skipped')
     }
   }
 }

@@ -35,7 +35,7 @@ export async function createProductVariant(input: ProductVariantInput, actorId: 
     )
 
     logger.info({ variantId: created.id, productId: input.product_id, actorId }, 'product variant created')
-    await enqueueWoocommercePublish(ctx.orgId, created.id, t)
+    await enqueueIntegrationPublish(ctx.orgId, created.id, t)
     return created
   })
 }
@@ -62,22 +62,22 @@ export async function updateProductVariant(id: UUID, input: ProductVariantUpdate
 
     await variant.update(payload as Parameters<typeof variant.update>[0], { transaction: t })
     logger.info({ variantId: id, actorId }, 'product variant updated')
-    await enqueueWoocommercePublish(ctx.orgId, variant.id, t)
+    await enqueueIntegrationPublish(ctx.orgId, variant.id, t)
     return variant
   })
 }
 
 /**
- * Best-effort: enqueue a WooCommerce catalog publish for this variant on any
- * auto-publishing site. Runs inside the caller's transaction (transactional
- * outbox) and never blocks the catalog write if the integration is absent.
+ * Best-effort: enqueue a catalog publish for this variant to any e-commerce
+ * integration configured for the org. Runs inside the caller's transaction
+ * (transactional outbox) and never blocks the catalog write if no integration is present.
  */
-async function enqueueWoocommercePublish(orgId: string, variantId: UUID, t: Transaction): Promise<void> {
+async function enqueueIntegrationPublish(orgId: string, variantId: UUID, t: Transaction): Promise<void> {
   try {
-    const mod = await import('@/modules/integrations/woocommerce/woo-catalog.service')
-    await mod.enqueueProductSync(orgId, [variantId], t)
+    const integrations = await import('@/modules/integrations')
+    await integrations.enqueueOutboundProductSync(orgId, [variantId], t)
   } catch (err) {
-    logger.warn({ variantId, err: String(err) }, 'woocommerce publish enqueue skipped')
+    logger.warn({ variantId, err: String(err) }, 'integration publish enqueue skipped')
   }
 }
 

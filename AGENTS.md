@@ -308,6 +308,7 @@ Features that touch sales, inventory, purchases, AFIP, accounting, billing, POS,
 | Doc | Purpose |
 |-----|---------|
 | [docs/MULTITENANCY.md](docs/MULTITENANCY.md) | org_id / branch_id rules (keep updated) |
+| [docs/dev/integrations-adapters.md](docs/dev/integrations-adapters.md) | E-commerce integration adapter/plugin architecture; how to add a provider |
 | [docs/dev/getting-started.md](docs/dev/getting-started.md) | Local setup for new developers |
 | [docs/gtm/](docs/gtm/) | Packaging, onboarding and support runbooks |
 | [.github/pull_request_template.md](.github/pull_request_template.md) | PR checklist |

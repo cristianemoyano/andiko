@@ -147,7 +147,7 @@ export function buildClientForSite(site: WoocommerceSite): WooClient {
   return new WooClient({ storeUrl: site.store_url.trim(), consumerKey: key, consumerSecret: secret })
 }
 
-async function registerWebhooks(site: WoocommerceSite, secret: string): Promise<void> {
+export async function registerWebhooks(site: WoocommerceSite, secret: string): Promise<void> {
   const client = buildClientForSite(site)
   const deliveryUrl = `${env.AUTH_URL.replace(/\/+$/, '')}/api/v1/integrations/woocommerce/${site.id}/webhooks`
   for (const topic of ['order.created', 'order.updated', 'order.deleted']) {
