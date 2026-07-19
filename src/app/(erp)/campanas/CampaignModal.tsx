@@ -46,7 +46,8 @@ interface PaymentRuleForm {
 }
 
 interface TargetForm {
-  target_kind: 'category' | 'product'
+  target_kind: 'category' | 'product' | 'brand'
+  /** id (categoría/producto) o texto de marca (vendor). */
   ref_id: string
   ref_label: string
   is_exclusion: boolean
@@ -122,7 +123,7 @@ export function CampaignModal({
       if (!campaignId) { resetForm(); return }
       try {
         const c = await fetchJson<Record<string, unknown> & {
-          targets?: { target_kind: string; category_id: string | null; product_id: string | null; is_exclusion: boolean }[]
+          targets?: { target_kind: string; category_id: string | null; product_id: string | null; brand: string | null; is_exclusion: boolean }[]
           paymentRules?: PaymentRuleForm[]
         }>(`/api/v1/campaigns/${campaignId}`)
         setName(String(c.name ?? ''))
@@ -145,12 +146,11 @@ export function CampaignModal({
           payment_method: r.payment_method ?? '', payment_condition: r.payment_condition ?? '',
           wallet: r.wallet ?? '', card_brand: r.card_brand ?? '', card_type: r.card_type ?? '', via_qr: Boolean(r.via_qr),
         })))
-        setTargets((c.targets ?? []).map((t) => ({
-          target_kind: (t.target_kind === 'product' ? 'product' : 'category'),
-          ref_id: (t.category_id ?? t.product_id ?? ''),
-          ref_label: (t.category_id ?? t.product_id ?? ''),
-          is_exclusion: t.is_exclusion,
-        })))
+        setTargets((c.targets ?? []).map((t) => {
+          const kind = t.target_kind === 'product' ? 'product' : t.target_kind === 'brand' ? 'brand' : 'category'
+          const ref = kind === 'brand' ? (t.brand ?? '') : kind === 'product' ? (t.product_id ?? '') : (t.category_id ?? '')
+          return { target_kind: kind as TargetForm['target_kind'], ref_id: ref, ref_label: ref, is_exclusion: t.is_exclusion }
+        }))
         setErrors({}); setServerError(null); setPreview(null)
       } catch (e) {
         setServerError(getApiErrorMessage(e))
@@ -178,11 +178,12 @@ export function CampaignModal({
       .filter((r) => r.payment_method || r.payment_condition || r.wallet || r.card_brand || r.card_type || r.via_qr)
 
     const cleanTargets = targets
-      .filter((t) => t.ref_id)
+      .filter((t) => t.ref_id.trim())
       .map((t) => ({
         target_kind: t.target_kind,
         category_id: t.target_kind === 'category' ? t.ref_id : null,
         product_id: t.target_kind === 'product' ? t.ref_id : null,
+        brand: t.target_kind === 'brand' ? t.ref_id.trim() : null,
         is_exclusion: t.is_exclusion,
       }))
 
@@ -385,16 +386,24 @@ export function CampaignModal({
               <div key={idx} className="grid grid-cols-1 sm:grid-cols-[130px_1fr_auto] gap-2 items-center rounded-sm border border-border-subtle p-2">
                 <Select
                   value={t.target_kind}
-                  onChange={(v) => setTargets((ts) => ts.map((x, i) => i === idx ? { ...x, target_kind: v as 'category' | 'product', ref_id: '', ref_label: '' } : x))}
-                  options={[{ value: 'category', label: 'Categoría' }, { value: 'product', label: 'Producto' }]}
+                  onChange={(v) => setTargets((ts) => ts.map((x, i) => i === idx ? { ...x, target_kind: v as TargetForm['target_kind'], ref_id: '', ref_label: '' } : x))}
+                  options={[{ value: 'category', label: 'Categoría' }, { value: 'product', label: 'Producto' }, { value: 'brand', label: 'Marca' }]}
                 />
-                <SearchableSelect
-                  value={t.ref_id || null}
-                  onChange={(v) => setTargets((ts) => ts.map((x, i) => i === idx ? { ...x, ref_id: v ?? '' } : x))}
-                  onSearch={t.target_kind === 'category' ? searchCategories : searchProducts}
-                  options={t.ref_id ? [{ value: t.ref_id, label: t.ref_label || t.ref_id }] : []}
-                  placeholder={t.target_kind === 'category' ? 'Buscar categoría…' : 'Buscar producto…'}
-                />
+                {t.target_kind === 'brand' ? (
+                  <Input
+                    value={t.ref_id}
+                    onChange={(e) => setTargets((ts) => ts.map((x, i) => i === idx ? { ...x, ref_id: e.target.value } : x))}
+                    placeholder="Marca (ej. Chandon)"
+                  />
+                ) : (
+                  <SearchableSelect
+                    value={t.ref_id || null}
+                    onChange={(v) => setTargets((ts) => ts.map((x, i) => i === idx ? { ...x, ref_id: v ?? '' } : x))}
+                    onSearch={t.target_kind === 'category' ? searchCategories : searchProducts}
+                    options={t.ref_id ? [{ value: t.ref_id, label: t.ref_label || t.ref_id }] : []}
+                    placeholder={t.target_kind === 'category' ? 'Buscar categoría…' : 'Buscar producto…'}
+                  />
+                )}
                 <div className="flex items-center gap-2">
                   <label className="flex items-center gap-1.5 text-[13px] text-fg"><Checkbox checked={t.is_exclusion} onCheckedChange={(v) => setTargets((ts) => ts.map((x, i) => i === idx ? { ...x, is_exclusion: v === true } : x))} /> Excluir</label>
                   <Button variant="ghost" size="xs" onClick={() => setTargets((ts) => ts.filter((_, i) => i !== idx))}>Quitar</Button>

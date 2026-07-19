@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { evaluateCampaign, qualifyingLineIds, paymentRuleMatches, cartGrossSubtotal } from './campaign-match'
+import { evaluateCampaign, qualifyingLineIds, paymentRuleMatches, cartGrossSubtotal, weekdayInTz } from './campaign-match'
 import type { CartLine, CartContext, CampaignRule } from './campaign-resolver.types'
 
 function line(over: Partial<CartLine> = {}): CartLine {
@@ -8,6 +8,7 @@ function line(over: Partial<CartLine> = {}): CartLine {
     product_id: 'p1',
     variant_id: 'v1',
     category_id: 'c1',
+    brand: 'Chandon',
     quantity: '1',
     unit_price: '100000',
     discount_pct: '0',
@@ -84,8 +85,8 @@ describe('qualifyingLineIds', () => {
     ]
     const rule = baseRule({
       targets: [
-        { target_kind: 'category', category_id: 'c1', product_id: null, variant_id: null, is_exclusion: false },
-        { target_kind: 'product', category_id: null, product_id: 'pEXCL', variant_id: null, is_exclusion: true },
+        { target_kind: 'category', category_id: 'c1', product_id: null, variant_id: null, brand: null, is_exclusion: false },
+        { target_kind: 'product', category_id: null, product_id: 'pEXCL', variant_id: null, brand: null, is_exclusion: true },
       ],
     })
     expect(qualifyingLineIds(rule, lines)).toEqual(['a'])
@@ -101,7 +102,7 @@ describe('evaluateCampaign — ejemplo real A (3 cuotas MP crédito QR ≥ $150k
     installments_count: 3,
     installments_interest_free: true,
     channels: ['pos', 'manual'], // excluye online
-    active_weekdays: [wed.getDay(), (wed.getDay() + 1) % 7], // mié y jue
+    active_weekdays: [weekdayInTz(wed), (weekdayInTz(wed) + 1) % 7], // mié y jue (en TZ Argentina)
     min_purchase_amount: '150000',
     paymentRules: [{ wallet: 'mercadopago', card_type: 'credit', via_qr: true, payment_method: null, payment_condition: null, card_brand: null }],
   })
@@ -138,7 +139,7 @@ describe('evaluateCampaign — ejemplo real B (15% sábados, no online, cualquie
   const rule = baseRule({
     reward_percent: '15',
     channels: ['pos', 'manual'],
-    active_weekdays: [sat.getDay()],
+    active_weekdays: [weekdayInTz(sat)],
   })
 
   it('aplica el sábado en cualquier medio', () => {
@@ -152,6 +153,43 @@ describe('evaluateCampaign — ejemplo real B (15% sábados, no online, cualquie
   it('no aplica fuera de vigencia', () => {
     const expired = baseRule({ valid_to: PAST, valid_from: new Date(2024, 0, 1) })
     expect(evaluateCampaign(expired, [line()], cart({ at: sat })).applies).toBe(false)
+  })
+})
+
+describe('qualifyingLineIds — targeting por marca (product.vendor)', () => {
+  const lines = [
+    line({ line_id: 'a', brand: 'Chandon' }),
+    line({ line_id: 'b', brand: 'Mumm' }),
+    line({ line_id: 'c', brand: 'Baron B' }),
+  ]
+
+  it('incluye solo las líneas de las marcas indicadas (normaliza mayúsculas/espacios)', () => {
+    const rule = baseRule({
+      targets: [{ target_kind: 'brand', category_id: null, product_id: null, variant_id: null, brand: '  chandon ', is_exclusion: false }],
+    })
+    expect(qualifyingLineIds(rule, lines)).toEqual(['a'])
+  })
+
+  it('marca excluida: aplica a todo salvo esa marca', () => {
+    const rule = baseRule({
+      targets: [{ target_kind: 'brand', category_id: null, product_id: null, variant_id: null, brand: 'Mumm', is_exclusion: true }],
+    })
+    expect(qualifyingLineIds(rule, lines)).toEqual(['a', 'c'])
+  })
+
+  it('categoría incluida + marca excluida (espumantes salvo Baron B)', () => {
+    const catLines = [
+      line({ line_id: 'a', category_id: 'espumantes', brand: 'Chandon' }),
+      line({ line_id: 'b', category_id: 'espumantes', brand: 'Baron B' }),
+      line({ line_id: 'c', category_id: 'vinos', brand: 'Chandon' }),
+    ]
+    const rule = baseRule({
+      targets: [
+        { target_kind: 'category', category_id: 'espumantes', product_id: null, variant_id: null, brand: null, is_exclusion: false },
+        { target_kind: 'brand', category_id: null, product_id: null, variant_id: null, brand: 'Baron B', is_exclusion: true },
+      ],
+    })
+    expect(qualifyingLineIds(rule, catLines)).toEqual(['a'])
   })
 })
 

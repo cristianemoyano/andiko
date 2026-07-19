@@ -12,12 +12,13 @@ export interface CampaignTargetAttributes extends Timestamps, AuditFields {
   category_id: UUID | null
   product_id: UUID | null
   variant_id: UUID | null
+  brand: string | null
   is_exclusion: boolean
 }
 
 type CampaignTargetCreationAttributes = Optional<
   CampaignTargetAttributes,
-  | 'id' | 'org_id' | 'category_id' | 'product_id' | 'variant_id' | 'is_exclusion'
+  | 'id' | 'org_id' | 'category_id' | 'product_id' | 'variant_id' | 'brand' | 'is_exclusion'
   | 'created_at' | 'updated_at' | 'deleted_at' | 'created_by' | 'updated_by' | 'deleted_by'
 >
 
@@ -29,6 +30,7 @@ class CampaignTarget extends AuditModel<CampaignTargetAttributes, CampaignTarget
   declare category_id: UUID | null
   declare product_id: UUID | null
   declare variant_id: UUID | null
+  declare brand: string | null
   declare is_exclusion: boolean
 }
 
@@ -40,6 +42,7 @@ CampaignTarget.init(
     category_id:  { type: DataTypes.UUID },
     product_id:   { type: DataTypes.UUID },
     variant_id:   { type: DataTypes.UUID },
+    brand:        { type: DataTypes.STRING(120) },
     is_exclusion: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     ...auditColumnDefs,
   },

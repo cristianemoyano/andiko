@@ -25,16 +25,18 @@ export const campaignTargetInputSchema = z.object({
   category_id:  z.string().uuid().nullable().optional(),
   product_id:   z.string().uuid().nullable().optional(),
   variant_id:   z.string().uuid().nullable().optional(),
+  brand:        z.string().min(1).max(120).nullable().optional(),
   is_exclusion: z.boolean().optional().default(false),
 }).refine(
   (t) => {
-    const refs = [t.category_id, t.product_id, t.variant_id].filter(Boolean).length
+    const refs = [t.category_id, t.product_id, t.variant_id, t.brand].filter(Boolean).length
     if (refs !== 1) return false
     if (t.target_kind === 'category') return !!t.category_id
     if (t.target_kind === 'product') return !!t.product_id
-    return !!t.variant_id
+    if (t.target_kind === 'variant') return !!t.variant_id
+    return !!t.brand
   },
-  { message: 'La condición de producto debe referenciar exactamente el id que corresponde a su tipo.' },
+  { message: 'La condición de producto debe referenciar exactamente el valor que corresponde a su tipo.' },
 )
 
 export const campaignPaymentRuleInputSchema = z.object({
@@ -133,12 +135,13 @@ export const cartContextSchema = z.object({
   at:                z.string().datetime({ offset: true }).optional(),
 })
 
+// Sin `campaign_id` ni `campaign` se resuelven todas las campañas activas de la org.
 export const previewSchema = z.object({
   campaign_id: z.string().uuid().optional(),
   campaign:    campaignSchema.optional(),
   lines:       z.array(cartLineSchema).min(1),
   cart:        cartContextSchema.optional(),
-}).refine((d) => d.campaign_id || d.campaign || true, { message: 'Preview inválido.' })
+})
 
 export type CampaignTargetInput = z.infer<typeof campaignTargetInputSchema>
 export type CampaignPaymentRuleInput = z.infer<typeof campaignPaymentRuleInputSchema>

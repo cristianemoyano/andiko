@@ -57,6 +57,7 @@ export async function resolveCampaignsForSaleItems(
     product_id:   it.product_id ?? null,
     variant_id:   it.variant_id ?? null,
     category_id:  null,
+    brand:        null,
     quantity:     String(it.quantity),
     unit_price:   String(it.unit_price),
     discount_pct: String(it.discount_pct ?? 0),

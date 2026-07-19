@@ -7,6 +7,29 @@ export interface CampaignMatch {
   reason: string
 }
 
+/**
+ * Zona horaria de negocio para evaluar día de la semana y franja horaria.
+ * Andiko es un ERP argentino; usar hora del servidor (que suele ser UTC en deploy)
+ * haría que una campaña de "sábados" fallara cerca de medianoche ART.
+ */
+const BUSINESS_TIMEZONE = 'America/Argentina/Buenos_Aires'
+
+const WEEKDAY_INDEX: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+
+/** Día de la semana (0=domingo … 6=sábado) del instante `at` en la TZ de negocio. */
+export function weekdayInTz(at: Date, timeZone = BUSINESS_TIMEZONE): number {
+  const label = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' }).format(at)
+  return WEEKDAY_INDEX[label] ?? at.getDay()
+}
+
+/** Minutos desde medianoche (0–1439) del instante `at` en la TZ de negocio. */
+export function minutesOfDayInTz(at: Date, timeZone = BUSINESS_TIMEZONE): number {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(at)
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0')
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? '0')
+  return hour * 60 + minute
+}
+
 function timeToMinutes(t: string): number {
   const [h, m] = t.slice(0, 5).split(':').map((n) => parseInt(n, 10))
   return (h || 0) * 60 + (m || 0)
@@ -14,7 +37,7 @@ function timeToMinutes(t: string): number {
 
 function withinTimeWindow(from: string | null, to: string | null, at: Date): boolean {
   if (!from || !to) return true
-  const now = at.getHours() * 60 + at.getMinutes()
+  const now = minutesOfDayInTz(at)
   const start = timeToMinutes(from)
   const end = timeToMinutes(to)
   // Ventana normal (start <= end) o que cruza medianoche (start > end).
@@ -39,13 +62,19 @@ export function paymentRuleMatches(rule: CampaignPaymentRuleData, cart: CartCont
   return true
 }
 
+function normBrand(v: string | null): string {
+  return (v ?? '').trim().toLowerCase()
+}
+
 function lineMatchesTarget(
   line: CartLine,
-  target: { target_kind: string; category_id: string | null; product_id: string | null; variant_id: string | null },
+  target: { target_kind: string; category_id: string | null; product_id: string | null; variant_id: string | null; brand: string | null },
 ): boolean {
   if (target.target_kind === 'category') return !!line.category_id && line.category_id === target.category_id
   if (target.target_kind === 'product') return !!line.product_id && line.product_id === target.product_id
   if (target.target_kind === 'variant') return !!line.variant_id && line.variant_id === target.variant_id
+  // Marca: texto libre de `product.vendor`, comparado normalizado (trim + minúsculas).
+  if (target.target_kind === 'brand') return !!line.brand && normBrand(line.brand) === normBrand(target.brand)
   return false
 }
 
@@ -76,7 +105,7 @@ export function evaluateCampaign(rule: CampaignRule, lines: CartLine[], cart: Ca
   const at = cart.at
   if (at < rule.valid_from || at > rule.valid_to) return noMatch('Fuera de vigencia')
 
-  if (rule.active_weekdays && rule.active_weekdays.length > 0 && !rule.active_weekdays.includes(at.getDay())) {
+  if (rule.active_weekdays && rule.active_weekdays.length > 0 && !rule.active_weekdays.includes(weekdayInTz(at))) {
     return noMatch('No aplica en este día de la semana')
   }
 

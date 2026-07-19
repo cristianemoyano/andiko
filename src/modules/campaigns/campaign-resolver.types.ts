@@ -16,6 +16,8 @@ export interface CartLine {
   product_id: string | null
   variant_id: string | null
   category_id: string | null
+  /** Marca del producto (de `product.vendor`); usada por targets de tipo `brand`. */
+  brand: string | null
   quantity: string
   unit_price: string
   discount_pct: string
@@ -40,10 +42,11 @@ export interface CartContext {
 
 /** Condición de producto (inclusión/exclusión), en forma pura. */
 export interface CampaignTargetRule {
-  target_kind: 'category' | 'product' | 'variant'
+  target_kind: 'category' | 'product' | 'variant' | 'brand'
   category_id: string | null
   product_id: string | null
   variant_id: string | null
+  brand: string | null
   is_exclusion: boolean
 }
 

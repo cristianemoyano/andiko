@@ -2,6 +2,7 @@ import 'server-only'
 import { Op } from 'sequelize'
 import { whereOrg, type TenantContext } from '@/lib/tenancy'
 import Product from '@/modules/catalog/product.model'
+import ProductVariant from '@/modules/catalog/product-variant.model'
 import Campaign from './campaign.model'
 import CampaignTarget from './campaign-target.model'
 import CampaignPaymentRule from './campaign-payment-rule.model'
@@ -41,6 +42,7 @@ function toRule(campaign: CampaignWithChildren, couponId: string | null): Campai
       category_id: t.category_id,
       product_id: t.product_id,
       variant_id: t.variant_id,
+      brand: t.brand,
       is_exclusion: t.is_exclusion,
     })),
     paymentRules: (campaign.paymentRules ?? []).map((r) => ({
@@ -55,19 +57,41 @@ function toRule(campaign: CampaignWithChildren, couponId: string | null): Campai
   }
 }
 
-/** Completa `category_id` en las líneas que traen `product_id` pero no categoría. */
-async function hydrateLineCategories(lines: CartLine[], orgId: string): Promise<CartLine[]> {
-  const missing = lines.filter((l) => !l.category_id && l.product_id).map((l) => l.product_id as string)
-  if (missing.length === 0) return lines
+/**
+ * Completa `category_id` y `brand` (de `product.vendor`) en las líneas que no los traen.
+ * Resuelve primero `product_id` para las líneas que solo tienen `variant_id`.
+ */
+async function hydrateLineProductAttrs(lines: CartLine[], orgId: string): Promise<CartLine[]> {
+  // 1) product_id para líneas con solo variant_id.
+  const variantOnly = [...new Set(lines.filter((l) => !l.product_id && l.variant_id).map((l) => l.variant_id as string))]
+  let productByVariant = new Map<string, string | null>()
+  if (variantOnly.length > 0) {
+    const variants = await ProductVariant.findAll({
+      where: { id: { [Op.in]: variantOnly }, org_id: orgId },
+      attributes: ['id', 'product_id'],
+    })
+    productByVariant = new Map(variants.map((v) => [v.id, (v as unknown as { product_id: string | null }).product_id]))
+  }
+  const withPid = lines.map((l) =>
+    !l.product_id && l.variant_id ? { ...l, product_id: productByVariant.get(l.variant_id) ?? null } : l,
+  )
+
+  // 2) category_id + vendor(brand) desde el producto.
+  const need = [...new Set(withPid.filter((l) => (!l.category_id || !l.brand) && l.product_id).map((l) => l.product_id as string))]
+  if (need.length === 0) return withPid
 
   const products = await Product.findAll({
-    where: { id: { [Op.in]: [...new Set(missing)] }, org_id: orgId },
-    attributes: ['id', 'category_id'],
+    where: { id: { [Op.in]: need }, org_id: orgId },
+    attributes: ['id', 'category_id', 'vendor'],
   })
-  const catByProduct = new Map(products.map((p) => [p.id, (p as unknown as { category_id: string | null }).category_id]))
-  return lines.map((l) =>
-    !l.category_id && l.product_id ? { ...l, category_id: catByProduct.get(l.product_id) ?? null } : l,
-  )
+  const attrByProduct = new Map(products.map((p) => [p.id, p as unknown as { category_id: string | null; vendor: string | null }]))
+
+  return withPid.map((l) => {
+    if (!l.product_id) return l
+    const a = attrByProduct.get(l.product_id)
+    if (!a) return l
+    return { ...l, category_id: l.category_id ?? a.category_id, brand: l.brand ?? a.vendor }
+  })
 }
 
 async function loadActiveCampaignRules(cart: CartContext, ctx: TenantContext): Promise<CampaignRule[]> {
@@ -90,13 +114,16 @@ async function loadActiveCampaignRules(cart: CartContext, ctx: TenantContext): P
     ],
   })) as CampaignWithChildren[]
 
-  const couponCampaigns = campaigns.filter((c) => c.requires_coupon)
+  // Excluir campañas que ya alcanzaron su tope global de usos.
+  const usable = campaigns.filter((c) => c.max_uses == null || c.uses_count < c.max_uses)
+
+  const couponCampaigns = usable.filter((c) => c.requires_coupon)
   const couponMap = couponCampaigns.length > 0
-    ? await resolveValidCouponsByCodes(cart.coupon_codes, ctx)
+    ? await resolveValidCouponsByCodes(cart.coupon_codes, cart.contact_id, ctx)
     : new Map<string, string>()
 
   const rules: CampaignRule[] = []
-  for (const campaign of campaigns) {
+  for (const campaign of usable) {
     if (campaign.requires_coupon) {
       const couponId = couponMap.get(campaign.id)
       if (!couponId) continue // sin cupón válido → no aplica
@@ -115,7 +142,7 @@ export async function resolveCampaignsForCart(
   ctx: TenantContext,
   policy: CampaignMergePolicy = DEFAULT_MERGE_POLICY,
 ): Promise<ResolveResult> {
-  const hydrated = await hydrateLineCategories(lines, ctx.orgId)
+  const hydrated = await hydrateLineProductAttrs(lines, ctx.orgId)
   const rules = await loadActiveCampaignRules(cart, ctx)
   return resolveCampaigns(rules, hydrated, cart, policy)
 }
@@ -128,7 +155,7 @@ export async function previewCampaign(
   ctx: TenantContext,
   policy: CampaignMergePolicy = DEFAULT_MERGE_POLICY,
 ): Promise<ResolveResult> {
-  const hydrated = await hydrateLineCategories(lines, ctx.orgId)
+  const hydrated = await hydrateLineProductAttrs(lines, ctx.orgId)
 
   let rule: CampaignRule
   if ('id' in campaign) {
@@ -173,6 +200,7 @@ function draftToRule(draft: CampaignInput): CampaignRule {
       category_id: t.category_id ?? null,
       product_id: t.product_id ?? null,
       variant_id: t.variant_id ?? null,
+      brand: t.brand ?? null,
       is_exclusion: t.is_exclusion ?? false,
     })),
     paymentRules: (draft.payment_rules ?? []).map((r) => ({

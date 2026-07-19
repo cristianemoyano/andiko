@@ -11,6 +11,7 @@ function toCartLines(lines: CartLineInput[]): CartLine[] {
     product_id:   l.product_id ?? null,
     variant_id:   l.variant_id ?? null,
     category_id:  l.category_id ?? null,
+    brand:        null,
     quantity:     l.quantity,
     unit_price:   l.unit_price,
     discount_pct: l.discount_pct ?? '0',

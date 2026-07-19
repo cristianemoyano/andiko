@@ -182,18 +182,10 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
 
     await assertSaleLineItemsFromActiveCatalog(items, orgId, t)
 
-    // Campañas activas (guardado por módulo; reutiliza discount_pct por línea, no toca totales).
-    const { resolveCampaignsForSaleItems } = await import('@/modules/campaigns/sales-integration')
-    const campaignRes = await resolveCampaignsForSaleItems(
-      items,
-      { branch_id: branch_id ?? null, contact_id: order.contact_id ?? null, source: 'erp' },
-      orgId,
-    )
-    const discountFor = (idx: number, item: { discount_pct?: string | number | null }) =>
-      campaignRes?.discountPctByIndex[idx] ?? String(item.discount_pct ?? 0)
-
-    const itemTotals = items.map((item, idx) =>
-      calcLineItem(item.quantity, item.unit_price, discountFor(idx, item), (item.iva_rate ?? '21') as IvaRate)
+    // Nota: las campañas se resuelven al crear el PEDIDO (sales-orders.service). La factura
+    // hereda el `discount_pct` ya calculado en sus ítems, para no contar dos veces usos/cupones.
+    const itemTotals = items.map(item =>
+      calcLineItem(item.quantity, item.unit_price, item.discount_pct ?? 0, (item.iva_rate ?? '21') as IvaRate)
     )
     const docTotals = calcDocumentTotals(itemTotals)
 
@@ -225,7 +217,7 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
         quantity:     String(item.quantity),
         unit_price:   String(item.unit_price),
         unit_cost:    snapshotUnitCost(item.variant_id, costByVariant),
-        discount_pct: discountFor(idx, item),
+        discount_pct: String(item.discount_pct ?? 0),
         iva_rate:     (item.iva_rate ?? '21') as IvaRate,
         sort_order:   item.sort_order ?? idx,
         created_by:   actorId,
@@ -234,17 +226,6 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
       })),
       { transaction: t },
     )
-
-    if (campaignRes) {
-      const { commitCampaignApplications } = await import('@/modules/campaigns/sales-integration')
-      await commitCampaignApplications(
-        campaignRes.result,
-        { type: 'invoice', id: invoice.id, contactId: order.contact_id },
-        orgId,
-        actorId,
-        t,
-      )
-    }
 
     logger.info({ invoiceId: invoice.id, invoice_number, orgId, actorId }, 'invoice created')
     return getInvoiceInTransaction(invoice.id, t)

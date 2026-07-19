@@ -7,7 +7,7 @@ const SAT = new Date(2026, 6, 18, 14, 0)
 
 function line(over: Partial<CartLine> = {}): CartLine {
   return {
-    line_id: 'l1', product_id: 'p1', variant_id: 'v1', category_id: 'c1',
+    line_id: 'l1', product_id: 'p1', variant_id: 'v1', category_id: 'c1', brand: 'Chandon',
     quantity: '1', unit_price: '1000', discount_pct: '0', iva_rate: '21', ...over,
   }
 }
@@ -63,6 +63,25 @@ describe('resolveCampaigns', () => {
     expect(res.adjustedLines[0].discount_pct).toBe('15.00') // max(10, 15)
   })
 
+  it('no registra aplicación ni consume uso si el descuento manual ya supera al de campaña', () => {
+    // manual 20% > campaña 15% con política max → la campaña no mejora nada.
+    const res = resolveCampaigns([rule({ reward_percent: '15' })], [line({ discount_pct: '20' })], cart(), 'max')
+    expect(res.effects).toHaveLength(0)
+    expect(res.applications).toHaveLength(0)
+    expect(res.adjustedLines[0].discount_pct).toBe('20')
+  })
+
+  it('una campaña que no mejora no bloquea a otra mejor de menor prioridad', () => {
+    const res = resolveCampaigns(
+      [rule({ id: 'weak', reward_percent: '10', priority: 10 }), rule({ id: 'strong', reward_percent: '30', priority: 20 })],
+      [line({ discount_pct: '15' })], cart(), 'max',
+    )
+    // 'weak' (10%) no supera el 15% manual → no toca la línea; 'strong' (30%) sí aplica.
+    expect(res.adjustedLines[0].discount_pct).toBe('30.00')
+    expect(res.effects).toHaveLength(1)
+    expect(res.effects[0].campaign_id).toBe('strong')
+  })
+
   it('campañas no acumulables: solo la de mayor prioridad toca la línea', () => {
     const res = resolveCampaigns(
       [rule({ id: 'a', reward_percent: '20', priority: 10 }), rule({ id: 'b', reward_percent: '30', priority: 20 })],
@@ -76,7 +95,7 @@ describe('resolveCampaigns', () => {
   it('respeta targets: solo descuenta las líneas incluidas', () => {
     const lines = [line({ line_id: 'a', category_id: 'c1' }), line({ line_id: 'b', category_id: 'c2' })]
     const res = resolveCampaigns(
-      [rule({ targets: [{ target_kind: 'category', category_id: 'c1', product_id: null, variant_id: null, is_exclusion: false }] })],
+      [rule({ targets: [{ target_kind: 'category', category_id: 'c1', product_id: null, variant_id: null, brand: null, is_exclusion: false }] })],
       lines, cart(), 'max',
     )
     expect(res.adjustedLines.find((l) => l.line_id === 'a')!.discount_pct).toBe('15.00')

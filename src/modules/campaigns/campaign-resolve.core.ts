@@ -80,15 +80,19 @@ export function resolveCampaigns(
     if (eligible.length === 0) continue
 
     let campaignDiscount = new Decimal(0)
+    const changedLines: string[] = []
     for (const id of eligible) {
       const line = byId.get(id)
       if (!line) continue
-      const before = lineDiscountAmount(line)
       const merged = mergeDiscountPct(line.discount_pct, campaign.reward_percent, policy)
+      // Si la campaña no supera el descuento ya presente en la línea, no la toca:
+      // no muta, no emite efecto, no bloquea (evita inflar usos y tapar a otra mejor).
+      if (!new Decimal(merged.pct).gt(line.discount_pct || 0)) continue
+
+      const before = lineDiscountAmount(line)
       line.discount_pct = merged.pct
       const after = lineDiscountAmount(line)
-      const delta = after.minus(before)
-      if (delta.gt(0)) campaignDiscount = campaignDiscount.plus(delta)
+      campaignDiscount = campaignDiscount.plus(after.minus(before))
       if (merged.doubled) warnings.add(CAMPAIGN_WARNINGS.DOUBLE_DISCOUNT_ON_LINE)
 
       effects.push({
@@ -101,16 +105,20 @@ export function resolveCampaigns(
         reason: `${campaign.name}: ${campaign.reward_percent}%`,
       })
 
+      changedLines.push(id)
       touchedLines.add(id)
       if (!campaign.stackable) lockedLines.add(id)
     }
+
+    // Solo registrar la aplicación (y consumir un uso) si la campaña efectivamente descontó algo.
+    if (changedLines.length === 0) continue
 
     applications.push({
       campaign_id: campaign.id,
       coupon_id: campaign.couponId ?? null,
       applied_discount_amount: campaignDiscount.toFixed(2),
       benefit_snapshot: null,
-      rule_snapshot: { reward_kind: 'percent', reward_percent: campaign.reward_percent, lines: eligible },
+      rule_snapshot: { reward_kind: 'percent', reward_percent: campaign.reward_percent, lines: changedLines },
     })
   }
 

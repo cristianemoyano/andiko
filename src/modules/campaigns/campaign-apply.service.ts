@@ -57,12 +57,28 @@ export async function commitCampaignApplications(
 
     if (!app.coupon_id) continue
 
-    // Canje idempotente + incremento de cupón bajo lock.
+    // Canje idempotente en la misma venta.
     const existing = await CouponRedemption.findOne({
       where: { coupon_id: app.coupon_id, document_id: doc.id, org_id: orgId },
       transaction: t,
     })
     if (existing) continue
+
+    // Lock del cupón y re-chequeo del tope DENTRO del lock (evita sobre-canje por concurrencia:
+    // la validación previa corre fuera de la transacción y no serializa).
+    const coupon = await Coupon.findOne({
+      where: { id: app.coupon_id, org_id: orgId },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    })
+    if (!coupon) continue
+    if (coupon.max_redemptions != null && coupon.redeemed_count >= coupon.max_redemptions) {
+      logger.warn(
+        { couponId: app.coupon_id, documentType: doc.type, documentId: doc.id, orgId },
+        'coupon redemption skipped: max_redemptions reached under lock',
+      )
+      continue
+    }
 
     await CouponRedemption.create(
       {
@@ -79,14 +95,7 @@ export async function commitCampaignApplications(
       { transaction: t },
     )
 
-    const coupon = await Coupon.findOne({
-      where: { id: app.coupon_id, org_id: orgId },
-      transaction: t,
-      lock: t.LOCK.UPDATE,
-    })
-    if (coupon) {
-      await coupon.update({ redeemed_count: coupon.redeemed_count + 1 }, { transaction: t })
-    }
+    await coupon.update({ redeemed_count: coupon.redeemed_count + 1 }, { transaction: t })
   }
 
   logger.info(

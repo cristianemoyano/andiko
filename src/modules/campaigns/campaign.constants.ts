@@ -16,8 +16,8 @@ export function channelFromSalesSource(source: 'erp' | 'pos' | 'woocommerce'): C
   return 'manual'
 }
 
-/** A qué apunta una condición de producto. */
-export const CAMPAIGN_TARGET_KINDS = ['category', 'product', 'variant'] as const
+/** A qué apunta una condición de producto. `brand` matchea contra `product.vendor`. */
+export const CAMPAIGN_TARGET_KINDS = ['category', 'product', 'variant', 'brand'] as const
 export type CampaignTargetKind = typeof CAMPAIGN_TARGET_KINDS[number]
 
 /** Wallets/billeteras reconocidas para condiciones de pago. */

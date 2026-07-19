@@ -4,6 +4,7 @@ import logger from '@/lib/logger'
 import { whereOrg, type TenantContext } from '@/lib/tenancy'
 import Campaign from './campaign.model'
 import Coupon from './coupon.model'
+import CouponRedemption from './coupon-redemption.model'
 import { getCampaign } from './campaigns.service'
 import { CAMPAIGN_WARNINGS, type CampaignWarningCode } from './campaign.constants'
 import type { CouponInput, CouponUpdateInput } from './coupon.schema'
@@ -55,11 +56,15 @@ export type CouponValidation =
   | { ok: false; code: CampaignWarningCode }
 
 /** Valida un código de cupón contra la campaña asociada (vigencia + estado + límites). Read-only. */
-export async function validateCoupon(code: string, ctx: TenantContext): Promise<CouponValidation> {
+export async function validateCoupon(code: string, ctx: TenantContext, contactId: string | null = null): Promise<CouponValidation> {
   const coupon = await Coupon.findOne({ where: whereOrg(ctx, { code, is_active: true }) })
   if (!coupon) return { ok: false, code: CAMPAIGN_WARNINGS.COUPON_NOT_FOUND }
 
   if (coupon.max_redemptions != null && coupon.redeemed_count >= coupon.max_redemptions) {
+    return { ok: false, code: CAMPAIGN_WARNINGS.COUPON_LIMIT_REACHED }
+  }
+
+  if (await contactReachedPerCustomerLimit(coupon, contactId, ctx)) {
     return { ok: false, code: CAMPAIGN_WARNINGS.COUPON_LIMIT_REACHED }
   }
 
@@ -74,9 +79,23 @@ export async function validateCoupon(code: string, ctx: TenantContext): Promise<
   return { ok: true, coupon, campaign }
 }
 
+/** ¿El contacto alcanzó el límite por-cliente de canjes de este cupón? */
+async function contactReachedPerCustomerLimit(
+  coupon: Coupon,
+  contactId: string | null,
+  ctx: TenantContext,
+): Promise<boolean> {
+  if (coupon.per_customer_limit == null || !contactId) return false
+  const used = await CouponRedemption.count({
+    where: whereOrg(ctx, { coupon_id: coupon.id, contact_id: contactId }),
+  })
+  return used >= coupon.per_customer_limit
+}
+
 /** Devuelve, para los códigos dados, un mapa campaign_id → coupon_id de cupones válidos. */
 export async function resolveValidCouponsByCodes(
   codes: string[],
+  contactId: string | null,
   ctx: TenantContext,
 ): Promise<Map<string, string>> {
   const map = new Map<string, string>()
@@ -87,6 +106,7 @@ export async function resolveValidCouponsByCodes(
   })
   for (const coupon of coupons) {
     if (coupon.max_redemptions != null && coupon.redeemed_count >= coupon.max_redemptions) continue
+    if (await contactReachedPerCustomerLimit(coupon, contactId, ctx)) continue
     map.set(coupon.campaign_id, coupon.id)
   }
   return map
