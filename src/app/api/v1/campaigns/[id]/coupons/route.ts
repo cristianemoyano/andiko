@@ -28,7 +28,7 @@ export const POST = withTenantPermission<P>('campaigns:write', async (req, ctx, 
   const { id } = await ctx.params
   const parsed = couponSchema.safeParse(await req.json())
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
+    return NextResponse.json({ error: 'Datos inválidos.', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
     const coupon = await createCoupon(id, parsed.data, tenant, resolveActorId(session))

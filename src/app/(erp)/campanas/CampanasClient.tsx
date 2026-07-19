@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
 import { DataTable, TablePagination, type Column } from '@/components/erp'
@@ -8,10 +9,25 @@ import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/primitives/DropdownMenu'
 import { ConfirmDialog } from '@/components/erp/ConfirmDialog'
-import { CampaignModal, type CampaignRow } from './CampaignModal'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
 import { notifyApiError, notifySuccess } from '@/lib/notify'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
+import type { CampaignRewardKind } from '@/modules/campaigns/campaign.constants'
+
+export interface CampaignRow {
+  id: string
+  name: string
+  reward_kind: CampaignRewardKind
+  reward_percent: string | null
+  installments_count: number | null
+  installments_interest_free: boolean | null
+  requires_coupon: boolean
+  stackable: boolean
+  priority: number
+  valid_from: string
+  valid_to: string
+  is_active: boolean
+}
 
 const PAGE_SIZE = 20
 
@@ -59,13 +75,12 @@ const COLUMNS: Column<CampaignRow>[] = [
 ]
 
 export function CampanasClient() {
+  const router = useRouter()
   const [rows, setRows] = useState<CampaignRow[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [refresh, setRefresh] = useState(0)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
   const [toDelete, setToDelete] = useState<CampaignRow | null>(null)
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -98,21 +113,11 @@ export function CampanasClient() {
   }, [page, debouncedSearch, refresh])
 
   function openCreate() {
-    setEditingId(null)
-    setModalOpen(true)
+    router.push('/campanas/nueva')
   }
 
   function openEdit(row: CampaignRow) {
-    setEditingId(row.id)
-    setModalOpen(true)
-  }
-
-  function handleSaved() {
-    const wasEdit = !!editingId
-    setModalOpen(false)
-    setEditingId(null)
-    setRefresh((r) => r + 1)
-    notifySuccess(wasEdit ? 'Campaña actualizada' : 'Campaña creada')
+    router.push(`/campanas/${row.id}`)
   }
 
   async function toggleActive(row: CampaignRow) {
@@ -226,13 +231,6 @@ export function CampanasClient() {
           }
         />
       </PageBody>
-
-      <CampaignModal
-        open={modalOpen}
-        campaignId={editingId}
-        onClose={() => setModalOpen(false)}
-        onSaved={handleSaved}
-      />
 
       <ConfirmDialog
         open={!!toDelete}

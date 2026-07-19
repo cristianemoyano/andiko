@@ -16,7 +16,7 @@ export const PATCH = withTenantPermission<P>('campaigns:write', async (req, ctx,
   const { couponId } = await ctx.params
   const parsed = couponUpdateSchema.safeParse(await req.json())
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
+    return NextResponse.json({ error: 'Datos inválidos.', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
   try {
     const coupon = await updateCoupon(couponId, parsed.data, tenant, resolveActorId(session))

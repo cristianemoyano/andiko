@@ -38,7 +38,7 @@ function toCartContext(cart: CartContextInput | undefined): CartContext {
 export const POST = withTenantPermission('campaigns:read', async (req, _ctx, _session, tenant) => {
   const parsed = previewSchema.safeParse(await req.json())
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid input', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
+    return NextResponse.json({ error: 'Datos inválidos.', code: 'VALIDATION_ERROR', details: parsed.error.flatten() }, { status: 422 })
   }
 
   const lines = toCartLines(parsed.data.lines)
