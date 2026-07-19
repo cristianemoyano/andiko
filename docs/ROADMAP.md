@@ -942,10 +942,11 @@ Ideas validadas pero sin fecha definida.
 - Límite de crédito por cliente (bloqueo/alerta al superar saldo en cuenta corriente)
 - Comisiones de vendedores
 - Descuentos comerciales avanzados:
-  - Descuento global por documento (adicional al descuento por ítem)
-  - Reglas/promociones (por cantidad, por categoría, combos)
-  - Descuentos por cliente y por lista de precios con vigencia
-  - Descuento por condición de pago (contado/anticipado)
+  - [x] **Módulo de Campañas (Fase 1)** — motor de promociones org-scoped (`src/modules/campaigns/`): campañas con vigencia, días de la semana y franja horaria, canal (POS/online/manual), compra mínima, términos y condiciones; condiciones de pago (medio/wallet/tarjeta/QR/condición); condiciones de producto por categoría/producto con inclusión y exclusión; premio por **porcentaje** (reutiliza `discount_pct` por línea, no toca totales/AFIP/contabilidad) o **cuotas sin interés** (beneficio no monetario); cupones con límites de canje; vista previa (`/api/v1/campaigns/preview`); integración guardada en `createOrder`/`createInvoice`. UI en `/campanas`.
+  - [ ] Fase 2: descuento por monto fijo y 2x1/BOGO
+  - [ ] Fase 3: combos + descuento global a nivel documento (extiende `calcDocumentTotals` + AFIP + contabilidad)
+  - [ ] Fase 4: proyección/analítica de impacto de campañas
+  - [ ] Descuentos por cliente y por lista de precios con vigencia
 
 **Infra VPS (observabilidad y disco):**
 

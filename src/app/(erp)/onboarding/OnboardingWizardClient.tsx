@@ -284,6 +284,7 @@ const MODULE_DESCRIPTIONS: Record<OrgModuleKey, string> = {
   automations: 'Tareas recurrentes y automatizaciones',
   expenses: 'Gastos únicos, recurrentes y planes en cuotas',
   hr: 'Legajos de empleados y control de horario',
+  campaigns: 'Descuentos, promociones y cupones',
 }
 
 const INTEGRATIONS = [

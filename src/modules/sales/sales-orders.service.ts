@@ -23,7 +23,7 @@ import { ensureSalesBranchAssociations } from './sales-branch-associations'
 import { buildBranchRenumberPatch, assertDraftBranchChange, DOCUMENT_BRANCH_NOT_CHANGEABLE } from '@/lib/branch-document-renumber'
 import { nextDocumentNumber, calcLineItem, calcDocumentTotals, computeInvoiceDueDate } from './sales.utils'
 import { isOrderInvoiceable } from './sales-order-workflow'
-import type { IvaRate } from '@/types'
+import type { IvaRate, PaymentCondition } from '@/types'
 import type { TenantContext } from '@/lib/tenancy'
 import { whereAllowedBranches, whereBranch } from '@/lib/tenancy'
 import { isWithinSalesOwnScope, whereSalesDocumentScope, whereSalesOwnScope } from './sales-scope'
@@ -203,8 +203,24 @@ export async function createOrder(input: SalesOrderInput, ctx: TenantContext, ac
     void whereBranch(ctx, branch_id)
     const order_number = await nextDocumentNumber(ctx.orgId, branch_id, 'order', t)
 
-    const itemTotals = items.map(item =>
-      calcLineItem(item.quantity, item.unit_price, item.discount_pct ?? 0, (item.iva_rate ?? '21') as IvaRate)
+    // Campañas activas (guardado por módulo; reutiliza discount_pct por línea, no toca totales).
+    const { resolveCampaignsForSaleItems } = await import('@/modules/campaigns/sales-integration')
+    const orderMeta = orderFields as { contact_id?: string | null; source?: 'erp' | 'pos' | 'woocommerce'; payment_condition?: PaymentCondition }
+    const campaignRes = await resolveCampaignsForSaleItems(
+      items,
+      {
+        branch_id: branch_id ?? null,
+        contact_id: orderMeta.contact_id ?? null,
+        source: orderMeta.source,
+        payment_condition: orderMeta.payment_condition ?? null,
+      },
+      ctx.orgId,
+    )
+    const discountFor = (idx: number, item: { discount_pct?: string | number | null }) =>
+      campaignRes?.discountPctByIndex[idx] ?? String(item.discount_pct ?? 0)
+
+    const itemTotals = items.map((item, idx) =>
+      calcLineItem(item.quantity, item.unit_price, discountFor(idx, item), (item.iva_rate ?? '21') as IvaRate)
     )
     const docTotals = calcDocumentTotals(itemTotals)
 
@@ -231,7 +247,7 @@ export async function createOrder(input: SalesOrderInput, ctx: TenantContext, ac
         description:  item.description,
         quantity:     String(item.quantity),
         unit_price:   String(item.unit_price),
-        discount_pct: String(item.discount_pct ?? 0),
+        discount_pct: discountFor(idx, item),
         iva_rate:     (item.iva_rate ?? '21') as IvaRate,
         sort_order:   item.sort_order ?? idx,
         created_by:   actorId,
@@ -240,6 +256,17 @@ export async function createOrder(input: SalesOrderInput, ctx: TenantContext, ac
       })),
       { transaction: t },
     )
+
+    if (campaignRes) {
+      const { commitCampaignApplications } = await import('@/modules/campaigns/sales-integration')
+      await commitCampaignApplications(
+        campaignRes.result,
+        { type: 'sales_order', id: order.id, contactId: order.contact_id },
+        ctx.orgId,
+        actorId,
+        t,
+      )
+    }
 
     logger.info({ orderId: order.id, order_number, orgId: ctx.orgId, actorId }, 'order created')
     return getOrderInTransaction(order.id, ctx, t)

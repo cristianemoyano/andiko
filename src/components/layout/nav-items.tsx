@@ -83,6 +83,16 @@ export const NAV_MODULES: NavItem[] = [
     ),
   },
   {
+    id: 'campanas',
+    label: 'Campañas',
+    href: '/campanas',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 6.5 11 3v8L2 9.5z"/><path d="M11 4.5c1.5 0 2.5 .9 2.5 2.5s-1 2.5-2.5 2.5"/><path d="M4 9.5V12a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1.8"/>
+      </svg>
+    ),
+  },
+  {
     id: 'contactos',
     label: 'Contactos',
     href: '/contactos',

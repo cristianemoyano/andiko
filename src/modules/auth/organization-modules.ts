@@ -12,6 +12,7 @@ export const ORG_MODULE_KEYS = [
   'automations',
   'expenses',
   'hr',
+  'campaigns',
 ] as const
 
 export type OrgModuleKey = typeof ORG_MODULE_KEYS[number]
@@ -35,6 +36,7 @@ export const ORG_MODULE_DEFS: OrgModuleDef[] = [
   { key: 'automations', label: 'Automatizaciones', tier: 'premium' },
   { key: 'expenses', label: 'Expensas', tier: 'premium' },
   { key: 'hr', label: 'Recursos Humanos', tier: 'premium' },
+  { key: 'campaigns', label: 'Campañas', tier: 'premium' },
 ]
 
 /** Módulos incluidos en plan base (sin premium). */
@@ -65,6 +67,7 @@ export const ROUTE_PREFIX_TO_MODULE: ReadonlyArray<{ prefix: string; module: Org
   { prefix: '/automatizaciones', module: 'automations' },
   { prefix: '/expensas', module: 'expenses' },
   { prefix: '/control-horario', module: 'hr' },
+  { prefix: '/campanas', module: 'campaigns' },
 ]
 
 /** Sidebar nav id → module key */
@@ -83,6 +86,7 @@ export const NAV_ID_TO_MODULE: Record<string, OrgModuleKey> = {
   automatizaciones: 'automations',
   expensas: 'expenses',
   'control-horario': 'hr',
+  campanas: 'campaigns',
 }
 
 export function resolveModuleForPath(pathname: string): OrgModuleKey | null {
@@ -109,6 +113,7 @@ export const PERMISSION_RESOURCE_TO_MODULE: Record<string, OrgModuleKey> = {
   expenses: 'expenses',
   employees: 'hr',
   attendance: 'hr',
+  campaigns: 'campaigns',
 }
 
 export function isOrgModuleKey(value: string): value is OrgModuleKey {
