@@ -49,6 +49,10 @@ vi.mock('./sales-line-stock.service', () => ({
 vi.mock('@/modules/accounting/sales-invoice-accounting.service', () => ({
   postInvoiceIssuedAccounting: vi.fn().mockResolvedValue(undefined),
 }))
+vi.mock('./invoice-item-cost', () => ({
+  resolveVariantUnitCosts: vi.fn().mockResolvedValue(new Map()),
+  snapshotUnitCost: vi.fn().mockReturnValue(null),
+}))
 
 import Invoice from './invoice.model'
 import { issueInvoice, cancelInvoice, listInvoices, getInvoice } from './invoices.service'
