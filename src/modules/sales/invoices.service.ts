@@ -182,6 +182,8 @@ export async function createInvoice(input: InvoiceInput, orgId: string, actorId:
 
     await assertSaleLineItemsFromActiveCatalog(items, orgId, t)
 
+    // Nota: las campañas se resuelven al crear el PEDIDO (sales-orders.service). La factura
+    // hereda el `discount_pct` ya calculado en sus ítems, para no contar dos veces usos/cupones.
     const itemTotals = items.map(item =>
       calcLineItem(item.quantity, item.unit_price, item.discount_pct ?? 0, (item.iva_rate ?? '21') as IvaRate)
     )
