@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { DataTable, DocumentStatusNav, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -16,14 +16,29 @@ import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 const PAGE_SIZE = 20
 
-const STATUS_OPTIONS: { value: PurchaseOrderStatus | ''; label: string }[] = [
-  { value: '',                   label: 'Todos los estados' },
-  { value: 'draft',              label: 'Borrador' },
-  { value: 'sent',               label: 'Enviado' },
-  { value: 'partially_received', label: 'Recibido parcial' },
-  { value: 'received',           label: 'Recibido' },
-  { value: 'cancelled',          label: 'Cancelado' },
+type OrderStatusTab = PurchaseOrderStatus | ''
+
+const STATUS_TABS: readonly { key: OrderStatusTab; label: string }[] = [
+  { key: '',                   label: 'Todos' },
+  { key: 'draft',              label: 'Borrador' },
+  { key: 'sent',               label: 'Enviado' },
+  { key: 'partially_received', label: 'Recibido parcial' },
+  { key: 'received',           label: 'Recibido' },
+  { key: 'partial_returned',   label: 'Devuelto parcial' },
+  { key: 'returned',           label: 'Devuelto' },
+  { key: 'cancelled',          label: 'Cancelado' },
 ]
+
+const EMPTY_STATUS_COUNTS: Record<OrderStatusTab, number> = {
+  '': 0,
+  draft: 0,
+  sent: 0,
+  partially_received: 0,
+  received: 0,
+  partial_returned: 0,
+  returned: 0,
+  cancelled: 0,
+}
 
 const COLUMNS: Column<PurchaseOrder>[] = [
   {
@@ -79,7 +94,8 @@ export function OrdenesClient() {
   const [total, setTotal]     = useState(0)
   const [page, setPage]       = useState(1)
   const [search, setSearch]   = useState('')
-  const [status, setStatus]   = useState<PurchaseOrderStatus | ''>('')
+  const [status, setStatus]   = useState<OrderStatusTab>('')
+  const [statusCounts, setStatusCounts] = useState(EMPTY_STATUS_COUNTS)
   const [error, setError]     = useState<string | null>(null)
 
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -108,17 +124,43 @@ export function OrdenesClient() {
     return () => { controller.abort() }
   }, [page, debouncedSearch, status])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    const params = new URLSearchParams({
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    })
+    void (async () => {
+      try {
+        const res = await fetchJson<{ data: Record<OrderStatusTab, number> }>(
+          `/api/v1/purchases/orders/status-counts?${params}`,
+          { signal: controller.signal },
+        )
+        setStatusCounts({ ...EMPTY_STATUS_COUNTS, ...(res.data ?? {}) })
+      } catch {
+        if (!controller.signal.aborted) setStatusCounts(EMPTY_STATUS_COUNTS)
+      }
+    })()
+    return () => { controller.abort() }
+  }, [debouncedSearch])
+
   return (
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[{ label: 'Compras', href: '/compras' }, { label: 'Órdenes de compra' }]}
         actions={
           <Button size="sm" onClick={() => router.push('/compras/ordenes/nueva')}>
-            Nueva orden
+            + Nueva orden
           </Button>
         }
       />
       <ComprasSubNav />
+      <DocumentStatusNav
+        tabs={STATUS_TABS}
+        active={status}
+        counts={statusCounts}
+        onChange={next => { setStatus(next); setPage(1) }}
+        ariaLabel="Filtrar órdenes de compra por estado"
+      />
 
       <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
@@ -142,15 +184,6 @@ export function OrdenesClient() {
                   className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-52 bg-surface focus:outline-none focus:border-ring"
                 />
               </div>
-              <select
-                value={status}
-                onChange={e => { setStatus(e.target.value as PurchaseOrderStatus | ''); setPage(1) }}
-                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
-              >
-                {STATUS_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
               <span className="flex-1" />
               <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>

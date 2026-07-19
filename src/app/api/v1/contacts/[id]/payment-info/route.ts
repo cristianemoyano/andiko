@@ -40,6 +40,9 @@ export const POST = withPermission<P>('contacts:write', async (req, ctx, session
     if (err instanceof TenancyError && err.code === TENANCY_ERROR_CODES.ORG_CONTEXT_REQUIRED) {
       return NextResponse.json({ error: 'No hay organización en contexto.', code: err.code }, { status: 422 })
     }
+    if (err instanceof Error && err.message === 'SYSTEM_CONTACT_NOT_EDITABLE') {
+      return NextResponse.json({ error: 'El contacto de sistema no se puede editar.', code: err.message }, { status: 409 })
+    }
     if (err instanceof Error && err.message.includes('unique')) {
       return NextResponse.json({ error: 'El CBU ya está registrado', code: 'DUPLICATE_CBU' }, { status: 409 })
     }

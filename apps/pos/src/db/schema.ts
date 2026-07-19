@@ -22,6 +22,8 @@ export const customers = sqliteTable('customers', {
   iva_condition: text('iva_condition'),
   email:      text('email'),
   phone:      text('phone'),
+  is_system:  integer('is_system', { mode: 'boolean' }).notNull().default(false),
+  system_key: text('system_key'),
   synced_at:  text('synced_at').notNull(),
 })
 

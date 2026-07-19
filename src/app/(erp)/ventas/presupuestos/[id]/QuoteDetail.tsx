@@ -28,7 +28,7 @@ import { VentasSubNav } from '../../VentasSubNav'
 import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
 import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
-import { notifyApiError } from '@/lib/notify'
+import { notifyApiError, notifyError } from '@/lib/notify'
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 
 const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
@@ -86,6 +86,11 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
   const [saving, setSaving]     = useState(false)
   const [errors, setErrors]     = useState<FieldErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
+
+  function reportError(message: string) {
+    setServerError(message)
+    notifyError(message)
+  }
   const [createContactOpen, setCreateContactOpen] = useState(false)
   const [createContactSeed, setCreateContactSeed] = useState('')
 
@@ -186,20 +191,21 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
     if (!contactId) {
       setSaving(false)
       setErrors(prev => ({ ...prev, contact_id: ['Seleccioná un cliente.'] }))
+      notifyError('Seleccioná un cliente.')
       return
     }
 
     const lineWithoutProduct = findLineWithoutCatalogProduct(items)
     if (lineWithoutProduct >= 0) {
       setSaving(false)
-      setServerError(catalogProductRequiredMessage(lineWithoutProduct))
+      reportError(catalogProductRequiredMessage(lineWithoutProduct))
       return
     }
 
     const lineOverStock = findLineExceedingBranchStock(items, branchStockMap)
     if (lineOverStock >= 0) {
       setSaving(false)
-      setServerError(insufficientBranchStockMessage(lineOverStock))
+      reportError(insufficientBranchStockMessage(lineOverStock))
       return
     }
 
@@ -236,10 +242,12 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
         setErrors(fe)
         const hasItemsErrors = Object.keys(fe).some(k => k.startsWith('items'))
         if (hasItemsErrors) {
-          setServerError('Hay errores en los ítems. Revisá producto, descripción, cantidad y precio.')
+          reportError('Hay errores en los ítems. Revisá producto, descripción, cantidad y precio.')
+        } else {
+          notifyError('Revisá los campos marcados e intentá de nuevo.')
         }
       } else {
-        setServerError(getApiErrorMessage(err))
+        reportError(getApiErrorMessage(err))
       }
     } finally {
       setSaving(false)
@@ -404,6 +412,12 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
       <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
+          {serverError && (
+            <p role="alert" className="text-[13px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
+              {serverError}
+            </p>
+          )}
+
           {/* Status pipeline */}
           <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-center justify-between gap-4">
             <div>
@@ -541,12 +555,6 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                 </div>
               )
             )}
-
-            {serverError && (
-              <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
-                {serverError}
-              </p>
-            )}
           </div>
 
           <div className="bg-surface border border-border rounded-sm p-5">
@@ -594,6 +602,7 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                 <table className="w-full text-[12px]">
                   <thead>
                     <tr className="bg-surface-muted border-b border-border">
+                      <th className="w-12 px-4 py-2 text-center font-medium text-fg-muted">N°</th>
                       <th className="px-4 py-2 text-left font-medium text-fg-muted">Descripción</th>
                       <th className="px-4 py-2 text-right font-medium text-fg-muted">Cant.</th>
                       <th className="px-4 py-2 text-right font-medium text-fg-muted">P. unitario</th>
@@ -603,8 +612,9 @@ export function QuoteDetail({ id }: QuoteDetailProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {quote.items.map(item => (
+                    {quote.items.map((item, index) => (
                       <tr key={item.id} className="border-b border-border last:border-0">
+                        <td className="px-4 py-2.5 text-center tabular-nums text-fg-subtle">{index + 1}</td>
                         <td className="px-4 py-2.5 text-fg">{item.description}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{item.quantity}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{formatARS(item.unit_price)}</td>

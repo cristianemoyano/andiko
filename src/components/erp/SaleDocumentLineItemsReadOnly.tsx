@@ -47,9 +47,10 @@ export function SaleDocumentLineItemsReadOnly({
   return (
     <>
       <div className="md:hidden divide-y divide-border">
-        {items.map(item => (
+        {items.map((item, index) => (
           <div key={item.id} className="px-4 py-3 space-y-1.5">
             <p className="text-[13px] font-medium text-fg leading-snug">
+              <span className="mr-2 tabular-nums text-fg-subtle">{index + 1}.</span>
               {item.description}
               {item.product_type === 'service' ? <NonShippableLineBadge /> : null}
             </p>
@@ -73,6 +74,7 @@ export function SaleDocumentLineItemsReadOnly({
       <table className="hidden md:table w-full text-[12px]">
         <thead>
           <tr className="bg-surface-muted border-b border-border">
+            <th className="w-12 px-4 py-2 text-center font-medium text-fg-muted">N°</th>
             <th className="px-4 py-2 text-left font-medium text-fg-muted">Descripción</th>
             <th className="px-4 py-2 text-right font-medium text-fg-muted">Cant.</th>
             {showShipmentColumns && (
@@ -88,8 +90,9 @@ export function SaleDocumentLineItemsReadOnly({
           </tr>
         </thead>
         <tbody>
-          {items.map(item => (
+          {items.map((item, index) => (
             <tr key={item.id} className="border-b border-border last:border-0">
+              <td className="px-4 py-2.5 text-center tabular-nums text-fg-subtle">{index + 1}</td>
               <td className="px-4 py-2.5 text-fg">
                 {item.description}
                 {item.product_type === 'service' ? <NonShippableLineBadge /> : null}

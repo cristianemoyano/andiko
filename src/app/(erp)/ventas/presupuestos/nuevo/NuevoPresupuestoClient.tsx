@@ -4,12 +4,13 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
-import { PageBody } from '@/components/layout'
+import { PageBody, FormSection } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Textarea } from '@/components/primitives/Textarea'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
+import { PaymentConditionSelector } from '@/components/erp/PaymentConditionSelector'
 import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
 import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
 import { catalogProductRequiredMessage, findLineWithoutCatalogProduct, findLineExceedingBranchStock, insufficientBranchStockMessage, type BranchStockMap } from '@/lib/sales-line-items-form'
@@ -17,17 +18,11 @@ import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { VentasBranchField } from '@/components/erp/VentasBranchField'
 import type { PaymentCondition } from '../../types'
-import { PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
 import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
-import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { notifyError } from '@/lib/notify'
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
-
-const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
-  value: value as PaymentCondition,
-  label,
-}))
 
 type FieldErrors = Record<string, string[]>
 
@@ -53,6 +48,11 @@ export function NuevoPresupuestoClient() {
   const [createContactSeed, setCreateContactSeed] = useState('')
 
   const totals = calcTotals(items)
+
+  function reportError(message: string) {
+    setServerError(message)
+    notifyError(message)
+  }
 
   const searchContacts = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
     try {
@@ -87,26 +87,27 @@ export function NuevoPresupuestoClient() {
 
     if (!branchId) {
       setSaving(false)
-      setServerError('Elegí una sucursal.')
+      reportError('Elegí una sucursal.')
       return
     }
     if (!contactId) {
       setSaving(false)
       setErrors(prev => ({ ...prev, contact_id: ['Seleccioná un cliente.'] }))
+      notifyError('Seleccioná un cliente.')
       return
     }
 
     const lineWithoutProduct = findLineWithoutCatalogProduct(items)
     if (lineWithoutProduct >= 0) {
       setSaving(false)
-      setServerError(catalogProductRequiredMessage(lineWithoutProduct))
+      reportError(catalogProductRequiredMessage(lineWithoutProduct))
       return
     }
 
     const lineOverStock = findLineExceedingBranchStock(items, branchStockMap)
     if (lineOverStock >= 0) {
       setSaving(false)
-      setServerError(insufficientBranchStockMessage(lineOverStock))
+      reportError(insufficientBranchStockMessage(lineOverStock))
       return
     }
 
@@ -142,10 +143,12 @@ export function NuevoPresupuestoClient() {
         setErrors(fe)
         const hasItemsErrors = Object.keys(fe).some(k => k.startsWith('items'))
         if (hasItemsErrors) {
-          setServerError('Hay errores en los ítems. Revisá producto, descripción, cantidad y precio.')
+          reportError('Hay errores en los ítems. Revisá producto, descripción, cantidad y precio.')
+        } else {
+          notifyError('Revisá los campos marcados e intentá de nuevo.')
         }
       } else {
-        setServerError(getApiErrorMessage(err))
+        reportError(getApiErrorMessage(err))
       }
     } finally {
       setSaving(false)
@@ -175,8 +178,22 @@ export function NuevoPresupuestoClient() {
 
       <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
+          {/* Page header */}
+          <div className="pt-1">
+            <h1 className="text-xl font-semibold tracking-tight text-fg">Nuevo presupuesto</h1>
+            <p className="mt-0.5 text-[13px] text-fg-muted">
+              Elegí el cliente, cargá los ítems y creá el presupuesto para enviarlo.
+            </p>
+          </div>
+
+          {serverError && (
+            <p role="alert" className="text-[13px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
+              {serverError}
+            </p>
+          )}
+
           {/* Header fields */}
-          <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
+          <FormSection title="Datos generales">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Cliente" htmlFor="contact_id" error={errors.contact_id?.[0]}>
                 <SearchableSelect
@@ -219,34 +236,18 @@ export function NuevoPresupuestoClient() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Condición de pago">
-                <div className="flex gap-2 flex-wrap">
-                {PAYMENT_CONDITIONS.map(pc => (
-                  <button
-                    key={pc.value}
-                    type="button"
-                    onClick={() => setPaymentCondition(pc.value)}
-                    className={cn(
-                      'px-3 py-1 text-[12px] rounded-sm border transition-colors',
-                      paymentCondition === pc.value
-                        ? 'border-brand-accent bg-brand-accent-bg text-brand-accent font-medium'
-                        : 'border-border-strong text-fg-muted hover:border-border-strong'
-                    )}
-                  >
-                    {pc.label}
-                  </button>
-                ))}
-                </div>
+                <PaymentConditionSelector value={paymentCondition} onChange={setPaymentCondition} />
               </FormField>
               {actorName && (
                 <FormField label="Vendedor">
-                  <p className="text-[13px] text-fg-muted py-1.5 px-3 bg-surface-muted border border-border rounded-sm">{actorName}</p>
+                  <p className="flex h-9 items-center text-sm text-fg-muted px-3 bg-surface-muted border border-border rounded-sm">{actorName}</p>
                 </FormField>
               )}
             </div>
-          </div>
+          </FormSection>
 
           {/* Line items */}
-          <div className="bg-surface border border-border rounded-sm p-5">
+          <FormSection>
             <SalesLineItemsEditor
               items={items}
               onChange={setItems}
@@ -254,7 +255,7 @@ export function NuevoPresupuestoClient() {
               branchId={branchId}
               onStockMapChange={handleStockMapChange}
             />
-          </div>
+          </FormSection>
 
           {/* Totals */}
           <TotalsFooter
@@ -263,11 +264,11 @@ export function NuevoPresupuestoClient() {
             taxBreakdown={totals.taxBreakdown}
             taxAmount={totals.taxAmount}
             total={totals.total}
-            className="max-w-xs self-end"
+            className="w-full max-w-sm self-end"
           />
 
           {/* Notes */}
-          <div className="bg-surface border border-border rounded-sm p-5">
+          <FormSection title="Notas">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Notas para el cliente" htmlFor="notes">
                 <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Condiciones, aclaraciones…" />
@@ -276,13 +277,7 @@ export function NuevoPresupuestoClient() {
                 <Textarea id="internal_notes" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={3} placeholder="Visible solo para el equipo…" />
               </FormField>
             </div>
-          </div>
-
-          {serverError && (
-            <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
-              {serverError}
-            </p>
-          )}
+          </FormSection>
         </div>
       </PageBody>
 

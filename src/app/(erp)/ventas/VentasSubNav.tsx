@@ -27,7 +27,7 @@ export function VentasSubNav() {
           key={href}
           href={href}
           className={cn(
-            'shrink-0 whitespace-nowrap px-3 py-1 text-[13px] rounded-sm transition-colors',
+            'shrink-0 whitespace-nowrap px-3 py-1.5 text-[13px] rounded-sm transition-colors',
             pathname.startsWith(href)
               ? 'bg-surface border border-border text-fg font-medium shadow-sm'
               : 'text-fg-muted hover:text-fg hover:bg-surface-hover/80'

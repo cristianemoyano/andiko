@@ -27,6 +27,9 @@ export const PATCH = withPermission<P>('contacts:write', async (req, ctx, sessio
     if (err instanceof Error && err.message === 'PAYMENT_INFO_NOT_FOUND') {
       return NextResponse.json({ error: 'Dato de pago no encontrado', code: 'NOT_FOUND' }, { status: 404 })
     }
+    if (err instanceof Error && err.message === 'SYSTEM_CONTACT_NOT_EDITABLE') {
+      return NextResponse.json({ error: 'El contacto de sistema no se puede editar.', code: err.message }, { status: 409 })
+    }
     if (err instanceof Error && err.message.includes('unique')) {
       return NextResponse.json({ error: 'El CBU ya está registrado', code: 'DUPLICATE_CBU' }, { status: 409 })
     }
@@ -48,6 +51,9 @@ export const DELETE = withPermission<P>('contacts:delete', async (_req, ctx, ses
     }
     if (err instanceof Error && err.message === 'PAYMENT_INFO_NOT_FOUND') {
       return NextResponse.json({ error: 'Dato de pago no encontrado', code: 'NOT_FOUND' }, { status: 404 })
+    }
+    if (err instanceof Error && err.message === 'SYSTEM_CONTACT_NOT_EDITABLE') {
+      return NextResponse.json({ error: 'El contacto de sistema no se puede editar.', code: err.message }, { status: 409 })
     }
     throw err
   }

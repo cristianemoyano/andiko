@@ -31,9 +31,10 @@ function formatCbu(cbu: string) {
 interface PaymentInfoSectionProps {
   contactId: string
   initialPaymentInfo: PaymentInfo[]
+  readOnly?: boolean
 }
 
-export function PaymentInfoSection({ contactId, initialPaymentInfo }: PaymentInfoSectionProps) {
+export function PaymentInfoSection({ contactId, initialPaymentInfo, readOnly = false }: PaymentInfoSectionProps) {
   const [items, setItems] = useState<PaymentInfo[]>(initialPaymentInfo)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<PaymentInfo | null>(null)
@@ -54,7 +55,9 @@ export function PaymentInfoSection({ contactId, initialPaymentInfo }: PaymentInf
     <div className="bg-surface border border-border rounded overflow-hidden">
       <div className="px-4 py-2.5 border-b border-border bg-surface-muted flex items-center justify-between">
         <span className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Datos de pago</span>
-        <Button variant="ghost" size="xs" onClick={openCreate} data-testid="payment-info-add-btn">+ Agregar</Button>
+        {!readOnly && (
+          <Button variant="ghost" size="xs" onClick={openCreate} data-testid="payment-info-add-btn">+ Agregar</Button>
+        )}
       </div>
 
       {items.length === 0 ? (
@@ -84,14 +87,16 @@ export function PaymentInfoSection({ contactId, initialPaymentInfo }: PaymentInf
                   )}
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="xs"
-                className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                onClick={() => openEdit(item)}
-              >
-                Editar
-              </Button>
+              {!readOnly && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  onClick={() => openEdit(item)}
+                >
+                  Editar
+                </Button>
+              )}
             </div>
           ))}
         </div>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
-import { PageBody } from '@/components/layout'
+import { FormSection, PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
@@ -13,7 +13,7 @@ import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
 import { ComprasSubNav } from '../../ComprasSubNav'
 import type { PurchaseOrder } from '../../types'
 import { fetchJson } from '@/lib/fetch-json'
-import { notifyApiError } from '@/lib/notify'
+import { notifyApiError, notifyError } from '@/lib/notify'
 
 type ReturnableItem = {
   id: string
@@ -34,6 +34,7 @@ export function NuevaDevolucionCompraClient() {
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [exchangeItems, setExchangeItems] = useState<LineItemInput[]>([makeEmptyLine()])
   const [saving, setSaving] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!orderId) return
@@ -63,11 +64,17 @@ export function NuevaDevolucionCompraClient() {
 
   const handleSubmit = async () => {
     if (!orderId) return
+    setServerError(null)
     const items = (order?.items ?? [])
       .map(item => ({ order_item_id: item.id, quantity: parseFloat(quantities[item.id] || '0') }))
       .filter(i => i.quantity > 0)
 
-    if (items.length === 0) return
+    if (items.length === 0) {
+      const message = 'Ingresá al menos una cantidad a devolver.'
+      setServerError(message)
+      notifyError(message)
+      return
+    }
 
     const payload: Record<string, unknown> = {
       order_id: orderId,
@@ -88,7 +95,12 @@ export function NuevaDevolucionCompraClient() {
           iva_rate:     item.iva_rate,
           sort_order:   idx,
         }))
-      if (validExchange.length === 0) return
+      if (validExchange.length === 0) {
+        const message = 'Agregá al menos un producto para recibir en el cambio.'
+        setServerError(message)
+        notifyError(message)
+        return
+      }
       payload.exchange_items = validExchange
     }
 
@@ -121,30 +133,43 @@ export function NuevaDevolucionCompraClient() {
           {!orderId && <p className="text-danger">Falta order_id en la URL.</p>}
           {order && (
             <>
-              <p className="text-[13px] text-fg-muted">Orden {order.order_number}</p>
-              <div className="bg-surface border border-border rounded-sm p-4 flex flex-col gap-3">
-                <h2 className="font-semibold text-[13px]">Ítems a devolver</h2>
-                {(order.items as ReturnableItem[]).map(item => (
-                  <FormField key={item.id} label={`${item.description} (máx ${maxFor(item)})`} htmlFor={`qty-${item.id}`}>
-                    <Input
-                      id={`qty-${item.id}`}
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      max={maxFor(item)}
-                      step="any"
-                      value={quantities[item.id] ?? ''}
-                      onChange={e => setQuantities(q => ({ ...q, [item.id]: e.target.value }))}
-                    />
-                  </FormField>
-                ))}
+              <div className="pt-1">
+                <h1 className="text-xl font-semibold tracking-tight text-fg">
+                  {operationType === 'exchange' ? 'Nuevo cambio a proveedor' : 'Nueva devolución a proveedor'}
+                </h1>
+                <p className="mt-0.5 text-[13px] text-fg-muted">Orden {order.order_number}</p>
               </div>
 
+              {serverError && (
+                <p role="alert" className="rounded-sm border border-danger bg-danger-bg px-3 py-2 text-[13px] text-danger">
+                  {serverError}
+                </p>
+              )}
+
+              <FormSection title="Ítems a devolver">
+                {(order.items as ReturnableItem[]).map((item, index) => (
+                  <div key={item.id} className="grid grid-cols-[2rem_1fr] items-start gap-2">
+                    <span className="pt-7 text-center text-[12px] tabular-nums text-fg-subtle">{index + 1}</span>
+                    <FormField label={`${item.description} (máx ${maxFor(item)})`} htmlFor={`qty-${item.id}`}>
+                      <Input
+                        id={`qty-${item.id}`}
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        max={maxFor(item)}
+                        step="any"
+                        value={quantities[item.id] ?? ''}
+                        onChange={e => setQuantities(q => ({ ...q, [item.id]: e.target.value }))}
+                      />
+                    </FormField>
+                  </div>
+                ))}
+              </FormSection>
+
               {operationType === 'exchange' && (
-                <div className="bg-surface border border-border rounded-sm p-4 flex flex-col gap-3">
-                  <h2 className="font-semibold text-[13px]">Ítems nuevos a recibir</h2>
+                <FormSection title="Ítems nuevos a recibir">
                   <SalesLineItemsEditor items={exchangeItems} onChange={setExchangeItems} />
-                </div>
+                </FormSection>
               )}
 
               {operationType === 'exchange' && (

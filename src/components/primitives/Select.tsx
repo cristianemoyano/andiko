@@ -48,7 +48,7 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
         id={id}
         aria-invalid={error ? 'true' : undefined}
         className={cn(
-          'flex h-9 md:h-8 w-full items-center justify-between gap-2 rounded-sm border bg-surface px-2.5 text-base md:text-[13px] text-left transition-colors',
+          'flex h-9 w-full items-center justify-between gap-2 rounded-sm border bg-surface px-2.5 text-base md:text-sm text-left transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
           'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',
           'data-[placeholder]:text-fg-subtle',
@@ -105,7 +105,7 @@ const Select = forwardRef<HTMLButtonElement, SelectProps>(
                 value={itemValue}
                 disabled={option.disabled}
                 className={cn(
-                  'relative flex w-full cursor-pointer select-none items-center rounded-[3px] py-1.5 pl-2.5 pr-8 text-[13px] text-fg-muted outline-none transition-colors',
+                  'relative flex w-full cursor-pointer select-none items-center rounded-[3px] py-1.5 pl-2.5 pr-8 text-sm text-fg-muted outline-none transition-colors',
                   'data-[highlighted]:bg-surface-hover data-[highlighted]:text-fg',
                   'data-[state=checked]:bg-brand-accent-bg data-[state=checked]:font-medium data-[state=checked]:text-brand-accent',
                   'data-[highlighted]:data-[state=checked]:text-brand-accent',

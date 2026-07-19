@@ -6,6 +6,7 @@ import Branch from '@/modules/auth/branch.model'
 import { slugifyText } from '@/lib/slug'
 import { formatAddress } from '@/lib/format-address'
 import { seedDefaultChartOfAccounts } from '@/modules/accounting/chart-seed'
+import { seedConsumidorFinalContact } from '@/modules/contacts/system-contacts'
 import { seedDefaultOrgRoles } from '@/modules/auth/org-roles.service'
 import { updateOrganizationSettings } from '@/modules/auth/organization-settings.service'
 import { getDefaultModulesForPlan } from '@/modules/auth/organization-modules'
@@ -80,6 +81,7 @@ export async function createOrganization(input: OrganizationCreateInput) {
       { transaction: t },
     )
     await seedDefaultChartOfAccounts(org.id, t)
+    await seedConsumidorFinalContact(org.id, t)
     await seedDefaultOrgRoles(org.id, t)
     // Fija explícitamente los módulos habilitados en creación, en vez de dejar que
     // el fallback implícito de organization-settings.service.ts (is_default) decida.

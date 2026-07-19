@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
-import { PageBody } from '@/components/layout'
+import { PageBody, FormSection } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Input } from '@/components/primitives/Input'
 import { Textarea } from '@/components/primitives/Textarea'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
+import { PaymentConditionSelector } from '@/components/erp/PaymentConditionSelector'
 import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
 import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
 import { catalogProductRequiredMessage, findLineWithoutCatalogProduct, findLineExceedingBranchStock, insufficientBranchStockMessage, type BranchStockMap } from '@/lib/sales-line-items-form'
@@ -18,17 +19,11 @@ import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { VentasBranchField } from '@/components/erp/VentasBranchField'
 import type { PaymentCondition } from '../../types'
-import { PAYMENT_CONDITION_LABEL } from '../../types'
 import { VentasSubNav } from '../../VentasSubNav'
 import { CustomerQuickCreateDialog } from '../../CustomerQuickCreateDialog'
-import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { notifyError } from '@/lib/notify'
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
-
-const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({
-  value: value as PaymentCondition,
-  label,
-}))
 
 type FieldErrors = Record<string, string[]>
 type ContactAddress = {
@@ -95,6 +90,7 @@ export function NuevoPedidoClient() {
 
   const [contactId, setContactId]               = useState<string | null>(null)
   const [contactOption, setContactOption]       = useState<SearchableSelectOption | null>(null)
+  const cfPrefillDoneRef = useRef(false)
   const [branchId, setBranchId]                 = useState<string | null>(null)
   const [priceListId, setPriceListId]           = useState<string | null>(null)
   const [promisedDate, setPromisedDate]         = useState<Date | null>(null)
@@ -116,6 +112,11 @@ export function NuevoPedidoClient() {
 
   const totals = calcTotals(items)
 
+  function reportError(message: string) {
+    setServerError(message)
+    notifyError(message)
+  }
+
   const searchContacts = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
     try {
       const data = await fetchJson<{ data: Array<{ id: string; legal_name: string; trade_name: string | null }> }>(
@@ -125,6 +126,32 @@ export function NuevoPedidoClient() {
     } catch {
       return []
     }
+  }, [])
+
+  useEffect(() => {
+    if (cfPrefillDoneRef.current) return
+    cfPrefillDoneRef.current = true
+    let cancelled = false
+    void (async () => {
+      try {
+        const data = await fetchJson<{ data: Array<{ id: string; legal_name: string; trade_name: string | null }> }>(
+          '/api/v1/contacts?type=customer&system_key=consumidor_final&limit=1',
+        )
+        const cf = data.data?.[0]
+        if (cancelled || !cf) return
+        setContactId((current) => {
+          if (current !== null) return current
+          return cf.id
+        })
+        setContactOption((current) => {
+          if (current) return current
+          return { value: cf.id, label: cf.legal_name, sublabel: cf.trade_name ?? undefined }
+        })
+      } catch {
+        // Prefill is best-effort; user can still pick a customer.
+      }
+    })()
+    return () => { cancelled = true }
   }, [])
 
   const searchPriceLists = useCallback(async (q: string): Promise<SearchableSelectOption[]> => {
@@ -190,26 +217,27 @@ export function NuevoPedidoClient() {
 
     if (!branchId) {
       setSaving(false)
-      setServerError('Elegí una sucursal.')
+      reportError('Elegí una sucursal.')
       return
     }
     if (!contactId) {
       setSaving(false)
       setErrors(prev => ({ ...prev, contact_id: ['Seleccioná un cliente.'] }))
+      notifyError('Seleccioná un cliente.')
       return
     }
 
     const lineWithoutProduct = findLineWithoutCatalogProduct(items)
     if (lineWithoutProduct >= 0) {
       setSaving(false)
-      setServerError(catalogProductRequiredMessage(lineWithoutProduct))
+      reportError(catalogProductRequiredMessage(lineWithoutProduct))
       return
     }
 
     const lineOverStock = findLineExceedingBranchStock(items, branchStockMap)
     if (lineOverStock >= 0) {
       setSaving(false)
-      setServerError(insufficientBranchStockMessage(lineOverStock))
+      reportError(insufficientBranchStockMessage(lineOverStock))
       return
     }
 
@@ -257,8 +285,12 @@ export function NuevoPedidoClient() {
       router.push(`/ventas/pedidos/${order.id}`)
     } catch (err) {
       const fe = fieldErrorsFromApiError(err)
-      if (fe) setErrors(fe)
-      else setServerError(getApiErrorMessage(err))
+      if (fe) {
+        setErrors(fe)
+        notifyError('Revisá los campos marcados e intentá de nuevo.')
+      } else {
+        reportError(getApiErrorMessage(err))
+      }
     } finally {
       setSaving(false)
     }
@@ -287,8 +319,22 @@ export function NuevoPedidoClient() {
 
       <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
+          {/* Page header */}
+          <div className="pt-1">
+            <h1 className="text-xl font-semibold tracking-tight text-fg">Nuevo pedido</h1>
+            <p className="mt-0.5 text-[13px] text-fg-muted">
+              Elegí el cliente, cargá los ítems y confirmá el pedido para prepararlo.
+            </p>
+          </div>
+
+          {serverError && (
+            <p role="alert" className="text-[13px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
+              {serverError}
+            </p>
+          )}
+
           {/* Header fields */}
-          <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
+          <FormSection title="Datos generales">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Cliente" htmlFor="contact_id" error={errors.contact_id?.[0]}>
                 <SearchableSelect
@@ -331,34 +377,18 @@ export function NuevoPedidoClient() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Condición de pago">
-                <div className="flex gap-2 flex-wrap">
-                  {PAYMENT_CONDITIONS.map(pc => (
-                    <button
-                      key={pc.value}
-                      type="button"
-                      onClick={() => setPaymentCondition(pc.value)}
-                      className={cn(
-                        'px-3 py-1 text-[12px] rounded-sm border transition-colors',
-                        paymentCondition === pc.value
-                          ? 'border-brand-accent bg-brand-accent-bg text-brand-accent font-medium'
-                          : 'border-border-strong text-fg-muted hover:border-border-strong'
-                      )}
-                    >
-                      {pc.label}
-                    </button>
-                  ))}
-                </div>
+                <PaymentConditionSelector value={paymentCondition} onChange={setPaymentCondition} />
               </FormField>
               {actorName && (
                 <FormField label="Vendedor">
-                  <p className="text-[13px] text-fg-muted py-1.5 px-3 bg-surface-muted border border-border rounded-sm">{actorName}</p>
+                  <p className="flex h-9 items-center text-sm text-fg-muted px-3 bg-surface-muted border border-border rounded-sm">{actorName}</p>
                 </FormField>
               )}
             </div>
-          </div>
+          </FormSection>
 
           {/* Line items */}
-          <div className="bg-surface border border-border rounded-sm p-5">
+          <FormSection>
             <SalesLineItemsEditor
               items={items}
               onChange={setItems}
@@ -366,7 +396,7 @@ export function NuevoPedidoClient() {
               branchId={branchId}
               onStockMapChange={handleStockMapChange}
             />
-          </div>
+          </FormSection>
 
           {/* Totals */}
           <TotalsFooter
@@ -375,11 +405,11 @@ export function NuevoPedidoClient() {
             taxBreakdown={totals.taxBreakdown}
             taxAmount={totals.taxAmount}
             total={totals.total}
-            className="max-w-xs self-end"
+            className="w-full max-w-sm self-end"
           />
 
-          {/* Notes */}
-          <div className="bg-surface border border-border rounded-sm p-5">
+          {/* Notes + addresses */}
+          <FormSection title="Notas y direcciones">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Notas para el cliente" htmlFor="notes">
                 <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Condiciones, aclaraciones…" />
@@ -389,70 +419,64 @@ export function NuevoPedidoClient() {
               </FormField>
             </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Dirección de entrega" htmlFor="shipping_address_id">
-              <select
-                id="shipping_address_id"
-                value={shippingAddressId}
-                onChange={(e) => {
-                  const nextId = e.target.value
-                  setShippingAddressId(nextId)
-                  const selected = contactAddresses.find(a => a.id === nextId) ?? null
-                  setShippingAddress(fromContactAddress(selected))
-                }}
-                className="h-8 w-full rounded-sm border border-border-strong bg-surface px-2.5 text-[13px] text-fg focus:border-ring focus:outline-none"
-              >
-                <option value="">Sin dirección predefinida</option>
-                {contactAddresses
-                  .filter(a => a.type === 'delivery')
-                  .map((address) => (
-                    <option key={address.id} value={address.id}>{addressLabel(address)}</option>
-                  ))}
-              </select>
-            </FormField>
-            <FormField label="Dirección de facturación" htmlFor="billing_address_id">
-              <select
-                id="billing_address_id"
-                value={billingAddressId}
-                onChange={(e) => {
-                  const nextId = e.target.value
-                  setBillingAddressId(nextId)
-                  const selected = contactAddresses.find(a => a.id === nextId) ?? null
-                  setBillingAddress(fromContactAddress(selected))
-                }}
-                className="h-8 w-full rounded-sm border border-border-strong bg-surface px-2.5 text-[13px] text-fg focus:border-ring focus:outline-none"
-              >
-                <option value="">Sin dirección predefinida</option>
-                {contactAddresses
-                  .filter(a => a.type === 'fiscal')
-                  .map((address) => (
-                    <option key={address.id} value={address.id}>{addressLabel(address)}</option>
-                  ))}
-              </select>
-            </FormField>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField label="Dirección de entrega guardada" htmlFor="shipping_address_id">
+                <select
+                  id="shipping_address_id"
+                  value={shippingAddressId}
+                  onChange={(e) => {
+                    const nextId = e.target.value
+                    setShippingAddressId(nextId)
+                    const selected = contactAddresses.find(a => a.id === nextId) ?? null
+                    setShippingAddress(fromContactAddress(selected))
+                  }}
+                  className="h-9 w-full rounded-sm border border-border-strong bg-surface px-2.5 text-sm text-fg focus:border-ring focus:outline-none"
+                >
+                  <option value="">Sin dirección predefinida</option>
+                  {contactAddresses
+                    .filter(a => a.type === 'delivery')
+                    .map((address) => (
+                      <option key={address.id} value={address.id}>{addressLabel(address)}</option>
+                    ))}
+                </select>
+              </FormField>
+              <FormField label="Dirección de facturación guardada" htmlFor="billing_address_id">
+                <select
+                  id="billing_address_id"
+                  value={billingAddressId}
+                  onChange={(e) => {
+                    const nextId = e.target.value
+                    setBillingAddressId(nextId)
+                    const selected = contactAddresses.find(a => a.id === nextId) ?? null
+                    setBillingAddress(fromContactAddress(selected))
+                  }}
+                  className="h-9 w-full rounded-sm border border-border-strong bg-surface px-2.5 text-sm text-fg focus:border-ring focus:outline-none"
+                >
+                  <option value="">Sin dirección predefinida</option>
+                  {contactAddresses
+                    .filter(a => a.type === 'fiscal')
+                    .map((address) => (
+                      <option key={address.id} value={address.id}>{addressLabel(address)}</option>
+                    ))}
+                </select>
+              </FormField>
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <AddressSnapshotFields
-              prefix="shipping"
-              title="Snapshot entrega"
-              value={shippingAddress}
-              onChange={setShippingAddress}
-            />
-            <AddressSnapshotFields
-              prefix="billing"
-              title="Snapshot facturación"
-              value={billingAddress}
-              onChange={setBillingAddress}
-            />
-          </div>
-          </div>
-
-          {serverError && (
-            <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
-              {serverError}
-            </p>
-          )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <AddressSnapshotFields
+                prefix="shipping"
+                title="Domicilio de entrega"
+                value={shippingAddress}
+                onChange={setShippingAddress}
+              />
+              <AddressSnapshotFields
+                prefix="billing"
+                title="Domicilio de facturación"
+                value={billingAddress}
+                onChange={setBillingAddress}
+              />
+            </div>
+          </FormSection>
         </div>
       </PageBody>
 
@@ -485,8 +509,8 @@ function AddressSnapshotFields({
   }
 
   return (
-    <div className="rounded-sm border border-border p-3">
-      <p className="mb-3 text-[12px] font-medium text-fg-muted">{title}</p>
+    <div className="rounded-sm border border-border bg-surface-muted/40 p-3">
+      <p className="mb-3 text-[13px] font-medium text-fg">{title}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FormField label="Calle" htmlFor={`${prefix}_street`}>
           <Input id={`${prefix}_street`} value={value.street} onChange={(e) => patch({ street: e.target.value })} />

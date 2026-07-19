@@ -90,7 +90,7 @@ export function PosReceipt({
 }: PosReceiptProps) {
   const soldDate = new Date(soldAt)
   const totalNum = parseFloat(total)
-  const isConsumidorFinal = !customer
+  const isConsumidorFinal = !customer || Boolean(customer.is_system) || customer.system_key === 'consumidor_final'
   const isFiscalAuthorized = Boolean(cae) && !fiscalPending
   const { pv, number } = parseTicketNumber(ticketNumber, fiscal.puntoVenta)
   const codigo = fiscal.comprobanteCodigo ?? '083'

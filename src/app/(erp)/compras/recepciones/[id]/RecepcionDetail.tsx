@@ -15,6 +15,7 @@ import type { PurchaseReceipt } from '../../types'
 import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_RECEIPT_STATUS_LABEL, SUPPLIER_INVOICE_STATUS_LABEL } from '../../types'
 import { formatARS } from '@/components/primitives/CurrencyInput'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
+import { notifyError } from '@/lib/notify'
 
 interface RecepcionDetailProps {
   id: string
@@ -54,7 +55,9 @@ export function RecepcionDetail({ id }: RecepcionDetailProps) {
       setRefresh(r => r + 1)
       return true
     } catch (e) {
-      setActionError(getApiErrorMessage(e))
+      const message = getApiErrorMessage(e)
+      setActionError(message)
+      notifyError(message, 'No se pudo actualizar la recepción')
       return false
     }
   }
@@ -198,6 +201,7 @@ export function RecepcionDetail({ id }: RecepcionDetailProps) {
             <table className="w-full text-sm">
               <thead className="bg-surface-muted border-b border-border">
                 <tr>
+                  <th className="w-12 px-4 py-2.5 text-center text-[11px] font-semibold text-fg-muted uppercase tracking-wide">N°</th>
                   <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Descripción</th>
                   <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Cantidad</th>
                   <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Costo unitario</th>
@@ -206,11 +210,12 @@ export function RecepcionDetail({ id }: RecepcionDetailProps) {
               <tbody className="divide-y divide-border">
                 {(receipt.items ?? []).length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-fg-subtle text-sm">Sin ítems</td>
+                    <td colSpan={4} className="px-4 py-8 text-center text-fg-subtle text-sm">Sin ítems</td>
                   </tr>
                 ) : (
-                  (receipt.items ?? []).map(item => (
+                  (receipt.items ?? []).map((item, index) => (
                     <tr key={item.id} className="hover:bg-surface-muted/50">
+                      <td className="px-4 py-2.5 text-center text-[12px] tabular-nums text-fg-subtle">{index + 1}</td>
                       <td className="px-4 py-2.5 text-fg">{item.description}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
                         {parseFloat(item.quantity).toLocaleString('es-AR')}

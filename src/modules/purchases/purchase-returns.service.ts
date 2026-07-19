@@ -7,6 +7,7 @@ import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
 import { whereAllowedBranches, type TenantContext } from '@/lib/tenancy'
 import PurchaseReturn from './purchase-return.model'
+import type { PurchaseReturnStatus } from './purchase-return.model'
 import PurchaseReturnItem, { type PurchaseReturnItemAttributes } from './purchase-return-item.model'
 import PurchaseReturnExchangeItem, { type PurchaseReturnExchangeItemAttributes } from './purchase-return-exchange-item.model'
 import PurchaseOrder from './purchase-order.model'
@@ -28,6 +29,7 @@ import type {
   UpdatePurchaseReturnInput,
   CompletePurchaseReturnInput,
   PurchaseReturnQuery,
+  PurchaseReturnStatusCountsQuery,
 } from './purchase-return.schema'
 import type { IvaRate } from '@/types'
 
@@ -42,17 +44,8 @@ function stockActorId(ctx: TenantContext): string {
 export async function listPurchaseReturns(query: PurchaseReturnQuery, ctx: TenantContext) {
   ensurePurchaseReturnAssociations()
   const { offset, limit } = paginate(query.page, query.limit)
-  const where: Record<string, unknown> = { ...whereAllowedBranches(ctx, {}) }
+  const where = buildPurchaseReturnsListWhere(query, ctx)
   if (query.status)         where.status         = query.status
-  if (query.order_id)       where.order_id       = query.order_id
-  if (query.operation_type) where.operation_type = query.operation_type
-  if (query.search) {
-    const term = `%${query.search}%`
-    where[Op.or as unknown as string] = [
-      { return_number: { [Op.iLike]: term } },
-      { '$order.order_number$': { [Op.iLike]: term } },
-    ]
-  }
 
   const { rows, count } = await PurchaseReturn.findAndCountAll({
     where,
@@ -70,6 +63,53 @@ export async function listPurchaseReturns(query: PurchaseReturnQuery, ctx: Tenan
   })
 
   return toPaginated(rows, count, query.page, query.limit)
+}
+
+function buildPurchaseReturnsListWhere(
+  query: PurchaseReturnStatusCountsQuery,
+  ctx: TenantContext,
+): Record<string, unknown> {
+  const where: Record<string, unknown> = { ...whereAllowedBranches(ctx, {}) }
+  if (query.order_id) where.order_id = query.order_id
+  if (query.operation_type) where.operation_type = query.operation_type
+  if (query.search) {
+    const term = `%${query.search}%`
+    where[Op.or as unknown as string] = [
+      { return_number: { [Op.iLike]: term } },
+      { '$order.order_number$': { [Op.iLike]: term } },
+    ]
+  }
+  return where
+}
+
+export async function getPurchaseReturnStatusCounts(
+  query: PurchaseReturnStatusCountsQuery,
+  ctx: TenantContext,
+) {
+  ensurePurchaseReturnAssociations()
+  const rows = await PurchaseReturn.findAll({
+    where: buildPurchaseReturnsListWhere(query, ctx),
+    attributes: [
+      'status',
+      [sequelize.fn('COUNT', sequelize.col('PurchaseReturn.id')), 'count'],
+    ],
+    include: query.search
+      ? [{ model: PurchaseOrder, as: 'order', attributes: [], required: false }]
+      : undefined,
+    group: ['PurchaseReturn.status'],
+    raw: true,
+  }) as unknown as Array<{ status: PurchaseReturnStatus; count: string }>
+
+  const byStatus = Object.fromEntries(
+    rows.map(row => [row.status, Number(row.count)]),
+  ) as Partial<Record<PurchaseReturnStatus, number>>
+  return {
+    '': Object.values(byStatus).reduce((sum, count) => sum + count, 0),
+    draft: byStatus.draft ?? 0,
+    confirmed: byStatus.confirmed ?? 0,
+    completed: byStatus.completed ?? 0,
+    cancelled: byStatus.cancelled ?? 0,
+  }
 }
 
 export async function getPurchaseReturn(id: string, ctx: TenantContext) {

@@ -17,6 +17,7 @@ import { SearchableSelect, type SearchableSelectOption } from '@/components/erp/
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { VentasSubNav } from '../VentasSubNav'
 import { fetchJson } from '@/lib/fetch-json'
+import { notifyError } from '@/lib/notify'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 type CreditNoteStatus = 'draft' | 'issued' | 'cancelled'
@@ -269,7 +270,11 @@ export function NotasDeCreditoClient() {
     if (!branchId) newErrors.branch = 'Seleccioná una sucursal'
     if (!contactId) newErrors.contact = 'Seleccioná un cliente'
     if (!netAmount || netDec.lte(0)) newErrors.netAmount = 'Ingresá un importe neto válido'
-    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      notifyError('Revisá los campos marcados e intentá de nuevo.')
+      return
+    }
 
     setSubmitting(true)
     setServerError('')
@@ -292,7 +297,9 @@ export function NotasDeCreditoClient() {
       setModalOpen(false)
       setRefresh(r => r + 1)
     } catch (err: unknown) {
-      setServerError(err instanceof Error ? err.message : 'Error al crear la nota de crédito')
+      const message = err instanceof Error ? err.message : 'Error al crear la nota de crédito'
+      setServerError(message)
+      notifyError(message)
     } finally {
       setSubmitting(false)
     }
@@ -304,7 +311,7 @@ export function NotasDeCreditoClient() {
     <div className="flex h-full flex-col">
       <TopBar
         breadcrumbs={[{ label: 'Ventas', href: '/ventas/presupuestos' }, { label: 'Notas de crédito' }]}
-        actions={<Button size="sm" onClick={openCreate}>Nueva nota de crédito</Button>}
+        actions={<Button size="sm" onClick={openCreate}>+ Nueva nota de crédito</Button>}
       />
       <VentasSubNav />
 
@@ -345,9 +352,12 @@ export function NotasDeCreditoClient() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen} title="Nueva nota de crédito">
         <form key={formKey} onSubmit={handleSubmit} className="space-y-4 p-5 min-w-[440px]">
 
-          <FormField label="Sucursal *" error={errors.branch}>
-            <BranchSelectField value={branchId} onChange={v => { setBranchId(v ?? ''); setErrors(e => ({ ...e, branch: '' })) }} />
-          </FormField>
+          <BranchSelectField
+            value={branchId}
+            onChange={v => { setBranchId(v ?? ''); setErrors(e => ({ ...e, branch: '' })) }}
+            required
+            error={errors.branch || undefined}
+          />
 
           <FormField label="Cliente *" error={errors.contact}>
             <SearchableSelect

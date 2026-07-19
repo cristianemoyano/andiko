@@ -5,9 +5,15 @@ import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
 import SupplierInvoice from './supplier-invoice.model'
+import type { SupplierInvoiceStatus } from './supplier-invoice.model'
 import SupplierInvoiceItem from './supplier-invoice-item.model'
 import SupplierPayment from './supplier-payment.model'
-import type { SupplierInvoiceInput, SupplierInvoiceUpdateInput, SupplierInvoiceQuery } from './supplier-invoice.schema'
+import type {
+  SupplierInvoiceInput,
+  SupplierInvoiceUpdateInput,
+  SupplierInvoiceQuery,
+  SupplierInvoiceStatusCountsQuery,
+} from './supplier-invoice.schema'
 import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { nextPurchaseDocNumber, calcLineItem, calcDocumentTotals, calcDueDate } from './purchases.utils'
 import { ensurePurchasesBranchAssociations } from './purchases-branch-associations'
@@ -21,20 +27,11 @@ export async function listSupplierInvoices(query: SupplierInvoiceQuery, orgId: s
   const { page, limit, search, status, contact_id, order_id, overdue } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = { org_id: orgId }
+  const where = buildSupplierInvoicesListWhere(
+    { search, contact_id, order_id, overdue },
+    orgId,
+  )
   if (status)     where.status     = status
-  if (contact_id) where.contact_id = contact_id
-  if (order_id)   where.order_id   = order_id
-  if (search) {
-    where[Op.or as unknown as string] = [
-      { invoice_number:          { [Op.iLike]: `%${search}%` } },
-      { supplier_invoice_number: { [Op.iLike]: `%${search}%` } },
-    ]
-  }
-  if (overdue) {
-    where.due_date = { [Op.lt]: new Date() }
-    where.status   = { [Op.notIn]: ['paid', 'cancelled'] }
-  }
 
   const { default: Branch }  = await import('@/modules/auth/branch.model')
   const { default: Contact } = await import('@/modules/contacts/contact.model')
@@ -58,6 +55,54 @@ export async function listSupplierInvoices(query: SupplierInvoiceQuery, orgId: s
   })
 
   return toPaginated(rows, count, page, limit)
+}
+
+function buildSupplierInvoicesListWhere(
+  query: SupplierInvoiceStatusCountsQuery,
+  orgId: string,
+): Record<string, unknown> {
+  const where: Record<string, unknown> = { org_id: orgId }
+  if (query.contact_id) where.contact_id = query.contact_id
+  if (query.order_id) where.order_id = query.order_id
+  if (query.search) {
+    where[Op.or as unknown as string] = [
+      { invoice_number: { [Op.iLike]: `%${query.search}%` } },
+      { supplier_invoice_number: { [Op.iLike]: `%${query.search}%` } },
+    ]
+  }
+  if (query.overdue) {
+    where.due_date = { [Op.lt]: new Date() }
+    where.status = { [Op.notIn]: ['paid', 'cancelled'] }
+  }
+  return where
+}
+
+export async function getSupplierInvoiceStatusCounts(
+  query: SupplierInvoiceStatusCountsQuery,
+  orgId: string,
+) {
+  const rows = await SupplierInvoice.findAll({
+    where: buildSupplierInvoicesListWhere(query, orgId),
+    attributes: [
+      'status',
+      [sequelize.fn('COUNT', sequelize.col('SupplierInvoice.id')), 'count'],
+    ],
+    group: ['status'],
+    raw: true,
+  }) as unknown as Array<{ status: SupplierInvoiceStatus; count: string }>
+
+  const byStatus = Object.fromEntries(
+    rows.map(row => [row.status, Number(row.count)]),
+  ) as Partial<Record<SupplierInvoiceStatus, number>>
+
+  return {
+    '': Object.values(byStatus).reduce((sum, count) => sum + count, 0),
+    draft: byStatus.draft ?? 0,
+    received: byStatus.received ?? 0,
+    partially_paid: byStatus.partially_paid ?? 0,
+    paid: byStatus.paid ?? 0,
+    cancelled: byStatus.cancelled ?? 0,
+  }
 }
 
 export async function getSupplierInvoice(id: string, orgId: string) {

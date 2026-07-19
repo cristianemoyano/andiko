@@ -19,20 +19,18 @@ export interface TotalsFooterProps {
 function TotalsRow({
   label,
   value,
-  bold,
   className,
 }: {
   label: string
   value: string | number
-  bold?: boolean
   className?: string
 }) {
   return (
     <div className={cn('flex items-baseline justify-between gap-4', className)}>
-      <span className={cn('text-[12px] text-fg-muted', bold && 'font-semibold text-fg')}>
+      <span className="text-[13px] text-fg-muted">
         {label}
       </span>
-      <span className={cn('text-[13px] tabular-nums text-fg-muted', bold && 'font-semibold text-fg text-[15px]')}>
+      <span className="text-sm tabular-nums text-fg">
         {formatARS(value)}
       </span>
     </div>
@@ -50,7 +48,7 @@ function TotalsFooter({
   const hasDiscount = discountAmount !== undefined && Number(discountAmount) > 0
 
   return (
-    <div className={cn('flex flex-col gap-1.5 rounded-sm border border-border bg-surface-muted p-4', className)}>
+    <div className={cn('flex flex-col gap-2 rounded-md border border-brand-accent-border/60 bg-brand-accent-bg/40 p-4', className)}>
       <TotalsRow label="Subtotal" value={subtotal} />
 
       {hasDiscount && (
@@ -73,8 +71,13 @@ function TotalsFooter({
         <TotalsRow label="IVA" value={taxAmount} />
       )}
 
-      <div className="my-1 border-t border-border" />
-      <TotalsRow label="Total" value={total} bold />
+      <div className="my-1 border-t border-brand-accent-border/50" />
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-sm font-semibold text-fg">Total</span>
+        <span className="text-xl font-semibold tabular-nums tracking-tight text-fg">
+          {formatARS(total)}
+        </span>
+      </div>
     </div>
   )
 }

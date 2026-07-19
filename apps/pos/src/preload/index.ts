@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('pos', {
   customers: {
     search: (query: string) => ipcRenderer.invoke('customers:search', query),
     get: (id: string) => ipcRenderer.invoke('customers:get', id),
+    getSystemConsumidorFinal: () => ipcRenderer.invoke('customers:getSystemConsumidorFinal'),
   },
   users: {
     search: (query: string) => ipcRenderer.invoke('users:search', query),

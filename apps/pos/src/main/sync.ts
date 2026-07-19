@@ -345,11 +345,15 @@ export async function syncCatalog() {
     db().insert(customers).values({
       id: c.id, legal_name: c.legal_name, trade_name: c.trade_name ?? null,
       cuit: c.cuit ?? null, iva_condition: c.iva_condition ?? null,
-      email: c.email ?? null, phone: c.phone ?? null, synced_at: c.updated_at,
+      email: c.email ?? null, phone: c.phone ?? null,
+      is_system: Boolean(c.is_system), system_key: c.system_key ?? null,
+      synced_at: c.updated_at,
     }).onConflictDoUpdate({ target: customers.id, set: {
       legal_name: c.legal_name, trade_name: c.trade_name ?? null, cuit: c.cuit ?? null,
       iva_condition: c.iva_condition ?? null,
-      email: c.email ?? null, phone: c.phone ?? null, synced_at: c.updated_at,
+      email: c.email ?? null, phone: c.phone ?? null,
+      is_system: Boolean(c.is_system), system_key: c.system_key ?? null,
+      synced_at: c.updated_at,
     }}).run()
   }
 

@@ -65,7 +65,14 @@ export const purchaseReturnQuerySchema = paginationSchema.extend({
   operation_type: z.enum(PURCHASE_RETURN_OPERATION_TYPES).optional(),
 })
 
+export const purchaseReturnStatusCountsQuerySchema = purchaseReturnQuerySchema.pick({
+  search: true,
+  order_id: true,
+  operation_type: true,
+})
+
 export type CreatePurchaseReturnInput   = z.infer<typeof createPurchaseReturnSchema>
 export type UpdatePurchaseReturnInput   = z.infer<typeof updatePurchaseReturnSchema>
 export type CompletePurchaseReturnInput = z.infer<typeof completePurchaseReturnSchema>
 export type PurchaseReturnQuery         = z.infer<typeof purchaseReturnQuerySchema>
+export type PurchaseReturnStatusCountsQuery = z.infer<typeof purchaseReturnStatusCountsQuerySchema>

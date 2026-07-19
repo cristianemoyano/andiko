@@ -234,6 +234,7 @@ Base de datos de clientes y proveedores. Dependencia de todos los módulos sigui
 - [x] API REST: `GET /api/v1/contacts`, `POST /api/v1/contacts`
 - [x] API REST: `GET /api/v1/contacts/:id`, `PATCH /api/v1/contacts/:id`, `DELETE /api/v1/contacts/:id`
 - [x] Tests unitarios para `contact.utils.ts` (validateCuit, formatCuit, `formatContactPersonLabel`)
+- [x] Contacto de sistema por org “Consumidor Final” (`is_system` + `system_key`) — seed en alta de org, backfill, protegido de edición/borrado; preselección en nuevo pedido ERP
 
 ### Frontend
 - [x] TopBar con breadcrumb (componente de layout reutilizable)
@@ -335,6 +336,7 @@ Sin integración AFIP en esta fase — documentos internos únicamente.
 - [x] Rediseño UX Ventas — fase 3: `order_id` requerido en facturas (NOT NULL + Zod); conversión solo desde `delivered`; `price_list_id` en presupuestos, pedidos y facturas
 - [x] Rediseño UX Ventas — fase 4: `SalesLineItemsEditor` (búsqueda de producto con autocomplete de precio/IVA) + `StatusPipeline` (stepper horizontal por tipo de documento)
 - [x] Rediseño UX Ventas — fase 5: formularios de página completa para nuevo presupuesto y nuevo pedido; vistas de detalle rediseñadas con `StatusPipeline` + edición in-place + transiciones de estado; listas navegan a `/[id]` al hacer click; eliminación de InvoiceModal/OrderModal/QuoteModal
+- [x] UX documentos Ventas — tipografía DS (labels 13px / inputs h-9), `FormSection`, `PaymentConditionSelector`, ítems numerados, errores toast+alert arriba, badges en tabs de estado (`DocumentStatusNav`)
 - [x] Notas de crédito internas — NC-XX-NNNN, borrador → emitida → anulada; aplica automáticamente al saldo de factura vinculada; aparece en cuenta corriente del cliente
 - [x] **Devoluciones y cambios de venta** — `sales_returns` (parcial/total, múltiples por pedido); stock IN/OUT; NC con ítems + AFIP; reembolsos (`sales_refunds`) o saldo a favor; estados de pedido `partial_returned` / `returned`; UI `/ventas/devoluciones`; flujo POS post-venta
 - [x] Listado de cuentas corrientes por cliente
@@ -414,6 +416,7 @@ Ciclo de compras: orden → recepción → factura proveedor → pago.
 - [x] Listado + detalle de recepciones con confirmación (actualiza stock)
 - [x] Listado + detalle de facturas de proveedor con registro de pagos parciales
 - [x] Listado de pagos a proveedores
+- [x] UX paridad con Ventas — tabs de estado con conteos (`DocumentStatusNav` + `status-counts` en OC/recepciones/facturas/devoluciones), `FormSection`, condición de pago compartida, ítems numerados, errores toast+inline, totales con `calcTotals`
 
 ### Pendientes
 - [x] Cuenta corriente proveedor — `/compras/cuenta-corriente` con historial de facturas + pagos, saldo, vencido y filtros por período (mismo patrón que ventas CC)
@@ -611,9 +614,10 @@ App de escritorio para locales físicos. Sincronización eventual con el cloud E
 - [x] `DELETE /api/v1/pos/devices/:id` — soft delete
 - [x] `GET /api/v1/pos/license` — info de licencia + org/branch para el dispositivo autenticado
 - [x] `GET /api/v1/pos/products` — catálogo con variantes y precio efectivo (delta por `since`)
-- [x] `GET /api/v1/pos/customers` — clientes con delta por `since`
+- [x] `GET /api/v1/pos/customers` — clientes con delta por `since` (incluye `is_system` / `system_key`)
 - [x] `GET /api/v1/pos/users` — cajeros autorizados con `pos_pin_hash` (delta por `since`)
 - [x] `POST /api/v1/pos/sales/sync` — batch de ventas offline → `sales_orders` con trazabilidad POS
+- [x] Consumidor Final de sistema preseleccionado en venta POS; sync persiste `contact_id` (fallback fiscal sintético si el dispositivo aún no sincronizó el contacto)
 
 ### Frontend ERP (gestión de dispositivos)
 - [x] `/pos/dispositivos` — listado de dispositivos con estado de licencia

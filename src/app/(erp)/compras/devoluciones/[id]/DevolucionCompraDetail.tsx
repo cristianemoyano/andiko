@@ -143,7 +143,11 @@ export function DevolucionCompraDetail() {
               <h2 className="font-semibold mb-3">Ítems devueltos</h2>
               <ul className="text-[13px] space-y-1">
                 {row.items!.map((item, i) => (
-                  <li key={i} className="flex justify-between gap-3"><span>{item.description} × {item.quantity}</span><span className="tabular-nums shrink-0">{formatARS(item.total)}</span></li>
+                  <li key={i} className="grid grid-cols-[1.5rem_1fr_auto] gap-2">
+                    <span className="text-fg-subtle tabular-nums">{i + 1}.</span>
+                    <span>{item.description} × {item.quantity}</span>
+                    <span className="tabular-nums shrink-0">{formatARS(item.total)}</span>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -154,7 +158,11 @@ export function DevolucionCompraDetail() {
               <h2 className="font-semibold mb-3">Ítems recibidos (cambio)</h2>
               <ul className="text-[13px] space-y-1">
                 {row.exchangeItems!.map((item, i) => (
-                  <li key={i} className="flex justify-between gap-3"><span>{item.description} × {item.quantity}</span><span className="tabular-nums shrink-0">{formatARS(item.total)}</span></li>
+                  <li key={i} className="grid grid-cols-[1.5rem_1fr_auto] gap-2">
+                    <span className="text-fg-subtle tabular-nums">{i + 1}.</span>
+                    <span>{item.description} × {item.quantity}</span>
+                    <span className="tabular-nums shrink-0">{formatARS(item.total)}</span>
+                  </li>
                 ))}
               </ul>
             </div>

@@ -29,6 +29,13 @@ export const contactQuerySchema = paginationSchema.extend({
   search: z.string().optional(),
   type:   z.enum(['customer', 'supplier', 'both']).optional(),
   source: listSourceQuerySchema,
+  /** Filter to the protected system contact key (e.g. consumidor_final). */
+  system_key: z.enum(['consumidor_final']).optional(),
+  /** Shorthand: only system contacts when true. */
+  system: z
+    .enum(['true', 'false', '1', '0'])
+    .transform((v) => v === 'true' || v === '1')
+    .optional(),
 })
 
 export type ContactInput = z.infer<typeof contactSchema>

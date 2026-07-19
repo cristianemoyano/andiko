@@ -361,9 +361,7 @@ export function CreditNoteDetail() {
             <div className="rounded border border-blue-200 bg-blue-50/30 p-5 space-y-4">
               <p className="text-[13px] font-medium text-fg-muted">Editar borrador</p>
 
-              <FormField label="Sucursal">
-                <BranchSelectField value={branchId} onChange={v => setBranchId(v ?? '')} />
-              </FormField>
+              <BranchSelectField value={branchId} onChange={v => setBranchId(v ?? '')} />
 
               <FormField label="Cliente">
                 <SearchableSelect

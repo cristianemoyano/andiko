@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
-import { PageBody } from '@/components/layout'
+import { PageBody, FormSection } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { FormField } from '@/components/primitives/FormField'
@@ -14,7 +14,7 @@ import { catalogProductRequiredMessage, findLineWithoutCatalogProduct } from '@/
 import { VentasSubNav } from '../../VentasSubNav'
 import type { Order } from '../../types'
 import { fetchJson } from '@/lib/fetch-json'
-import { notifyApiError } from '@/lib/notify'
+import { notifyApiError, notifyError } from '@/lib/notify'
 
 type ReturnableItem = {
   id: string
@@ -84,7 +84,9 @@ export function NuevaDevolucionClient() {
     if (operationType === 'exchange') {
       const lineWithoutProduct = findLineWithoutCatalogProduct(exchangeItems)
       if (lineWithoutProduct >= 0) {
-        setServerError(catalogProductRequiredMessage(lineWithoutProduct))
+        const message = catalogProductRequiredMessage(lineWithoutProduct)
+        setServerError(message)
+        notifyError(message)
         return
       }
 
@@ -125,33 +127,48 @@ export function NuevaDevolucionClient() {
       />
       <VentasSubNav />
       <PageBody>
-        <div className="max-w-3xl mx-auto flex flex-col gap-4">
+        <div className="max-w-3xl mx-auto flex flex-col gap-5">
           {!orderId && <p className="text-danger">Falta order_id en la URL.</p>}
           {order && (
             <>
-              <p className="text-[13px] text-fg-muted">Pedido {order.order_number}</p>
-              <div className="bg-surface border border-border rounded-sm p-4 flex flex-col gap-3">
-                <h2 className="font-semibold text-[13px]">Ítems a devolver</h2>
-                {(order.items as ReturnableItem[]).map(item => (
-                  <FormField key={item.id} label={`${item.description} (máx ${maxFor(item)})`} htmlFor={`qty-${item.id}`}>
-                    <Input
-                      id={`qty-${item.id}`}
-                      type="number"
-                      min={0}
-                      max={maxFor(item)}
-                      step="any"
-                      value={quantities[item.id] ?? ''}
-                      onChange={e => setQuantities(q => ({ ...q, [item.id]: e.target.value }))}
-                    />
-                  </FormField>
-                ))}
+              <div className="pt-1">
+                <h1 className="text-xl font-semibold tracking-tight text-fg">
+                  {operationType === 'exchange' ? 'Nuevo cambio' : 'Nueva devolución'}
+                </h1>
+                <p className="mt-0.5 text-[13px] text-fg-muted">Pedido {order.order_number}</p>
               </div>
 
+              {serverError && (
+                <p className="text-[13px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2" role="alert">
+                  {serverError}
+                </p>
+              )}
+
+              <FormSection title="Ítems a devolver">
+                {(order.items as ReturnableItem[]).map((item, index) => (
+                  <div key={item.id} className="grid grid-cols-[2rem_1fr] items-start gap-2">
+                    <span className="pt-7 text-center text-[12px] tabular-nums text-fg-subtle">
+                      {index + 1}
+                    </span>
+                    <FormField label={`${item.description} (máx ${maxFor(item)})`} htmlFor={`qty-${item.id}`}>
+                      <Input
+                        id={`qty-${item.id}`}
+                        type="number"
+                        min={0}
+                        max={maxFor(item)}
+                        step="any"
+                        value={quantities[item.id] ?? ''}
+                        onChange={e => setQuantities(q => ({ ...q, [item.id]: e.target.value }))}
+                      />
+                    </FormField>
+                  </div>
+                ))}
+              </FormSection>
+
               {operationType === 'exchange' && (
-                <div className="bg-surface border border-border rounded-sm p-4 flex flex-col gap-3">
-                  <h2 className="font-semibold text-[13px]">Ítems nuevos a entregar</h2>
+                <FormSection title="Ítems nuevos a entregar">
                   <SalesLineItemsEditor items={exchangeItems} onChange={setExchangeItems} />
-                </div>
+                </FormSection>
               )}
 
               {operationType === 'exchange' && (
@@ -160,12 +177,6 @@ export function NuevaDevolucionClient() {
                   taxAmount={0}
                   total={difference}
                 />
-              )}
-
-              {serverError && (
-                <p className="text-[13px] text-danger" role="alert">
-                  {serverError}
-                </p>
               )}
 
               <Button onClick={() => void handleSubmit()} disabled={saving}>

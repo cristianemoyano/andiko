@@ -211,13 +211,29 @@ export function SaleScreen({
     })
   }, [draftSaleId, cashierUserId, cashierName])
 
+  async function resolveDefaultCustomer(): Promise<PosCustomer | null> {
+    try {
+      return await window.pos.customers.getSystemConsumidorFinal()
+    } catch {
+      return null
+    }
+  }
+
   async function hydrateDraft(draftId: string) {
     const res = await window.pos.draftSales.get(draftId)
     if (!res.ok || !res.data) return
     const now = new Date().toISOString()
     setDraftSaleId(draftId)
-    // Customer hydration: we keep only the customer_id in the draft; the UI can re-select customer if needed.
-    // (Customer search is local anyway; keep current behavior and avoid extra DB/API work here.)
+    if (res.data.customer_id) {
+      try {
+        const c = await window.pos.customers.get(res.data.customer_id)
+        setCustomer(c)
+      } catch {
+        setCustomer(null)
+      }
+    } else {
+      setCustomer(await resolveDefaultCustomer())
+    }
     setCart(
       res.data.items.map((it) => ({
         product: {
@@ -253,14 +269,16 @@ export function SaleScreen({
   }, [resumeDraftId])
 
   useEffect(() => {
-    // Auto-resume most recent active draft on startup
+    // Auto-resume most recent active draft on startup; otherwise preselect CF.
     ;(async () => {
       const res = await window.pos.draftSales.getActive()
       if (res.ok && res.data?.id) {
         await hydrateDraft(res.data.id)
+        return
       }
+      setCustomer(await resolveDefaultCustomer())
     })()
-     
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only bootstrap
   }, [])
 
   useEffect(() => {
@@ -413,12 +431,12 @@ export function SaleScreen({
     setLastSale(null)
     setCart([])
     setSearch('')
-    setCustomer(null)
     setCustomerOpen(false)
     setCustomerQuery('')
     setCustomerRows([])
     setDraftSaleId(null)
     lastDraftProductIdsRef.current = []
+    void resolveDefaultCustomer().then(setCustomer)
     searchRef.current?.focus()
   }
 
@@ -1080,11 +1098,17 @@ export function SaleScreen({
 
               <div className="max-h-[360px] overflow-y-auto border border-zinc-200 rounded-lg divide-y divide-zinc-100">
                 <button
-                  onClick={() => { setCustomer(null); setCustomerOpen(false); searchRef.current?.focus() }}
+                  onClick={() => {
+                    void (async () => {
+                      setCustomer(await resolveDefaultCustomer())
+                      setCustomerOpen(false)
+                      searchRef.current?.focus()
+                    })()
+                  }}
                   className="w-full text-left px-3 py-2 hover:bg-zinc-50 transition-colors"
                 >
                   <div className="text-[15px] font-medium text-zinc-900">Consumidor final</div>
-                  <div className="text-[13px] text-zinc-500">Sin asignar cliente</div>
+                  <div className="text-[13px] text-zinc-500">Cliente de sistema</div>
                 </button>
 
                 {customerRows.map(c => (
@@ -1386,9 +1410,11 @@ export function SaleScreen({
                 <div className="flex-1 min-w-0">
                   <div className="text-[12px] font-semibold uppercase tracking-wide text-zinc-400">Cliente</div>
                   <div className="text-base font-medium text-zinc-900 truncate">
-                    {customer ? (customer.trade_name ?? customer.legal_name) : 'Consumidor final'}
+                    {customer && !customer.is_system && customer.system_key !== 'consumidor_final'
+                      ? (customer.trade_name ?? customer.legal_name)
+                      : 'Consumidor final'}
                   </div>
-                  {customer?.cuit ? (
+                  {customer?.cuit && !customer.is_system ? (
                     <div className="text-[13px] text-zinc-500 truncate">CUIT {customer.cuit}</div>
                   ) : (
                     <div className="text-[13px] text-zinc-500">Atajo para buscar cliente</div>
@@ -1396,11 +1422,11 @@ export function SaleScreen({
                 </div>
                 <ShortcutBadge modKey={modKey} keyLabel="U" />
               </button>
-              {customer && (
+              {customer && !customer.is_system && customer.system_key !== 'consumidor_final' && (
                 <button
                   type="button"
-                  onClick={() => setCustomer(null)}
-                  title="Quitar cliente"
+                  onClick={() => { void resolveDefaultCustomer().then(setCustomer) }}
+                  title="Volver a consumidor final"
                   className="shrink-0 px-2.5 border-l border-zinc-200 text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

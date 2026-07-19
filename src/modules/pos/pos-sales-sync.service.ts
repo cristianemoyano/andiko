@@ -12,6 +12,7 @@ import type { PosDeviceContext } from '@/lib/pos-auth'
 import type { PosSaleAuthorizeInput } from './pos-fiscal.schema'
 import { deductStockForOrder } from '@/modules/inventory/stock-movements.service'
 import { findDefaultSaleVariant } from '@/modules/catalog/products.service'
+import { getConsumidorFinalContact } from '@/modules/contacts/system-contacts'
 
 function calcItem(qty: number, unitPrice: string, ivaRate: IvaRate) {
   const unitGross = new Decimal(unitPrice)
@@ -129,11 +130,17 @@ export async function upsertPosSalesOrder(
       })
     }
 
+    let contactId = sale.customer_id ?? null
+    if (!contactId) {
+      const cf = await getConsumidorFinalContact(ctx.orgId, t)
+      contactId = cf?.id ?? null
+    }
+
     const order = await SalesOrder.create(
       {
         org_id: ctx.orgId,
         branch_id: ctx.branchId,
-        contact_id: sale.customer_id ?? null,
+        contact_id: contactId,
         source: 'pos',
         pos_device_id: ctx.deviceId,
         pos_sale_id: sale.pos_sale_id,

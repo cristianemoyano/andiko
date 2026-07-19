@@ -40,6 +40,8 @@ function runMigrations(sqlite: Database.Database) {
       iva_condition TEXT,
       email TEXT,
       phone TEXT,
+      is_system INTEGER NOT NULL DEFAULT 0,
+      system_key TEXT,
       synced_at TEXT NOT NULL
     );
 
@@ -179,6 +181,8 @@ function runMigrations(sqlite: Database.Database) {
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN payments TEXT NOT NULL DEFAULT '[]';`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE pos_draft_sales ADD COLUMN payments TEXT DEFAULT '[]';`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE customers ADD COLUMN iva_condition TEXT;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE customers ADD COLUMN is_system INTEGER NOT NULL DEFAULT 0;`) } catch { /* ignore */ }
+  try { sqlite.exec(`ALTER TABLE customers ADD COLUMN system_key TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN ticket_number TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN cae TEXT;`) } catch { /* ignore */ }
   try { sqlite.exec(`ALTER TABLE sales ADD COLUMN cae_expiration TEXT;`) } catch { /* ignore */ }

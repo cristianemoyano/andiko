@@ -44,6 +44,14 @@ export const supplierInvoiceQuerySchema = paginationSchema.extend({
   overdue:    z.coerce.boolean().optional(),
 })
 
+export const supplierInvoiceStatusCountsQuerySchema = supplierInvoiceQuerySchema.pick({
+  search: true,
+  contact_id: true,
+  order_id: true,
+  overdue: true,
+})
+
 export type SupplierInvoiceInput       = z.infer<typeof supplierInvoiceSchema>
 export type SupplierInvoiceUpdateInput = z.infer<typeof supplierInvoiceUpdateSchema>
 export type SupplierInvoiceQuery       = z.infer<typeof supplierInvoiceQuerySchema>
+export type SupplierInvoiceStatusCountsQuery = z.infer<typeof supplierInvoiceStatusCountsQuerySchema>

@@ -32,6 +32,7 @@ import PriceListItem from '@/modules/catalog/price-list-item.model'
 import { slugifyText } from '@/lib/slug'
 import type { TenantContext } from '@/lib/tenancy'
 import { seedDefaultChartOfAccounts } from '@/modules/accounting/chart-seed'
+import { seedConsumidorFinalContact } from '@/modules/contacts/system-contacts'
 import { DEFAULT_BALANZA_CONFIG } from '@/modules/pos/balanza-barcode'
 import Account from '@/modules/accounting/account.model'
 import JournalEntry from '@/modules/accounting/journal-entry.model'
@@ -1952,6 +1953,7 @@ async function run() {
           await seedInventory(org.id, branches, user.id, t)
           logSeedProgress(`${tenant.slug}: plan contable`)
           await seedDefaultChartOfAccounts(org.id, t, user.id)
+          await seedConsumidorFinalContact(org.id, t, user.id)
           const defaultBranch = branches[0]!
           logSeedProgress(`${tenant.slug}: financieros`)
           await seedIntegrationFinancials(org.id, defaultBranch, user.id, contacts, variantsBySku, t)
@@ -1969,6 +1971,7 @@ async function run() {
           await seedInventory(org.id, branches, user.id, t)
           logSeedProgress(`${tenant.slug}: plan contable`)
           await seedDefaultChartOfAccounts(org.id, t, user.id)
+          await seedConsumidorFinalContact(org.id, t, user.id)
 
           // Purchases seed (demo tenant only)
           if (tenant.slug === 'demo') {

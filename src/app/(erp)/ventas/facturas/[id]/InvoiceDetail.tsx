@@ -27,7 +27,7 @@ import { INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL, fo
 import { resolveSalesDocumentDisplay } from '@/lib/fiscal-document-number'
 import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
-import { notifyApiError, notifyInfo, notifySuccess } from '@/lib/notify'
+import { notifyApiError, notifyError, notifyInfo, notifySuccess } from '@/lib/notify'
 
 const PAYMENT_METHOD_OPTIONS = (Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map(
   m => ({ value: m, label: PAYMENT_METHOD_LABEL[m] })
@@ -148,12 +148,16 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
     setPaymentError(null)
     const amountNum = parseFloat(paymentAmount)
     if (!invoice || Number.isNaN(amountNum) || amountNum <= 0) {
-      setPaymentError('Ingresá un importe válido.')
+      const message = 'Ingresá un importe válido.'
+      setPaymentError(message)
+      notifyError(message)
       return
     }
     const balance = parseFloat(invoice.balance)
     if (amountNum > balance + 0.005) {
-      setPaymentError(`El importe no puede superar el saldo (${formatARS(invoice.balance)}).`)
+      const message = `El importe no puede superar el saldo (${formatARS(invoice.balance)}).`
+      setPaymentError(message)
+      notifyError(message)
       return
     }
 
@@ -178,7 +182,9 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
       notifySuccess('Cobro registrado')
       setRefresh(r => r + 1)
     } catch (e) {
-      setPaymentError(getApiErrorMessage(e))
+      const message = getApiErrorMessage(e)
+      setPaymentError(message)
+      notifyError(message)
     } finally {
       setPaymentSaving(false)
     }
@@ -470,6 +476,7 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="bg-surface-muted border-b border-border">
+                    <th className="w-12 px-4 py-2 text-center font-medium text-fg-muted">N°</th>
                     <th className="px-4 py-2 text-left font-medium text-fg-muted">Descripción</th>
                     <th className="px-4 py-2 text-right font-medium text-fg-muted">Cant.</th>
                     <th className="px-4 py-2 text-right font-medium text-fg-muted">P. unitario</th>
@@ -479,8 +486,9 @@ export function InvoiceDetail({ id }: InvoiceDetailProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoice.items.map(item => (
+                  {invoice.items.map((item, index) => (
                     <tr key={item.id} className="border-b border-border last:border-0">
+                      <td className="px-4 py-2.5 text-center tabular-nums text-fg-subtle">{index + 1}</td>
                       <td className="px-4 py-2.5 text-fg">{item.description}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{item.quantity}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{formatARS(item.unit_price)}</td>
