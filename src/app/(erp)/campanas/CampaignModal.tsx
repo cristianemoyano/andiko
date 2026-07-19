@@ -74,6 +74,21 @@ interface PreviewResult {
   totalsAfter: { total: string }
 }
 
+interface CampaignAnalysisResult {
+  applicable: boolean
+  discount_pct: string | null
+  scope: 'targeted' | 'all_products'
+  truncated: boolean
+  rows: { variant_id: string; sku: string; name: string; list_price: string; cost_price: string; discounted_price: string; margin_pct: string; is_loss: boolean }[]
+  summary: { products: number; losing: number; min_margin_pct: string; safe_discount_ceiling_pct: string; has_losses: boolean }
+  projection: { window_days: number; units: string; revenue: string; current_margin: string; estimated_discount: string; projected_margin: string; projected_is_loss: boolean } | null
+}
+
+function formatMoney(v: string): string {
+  const n = Number(v)
+  return Number.isFinite(n) ? n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v
+}
+
 export function CampaignModal({
   open, campaignId, onClose, onSaved,
 }: {
@@ -109,12 +124,17 @@ export function CampaignModal({
   const [preview, setPreview] = useState<PreviewResult | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
 
+  const [analysis, setAnalysis] = useState<CampaignAnalysisResult | null>(null)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+
   const resetForm = useCallback(() => {
     setName(''); setDescription(''); setTerms('')
     setRewardKind('percent'); setRewardPercent(''); setInstallmentsCount('3'); setInterestFree(true)
     setValidFrom(new Date()); setValidTo(null); setWeekdays([]); setChannels([]); setMinPurchase('')
     setRequiresCoupon(false); setStackable(false); setIsActive(true); setPriority('100')
     setPaymentRules([]); setTargets([]); setErrors({}); setServerError(null); setPreview(null); setPreviewError(null)
+    setAnalysis(null); setAnalysisError(null)
   }, [])
 
   useEffect(() => {
@@ -247,6 +267,21 @@ export function CampaignModal({
       setPreview(result)
     } catch (e) {
       setPreviewError(getApiErrorMessage(e))
+    }
+  }
+
+  async function runAnalysis() {
+    setAnalyzing(true); setAnalysisError(null); setAnalysis(null)
+    try {
+      const body = campaignId
+        ? { campaign_id: campaignId }
+        : { campaign: buildPayload() }
+      const result = await fetchJson<CampaignAnalysisResult>('/api/v1/campaigns/analysis', { method: 'POST', body: JSON.stringify(body) })
+      setAnalysis(result)
+    } catch (e) {
+      setAnalysisError(getApiErrorMessage(e))
+    } finally {
+      setAnalyzing(false)
     }
   }
 
@@ -458,6 +493,73 @@ export function CampaignModal({
                   <li className="text-fg-muted">Total: {preview.totalsBefore.total} → {preview.totalsAfter.total}</li>
                   {preview.warnings.map((w, i) => <li key={`w${i}`} className="text-warning">⚠ {w}</li>)}
                 </ul>
+              )}
+            </div>
+          )}
+        </fieldset>
+
+        {/* Rentabilidad y proyección */}
+        <fieldset className="rounded-md border border-dashed border-border p-3">
+          <legend className="px-1 text-[12px] font-medium text-fg-muted">Rentabilidad y proyección</legend>
+          <p className="text-[11px] text-fg-subtle">
+            El límite de un descuento es el <strong>costo variable</strong> del producto: el precio con descuento debe
+            quedar por encima del costo. Debajo de ese límite, cada venta pierde plata.
+          </p>
+          <div className="mt-2">
+            <Button variant="secondary" size="sm" onClick={runAnalysis} disabled={analyzing} data-testid="analyze-btn">
+              {analyzing ? 'Analizando…' : 'Analizar rentabilidad'}
+            </Button>
+          </div>
+          {analysisError && <p className="mt-2 text-[12px] text-danger">{analysisError}</p>}
+          {analysis && !analysis.applicable && (
+            <p className="mt-2 text-[12px] text-fg-muted">Las campañas de cuotas no descuentan el precio: no afectan el margen.</p>
+          )}
+          {analysis && analysis.applicable && (
+            <div className="mt-2 flex flex-col gap-2 text-[12px]" data-testid="analysis-result">
+              <div className={`rounded-sm border px-2 py-1.5 ${analysis.summary.has_losses ? 'border-danger bg-danger-bg text-danger' : 'border-border bg-surface-muted text-fg'}`}>
+                {analysis.summary.has_losses
+                  ? `⚠ ${analysis.summary.losing} de ${analysis.summary.products} producto(s) quedan en pérdida con ${analysis.discount_pct}% de descuento.`
+                  : `✓ Ningún producto queda en pérdida con ${analysis.discount_pct}% (${analysis.summary.products} analizado(s)).`}
+                {' '}Descuento máximo seguro para todos: <strong>{analysis.summary.safe_discount_ceiling_pct}%</strong>.
+                {analysis.scope === 'all_products' && ' (sin condiciones de producto: muestra acotada)'}
+              </div>
+
+              {analysis.rows.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[11px]">
+                    <thead className="text-fg-muted">
+                      <tr className="text-left">
+                        <th className="py-1 pr-2">Producto</th>
+                        <th className="py-1 pr-2 text-right">Lista</th>
+                        <th className="py-1 pr-2 text-right">C/desc.</th>
+                        <th className="py-1 pr-2 text-right">Costo</th>
+                        <th className="py-1 pr-2 text-right">Margen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analysis.rows.slice(0, 8).map((r) => (
+                        <tr key={r.variant_id} className={r.is_loss ? 'text-danger' : 'text-fg'}>
+                          <td className="py-0.5 pr-2">{r.name}{r.is_loss ? ' ⚠' : ''}</td>
+                          <td className="py-0.5 pr-2 text-right">{formatMoney(r.list_price)}</td>
+                          <td className="py-0.5 pr-2 text-right">{formatMoney(r.discounted_price)}</td>
+                          <td className="py-0.5 pr-2 text-right">{formatMoney(r.cost_price)}</td>
+                          <td className="py-0.5 pr-2 text-right">{r.margin_pct}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {analysis.rows.length > 8 && <p className="mt-1 text-fg-subtle">… y {analysis.rows.length - 8} más</p>}
+                </div>
+              )}
+
+              {analysis.projection && (
+                <div className="rounded-sm border border-border bg-surface-muted px-2 py-1.5 text-fg">
+                  <span className="text-fg-muted">Proyección últimos {analysis.projection.window_days} días — </span>
+                  {formatMoney(analysis.projection.units)} u. vendidas, facturación ${formatMoney(analysis.projection.revenue)}.
+                  Descuento estimado: <strong>${formatMoney(analysis.projection.estimated_discount)}</strong>.
+                  Margen: ${formatMoney(analysis.projection.current_margin)} → <strong className={analysis.projection.projected_is_loss ? 'text-danger' : ''}>${formatMoney(analysis.projection.projected_margin)}</strong>
+                  {analysis.projection.projected_is_loss ? ' ⚠ negativo' : ''}.
+                </div>
               )}
             </div>
           )}

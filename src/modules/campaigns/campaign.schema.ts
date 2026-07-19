@@ -143,6 +143,13 @@ export const previewSchema = z.object({
   cart:        cartContextSchema.optional(),
 })
 
+export const analysisSchema = z.object({
+  campaign_id: z.string().uuid().optional(),
+  campaign:    campaignSchema.optional(),
+  window_days: z.coerce.number().int().min(1).max(365).optional(),
+})
+
+export type AnalysisInput = z.infer<typeof analysisSchema>
 export type CampaignTargetInput = z.infer<typeof campaignTargetInputSchema>
 export type CampaignPaymentRuleInput = z.infer<typeof campaignPaymentRuleInputSchema>
 export type CampaignInput = z.infer<typeof campaignSchema>

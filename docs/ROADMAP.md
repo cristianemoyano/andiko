@@ -945,7 +945,7 @@ Ideas validadas pero sin fecha definida.
   - [x] **Módulo de Campañas (Fase 1)** — motor de promociones org-scoped (`src/modules/campaigns/`): campañas con vigencia, días de la semana y franja horaria, canal (POS/online/manual), compra mínima, términos y condiciones; condiciones de pago (medio/wallet/tarjeta/QR/condición); condiciones de producto por categoría/producto/**marca** (`product.vendor`) con inclusión y exclusión; premio por **porcentaje** (reutiliza `discount_pct` por línea, no toca totales/AFIP/contabilidad) o **cuotas sin interés** (beneficio no monetario); cupones con límites de canje; vista previa (`/api/v1/campaigns/preview`); integración guardada en `createOrder`/`createInvoice`. UI en `/campanas`.
   - [ ] Fase 2: descuento por monto fijo y 2x1/BOGO
   - [ ] Fase 3: combos + descuento global a nivel documento (extiende `calcDocumentTotals` + AFIP + contabilidad)
-  - [ ] Fase 4: proyección/analítica de impacto de campañas
+  - [x] **Rentabilidad y proyección**: por cada producto afectado, precio con descuento vs. costo variable, alerta de pérdida y descuento máximo seguro; proyección del impacto sobre las ventas de los últimos N días (`campaign-margin.math.ts`, `campaign-analysis.service.ts`, `/api/v1/campaigns/analysis`).
   - [ ] Descuentos por cliente y por lista de precios con vigencia
 
 **Infra VPS (observabilidad y disco):**
