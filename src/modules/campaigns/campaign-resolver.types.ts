@@ -67,6 +67,9 @@ export interface CampaignRule {
   branch_id: string | null
   reward_kind: CampaignRewardKind
   reward_percent: string | null
+  reward_amount: string | null
+  buy_qty: string | null
+  get_qty: string | null
   installments_count: number | null
   installments_interest_free: boolean | null
   requires_coupon: boolean

@@ -13,6 +13,9 @@ export interface CampaignAttributes extends Timestamps, AuditFields {
   terms: string | null
   reward_kind: CampaignRewardKind
   reward_percent: string | null
+  reward_amount: string | null
+  buy_qty: string | null
+  get_qty: string | null
   installments_count: number | null
   installments_interest_free: boolean | null
   requires_coupon: boolean
@@ -33,7 +36,7 @@ export interface CampaignAttributes extends Timestamps, AuditFields {
 type CampaignCreationAttributes = Optional<
   CampaignAttributes,
   | 'id' | 'org_id' | 'branch_id' | 'description' | 'terms'
-  | 'reward_percent' | 'installments_count' | 'installments_interest_free'
+  | 'reward_percent' | 'reward_amount' | 'buy_qty' | 'get_qty' | 'installments_count' | 'installments_interest_free'
   | 'requires_coupon' | 'stackable' | 'priority' | 'min_purchase_amount'
   | 'active_weekdays' | 'active_time_from' | 'active_time_to' | 'channels'
   | 'is_active' | 'max_uses' | 'uses_count'
@@ -49,6 +52,9 @@ class Campaign extends AuditModel<CampaignAttributes, CampaignCreationAttributes
   declare terms: string | null
   declare reward_kind: CampaignRewardKind
   declare reward_percent: string | null
+  declare reward_amount: string | null
+  declare buy_qty: string | null
+  declare get_qty: string | null
   declare installments_count: number | null
   declare installments_interest_free: boolean | null
   declare requires_coupon: boolean
@@ -75,6 +81,9 @@ Campaign.init(
     terms:                      { type: DataTypes.TEXT },
     reward_kind:                { type: DataTypes.STRING(16), allowNull: false },
     reward_percent:             { type: DataTypes.DECIMAL(5, 2) },
+    reward_amount:              { type: DataTypes.DECIMAL(15, 2) },
+    buy_qty:                    { type: DataTypes.DECIMAL(15, 4) },
+    get_qty:                    { type: DataTypes.DECIMAL(15, 4) },
     installments_count:         { type: DataTypes.SMALLINT },
     installments_interest_free: { type: DataTypes.BOOLEAN },
     requires_coupon:            { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },

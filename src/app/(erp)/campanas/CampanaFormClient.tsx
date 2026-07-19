@@ -86,6 +86,9 @@ export function CampanaFormClient({ campaignId }: { campaignId?: string }) {
   const [terms, setTerms] = useState('')
   const [rewardKind, setRewardKind] = useState<CampaignRewardKind>('percent')
   const [rewardPercent, setRewardPercent] = useState('')
+  const [rewardAmount, setRewardAmount] = useState('')
+  const [buyQty, setBuyQty] = useState('1')
+  const [getQty, setGetQty] = useState('1')
   const [installmentsCount, setInstallmentsCount] = useState('3')
   const [interestFree, setInterestFree] = useState(true)
   const [validFrom, setValidFrom] = useState<Date | null>(new Date())
@@ -133,6 +136,9 @@ export function CampanaFormClient({ campaignId }: { campaignId?: string }) {
         setTerms(String(c.terms ?? ''))
         setRewardKind((c.reward_kind as CampaignRewardKind) ?? 'percent')
         setRewardPercent(c.reward_percent ? String(c.reward_percent) : '')
+        setRewardAmount(c.reward_amount ? String(c.reward_amount) : '')
+        setBuyQty(c.buy_qty ? String(Number(c.buy_qty)) : '1')
+        setGetQty(c.get_qty ? String(Number(c.get_qty)) : '1')
         setInstallmentsCount(c.installments_count ? String(c.installments_count) : '3')
         setInterestFree(Boolean(c.installments_interest_free))
         setValidFrom(c.valid_from ? new Date(String(c.valid_from)) : new Date())
@@ -201,6 +207,9 @@ export function CampanaFormClient({ campaignId }: { campaignId?: string }) {
       terms: terms || null,
       reward_kind: rewardKind,
       reward_percent: rewardKind === 'percent' ? (rewardPercent || '0') : null,
+      reward_amount: rewardKind === 'fixed_amount' ? (rewardAmount || '0') : null,
+      buy_qty: rewardKind === 'free_qty' ? Number(buyQty || '1') : null,
+      get_qty: rewardKind === 'free_qty' ? Number(getQty || '1') : null,
       installments_count: rewardKind === 'installments' ? Number(installmentsCount || '0') : null,
       installments_interest_free: rewardKind === 'installments' ? interestFree : null,
       requires_coupon: requiresCoupon,
@@ -340,20 +349,39 @@ export function CampanaFormClient({ campaignId }: { campaignId?: string }) {
                       onChange={(v) => setRewardKind(v as CampaignRewardKind)}
                       options={[
                         { value: 'percent', label: 'Porcentaje de descuento' },
+                        { value: 'fixed_amount', label: 'Monto fijo de descuento' },
+                        { value: 'free_qty', label: '2x1 / Lleva X paga Y' },
                         { value: 'installments', label: 'Cuotas sin interés' },
                       ]}
                     />
                   </FormField>
-                  {rewardKind === 'percent' ? (
+                  {rewardKind === 'percent' && (
                     <FormField label="Porcentaje (%)" htmlFor="c_pct" error={errors.reward_percent?.[0]}>
                       <Input id="c_pct" value={rewardPercent} onChange={(e) => setRewardPercent(e.target.value)} inputMode="decimal" placeholder="15" error={!!errors.reward_percent} />
                     </FormField>
-                  ) : (
+                  )}
+                  {rewardKind === 'fixed_amount' && (
+                    <FormField label="Monto de descuento (ARS)" htmlFor="c_amount" error={errors.reward_amount?.[0]}>
+                      <CurrencyInput id="c_amount" value={rewardAmount} onChange={setRewardAmount} error={!!errors.reward_amount} />
+                    </FormField>
+                  )}
+                  {rewardKind === 'installments' && (
                     <FormField label="Cantidad de cuotas" htmlFor="c_inst">
                       <Input id="c_inst" value={installmentsCount} onChange={(e) => setInstallmentsCount(e.target.value)} inputMode="numeric" placeholder="3" />
                     </FormField>
                   )}
                 </div>
+                {rewardKind === 'free_qty' && (
+                  <div className="grid grid-cols-2 gap-4 max-w-sm">
+                    <FormField label="Lleva (total)" htmlFor="c_getqty">
+                      <Input id="c_getqty" value={getQty} onChange={(e) => setGetQty(e.target.value)} inputMode="numeric" placeholder="1" />
+                    </FormField>
+                    <FormField label="Paga" htmlFor="c_buyqty">
+                      <Input id="c_buyqty" value={buyQty} onChange={(e) => setBuyQty(e.target.value)} inputMode="numeric" placeholder="1" />
+                    </FormField>
+                    <p className="col-span-2 text-[11px] text-fg-subtle">Ej.: 2x1 = lleva 2, paga 1 → “Lleva” 1 (gratis) y “Paga” 1. La cantidad libre por cada grupo se descuenta como % de la línea.</p>
+                  </div>
+                )}
                 {rewardKind === 'installments' && (
                   <label className="flex items-center gap-2 text-[13px] text-fg">
                     <Switch checked={interestFree} onCheckedChange={setInterestFree} /> Sin interés
@@ -507,7 +535,7 @@ export function CampanaFormClient({ campaignId }: { campaignId?: string }) {
                 </div>
                 {analysisError && <p className="text-[12px] text-danger">{analysisError}</p>}
                 {analysis && !analysis.applicable && (
-                  <p className="text-[12px] text-fg-muted">Las campañas de cuotas no descuentan el precio: no afectan el margen.</p>
+                  <p className="text-[12px] text-fg-muted">El análisis de rentabilidad está disponible para descuentos por porcentaje. Para monto fijo, 2x1 o cuotas, usá la vista previa (el descuento depende del carrito).</p>
                 )}
                 {analysis && analysis.applicable && (
                   <div className="flex flex-col gap-2 text-[12px]" data-testid="analysis-result">

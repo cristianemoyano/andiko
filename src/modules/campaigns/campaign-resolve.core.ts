@@ -1,6 +1,6 @@
 import Decimal from 'decimal.js'
 import { calcLineItem, calcDocumentTotals } from '@/modules/sales/sales.math'
-import { mergeDiscountPct } from './campaign.math'
+import { mergeDiscountPct, fixedAmountToPct, bogoPct } from './campaign.math'
 import { evaluateCampaign } from './campaign-match'
 import { CAMPAIGN_WARNINGS, type CampaignMergePolicy } from './campaign.constants'
 import type {
@@ -19,6 +19,27 @@ function lineDiscountAmount(line: CartLine): Decimal {
 
 function totalsOf(lines: CartLine[]) {
   return calcDocumentTotals(lines.map((l) => calcLineItem(l.quantity, l.unit_price, l.discount_pct, l.iva_rate)))
+}
+
+function bogoLabel(buyQty: string | null, getQty: string | null): string {
+  const buy = Number(buyQty ?? 0)
+  const get = Number(getQty ?? 0)
+  const total = buy + get
+  if (buy === 1 && get >= 1) return `${total}x1`
+  return `Lleva ${total} paga ${buy}`
+}
+
+function rewardReason(campaign: CampaignRule, appliedPct: string): string {
+  switch (campaign.reward_kind) {
+    case 'percent':
+      return `${campaign.name}: ${campaign.reward_percent}%`
+    case 'fixed_amount':
+      return `${campaign.name}: $${campaign.reward_amount} (≈${appliedPct}%)`
+    case 'free_qty':
+      return `${campaign.name}: ${bogoLabel(campaign.buy_qty, campaign.get_qty)}`
+    default:
+      return `${campaign.name}: ${appliedPct}%`
+  }
 }
 
 /**
@@ -69,7 +90,8 @@ export function resolveCampaigns(
       continue
     }
 
-    if (campaign.reward_kind !== 'percent' || campaign.reward_percent == null) continue
+    // A partir de acá, premios monetarios: todos se expresan como % de descuento por línea.
+    if (!['percent', 'fixed_amount', 'free_qty'].includes(campaign.reward_kind)) continue
 
     // Selección de líneas elegibles según stacking.
     const eligible = match.qualifyingLineIds.filter((id) => {
@@ -79,12 +101,31 @@ export function resolveCampaigns(
     })
     if (eligible.length === 0) continue
 
+    // Porcentaje efectivo por línea según el tipo de premio.
+    let uniformPct: string | null = null
+    if (campaign.reward_kind === 'percent') {
+      if (campaign.reward_percent == null) continue
+      uniformPct = campaign.reward_percent
+    } else if (campaign.reward_kind === 'fixed_amount') {
+      if (campaign.reward_amount == null) continue
+      const totalBase = eligible.reduce((acc, id) => {
+        const line = byId.get(id)
+        return line ? acc.plus(new Decimal(line.quantity).mul(line.unit_price)) : acc
+      }, new Decimal(0))
+      uniformPct = fixedAmountToPct(campaign.reward_amount, totalBase.toString())
+    }
+    const pctForLine = (line: CartLine): string =>
+      campaign.reward_kind === 'free_qty'
+        ? bogoPct(line.quantity, campaign.buy_qty ?? 0, campaign.get_qty ?? 0)
+        : (uniformPct ?? '0')
+
     let campaignDiscount = new Decimal(0)
     const changedLines: string[] = []
     for (const id of eligible) {
       const line = byId.get(id)
       if (!line) continue
-      const merged = mergeDiscountPct(line.discount_pct, campaign.reward_percent, policy)
+      const campaignPct = pctForLine(line)
+      const merged = mergeDiscountPct(line.discount_pct, campaignPct, policy)
       // Si la campaña no supera el descuento ya presente en la línea, no la toca:
       // no muta, no emite efecto, no bloquea (evita inflar usos y tapar a otra mejor).
       if (!new Decimal(merged.pct).gt(line.discount_pct || 0)) continue
@@ -101,8 +142,8 @@ export function resolveCampaigns(
         coupon_id: campaign.couponId ?? null,
         line_id: id,
         effect_kind: 'line_discount_pct',
-        value: campaign.reward_percent,
-        reason: `${campaign.name}: ${campaign.reward_percent}%`,
+        value: merged.pct,
+        reason: rewardReason(campaign, merged.pct),
       })
 
       changedLines.push(id)
@@ -118,7 +159,14 @@ export function resolveCampaigns(
       coupon_id: campaign.couponId ?? null,
       applied_discount_amount: campaignDiscount.toFixed(2),
       benefit_snapshot: null,
-      rule_snapshot: { reward_kind: 'percent', reward_percent: campaign.reward_percent, lines: changedLines },
+      rule_snapshot: {
+        reward_kind: campaign.reward_kind,
+        reward_percent: campaign.reward_percent,
+        reward_amount: campaign.reward_amount,
+        buy_qty: campaign.buy_qty,
+        get_qty: campaign.get_qty,
+        lines: changedLines,
+      },
     })
   }
 

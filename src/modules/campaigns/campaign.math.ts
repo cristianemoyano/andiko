@@ -42,3 +42,31 @@ export function mergeDiscountPct(
 
   return { pct: result.toFixed(2), doubled }
 }
+
+/**
+ * Monto fijo → % uniforme por línea. Prorratear un monto fijo proporcionalmente a la base
+ * de cada línea equivale a un mismo porcentaje: `pct = monto / baseTotal · 100` (topado a 100).
+ * Así el descuento se expresa como `discount_pct` por línea y no toca la matemática de totales.
+ */
+export function fixedAmountToPct(rewardAmount: string | number, totalBase: string | number): string {
+  const amount = new Decimal(rewardAmount || 0)
+  const base = new Decimal(totalBase || 0)
+  if (base.lte(0)) return '0.00'
+  return Decimal.min(new Decimal(100), amount.div(base).mul(100)).toFixed(2)
+}
+
+/**
+ * 2x1 / "lleva X paga Y" → % equivalente por línea. Por cada grupo de `buy + get` unidades,
+ * `get` salen gratis. El valor de las unidades gratis sobre el total de la línea es el descuento:
+ * `pct = unidadesGratis / cantidad · 100`.
+ */
+export function bogoPct(quantity: string | number, buyQty: string | number, getQty: string | number): string {
+  const qty = new Decimal(quantity || 0)
+  const buy = new Decimal(buyQty || 0)
+  const get = new Decimal(getQty || 0)
+  const group = buy.plus(get)
+  if (qty.lte(0) || group.lte(0)) return '0.00'
+  const freeUnits = qty.div(group).floor().mul(get)
+  if (freeUnits.lte(0)) return '0.00'
+  return Decimal.min(new Decimal(100), freeUnits.div(qty).mul(100)).toFixed(2)
+}

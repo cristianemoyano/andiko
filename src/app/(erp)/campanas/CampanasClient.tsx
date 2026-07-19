@@ -19,6 +19,9 @@ export interface CampaignRow {
   name: string
   reward_kind: CampaignRewardKind
   reward_percent: string | null
+  reward_amount: string | null
+  buy_qty: string | null
+  get_qty: string | null
   installments_count: number | null
   installments_interest_free: boolean | null
   requires_coupon: boolean
@@ -39,6 +42,14 @@ function formatDate(value: string): string {
 function rewardLabel(row: CampaignRow): string {
   if (row.reward_kind === 'installments') {
     return `${row.installments_count ?? ''} cuotas${row.installments_interest_free ? ' sin interés' : ''}`
+  }
+  if (row.reward_kind === 'fixed_amount') {
+    return `$${row.reward_amount ?? '0'} de descuento`
+  }
+  if (row.reward_kind === 'free_qty') {
+    const buy = Number(row.buy_qty ?? 0)
+    const get = Number(row.get_qty ?? 0)
+    return buy === 1 && get >= 1 ? `${buy + get}x1` : `Lleva ${buy + get} paga ${buy}`
   }
   return `${row.reward_percent ?? '0'}% de descuento`
 }

@@ -1,8 +1,14 @@
 // Constantes del módulo de Campañas — client-safe (sin dependencias de servidor).
 // Importable desde schemas Zod, modelos Sequelize y UI.
 
-/** Tipo de premio de una campaña (Fase 1). Se ampliará en F2–3 con fixed_amount/bundle_price/free_qty. */
-export const CAMPAIGN_REWARD_KINDS = ['percent', 'installments'] as const
+/**
+ * Tipo de premio de una campaña.
+ * - `percent`: % de descuento por línea.
+ * - `installments`: cuotas sin interés (no monetario).
+ * - `fixed_amount`: monto fijo, prorrateado como % por línea sobre los ítems que califican.
+ * - `free_qty`: 2x1 / "lleva X paga Y" — las unidades gratis se traducen a % por línea.
+ */
+export const CAMPAIGN_REWARD_KINDS = ['percent', 'installments', 'fixed_amount', 'free_qty'] as const
 export type CampaignRewardKind = typeof CAMPAIGN_REWARD_KINDS[number]
 
 /** Canales de venta sobre los que puede aplicar/excluirse una campaña. */

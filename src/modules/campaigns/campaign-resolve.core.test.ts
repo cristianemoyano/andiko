@@ -25,6 +25,7 @@ function rule(over: Partial<CampaignRule> = {}): CampaignRule {
   return {
     id: 'camp1', name: 'Campaña', branch_id: null,
     reward_kind: 'percent', reward_percent: '15',
+    reward_amount: null, buy_qty: null, get_qty: null,
     installments_count: null, installments_interest_free: null,
     requires_coupon: false, stackable: false, priority: 100,
     min_purchase_amount: null,
@@ -90,6 +91,36 @@ describe('resolveCampaigns', () => {
     expect(res.adjustedLines[0].discount_pct).toBe('20.00')
     expect(res.effects).toHaveLength(1)
     expect(res.effects[0].campaign_id).toBe('a')
+  })
+
+  it('monto fijo: prorratea como % uniforme sobre las líneas que califican', () => {
+    // $300 sobre 2 líneas de $1000 (base total 2000) → 15% en cada línea.
+    const lines = [line({ line_id: 'a', unit_price: '1000' }), line({ line_id: 'b', unit_price: '1000' })]
+    const res = resolveCampaigns(
+      [rule({ reward_kind: 'fixed_amount', reward_percent: null, reward_amount: '300' })],
+      lines, cart(), 'max',
+    )
+    expect(res.adjustedLines[0].discount_pct).toBe('15.00')
+    expect(res.adjustedLines[1].discount_pct).toBe('15.00')
+    // descuento total aplicado ≈ $300
+    expect(res.applications[0].applied_discount_amount).toBe('300.00')
+  })
+
+  it('2x1: descuenta el equivalente a las unidades gratis (50% con cantidad par)', () => {
+    const res = resolveCampaigns(
+      [rule({ reward_kind: 'free_qty', reward_percent: null, buy_qty: '1', get_qty: '1' })],
+      [line({ quantity: '4', unit_price: '1000' })], cart(), 'max',
+    )
+    expect(res.adjustedLines[0].discount_pct).toBe('50.00')
+  })
+
+  it('2x1: sin grupo completo no aplica', () => {
+    const res = resolveCampaigns(
+      [rule({ reward_kind: 'free_qty', reward_percent: null, buy_qty: '1', get_qty: '1' })],
+      [line({ quantity: '1', unit_price: '1000' })], cart(), 'max',
+    )
+    expect(res.effects).toHaveLength(0)
+    expect(res.applications).toHaveLength(0)
   })
 
   it('respeta targets: solo descuenta las líneas incluidas', () => {

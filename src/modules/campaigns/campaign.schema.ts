@@ -60,6 +60,9 @@ const campaignBaseSchema = z.object({
   branch_id:                  z.string().uuid().nullable().optional(),
   reward_kind:                z.enum(CAMPAIGN_REWARD_KINDS),
   reward_percent:             percent.nullable().optional(),
+  reward_amount:              money.nullable().optional(),
+  buy_qty:                    z.number().positive().max(1000).nullable().optional(),
+  get_qty:                    z.number().positive().max(1000).nullable().optional(),
   installments_count:         z.number().int().positive().max(48).nullable().optional(),
   installments_interest_free: z.boolean().nullable().optional(),
   requires_coupon:            z.boolean().optional().default(false),
@@ -81,10 +84,15 @@ const campaignBaseSchema = z.object({
 function refineRewardCoherence(data: {
   reward_kind: string
   reward_percent?: string | null
+  reward_amount?: string | null
+  buy_qty?: number | null
+  get_qty?: number | null
   installments_count?: number | null
 }): boolean {
   if (data.reward_kind === 'percent') return data.reward_percent != null
   if (data.reward_kind === 'installments') return data.installments_count != null
+  if (data.reward_kind === 'fixed_amount') return data.reward_amount != null
+  if (data.reward_kind === 'free_qty') return data.buy_qty != null && data.get_qty != null
   return true
 }
 

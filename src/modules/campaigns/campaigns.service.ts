@@ -35,7 +35,8 @@ export async function listCampaigns(query: CampaignQuery, ctx: TenantContext) {
     offset,
     order: [['priority', 'ASC'], ['valid_from', 'DESC'], ['name', 'ASC']],
     attributes: [
-      'id', 'name', 'reward_kind', 'reward_percent', 'installments_count', 'installments_interest_free',
+      'id', 'name', 'reward_kind', 'reward_percent', 'reward_amount', 'buy_qty', 'get_qty',
+      'installments_count', 'installments_interest_free',
       'requires_coupon', 'stackable', 'priority', 'valid_from', 'valid_to', 'is_active', 'created_at',
     ],
   })
@@ -104,13 +105,16 @@ async function replaceChildren(
 }
 
 export async function createCampaign(input: CampaignInput, ctx: TenantContext, actorId: UUID) {
-  const { targets, payment_rules, branch_id, ...fields } = input
+  const { targets, payment_rules, branch_id, buy_qty, get_qty, ...fields } = input
   if (branch_id) void whereBranch(ctx, branch_id) // valida acceso a la sucursal
 
   const campaign = await sequelize.transaction(async (t) => {
     const created = await Campaign.create(
       {
         ...fields,
+        // NUMERIC en la DB → string en el modelo Sequelize.
+        buy_qty: buy_qty != null ? String(buy_qty) : null,
+        get_qty: get_qty != null ? String(get_qty) : null,
         branch_id: branch_id ?? null,
         valid_from: new Date(fields.valid_from),
         valid_to: new Date(fields.valid_to),
@@ -132,13 +136,15 @@ export async function updateCampaign(id: UUID, input: CampaignUpdateInput, ctx: 
   const campaign = await Campaign.findOne({ where: whereOrg(ctx, { id }) })
   if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND')
 
-  const { targets, payment_rules, branch_id, valid_from, valid_to, ...fields } = input
+  const { targets, payment_rules, branch_id, valid_from, valid_to, buy_qty, get_qty, ...fields } = input
   if (branch_id) void whereBranch(ctx, branch_id)
 
   await sequelize.transaction(async (t) => {
     await campaign.update(
       {
         ...fields,
+        ...(buy_qty !== undefined ? { buy_qty: buy_qty != null ? String(buy_qty) : null } : {}),
+        ...(get_qty !== undefined ? { get_qty: get_qty != null ? String(get_qty) : null } : {}),
         ...(branch_id !== undefined ? { branch_id: branch_id ?? null } : {}),
         ...(valid_from ? { valid_from: new Date(valid_from) } : {}),
         ...(valid_to ? { valid_to: new Date(valid_to) } : {}),
