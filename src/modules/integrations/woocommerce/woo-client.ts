@@ -179,6 +179,13 @@ export class WooClient {
     return out
   }
 
+  // --- Connectivity ---
+
+  /** Lightweight authenticated round-trip to verify credentials (one product row). */
+  async ping(): Promise<void> {
+    await this.request('GET', '/products', { query: { per_page: 1 } })
+  }
+
   // --- Products ---
 
   listProducts(): Promise<WooProduct[]> {
