@@ -19,6 +19,7 @@ import { ComprasSubNav } from '../../ComprasSubNav'
 import type { SupplierInvoice, SupplierPayment, PaymentMethod } from '../../types'
 import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_RECEIPT_STATUS_LABEL, SUPPLIER_INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL, PAYMENT_METHOD_LABEL } from '../../types'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
+import { notifyError } from '@/lib/notify'
 
 interface FacturaProvDetailProps {
   id: string
@@ -76,7 +77,9 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
       setRefresh(r => r + 1)
       return true
     } catch (e) {
-      setActionError(getApiErrorMessage(e))
+      const message = getApiErrorMessage(e)
+      setActionError(message)
+      notifyError(message, 'No se pudo actualizar la factura')
       return false
     }
   }
@@ -89,7 +92,12 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
   async function handleAddPayment() {
     if (!invoice) return
     const amount = parseFloat(paymentAmount)
-    if (!amount || amount <= 0) { setPaymentError('Ingresá un monto válido'); return }
+    if (!amount || amount <= 0) {
+      const message = 'Ingresá un monto válido'
+      setPaymentError(message)
+      notifyError(message, 'No se pudo registrar el pago')
+      return
+    }
 
     setPaymentSaving(true)
     setPaymentError(null)
@@ -109,7 +117,9 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
       setPaymentNotes('')
       setRefresh(r => r + 1)
     } catch (e) {
-      setPaymentError(getApiErrorMessage(e))
+      const message = getApiErrorMessage(e)
+      setPaymentError(message)
+      notifyError(message, 'No se pudo registrar el pago')
     } finally {
       setPaymentSaving(false)
     }
@@ -121,7 +131,9 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
       setPaymentToDelete(null)
       setRefresh(r => r + 1)
     } catch (e) {
-      setActionError(getApiErrorMessage(e))
+      const message = getApiErrorMessage(e)
+      setActionError(message)
+      notifyError(message, 'No se pudo eliminar el pago')
     }
   }
 
@@ -263,6 +275,7 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
             <table className="w-full text-sm">
               <thead className="bg-surface-muted border-b border-border">
                 <tr>
+                  <th className="w-12 px-4 py-2.5 text-center text-[11px] font-semibold text-fg-muted uppercase tracking-wide">N°</th>
                   <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Descripción</th>
                   <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Cant.</th>
                   <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">P. Unit.</th>
@@ -273,11 +286,12 @@ export function FacturaProvDetail({ id }: FacturaProvDetailProps) {
               <tbody className="divide-y divide-border">
                 {(invoice.items ?? []).length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-fg-subtle text-sm">Sin ítems</td>
+                    <td colSpan={6} className="px-4 py-8 text-center text-fg-subtle text-sm">Sin ítems</td>
                   </tr>
                 ) : (
-                  (invoice.items ?? []).map(item => (
+                  (invoice.items ?? []).map((item, index) => (
                     <tr key={item.id} className="hover:bg-surface-muted/50">
+                      <td className="px-4 py-2.5 text-center text-[12px] tabular-nums text-fg-subtle">{index + 1}</td>
                       <td className="px-4 py-2.5 text-fg">{item.description}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{parseFloat(item.quantity).toLocaleString('es-AR')}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{formatARS(item.unit_price)}</td>

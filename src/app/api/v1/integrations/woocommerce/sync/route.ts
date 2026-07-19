@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { env } from '@/config/env'
-import { runSyncTick } from '@/modules/integrations/woocommerce/woo-sync-worker.service'
+import { runIntegrationsSyncTick } from '@/modules/integrations'
 
 /**
- * WooCommerce sync tick: poll all active sites for new orders and drain the
- * outbox (stock/product/order jobs). Callable via cron with
- * Authorization: Bearer $CRON_SECRET, or manually in dev.
+ * Integrations sync tick: for every registered provider, poll active connections
+ * for new orders and drain the outbox (stock/product/order jobs). Callable via
+ * cron with Authorization: Bearer $CRON_SECRET, or manually in dev.
  */
 export async function POST(req: Request) {
   const cronSecret = process.env.CRON_SECRET
@@ -18,6 +18,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'CRON_SECRET not configured', code: 'MISCONFIGURED' }, { status: 503 })
   }
 
-  const result = await runSyncTick()
-  return NextResponse.json({ ok: true, ...result })
+  const providers = await runIntegrationsSyncTick()
+  return NextResponse.json({ ok: true, providers })
 }

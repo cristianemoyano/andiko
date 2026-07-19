@@ -27,6 +27,8 @@ type Contact = {
   phone: string | null
   notes: string | null
   is_active: boolean
+  is_system: boolean
+  system_key: string | null
   created_at: string
   updated_at: string
 }
@@ -102,14 +104,16 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
           { label: contact.legal_name },
         ]}
         actions={
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>
-              Eliminar
-            </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)}>
-              Editar
-            </Button>
-          </div>
+          contact.is_system ? undefined : (
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>
+                Eliminar
+              </Button>
+              <Button size="sm" onClick={() => setModalOpen(true)}>
+                Editar
+              </Button>
+            </div>
+          )
         }
       />
 
@@ -127,6 +131,7 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
               )}
               <div className="flex items-center gap-2 mt-3">
                 <Badge status="neutral">{TYPE_LABEL[contact.type]}</Badge>
+                {contact.is_system && <Badge status="neutral">Sistema</Badge>}
                 <StatusBadge value={contact.is_active ? 'Aprobado' : 'Anulado'} />
               </div>
             </div>
@@ -155,10 +160,10 @@ export function ContactDetail({ contact: initial, addresses, paymentInfo }: { co
           </Section>
 
           {/* Direcciones */}
-          <AddressesSection contactId={contact.id} initialAddresses={addresses} />
+          <AddressesSection contactId={contact.id} initialAddresses={addresses} readOnly={contact.is_system} />
 
           {/* Datos de pago */}
-          <PaymentInfoSection contactId={contact.id} initialPaymentInfo={paymentInfo} />
+          <PaymentInfoSection contactId={contact.id} initialPaymentInfo={paymentInfo} readOnly={contact.is_system} />
 
           {/* Notas */}
           {contact.notes && (

@@ -39,7 +39,13 @@ export const purchaseOrderQuerySchema = paginationSchema.extend({
   contact_id: z.string().uuid().optional(),
 })
 
+export const purchaseOrderStatusCountsQuerySchema = purchaseOrderQuerySchema.pick({
+  search: true,
+  contact_id: true,
+})
+
 export type PurchaseOrderInput       = z.infer<typeof purchaseOrderSchema>
 export type PurchaseOrderUpdateInput = z.infer<typeof purchaseOrderUpdateSchema>
 export type PurchaseOrderQuery       = z.infer<typeof purchaseOrderQuerySchema>
+export type PurchaseOrderStatusCountsQuery = z.infer<typeof purchaseOrderStatusCountsQuerySchema>
 export type PurchaseLineItemInput    = z.infer<typeof purchaseLineItemSchema>

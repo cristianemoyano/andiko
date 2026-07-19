@@ -4,6 +4,11 @@ import Contact from './contact.model'
 import type { ContactInput, ContactUpdateInput, ContactQuery } from './contact.schema'
 import { contactSchema, contactUpdateSchema } from './contact.schema'
 import { formatCuit, normalizeContactImportRow } from './contact.utils'
+import {
+  assertContactDeletable,
+  assertContactMutable,
+  SYSTEM_KEY_CONSUMIDOR_FINAL,
+} from './system-contacts'
 import { paginate, toPaginated } from '@/lib/pagination'
 import logger from '@/lib/logger'
 import type { TenantContext } from '@/lib/tenancy'
@@ -17,13 +22,15 @@ import {
 import WoocommerceCustomerLink from '@/modules/integrations/woocommerce/woocommerce-customer-link.model'
 
 export async function listContacts(query: ContactQuery, ctx: TenantContext) {
-  const { page, limit, search, type, source } = query
+  const { page, limit, search, type, source, system_key: systemKey, system } = query
   const { offset } = paginate(page, limit)
 
   const where = combineListWhere(
     whereOrg(ctx),
     type ? { type } : {},
     source ? importSourceListWhere(source, ctx.orgId, 'contact') : {},
+    systemKey ? { system_key: systemKey } : {},
+    system === true ? { is_system: true } : {},
     search
       ? {
           [Op.or]: [
@@ -45,7 +52,8 @@ export async function listContacts(query: ContactQuery, ctx: TenantContext) {
     order: [['legal_name', 'ASC']],
     attributes: [
       'id', 'type', 'legal_name', 'trade_name', 'first_name', 'last_name', 'job_title',
-      'cuit', 'iva_condition', 'email', 'phone', 'is_active', 'import_source', 'import_external_id',
+      'cuit', 'iva_condition', 'email', 'phone', 'is_active', 'is_system', 'system_key',
+      'import_source', 'import_external_id',
     ],
   })
 
@@ -90,6 +98,10 @@ export async function createContact(input: ContactInput, ctx: TenantContext, act
 
 export async function updateContact(id: string, input: ContactUpdateInput, ctx: TenantContext, actorId: string) {
   const contact = await getContact(id, ctx)
+  if (contact.is_system) {
+    if (input.is_active === false) throw new Error('SYSTEM_CONTACT_NOT_DEACTIVATABLE')
+    assertContactMutable(contact)
+  }
   await contact.update({
     ...input,
     ...(input.cuit ? { cuit: formatCuit(input.cuit) } : {}),
@@ -101,6 +113,7 @@ export async function updateContact(id: string, input: ContactUpdateInput, ctx: 
 
 export async function deleteContact(id: string, ctx: TenantContext, actorId: string) {
   const contact = await getContact(id, ctx)
+  assertContactDeletable(contact)
   await contact.update({ deleted_by: actorId })
   await contact.destroy()
   logger.info({ contactId: id, actorId }, 'contact soft-deleted')
@@ -157,6 +170,11 @@ export async function importContacts(
         : { ...whereOrg(ctx), legal_name: row.legal_name }
 
       const existing = await Contact.findOne({ where: matchWhere, transaction: t })
+
+      if (existing?.is_system || existing?.system_key === SYSTEM_KEY_CONSUMIDOR_FINAL) {
+        skipped++
+        continue
+      }
 
       if (action === 'create') {
         if (existing) { skipped++; continue }

@@ -114,7 +114,7 @@ function SearchableSelect({
           aria-expanded={open}
           aria-haspopup="listbox"
           className={cn(
-            'flex h-8 w-full items-center justify-between gap-2 rounded-sm border bg-surface px-2.5 text-[13px] transition-colors text-left',
+            'flex h-9 w-full items-center justify-between gap-2 rounded-sm border bg-surface px-2.5 text-sm transition-colors text-left',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
             'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',
             error
@@ -195,7 +195,7 @@ function SearchableSelect({
                 value={query}
                 onChange={e => handleSearch(e.target.value)}
                 placeholder="Buscar…"
-                className="h-7 w-full rounded-sm border border-border bg-surface pl-7 pr-2 text-[12px] text-fg placeholder:text-fg-subtle focus:outline-none focus:border-ring"
+                className="h-8 w-full rounded-sm border border-border bg-surface pl-7 pr-2 text-[13px] text-fg placeholder:text-fg-subtle focus:outline-none focus:border-ring"
               />
             </div>
           </div>
@@ -226,14 +226,14 @@ function SearchableSelect({
                 aria-selected={option.value === value}
                 onClick={() => handleSelect(option)}
                 className={cn(
-                  'flex w-full flex-col gap-0.5 px-3 py-2 text-left text-[13px] transition-colors',
+                  'flex w-full flex-col gap-0.5 px-3 py-2 text-left text-sm transition-colors',
                   'hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none',
                   option.value === value && 'bg-brand-accent-bg text-brand-accent font-medium',
                 )}
               >
                 <span className="font-medium leading-tight">{option.label}</span>
                 {option.sublabel && (
-                  <span className="text-[11px] text-fg-muted leading-tight">{option.sublabel}</span>
+                  <span className="text-[12px] text-fg-muted leading-tight">{option.sublabel}</span>
                 )}
               </button>
             ))}

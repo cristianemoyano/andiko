@@ -503,7 +503,7 @@ export function SalesLineItemsEditor({
 
   return (
     <div>
-      <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide mb-2">
+      <p className="text-sm font-semibold text-fg mb-2.5">
         Ítems
       </p>
       {catalogResolving && (
@@ -519,19 +519,20 @@ export function SalesLineItemsEditor({
         </p>
       )}
       <div className="border border-border rounded-sm overflow-hidden">
-        <table className="w-full text-[12px]">
+        <table className="w-full text-[13px]">
           <thead>
             <tr className="bg-surface-muted border-b border-border">
-              <th className="px-2 py-2 text-left font-medium text-fg-muted w-[22%]">Producto</th>
-              <th className="px-2 py-2 text-left font-medium text-fg-muted">Descripción</th>
+              <th className="w-10 px-2 py-2 text-center text-[12px] font-medium text-fg-muted">N°</th>
+              <th className="px-2 py-2 text-left text-[12px] font-medium text-fg-muted w-[22%]">Producto</th>
+              <th className="px-2 py-2 text-left text-[12px] font-medium text-fg-muted">Descripción</th>
               {showStock && (
-                <th className="px-2 py-2 text-right font-medium text-fg-muted w-20">Stock</th>
+                <th className="px-2 py-2 text-right text-[12px] font-medium text-fg-muted w-20">Stock</th>
               )}
-              <th className="px-2 py-2 text-right font-medium text-fg-muted w-14">Cant.</th>
-              <th className="px-2 py-2 text-right font-medium text-fg-muted w-28">P. unitario</th>
-              <th className="px-2 py-2 text-right font-medium text-fg-muted w-16">Desc %</th>
-              <th className="px-2 py-2 text-right font-medium text-fg-muted w-16">IVA</th>
-              <th className="px-2 py-2 text-right font-medium text-fg-muted w-24">Total</th>
+              <th className="px-2 py-2 text-right text-[12px] font-medium text-fg-muted w-14">Cant.</th>
+              <th className="px-2 py-2 text-right text-[12px] font-medium text-fg-muted w-28">P. unitario</th>
+              <th className="px-2 py-2 text-right text-[12px] font-medium text-fg-muted w-16">Desc %</th>
+              <th className="px-2 py-2 text-right text-[12px] font-medium text-fg-muted w-16">IVA</th>
+              <th className="px-2 py-2 text-right text-[12px] font-medium text-fg-muted w-24">Total</th>
               <th className="w-8" />
             </tr>
           </thead>
@@ -541,6 +542,9 @@ export function SalesLineItemsEditor({
               const over = overstockLines.has(lineIndex)
               return (
                 <tr key={item.id} className="border-b border-border last:border-0">
+                  <td className="px-2 py-1 text-center text-[12px] tabular-nums text-fg-subtle">
+                    {lineIndex + 1}
+                  </td>
                   <td className="px-2 py-1">
                     <div className="flex flex-col gap-0.5">
                       <ProductCell
@@ -554,7 +558,7 @@ export function SalesLineItemsEditor({
                   </td>
                   <td className="px-2 py-1">
                     <input
-                      className="w-full h-7 text-[12px] bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted"
+                      className="w-full h-8 text-[13px] bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted"
                       placeholder="Descripción del ítem"
                       value={item.description}
                       onChange={e => updateItem(item.id, { description: e.target.value })}
@@ -568,7 +572,7 @@ export function SalesLineItemsEditor({
                   )}
                   <td className="px-2 py-1">
                     <input
-                      className={`w-full h-7 text-[12px] text-right bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted ${over ? 'text-danger font-medium' : ''}`}
+                      className={`w-full h-8 text-[13px] text-right bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted ${over ? 'text-danger font-medium' : ''}`}
                       value={item.quantity}
                       onChange={e => updateItem(item.id, { quantity: e.target.value })}
                       inputMode="decimal"
@@ -577,7 +581,7 @@ export function SalesLineItemsEditor({
                   </td>
                   <td className="px-2 py-1">
                     <CurrencyInput
-                      className="h-7 text-[12px] text-right"
+                      className="h-8 text-[13px] text-right"
                       value={item.unit_price}
                       onChange={v => updateItem(item.id, { unit_price: v })}
                       disabled={disabled}
@@ -585,7 +589,7 @@ export function SalesLineItemsEditor({
                   </td>
                   <td className="px-2 py-1">
                     <input
-                      className="w-full h-7 text-[12px] text-right bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted"
+                      className="w-full h-8 text-[13px] text-right bg-transparent border-0 focus:outline-none focus:bg-surface focus:border focus:border-ring focus:rounded-sm px-1 disabled:text-fg-muted"
                       value={item.discount_pct}
                       onChange={e => updateItem(item.id, { discount_pct: e.target.value })}
                       inputMode="decimal"
@@ -594,7 +598,7 @@ export function SalesLineItemsEditor({
                   </td>
                   <td className="px-2 py-1">
                     <select
-                      className="w-full h-7 text-[12px] bg-transparent border-0 focus:outline-none text-right disabled:text-fg-muted"
+                      className="w-full h-8 text-[13px] bg-transparent border-0 focus:outline-none text-right disabled:text-fg-muted"
                       value={item.iva_rate}
                       onChange={e => updateItem(item.id, { iva_rate: e.target.value as IvaRate })}
                       disabled={disabled}
@@ -604,7 +608,7 @@ export function SalesLineItemsEditor({
                       ))}
                     </select>
                   </td>
-                  <td className="px-2 py-1 text-right tabular-nums font-medium text-fg-muted">
+                  <td className="px-2 py-1 text-right tabular-nums font-medium text-fg">
                     ${c.total.toFixed(2)}
                   </td>
                   <td className="px-1 py-1">
@@ -627,7 +631,7 @@ export function SalesLineItemsEditor({
         </table>
       </div>
       {!disabled && (
-        <Button type="button" variant="ghost" size="xs" className="mt-2" onClick={addLine}>
+        <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={addLine}>
           + Agregar ítem
         </Button>
       )}

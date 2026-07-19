@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
-import { PageBody } from '@/components/layout'
+import { FormSection, PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Textarea } from '@/components/primitives/Textarea'
@@ -18,6 +18,7 @@ import { useBranchDefaultWarehouse } from '@/components/erp/useBranchDefaultWare
 import { ComprasSubNav } from '../../ComprasSubNav'
 import type { PurchaseOrder } from '../../types'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
+import { notifyError } from '@/lib/notify'
 
 interface ReceiptItem {
   order_item_id: string | null
@@ -98,9 +99,20 @@ export function NuevaRecepcionClient() {
     setItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it))
   }
 
+  function reportError(message: string) {
+    setServerError(message)
+    notifyError(message)
+  }
+
   async function handleSave() {
-    if (!branchId) { setServerError('Elegí una sucursal.'); return }
-    if (!warehouseId) { setServerError('Elegí un depósito.'); return }
+    if (!branchId) {
+      reportError('Elegí una sucursal.')
+      return
+    }
+    if (!warehouseId) {
+      reportError('Elegí un depósito.')
+      return
+    }
 
     setSaving(true)
     setServerError(null)
@@ -132,7 +144,7 @@ export function NuevaRecepcionClient() {
       })
       router.push(`/compras/recepciones/${receipt.id}`)
     } catch (e) {
-      setServerError(getApiErrorMessage(e))
+      reportError(getApiErrorMessage(e))
     } finally {
       setSaving(false)
     }
@@ -160,9 +172,15 @@ export function NuevaRecepcionClient() {
 
       <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
+          <div className="pt-1">
+            <h1 className="text-xl font-semibold tracking-tight text-fg">Nueva recepción</h1>
+            <p className="mt-0.5 text-[13px] text-fg-muted">
+              Confirmá qué productos ingresan y en qué depósito quedarán disponibles.
+            </p>
+          </div>
 
           {serverError && (
-            <div className="px-4 py-2 bg-danger-bg border border-danger rounded-sm text-sm text-danger">
+            <div role="alert" className="rounded-sm border border-danger bg-danger-bg px-4 py-2 text-sm text-danger">
               {serverError}
             </div>
           )}
@@ -174,11 +192,9 @@ export function NuevaRecepcionClient() {
           )}
 
           {/* Header fields card */}
-          <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
+          <FormSection title="Datos generales">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Sucursal" required>
-                <BranchSelectField value={branchId} onChange={setBranchId} />
-              </FormField>
+              <BranchSelectField value={branchId} onChange={setBranchId} required />
 
               <FormField label="Depósito de destino" required>
                 <SearchableSelect
@@ -206,30 +222,29 @@ export function NuevaRecepcionClient() {
               </FormField>
               {actorName && (
                 <FormField label="Comprador">
-                  <p className="text-[13px] text-fg-muted py-1.5 px-3 bg-surface-muted border border-border rounded-sm">{actorName}</p>
+                  <p className="flex h-9 items-center rounded-sm border border-border bg-surface-muted px-3 text-sm text-fg-muted">{actorName}</p>
                 </FormField>
               )}
             </div>
-          </div>
+          </FormSection>
 
           {/* Items card */}
-          <div className="bg-surface border border-border rounded-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-border">
-              <p className="text-[11px] text-fg-subtle font-semibold uppercase tracking-wide">Ítems a recibir</p>
-            </div>
+          <FormSection title="Ítems a recibir" className="overflow-hidden p-0 [&>div:first-child]:px-5 [&>div:first-child]:pt-4">
             {items.length > 0 ? (
               <table className="w-full text-sm">
                 <thead className="bg-surface-muted border-b border-border">
                   <tr>
-                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Descripción</th>
-                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Lote (opcional)</th>
-                    <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Vencimiento</th>
-                    <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Cantidad a recibir</th>
+                    <th className="w-12 px-4 py-2.5 text-center text-[12px] font-medium text-fg-muted">N°</th>
+                    <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Descripción</th>
+                    <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Lote (opcional)</th>
+                    <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Vencimiento</th>
+                    <th className="text-right px-4 py-2.5 text-[12px] font-medium text-fg-muted">Cantidad a recibir</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {items.map((item, idx) => (
                     <tr key={idx}>
+                      <td className="px-4 py-2.5 text-center text-[12px] tabular-nums text-fg-subtle">{idx + 1}</td>
                       <td className="px-4 py-2.5 text-fg">{item.description}</td>
                       <td className="px-4 py-2.5">
                         <Input
@@ -264,14 +279,14 @@ export function NuevaRecepcionClient() {
             ) : (
               <p className="px-5 py-4 text-[13px] text-fg-subtle">Sin ítems. La recepción se creará sin ítems vinculados a una orden.</p>
             )}
-          </div>
+          </FormSection>
 
           {/* Notes card */}
-          <div className="bg-surface border border-border rounded-sm p-5">
+          <FormSection title="Notas">
             <FormField label="Notas">
               <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Observaciones de la recepción…" />
             </FormField>
-          </div>
+          </FormSection>
 
         </div>
       </PageBody>

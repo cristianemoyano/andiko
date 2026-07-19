@@ -4,24 +4,24 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/layout/TopBar'
-import { PageBody } from '@/components/layout'
+import { FormSection, PageBody } from '@/components/layout'
 import { Button } from '@/components/primitives/Button'
 import { FormField } from '@/components/primitives/FormField'
 import { Textarea } from '@/components/primitives/Textarea'
 import { DatePicker } from '@/components/primitives/DatePicker'
 import { TotalsFooter } from '@/components/erp/TotalsFooter'
-import { SalesLineItemsEditor, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
+import { PaymentConditionSelector } from '@/components/erp/PaymentConditionSelector'
+import { SalesLineItemsEditor, calcTotals, makeEmptyLine } from '@/components/erp/SalesLineItemsEditor'
 import type { LineItemInput } from '@/components/erp/SalesLineItemsEditor'
 import { consumePurchaseOrderDraft } from '@/lib/purchase-order-draft'
 import { SearchableSelect } from '@/components/erp/SearchableSelect'
 import type { SearchableSelectOption } from '@/components/erp/SearchableSelect'
 import { BranchSelectField } from '@/components/erp/BranchSelectField'
 import { ComprasSubNav } from '../../ComprasSubNav'
-import { PAYMENT_CONDITION_LABEL } from '../../types'
 import Decimal from 'decimal.js'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
-
-const PAYMENT_CONDITIONS = Object.entries(PAYMENT_CONDITION_LABEL).map(([value, label]) => ({ value, label }))
+import { notifyError } from '@/lib/notify'
+import type { PaymentCondition } from '@/types'
 
 export function NuevaOrdenClient() {
   const router = useRouter()
@@ -31,7 +31,7 @@ export function NuevaOrdenClient() {
   const [branchId,         setBranchId]         = useState<string | null>(null)
   const [contactId,        setContactId]        = useState<string | null>(null)
   const [expectedDate,     setExpectedDate]     = useState<Date | null>(null)
-  const [paymentCondition, setPaymentCondition] = useState('cash')
+  const [paymentCondition, setPaymentCondition] = useState<PaymentCondition>('cash')
   const [items,            setItems]            = useState<LineItemInput[]>([makeEmptyLine()])
   const [notes,            setNotes]            = useState('')
   const [internalNotes,    setInternalNotes]    = useState('')
@@ -66,12 +66,18 @@ export function NuevaOrdenClient() {
     }
   }, [])
 
-  const subtotal = items.reduce((acc, i) => acc + (parseFloat(i.unit_price || '0') * parseFloat(i.quantity || '0')), 0)
-  const taxAmt   = 0
-  const totalAmt = subtotal
+  const totals = calcTotals(items)
+
+  function reportError(message: string) {
+    setServerError(message)
+    notifyError(message)
+  }
 
   async function handleSave() {
-    if (!branchId) { setServerError('Elegí una sucursal.'); return }
+    if (!branchId) {
+      reportError('Elegí una sucursal.')
+      return
+    }
 
     setSaving(true)
     setServerError(null)
@@ -101,7 +107,7 @@ export function NuevaOrdenClient() {
       })
       router.push(`/compras/ordenes/${order.id}`)
     } catch (e) {
-      setServerError(getApiErrorMessage(e))
+      reportError(getApiErrorMessage(e))
     } finally {
       setSaving(false)
     }
@@ -129,19 +135,23 @@ export function NuevaOrdenClient() {
 
       <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
+          <div className="pt-1">
+            <h1 className="text-xl font-semibold tracking-tight text-fg">Nueva orden de compra</h1>
+            <p className="mt-0.5 text-[13px] text-fg-muted">
+              Elegí el proveedor, cargá los productos y prepará la orden para enviarla.
+            </p>
+          </div>
 
           {serverError && (
-            <div className="px-4 py-2 bg-danger-bg border border-danger rounded-sm text-sm text-danger">
+            <div role="alert" className="rounded-sm border border-danger bg-danger-bg px-4 py-2 text-sm text-danger">
               {serverError}
             </div>
           )}
 
           {/* Header fields card */}
-          <div className="bg-surface border border-border rounded-sm p-5 flex flex-col gap-4">
+          <FormSection title="Datos generales">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Sucursal" required>
-                <BranchSelectField value={branchId} onChange={setBranchId} />
-              </FormField>
+              <BranchSelectField value={branchId} onChange={setBranchId} required />
 
               <FormField label="Proveedor">
                 <SearchableSelect
@@ -157,38 +167,29 @@ export function NuevaOrdenClient() {
               </FormField>
 
               <FormField label="Condición de pago">
-                <select
-                  value={paymentCondition}
-                  onChange={e => setPaymentCondition(e.target.value)}
-                  className="w-full h-9 px-3 text-sm border border-border rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500"
-                >
-                  {PAYMENT_CONDITIONS.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
+                <PaymentConditionSelector value={paymentCondition} onChange={setPaymentCondition} />
               </FormField>
               {actorName && (
                 <FormField label="Comprador">
-                  <p className="text-[13px] text-fg-muted py-1.5 px-3 bg-surface-muted border border-border rounded-sm">{actorName}</p>
+                  <p className="flex h-9 items-center rounded-sm border border-border bg-surface-muted px-3 text-sm text-fg-muted">{actorName}</p>
                 </FormField>
               )}
             </div>
-          </div>
+          </FormSection>
 
           {/* Items + totals card */}
-          <div className="bg-surface border border-border rounded-sm overflow-hidden">
+          <FormSection>
             <SalesLineItemsEditor items={items} onChange={setItems} priceListId={null} />
-            <div className="border-t border-border">
-              <TotalsFooter
-                subtotal={String(new Decimal(subtotal).toFixed(2))}
-                taxAmount={String(new Decimal(taxAmt).toFixed(2))}
-                total={String(new Decimal(totalAmt).toFixed(2))}
-              />
-            </div>
-          </div>
+          </FormSection>
+          <TotalsFooter
+            subtotal={new Decimal(totals.subtotal).toFixed(2)}
+            taxAmount={new Decimal(totals.taxAmount).toFixed(2)}
+            total={new Decimal(totals.total).toFixed(2)}
+            className="w-full max-w-sm self-end"
+          />
 
           {/* Notes card */}
-          <div className="bg-surface border border-border rounded-sm p-5">
+          <FormSection title="Notas">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField label="Notas">
                 <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Notas para el proveedor…" />
@@ -197,7 +198,7 @@ export function NuevaOrdenClient() {
                 <Textarea value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={3} placeholder="Notas internas…" />
               </FormField>
             </div>
-          </div>
+          </FormSection>
 
         </div>
       </PageBody>

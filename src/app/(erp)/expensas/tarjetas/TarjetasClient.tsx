@@ -218,9 +218,7 @@ export function TarjetasClient() {
             <p className="text-sm text-danger">{formError}</p>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Sucursal" required>
-              <BranchSelectField value={branchId} onChange={setBranchId} />
-            </FormField>
+            <BranchSelectField value={branchId} onChange={setBranchId} required />
             <FormField label="Emisor / proveedor" required>
               <SearchableSelect
                 value={contactId}

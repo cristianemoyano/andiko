@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.53.0](https://github.com/cristianemoyano/andiko/compare/v0.52.0...v0.53.0) (2026-07-19)
+
+### Features
+
+* **core:** polish document UX and system Consumidor Final ([a4141fb](https://github.com/cristianemoyano/andiko/commit/a4141fbafa709bd32ddcad53cb73b846415c6f79))
+
 ## [0.52.0](https://github.com/cristianemoyano/andiko/compare/v0.51.1...v0.52.0) (2026-07-19)
 
 ### Features

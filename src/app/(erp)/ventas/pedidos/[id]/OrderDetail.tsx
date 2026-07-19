@@ -34,7 +34,7 @@ import { CreateShipmentDialog } from './CreateShipmentDialog'
 import { OrderShipmentsSection } from './OrderShipmentsSection'
 import { cn } from '@/lib/utils'
 import { fetchJson, getApiErrorMessage } from '@/lib/fetch-json'
-import { notifyApiError, notifySuccess } from '@/lib/notify'
+import { notifyApiError, notifyError, notifySuccess } from '@/lib/notify'
 import { fieldErrorsFromApiError } from '@/lib/validation-errors'
 import { ORDER_STATUS_TRANSITIONS, ORDER_CANCELLABLE_STATUSES, isOrderInvoiceable, orderAcceptsShipmentCreation } from '@/modules/sales/sales-order-workflow'
 import type { DeliveryLogisticsMode } from '@/modules/sales/sales-order.schema'
@@ -221,6 +221,11 @@ export function OrderDetail({ id }: OrderDetailProps) {
   const [errors, setErrors]     = useState<FieldErrors>({})
   const [serverError, setServerError] = useState<string | null>(null)
 
+  function reportError(message: string) {
+    setServerError(message)
+    notifyError(message)
+  }
+
   // Edit form fields
   const [contactId, setContactId]               = useState<string | null>(null)
   const [contactOption, setContactOption]       = useState<SearchableSelectOption | null>(null)
@@ -395,27 +400,28 @@ export function OrderDetail({ id }: OrderDetailProps) {
     if (!contactId) {
       setSaving(false)
       setErrors(prev => ({ ...prev, contact_id: ['Seleccioná un cliente.'] }))
+      notifyError('Seleccioná un cliente.')
       return
     }
 
     if (!contactOnlyEdit) {
       if (catalogResolving) {
         setSaving(false)
-        setServerError('Esperá a que se carguen los productos del catálogo en las líneas.')
+        reportError('Esperá a que se carguen los productos del catálogo en las líneas.')
         return
       }
 
       const lineWithoutProduct = findLineWithoutCatalogProduct(items)
       if (lineWithoutProduct >= 0) {
         setSaving(false)
-        setServerError(catalogProductRequiredMessage(lineWithoutProduct))
+        reportError(catalogProductRequiredMessage(lineWithoutProduct))
         return
       }
 
       const lineOverStock = findLineExceedingBranchStock(items, branchStockMap)
       if (lineOverStock >= 0) {
         setSaving(false)
-        setServerError(insufficientBranchStockMessage(lineOverStock))
+        reportError(insufficientBranchStockMessage(lineOverStock))
         return
       }
     }
@@ -452,8 +458,12 @@ export function OrderDetail({ id }: OrderDetailProps) {
       setRefresh(r => r + 1)
     } catch (err) {
       const fe = fieldErrorsFromApiError(err)
-      if (fe) setErrors(fe)
-      else setServerError(getApiErrorMessage(err))
+      if (fe) {
+        setErrors(fe)
+        notifyError('Revisá los campos marcados e intentá de nuevo.')
+      } else {
+        reportError(getApiErrorMessage(err))
+      }
     } finally {
       setSaving(false)
     }
@@ -701,6 +711,12 @@ export function OrderDetail({ id }: OrderDetailProps) {
       <PageBody>
         <div className="max-w-4xl mx-auto flex flex-col gap-5">
 
+          {serverError && (
+            <p role="alert" className="text-[13px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
+              {serverError}
+            </p>
+          )}
+
           {/* Status pipeline */}
           <div className="bg-surface border border-border rounded-sm px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
             <div>
@@ -807,7 +823,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                   </>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField label="Dirección de entrega" htmlFor="shipping_address_id">
+                  <FormField label="Dirección de entrega guardada" htmlFor="shipping_address_id">
                     <select
                       id="shipping_address_id"
                       value={shippingAddressId}
@@ -825,7 +841,7 @@ export function OrderDetail({ id }: OrderDetailProps) {
                       ))}
                     </select>
                   </FormField>
-                  <FormField label="Dirección de facturación" htmlFor="billing_address_id">
+                  <FormField label="Dirección de facturación guardada" htmlFor="billing_address_id">
                     <select
                       id="billing_address_id"
                       value={billingAddressId}
@@ -845,8 +861,8 @@ export function OrderDetail({ id }: OrderDetailProps) {
                   </FormField>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <AddressSnapshotFields prefix="shipping" title="Snapshot entrega" value={shippingAddress} onChange={setShippingAddress} />
-                  <AddressSnapshotFields prefix="billing" title="Snapshot facturación" value={billingAddress} onChange={setBillingAddress} />
+                  <AddressSnapshotFields prefix="shipping" title="Domicilio de entrega" value={shippingAddress} onChange={setShippingAddress} />
+                  <AddressSnapshotFields prefix="billing" title="Domicilio de facturación" value={billingAddress} onChange={setBillingAddress} />
                 </div>
               </>
             ) : (
@@ -928,12 +944,6 @@ export function OrderDetail({ id }: OrderDetailProps) {
                   )}
                 </div>
               )
-            )}
-
-            {serverError && (
-              <p role="alert" className="text-[12px] text-danger bg-danger-bg border border-danger rounded-sm px-3 py-2">
-                {serverError}
-              </p>
             )}
           </div>
 

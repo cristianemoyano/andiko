@@ -65,7 +65,7 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
           onFocus={handleFocus}
           onBlur={handleBlur}
           className={cn(
-            'flex h-8 w-full rounded-sm border bg-surface px-2.5 text-[13px] text-fg transition-colors text-right tabular-nums',
+            'flex h-9 w-full rounded-sm border bg-surface px-2.5 text-sm text-fg transition-colors text-right tabular-nums',
             'placeholder:text-fg-subtle',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
             'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',

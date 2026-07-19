@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { DataTable, DocumentStatusNav, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { ComprasSubNav } from '../ComprasSubNav'
 import type { PurchaseReceipt, PurchaseReceiptStatus } from '../types'
@@ -14,12 +14,21 @@ import { useDebouncedValue } from '@/lib/use-debounced-value'
 
 const PAGE_SIZE = 20
 
-const STATUS_OPTIONS: { value: PurchaseReceiptStatus | ''; label: string }[] = [
-  { value: '',          label: 'Todos los estados' },
-  { value: 'draft',     label: 'Borrador' },
-  { value: 'confirmed', label: 'Confirmado' },
-  { value: 'cancelled', label: 'Cancelado' },
+type ReceiptStatusTab = PurchaseReceiptStatus | ''
+
+const STATUS_TABS: readonly { key: ReceiptStatusTab; label: string }[] = [
+  { key: '',          label: 'Todas' },
+  { key: 'draft',     label: 'Borrador' },
+  { key: 'confirmed', label: 'Confirmada' },
+  { key: 'cancelled', label: 'Cancelada' },
 ]
+
+const EMPTY_STATUS_COUNTS: Record<ReceiptStatusTab, number> = {
+  '': 0,
+  draft: 0,
+  confirmed: 0,
+  cancelled: 0,
+}
 
 const COLUMNS: Column<PurchaseReceipt>[] = [
   {
@@ -68,7 +77,8 @@ export function RecepcionesClient() {
   const [total, setTotal]       = useState(0)
   const [page, setPage]         = useState(1)
   const [search, setSearch]     = useState('')
-  const [status, setStatus]     = useState<PurchaseReceiptStatus | ''>('')
+  const [status, setStatus]     = useState<ReceiptStatusTab>('')
+  const [statusCounts, setStatusCounts] = useState(EMPTY_STATUS_COUNTS)
   const [error, setError]       = useState<string | null>(null)
 
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -97,10 +107,36 @@ export function RecepcionesClient() {
     return () => { controller.abort() }
   }, [page, debouncedSearch, status])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    const params = new URLSearchParams({
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    })
+    void (async () => {
+      try {
+        const res = await fetchJson<{ data: Record<ReceiptStatusTab, number> }>(
+          `/api/v1/purchases/receipts/status-counts?${params}`,
+          { signal: controller.signal },
+        )
+        setStatusCounts({ ...EMPTY_STATUS_COUNTS, ...(res.data ?? {}) })
+      } catch {
+        if (!controller.signal.aborted) setStatusCounts(EMPTY_STATUS_COUNTS)
+      }
+    })()
+    return () => { controller.abort() }
+  }, [debouncedSearch])
+
   return (
     <div className="flex flex-col h-full">
       <TopBar breadcrumbs={[{ label: 'Compras', href: '/compras' }, { label: 'Recepciones' }]} />
       <ComprasSubNav />
+      <DocumentStatusNav
+        tabs={STATUS_TABS}
+        active={status}
+        counts={statusCounts}
+        onChange={next => { setStatus(next); setPage(1) }}
+        ariaLabel="Filtrar recepciones por estado"
+      />
 
       <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
@@ -124,15 +160,6 @@ export function RecepcionesClient() {
                   className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-52 bg-surface focus:outline-none focus:border-ring"
                 />
               </div>
-              <select
-                value={status}
-                onChange={e => { setStatus(e.target.value as PurchaseReceiptStatus | ''); setPage(1) }}
-                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
-              >
-                {STATUS_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
               <span className="flex-1" />
               <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>

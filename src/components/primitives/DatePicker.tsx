@@ -92,7 +92,7 @@ export function DatePicker({
           disabled={disabled}
           data-invalid={error ? 'true' : undefined}
           className={cn(
-            'flex h-8 w-full items-center gap-1.5 rounded-sm border bg-surface px-2.5 text-left text-[13px] text-fg tabular-nums transition-colors',
+            'flex h-9 w-full items-center gap-1.5 rounded-sm border bg-surface px-2.5 text-left text-sm text-fg tabular-nums transition-colors',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
             'disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-fg-subtle',
             error

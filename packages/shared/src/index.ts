@@ -44,6 +44,8 @@ export type PosCustomer = {
   iva_condition: string | null
   email: string | null
   phone: string | null
+  is_system?: boolean
+  system_key?: string | null
   updated_at: string
 }
 

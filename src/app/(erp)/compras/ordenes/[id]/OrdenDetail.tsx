@@ -16,6 +16,7 @@ import { ComprasSubNav } from '../../ComprasSubNav'
 import type { PurchaseOrder } from '../../types'
 import { PURCHASE_ORDER_STATUS_LABEL, PURCHASE_RECEIPT_STATUS_LABEL, SUPPLIER_INVOICE_STATUS_LABEL, PAYMENT_CONDITION_LABEL } from '../../types'
 import { fetchJson, getApiErrorMessage, isApiRequestError } from '@/lib/fetch-json'
+import { notifyError } from '@/lib/notify'
 
 interface OrdenDetailProps {
   id: string
@@ -57,7 +58,9 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
       setRefresh(r => r + 1)
       return true
     } catch (e) {
-      setActionError(getApiErrorMessage(e))
+      const message = getApiErrorMessage(e)
+      setActionError(message)
+      notifyError(message, 'No se pudo actualizar la orden')
       return false
     }
   }
@@ -240,6 +243,7 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
             <table className="w-full text-sm">
               <thead className="bg-surface-muted border-b border-border">
                 <tr>
+                  <th className="w-12 px-4 py-2.5 text-center text-[11px] font-semibold text-fg-muted uppercase tracking-wide">N°</th>
                   <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Descripción</th>
                   <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Cant.</th>
                   <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Recibido</th>
@@ -251,11 +255,12 @@ export function OrdenDetail({ id }: OrdenDetailProps) {
               <tbody className="divide-y divide-border">
                 {(order.items ?? []).length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-fg-subtle text-sm">Sin ítems</td>
+                    <td colSpan={7} className="px-4 py-8 text-center text-fg-subtle text-sm">Sin ítems</td>
                   </tr>
                 ) : (
-                  (order.items ?? []).map(item => (
+                  (order.items ?? []).map((item, index) => (
                     <tr key={item.id} className="hover:bg-surface-muted/50">
+                      <td className="px-4 py-2.5 text-center text-[12px] tabular-nums text-fg-subtle">{index + 1}</td>
                       <td className="px-4 py-2.5 text-fg">{item.description}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{parseFloat(item.quantity).toLocaleString('es-AR')}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">{parseFloat(item.received_qty ?? '0').toLocaleString('es-AR')}</td>

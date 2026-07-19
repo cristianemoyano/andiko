@@ -6,7 +6,12 @@ import { paginate, toPaginated } from '@/lib/pagination'
 import PurchaseOrder from './purchase-order.model'
 import type { PurchaseOrderStatus } from './purchase-order.model'
 import PurchaseOrderItem from './purchase-order-item.model'
-import type { PurchaseOrderInput, PurchaseOrderUpdateInput, PurchaseOrderQuery } from './purchase-order.schema'
+import type {
+  PurchaseOrderInput,
+  PurchaseOrderUpdateInput,
+  PurchaseOrderQuery,
+  PurchaseOrderStatusCountsQuery,
+} from './purchase-order.schema'
 import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { nextPurchaseDocNumber, calcLineItem, calcDocumentTotals } from './purchases.utils'
 import { ensurePurchasesBranchAssociations } from './purchases-branch-associations'
@@ -19,14 +24,8 @@ export async function listPurchaseOrders(query: PurchaseOrderQuery, ctx: TenantC
   const { page, limit, search, status, contact_id } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = whereAllowedBranches(ctx)
+  const where = buildPurchaseOrdersListWhere({ search, contact_id }, ctx)
   if (status)     where.status     = status
-  if (contact_id) where.contact_id = contact_id
-  if (search) {
-    where[Op.or as unknown as string] = [
-      { order_number: { [Op.iLike]: `%${search}%` } },
-    ]
-  }
 
   const { default: Branch }  = await import('@/modules/auth/branch.model')
   const { default: Contact } = await import('@/modules/contacts/contact.model')
@@ -50,6 +49,51 @@ export async function listPurchaseOrders(query: PurchaseOrderQuery, ctx: TenantC
   })
 
   return toPaginated(rows, count, page, limit)
+}
+
+function buildPurchaseOrdersListWhere(
+  query: PurchaseOrderStatusCountsQuery,
+  ctx: TenantContext,
+): Record<string, unknown> {
+  const where: Record<string, unknown> = whereAllowedBranches(ctx)
+  if (query.contact_id) where.contact_id = query.contact_id
+  if (query.search) {
+    where[Op.or as unknown as string] = [
+      { order_number: { [Op.iLike]: `%${query.search}%` } },
+    ]
+  }
+  return where
+}
+
+export async function getPurchaseOrderStatusCounts(
+  query: PurchaseOrderStatusCountsQuery,
+  ctx: TenantContext,
+) {
+  ensurePurchasesBranchAssociations()
+  const rows = await PurchaseOrder.findAll({
+    where: buildPurchaseOrdersListWhere(query, ctx),
+    attributes: [
+      'status',
+      [sequelize.fn('COUNT', sequelize.col('PurchaseOrder.id')), 'count'],
+    ],
+    group: ['status'],
+    raw: true,
+  }) as unknown as Array<{ status: PurchaseOrderStatus; count: string }>
+
+  const byStatus = Object.fromEntries(
+    rows.map(row => [row.status, Number(row.count)]),
+  ) as Partial<Record<PurchaseOrderStatus, number>>
+
+  return {
+    '': Object.values(byStatus).reduce((sum, count) => sum + count, 0),
+    draft: byStatus.draft ?? 0,
+    sent: byStatus.sent ?? 0,
+    partially_received: byStatus.partially_received ?? 0,
+    received: byStatus.received ?? 0,
+    partial_returned: byStatus.partial_returned ?? 0,
+    returned: byStatus.returned ?? 0,
+    cancelled: byStatus.cancelled ?? 0,
+  }
 }
 
 export async function getPurchaseOrder(id: string, orgId: string) {

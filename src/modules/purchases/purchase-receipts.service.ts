@@ -5,9 +5,15 @@ import sequelize from '@/lib/db'
 import logger from '@/lib/logger'
 import { paginate, toPaginated } from '@/lib/pagination'
 import PurchaseReceipt from './purchase-receipt.model'
+import type { PurchaseReceiptStatus } from './purchase-receipt.model'
 import PurchaseReceiptItem from './purchase-receipt-item.model'
 import PurchaseOrderItem from './purchase-order-item.model'
-import type { PurchaseReceiptInput, PurchaseReceiptUpdateInput, PurchaseReceiptQuery } from './purchase-receipt.schema'
+import type {
+  PurchaseReceiptInput,
+  PurchaseReceiptUpdateInput,
+  PurchaseReceiptQuery,
+  PurchaseReceiptStatusCountsQuery,
+} from './purchase-receipt.schema'
 import { buildBranchRenumberPatch, assertDraftBranchChange } from '@/lib/branch-document-renumber'
 import { nextPurchaseDocNumber } from './purchases.utils'
 import { ensurePurchasesBranchAssociations } from './purchases-branch-associations'
@@ -19,16 +25,11 @@ export async function listPurchaseReceipts(query: PurchaseReceiptQuery, orgId: s
   const { page, limit, search, status, contact_id, order_id, warehouse_id } = query
   const { offset } = paginate(page, limit)
 
-  const where: Record<string, unknown> = { org_id: orgId }
+  const where = buildPurchaseReceiptsListWhere(
+    { search, contact_id, order_id, warehouse_id },
+    orgId,
+  )
   if (status)       where.status       = status
-  if (contact_id)   where.contact_id   = contact_id
-  if (order_id)     where.order_id     = order_id
-  if (warehouse_id) where.warehouse_id = warehouse_id
-  if (search) {
-    where[Op.or as unknown as string] = [
-      { receipt_number: { [Op.iLike]: `%${search}%` } },
-    ]
-  }
 
   const { default: Branch }    = await import('@/modules/auth/branch.model')
   const { default: Contact }   = await import('@/modules/contacts/contact.model')
@@ -51,6 +52,48 @@ export async function listPurchaseReceipts(query: PurchaseReceiptQuery, orgId: s
   })
 
   return toPaginated(rows, count, page, limit)
+}
+
+function buildPurchaseReceiptsListWhere(
+  query: PurchaseReceiptStatusCountsQuery,
+  orgId: string,
+): Record<string, unknown> {
+  const where: Record<string, unknown> = { org_id: orgId }
+  if (query.contact_id) where.contact_id = query.contact_id
+  if (query.order_id) where.order_id = query.order_id
+  if (query.warehouse_id) where.warehouse_id = query.warehouse_id
+  if (query.search) {
+    where[Op.or as unknown as string] = [
+      { receipt_number: { [Op.iLike]: `%${query.search}%` } },
+    ]
+  }
+  return where
+}
+
+export async function getPurchaseReceiptStatusCounts(
+  query: PurchaseReceiptStatusCountsQuery,
+  orgId: string,
+) {
+  const rows = await PurchaseReceipt.findAll({
+    where: buildPurchaseReceiptsListWhere(query, orgId),
+    attributes: [
+      'status',
+      [sequelize.fn('COUNT', sequelize.col('PurchaseReceipt.id')), 'count'],
+    ],
+    group: ['status'],
+    raw: true,
+  }) as unknown as Array<{ status: PurchaseReceiptStatus; count: string }>
+
+  const byStatus = Object.fromEntries(
+    rows.map(row => [row.status, Number(row.count)]),
+  ) as Partial<Record<PurchaseReceiptStatus, number>>
+
+  return {
+    '': Object.values(byStatus).reduce((sum, count) => sum + count, 0),
+    draft: byStatus.draft ?? 0,
+    confirmed: byStatus.confirmed ?? 0,
+    cancelled: byStatus.cancelled ?? 0,
+  }
 }
 
 export async function getPurchaseReceipt(id: string, orgId: string) {

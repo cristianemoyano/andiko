@@ -31,6 +31,8 @@ type Contact = {
   email: string | null
   phone: string | null
   is_active: boolean
+  is_system: boolean
+  system_key: string | null
   import_source: string | null
   import_external_id: string | null
   source: string | null
@@ -60,8 +62,13 @@ const COLUMNS: Column<Contact>[] = [
     header: 'Razón social',
     sortable: true,
     render: row => (
-      <span className="font-medium text-fg" data-testid="contact-row" data-contact-name={row.legal_name}>
+      <span className="inline-flex items-center gap-2 font-medium text-fg" data-testid="contact-row" data-contact-name={row.legal_name}>
         {row.legal_name}
+        {row.is_system && (
+          <span className="rounded-sm border border-border bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-fg-muted">
+            Sistema
+          </span>
+        )}
       </span>
     ),
   },
@@ -225,27 +232,29 @@ export function ContactosClient({ showWooColumn = false }: { showWooColumn?: boo
           <Button variant="ghost" size="xs" onClick={() => router.push(`/contactos/${row.id}`)}>
             Ver
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="xs" aria-label="Más acciones" className="px-1.5">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" />
-                </svg>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem data-testid="edit-contact-btn" data-contact-name={row.legal_name} onSelect={() => openEdit(row)}>
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={() => setContactToDelete(row)}>
-                Eliminar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!row.is_system && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="xs" aria-label="Más acciones" className="px-1.5">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" />
+                  </svg>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem data-testid="edit-contact-btn" data-contact-name={row.legal_name} onSelect={() => openEdit(row)}>
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={() => setContactToDelete(row)}>
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       ),
-      mobileRender: row => (
+      mobileRender: row => row.is_system ? null : (
         <>
           <DropdownMenuItem onSelect={() => openEdit(row)}>Editar</DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onSelect={() => setContactToDelete(row)}>Eliminar</DropdownMenuItem>

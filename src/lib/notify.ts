@@ -9,6 +9,11 @@ export function notifyApiError(error: unknown, title = 'Error'): void {
   toast.error(title, { description: getApiErrorMessage(error) })
 }
 
+/** Toast de error con mensaje ya resuelto (validación de formulario, reglas de negocio). */
+export function notifyError(message: string, title = 'No se pudo guardar'): void {
+  toast.error(title, { description: message })
+}
+
 export function notifySuccess(message: string): void {
   toast.success(message)
 }

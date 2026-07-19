@@ -139,7 +139,13 @@ export function ReturnDetail() {
               <h2 className="font-semibold mb-3">Ítems devueltos</h2>
               <ul className="text-[13px] space-y-1">
                 {row.items!.map((item, i) => (
-                  <li key={i} className="flex justify-between"><span>{item.description} × {item.quantity}</span><span>{formatARS(item.total)}</span></li>
+                  <li key={i} className="flex justify-between gap-4">
+                    <span>
+                      <span className="mr-2 tabular-nums text-fg-subtle">{i + 1}.</span>
+                      {item.description} × {item.quantity}
+                    </span>
+                    <span>{formatARS(item.total)}</span>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -150,7 +156,13 @@ export function ReturnDetail() {
               <h2 className="font-semibold mb-3">Ítems entregados (cambio)</h2>
               <ul className="text-[13px] space-y-1">
                 {row.exchangeItems!.map((item, i) => (
-                  <li key={i} className="flex justify-between"><span>{item.description} × {item.quantity}</span><span>{formatARS(item.total)}</span></li>
+                  <li key={i} className="flex justify-between gap-4">
+                    <span>
+                      <span className="mr-2 tabular-nums text-fg-subtle">{i + 1}.</span>
+                      {item.description} × {item.quantity}
+                    </span>
+                    <span>{formatARS(item.total)}</span>
+                  </li>
                 ))}
               </ul>
             </div>

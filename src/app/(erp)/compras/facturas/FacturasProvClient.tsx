@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopBar } from '@/components/layout/TopBar'
 import { PageBody } from '@/components/layout'
-import { DataTable, TablePagination, type Column } from '@/components/erp'
+import { DataTable, DocumentStatusNav, TablePagination, type Column } from '@/components/erp'
 import { StatusBadge } from '@/components/primitives/Badge'
 import { Button } from '@/components/primitives/Button'
 import { formatARS } from '@/components/primitives/CurrencyInput'
@@ -16,14 +16,25 @@ import { SUPPLIER_INVOICE_STATUS_LABEL } from '../types'
 
 const PAGE_SIZE = 20
 
-const STATUS_OPTIONS: { value: SupplierInvoiceStatus | ''; label: string }[] = [
-  { value: '',               label: 'Todos los estados' },
-  { value: 'draft',          label: 'Borrador' },
-  { value: 'received',       label: 'Recibida' },
-  { value: 'partially_paid', label: 'Pago parcial' },
-  { value: 'paid',           label: 'Pagada' },
-  { value: 'cancelled',      label: 'Cancelada' },
+type InvoiceStatusTab = SupplierInvoiceStatus | ''
+
+const STATUS_TABS: readonly { key: InvoiceStatusTab; label: string }[] = [
+  { key: '',               label: 'Todas' },
+  { key: 'draft',          label: 'Borrador' },
+  { key: 'received',       label: 'Recibida' },
+  { key: 'partially_paid', label: 'Pago parcial' },
+  { key: 'paid',           label: 'Pagada' },
+  { key: 'cancelled',      label: 'Cancelada' },
 ]
+
+const EMPTY_STATUS_COUNTS: Record<InvoiceStatusTab, number> = {
+  '': 0,
+  draft: 0,
+  received: 0,
+  partially_paid: 0,
+  paid: 0,
+  cancelled: 0,
+}
 
 const COLUMNS: Column<SupplierInvoice>[] = [
   {
@@ -86,7 +97,8 @@ export function FacturasProvClient() {
   const [total, setTotal]       = useState(0)
   const [page, setPage]         = useState(1)
   const [search, setSearch]     = useState('')
-  const [status, setStatus]     = useState<SupplierInvoiceStatus | ''>('')
+  const [status, setStatus]     = useState<InvoiceStatusTab>('')
+  const [statusCounts, setStatusCounts] = useState(EMPTY_STATUS_COUNTS)
   const [error, setError]       = useState<string | null>(null)
 
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -115,17 +127,43 @@ export function FacturasProvClient() {
     return () => { controller.abort() }
   }, [page, debouncedSearch, status])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    const params = new URLSearchParams({
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    })
+    void (async () => {
+      try {
+        const res = await fetchJson<{ data: Record<InvoiceStatusTab, number> }>(
+          `/api/v1/purchases/supplier-invoices/status-counts?${params}`,
+          { signal: controller.signal },
+        )
+        setStatusCounts({ ...EMPTY_STATUS_COUNTS, ...(res.data ?? {}) })
+      } catch {
+        if (!controller.signal.aborted) setStatusCounts(EMPTY_STATUS_COUNTS)
+      }
+    })()
+    return () => { controller.abort() }
+  }, [debouncedSearch])
+
   return (
     <div className="flex flex-col h-full">
       <TopBar
         breadcrumbs={[{ label: 'Compras', href: '/compras' }, { label: 'Facturas proveedor' }]}
         actions={
           <Button size="sm" onClick={() => router.push('/compras/facturas/nueva')}>
-            Nueva factura
+            + Nueva factura
           </Button>
         }
       />
       <ComprasSubNav />
+      <DocumentStatusNav
+        tabs={STATUS_TABS}
+        active={status}
+        counts={statusCounts}
+        onChange={next => { setStatus(next); setPage(1) }}
+        ariaLabel="Filtrar facturas de proveedor por estado"
+      />
 
       <PageBody>
         {error && <p className="mb-3 text-sm text-danger">{error}</p>}
@@ -149,15 +187,6 @@ export function FacturasProvClient() {
                   className="pl-7 pr-3 h-[30px] text-[13px] border border-border-strong rounded-sm w-full sm:w-52 bg-surface focus:outline-none focus:border-ring"
                 />
               </div>
-              <select
-                value={status}
-                onChange={e => { setStatus(e.target.value as SupplierInvoiceStatus | ''); setPage(1) }}
-                className="h-[30px] text-[13px] border border-border-strong rounded-sm px-2 bg-surface focus:outline-none focus:border-ring text-fg-muted"
-              >
-                {STATUS_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
               <span className="flex-1" />
               <span className="text-[12px] text-fg-muted">{total} registro{total !== 1 ? 's' : ''}</span>
             </>

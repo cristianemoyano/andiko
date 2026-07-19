@@ -53,9 +53,10 @@ function formatAddress(a: Address) {
 interface AddressesSectionProps {
   contactId: string
   initialAddresses: Address[]
+  readOnly?: boolean
 }
 
-export function AddressesSection({ contactId, initialAddresses }: AddressesSectionProps) {
+export function AddressesSection({ contactId, initialAddresses, readOnly = false }: AddressesSectionProps) {
   const [addresses, setAddresses] = useState<Address[]>(initialAddresses)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Address | null>(null)
@@ -76,7 +77,9 @@ export function AddressesSection({ contactId, initialAddresses }: AddressesSecti
     <div className="bg-surface border border-border rounded overflow-hidden">
       <div className="px-4 py-2.5 border-b border-border bg-surface-muted flex items-center justify-between">
         <span className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide">Direcciones</span>
-        <Button variant="ghost" size="xs" onClick={openCreate}>+ Agregar</Button>
+        {!readOnly && (
+          <Button variant="ghost" size="xs" onClick={openCreate}>+ Agregar</Button>
+        )}
       </div>
 
       {addresses.length === 0 ? (
@@ -98,14 +101,16 @@ export function AddressesSection({ contactId, initialAddresses }: AddressesSecti
                   )}
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="xs"
-                className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                onClick={() => openEdit(addr)}
-              >
-                Editar
-              </Button>
+              {!readOnly && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  onClick={() => openEdit(addr)}
+                >
+                  Editar
+                </Button>
+              )}
             </div>
           ))}
         </div>

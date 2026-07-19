@@ -25,6 +25,7 @@ Este documento define **cómo segmentamos datos** en Andiko para evitar cruces e
 
 ### Contacts — Org-scoped
 - `contacts`, `contact_addresses`, `contact_payment_info`
+- Cada org tiene un contacto de sistema único `system_key = consumidor_final` (`is_system = true`): no editable/borrable; se usa como cliente por defecto en pedidos ERP y ventas POS.
 
 ### Catalog — Org-scoped
 - `products`, `product_variants`, `product_categories`, `price_lists`, `price_list_items`

@@ -21,6 +21,7 @@ interface BranchSelectFieldProps {
   error?: string
   id?: string
   label?: string
+  required?: boolean
   placeholder?: string
   /** Endpoint that returns `{ data: BranchListItem[] }` */
   fetchUrl?: string
@@ -41,6 +42,7 @@ export function BranchSelectField({
   error,
   id = 'branch_id',
   label = 'Sucursal',
+  required,
   placeholder = 'Seleccionar sucursal…',
   fetchUrl = '/api/v1/branches',
   optionLabel = defaultLabel,
@@ -92,7 +94,7 @@ export function BranchSelectField({
   }, [options, applyDefault])
 
   return (
-    <FormField label={label} htmlFor={id} error={error ?? loadError ?? undefined}>
+    <FormField label={label} htmlFor={id} required={required} error={error ?? loadError ?? undefined}>
       <SearchableSelect
         id={id}
         value={value}

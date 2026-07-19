@@ -141,6 +141,8 @@ export async function syncWooCustomerToContact(
   site: WoocommerceSite,
   t?: Transaction,
 ): Promise<void> {
+  if (contact.is_system) return
+
   const billing = customer.billing
   const shipping = customer.shipping
   const displayName = customerDisplayName(customer)
@@ -211,7 +213,7 @@ export async function upsertContactFromWooCustomer(
   const personName = [billing?.first_name, billing?.last_name].filter(Boolean).join(' ').trim()
 
   const matched = await findContactByEmail(site.org_id!, email, t)
-  if (matched) {
+  if (matched && !matched.is_system) {
     await syncWooCustomerToContact(matched, customer, site, t)
     if (wooId) {
       const [link] = await WoocommerceCustomerLink.findOrCreate({
@@ -413,6 +415,7 @@ export async function pushContactToWoo(site: WoocommerceSite, contactId: string)
   const contact = await Contact.findOne({
     where: { id: contactId, org_id: site.org_id },
   })
+  if (!contact || contact.is_system) return 'skipped'
   if (!contact?.email?.trim()) return 'skipped'
 
   const payload = buildWooCustomerPayload(contact)

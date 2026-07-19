@@ -37,7 +37,15 @@ export const purchaseReceiptQuerySchema = paginationSchema.extend({
   warehouse_id: z.string().uuid().optional(),
 })
 
+export const purchaseReceiptStatusCountsQuerySchema = purchaseReceiptQuerySchema.pick({
+  search: true,
+  contact_id: true,
+  order_id: true,
+  warehouse_id: true,
+})
+
 export type PurchaseReceiptInput       = z.infer<typeof purchaseReceiptSchema>
 export type PurchaseReceiptUpdateInput = z.infer<typeof purchaseReceiptUpdateSchema>
 export type PurchaseReceiptQuery       = z.infer<typeof purchaseReceiptQuerySchema>
+export type PurchaseReceiptStatusCountsQuery = z.infer<typeof purchaseReceiptStatusCountsQuerySchema>
 export type ReceiptItemInput           = z.infer<typeof receiptItemSchema>

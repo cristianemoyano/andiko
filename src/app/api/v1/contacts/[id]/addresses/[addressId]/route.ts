@@ -27,6 +27,9 @@ export const PATCH = withPermission<P>('contacts:write', async (req, ctx, sessio
     if (err instanceof Error && err.message === 'ADDRESS_NOT_FOUND') {
       return NextResponse.json({ error: 'Dirección no encontrada', code: 'NOT_FOUND' }, { status: 404 })
     }
+    if (err instanceof Error && err.message === 'SYSTEM_CONTACT_NOT_EDITABLE') {
+      return NextResponse.json({ error: 'El contacto de sistema no se puede editar.', code: err.message }, { status: 409 })
+    }
     throw err
   }
 })
@@ -45,6 +48,9 @@ export const DELETE = withPermission<P>('contacts:delete', async (_req, ctx, ses
     }
     if (err instanceof Error && err.message === 'ADDRESS_NOT_FOUND') {
       return NextResponse.json({ error: 'Dirección no encontrada', code: 'NOT_FOUND' }, { status: 404 })
+    }
+    if (err instanceof Error && err.message === 'SYSTEM_CONTACT_NOT_EDITABLE') {
+      return NextResponse.json({ error: 'El contacto de sistema no se puede editar.', code: err.message }, { status: 409 })
     }
     throw err
   }

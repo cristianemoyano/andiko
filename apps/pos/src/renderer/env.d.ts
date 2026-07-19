@@ -23,6 +23,7 @@ interface PosAPI {
   customers: {
     search: (query: string) => Promise<PosCustomer[]>
     get: (id: string) => Promise<PosCustomer | null>
+    getSystemConsumidorFinal: () => Promise<PosCustomer | null>
   }
   users: {
     search: (query: string) => Promise<{ ok: boolean; error?: string; data: Array<{ id: string; name: string; email: string; role: string; role_label: string; branch_id: string | null }> }>

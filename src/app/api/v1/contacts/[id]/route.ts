@@ -43,6 +43,12 @@ export const PATCH = withPermission<P>('contacts:write', async (req, ctx, sessio
     if (err instanceof Error && err.message === 'CONTACT_NOT_FOUND') {
       return NextResponse.json({ error: 'Contacto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
     }
+    if (err instanceof Error && err.message === 'SYSTEM_CONTACT_NOT_EDITABLE') {
+      return NextResponse.json({ error: 'El contacto de sistema no se puede editar.', code: err.message }, { status: 409 })
+    }
+    if (err instanceof Error && err.message === 'SYSTEM_CONTACT_NOT_DEACTIVATABLE') {
+      return NextResponse.json({ error: 'El contacto de sistema no se puede desactivar.', code: err.message }, { status: 409 })
+    }
     throw err
   }
 })
@@ -61,6 +67,9 @@ export const DELETE = withPermission<P>('contacts:delete', async (_req, ctx, ses
     }
     if (err instanceof Error && err.message === 'CONTACT_NOT_FOUND') {
       return NextResponse.json({ error: 'Contacto no encontrado', code: 'NOT_FOUND' }, { status: 404 })
+    }
+    if (err instanceof Error && err.message === 'SYSTEM_CONTACT_NOT_DELETABLE') {
+      return NextResponse.json({ error: 'El contacto de sistema no se puede eliminar.', code: err.message }, { status: 409 })
     }
     throw err
   }
