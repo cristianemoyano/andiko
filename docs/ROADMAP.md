@@ -510,7 +510,7 @@ Módulo de facturación plataforma → organizaciones tenant. El ERP cobra a cad
 - [ ] Factura electrónica AFIP (CAE) de la plataforma hacia las orgs *(datos del emisor + snapshot en la factura ya implementados como base)*
 - [x] Generación automática de facturas recurrentes (cron) — UI sys-admin en `/sys-admin/billing/automatizacion`; job `POST /api/v1/sys-admin/billing/jobs/generate-due-invoices` (`CRON_SECRET`); genera drafts + avanza `current_period_*`
 - [x] Dunning parcial — `billing-dunning.service.ts` marca `past_due` al vencer facturas impagas; job `POST /api/v1/sys-admin/billing/jobs/dunning`; reactivación al registrar pago
-- [ ] Suspensión / bloqueo de acceso ERP en `past_due` (hoy solo cambia estado de suscripción)
+- [x] Suspensión / bloqueo de acceso ERP en `past_due` — redirect a `/suspendido` (exentos `/facturacion` y sys-admin), API bloquea mutaciones con 403 `SUBSCRIPTION_SUSPENDED`, reactivación al registrar pago
 
 ---
 
@@ -521,14 +521,14 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 **Entidades:** `accounts`, `journal_entries`, `journal_entry_lines`
 
 - [x] Plan de cuentas (adaptado a PyMEs argentinas) — sembrado por defecto, editable
-- [ ] Asientos automáticos desde ventas, compras y pagos
+- [x] Asientos automáticos desde ventas, compras y pagos — `sales_invoice`, `sales_payment`, `purchase_invoice`, `purchase_payment`, `expense_invoice`, `expense_payment` (idempotentes por `source_type`+`source_id`, no-fatales ante cuentas faltantes)
 - [x] Asiento automático al completar devolución de venta (`sales_return` → NC / reembolso)
 - [x] Asiento automático al completar devolución de compra (`purchase_return` → reverso Mercaderías / IVA crédito / Proveedores, + cambio)
 - [x] Asientos manuales — partida doble, débito/haber balanceado, estados borrador/contabilizado
 - [x] Balance de sumas y saldos — con filtro por sucursal (centro de costo)
-- [ ] Estado de resultados
-- [ ] Cierre de período
-- [ ] Exportación para estudio contable
+- [x] Estado de resultados (`/contabilidad/estado-de-resultados`) — ingresos / CMV / gastos por prefijo de código, excluye asientos de cierre, export CSV
+- [x] Cierre de período (`/contabilidad/cierres`) — tabla `accounting_periods`, asiento de cierre contra `3.2.02`, reapertura por asiento de reversión (nunca borra); bloquea contabilizar asientos manuales en período cerrado; auto-posting reimputa comprobantes tardíos al primer día abierto
+- [x] Exportación para estudio contable (`/contabilidad/exportacion`) — libro diario y sumas y saldos en CSV (BOM UTF-8, límite 50k filas)
 
 > Dimensión de sucursal (centro de costo) opcional a nivel de línea de asiento: los libros se mantienen a nivel empresa (CUIT).
 
@@ -538,7 +538,7 @@ Módulo contable básico. Depende de todos los módulos anteriores.
 |---|---|---|
 | **Pregunta que responde** | ¿Quién me debe, a quién debo, cuándo cobro/pago, con qué medio? | ¿Cómo queda registrado en los libros (debe/haber, cuentas, períodos)? |
 | **Enfoque** | Operativo del día a día — flujo de caja y gestión de cobranzas/pagos | Normativo y de cierre — plan de cuentas, asientos, balances, exportación al estudio |
-| **Dónde está hoy** | Cuenta corriente clientes en **Ventas** (`/ventas/cuenta-corriente`), proveedores en **Compras**; pagos y saldos en documentos; gaps en sección [Tesorería](#tesorería-impuestos-y-cumplimiento-ar-gaps-identificados--sin-fecha) (cheques, banco, cobranzas) | Módulo **Contabilidad** (`/contabilidad`): plan de cuentas, asientos manuales, auto-posting solo en devoluciones ventas/compras, balance; Libro IVA en UI contable |
+| **Dónde está hoy** | Cuenta corriente clientes en **Ventas** (`/ventas/cuenta-corriente`), proveedores en **Compras** y **Expensas**; pagos y saldos en documentos; gaps en sección [Tesorería](#tesorería-impuestos-y-cumplimiento-ar-gaps-identificados--sin-fecha) (cheques, banco, cobranzas) | Módulo **Contabilidad** (`/contabilidad`): plan de cuentas, asientos manuales, auto-posting completo (ventas, compras, pagos, expensas y devoluciones), balance, estado de resultados, cierres de período y exportación; Libro IVA en UI contable |
 | **Usuario típico** | Administración, cobranzas, tesorería | Contador / responsable de cierre |
 | **Relación** | Un cobro en finanzas debería generar (o vincularse a) un asiento contable cuando el auto-posting esté completo | Los asientos reflejan hechos ya ocurridos en ventas, compras, tesorería e inventario |
 
@@ -886,7 +886,7 @@ Gastos fijos/recurrentes de la empresa (alquiler, luz, agua, seguros, planes en 
 - [x] Líneas de detalle por gasto (cantidad, precio, descuento, IVA y cuenta contable); las series recurrentes copian snapshots para preservar el histórico
 - [x] Frecuencia bimestral en series recurrentes; carga Con IVA / Sin IVA (default Con IVA); actualizar monto futuro de la serie sin reescribir ocurrencias
 - [x] Copy de estados: Confirmar gasto / Confirmado; Anular / Anulado
-- [x] Aging / deuda por proveedor en `/expensas/reportes` (buckets de antigüedad a hoy)
+- [x] Cuenta corriente / aging por proveedor de Expensas — `/expensas/cuenta-corriente` + sección aging en `/expensas/reportes` (solo gastos con proveedor asignado)
 - [ ] Conciliación bancaria de pagos de Expensas
 - [x] Sincronizar estado/saldo del resumen de tarjeta con el gasto vinculado (pago, pago parcial, anulación); período reutilizable si el resumen se anula
 - [x] Corrección de gastos confirmados: revertir a borrador (reversión de asiento + repost al reconfirmar); montos de cuotas pendientes editables; montos de resúmenes de tarjeta editables
@@ -953,8 +953,8 @@ Ideas validadas pero sin fecha definida.
 **Logging de plataforma:**
 
 - [x] PostHog: analytics, error tracking, server logs (OTLP vía pino); cookie consent; deshabilitado en dev local
-- [ ] `LOG_LEVEL`, redacción de secretos en pino, `requestId` (AsyncLocalStorage)
-- [ ] `handleApiError` centralizado en api-handler
+- [x] `LOG_LEVEL` (env) y redacción de secretos en pino (incluye hook PostHog) — pendiente `requestId` (AsyncLocalStorage)
+- [x] `handleApiError` centralizado en api-handler (red de seguridad en wrappers; las rutas conservan su manejo local)
 - [ ] HTTP access logging
 - [ ] Convenciones `action` + `logger.error` en transacciones de módulos críticos
 - [ ] `docs/observability/logging.md`

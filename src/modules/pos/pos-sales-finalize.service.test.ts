@@ -57,6 +57,10 @@ vi.mock('@/modules/accounting/sales-invoice-accounting.service', () => ({
 vi.mock('@/modules/accounting/sales-payment-accounting.service', () => ({
   postSalesPaymentAccounting: mocks.postSalesPaymentAccounting,
 }))
+vi.mock('@/modules/sales/invoice-item-cost', () => ({
+  resolveVariantUnitCosts: vi.fn().mockResolvedValue(new Map()),
+  snapshotUnitCost: vi.fn().mockReturnValue(null),
+}))
 
 import { finalizePosSaleInErp } from './pos-sales-finalize.service'
 
